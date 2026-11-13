@@ -19,8 +19,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--fake", action="store_true", help="synthetic gloves and a synthetic lesson; no hardware")
     ap.add_argument("--replay", metavar="FILE", help="replay a raw RGMP capture instead of connecting to the solver")
     ap.add_argument("--replay-loop", action="store_true", help="loop the replay file")
+    ap.add_argument("--capture", metavar="FILE", help="write the raw RGMP bytes received to this file (for --replay later)")
+    ap.add_argument("--no-rcsp", action="store_true", help="do not connect to the Rokoko driver for button and LED")
     ap.add_argument("--camera", action="store_true", help="feed both hands from the MediaPipe camera source")
     ap.add_argument("--video", metavar="FILE", help="camera source reads this video file instead of the webcam")
+    ap.add_argument("--solver", metavar="HOST:PORT", help="hand solver RGMP address (default from config.toml [glove])")
+    ap.add_argument("--rcsp", metavar="HOST:PORT", help="Rokoko driver RCSP address (default from config.toml [glove])")
     ap.add_argument("--host", default=None)
     ap.add_argument("--port", type=int, default=None)
     ap.add_argument("--no-validate", action="store_true", help="skip JSON Schema checks on emitted messages")
@@ -37,6 +41,12 @@ def main(argv: list[str] | None = None) -> int:
         cfg.sources.right = "camera"
     if args.video:
         cfg.camera.video = args.video
+    if args.solver:
+        h, p = args.solver.rsplit(":", 1)
+        cfg.glove.solver_host, cfg.glove.solver_port = h, int(p)
+    if args.rcsp:
+        h, p = args.rcsp.rsplit(":", 1)
+        cfg.glove.rcsp_host, cfg.glove.rcsp_port = h, int(p)
 
     core = Core(cfg, fake=args.fake, validate=not args.no_validate)
 
@@ -49,7 +59,12 @@ def main(argv: list[str] | None = None) -> int:
         core.glove_source = GloveSource(cfg, core.clock, logs_dir=core.logs_dir, replay=core.replay_server)
     elif not args.fake:
         from .rgmp import GloveSource
-        core.glove_source = GloveSource(cfg, core.clock, logs_dir=core.logs_dir)
+        core.glove_source = GloveSource(cfg, core.clock, logs_dir=core.logs_dir,
+                                        capture_path=Path(args.capture) if args.capture else None)
+        if not args.no_rcsp:
+            from .rcsp import GloveControl, RcspClient
+            core.rcsp_client = RcspClient(cfg.glove.rcsp_host, int(cfg.glove.rcsp_port), reconnect_s=float(cfg.glove.reconnect_s))
+            core.glove_control = GloveControl(core.rcsp_client, core.session)
 
     if args.camera or "camera" in (cfg.sources.left, cfg.sources.right):
         try:

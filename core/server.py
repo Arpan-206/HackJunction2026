@@ -62,6 +62,9 @@ class Core:
         self.fake_source: fake_mod.FakeSource | None = None
         self.glove_source: Any = None     # core.rgmp.GloveSource, attached by __main__
         self.camera_source: Any = None    # core.camera.CameraSource, attached by __main__
+        self.rcsp_client: Any = None      # core.rcsp.RcspClient, attached by __main__
+        self.glove_control: Any = None    # core.rcsp.GloveControl, attached by __main__
+        self.replay_server: Any = None
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         if fake:
@@ -117,12 +120,17 @@ class Core:
             try:
                 self.poll_sources(t)
                 frame = self.session.tick(t)
-                for msg in self.session.drain():
+                msgs = self.session.drain()
+                for msg in msgs:
                     self._check(msg)
                     self.broadcast(msg)
                 self._check(frame)
                 self.frames += 1
                 self.broadcast_frame(frame, t)
+                if self.glove_control is not None:
+                    self.glove_control.on_messages(msgs)
+                    if self.frames % 10 == 0:
+                        asyncio.create_task(self.glove_control.update_leds())
             except Exception:
                 log.exception("tick failed")
             next_t += period
@@ -259,6 +267,13 @@ class Core:
             "hands": {s: None if hands.get(s) is None else {"tracked": hands[s].tracked, "source": hands[s].source} for s in SIDES},
             "anchor": self.session.anchor, "gemma": "off", "uptime_s": round(time.time() - self.started, 1),
             "fake": self.fake, "frames": self.frames, "clients": len(self.clients),
+            "rgmp": None if self.glove_source is None else {"connected": self.glove_source.connected,
+                                                            "frames": self.glove_source.frames,
+                                                            "devices": dict(self.glove_source.sides)},
+            "rcsp": None if self.rcsp_client is None else {"connected": self.rcsp_client.connected.is_set()},
+            "camera": None if self.camera_source is None else {"frames": self.camera_source.frames,
+                                                               "detections": self.camera_source.detections,
+                                                               "error": self.camera_source.error},
             "validation_errors": self.validation_errors, "last_validation_error": self.last_validation_error,
             "mode": self.session.mode, "lesson_id": self.session.lesson.id if self.session.lesson else None,
         }
@@ -268,14 +283,14 @@ def create_app(core: Core) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         core._task = asyncio.create_task(core.run())
-        for src in (core.glove_source, core.camera_source):
+        for src in (core.glove_source, core.camera_source, core.rcsp_client):
             if src is not None and hasattr(src, "start"):
                 await src.start()
         try:
             yield
         finally:
             core.stop()
-            for src in (core.glove_source, core.camera_source):
+            for src in (core.glove_source, core.camera_source, core.rcsp_client):
                 if src is not None and hasattr(src, "stop"):
                     await src.stop()
             if core._task is not None:
