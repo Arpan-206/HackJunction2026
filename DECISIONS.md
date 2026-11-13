@@ -67,3 +67,16 @@ Commits are signed with a hardware security key that is not plugged in
 overnight. `git config --local commit.gpgsign false` was set in this clone so
 work can be committed. The global setting is untouched. Re-sign or squash in
 the morning if signed history matters.
+
+## D13. `key_joints` are in the wrist frame
+SPEC says `key_joints` are "26 wrist-relative positions". They are stored in
+the wrist frame (wrist at the origin, fingers along -Z, back of the hand +Y),
+with the master's world wrist orientation kept in `key_wrist_q`. This is what
+lets the ghost be glued onto any learner wrist and mirrored by negating x.
+`trace.npz` keeps `joints` in `xr_base` as SPEC says; the wrist frame is
+recovered from `wrist_q`.
+
+## D14. Move-step matching breaks ties by raw error
+Inside the 8-degree dead zone every candidate master sample scores 1.0, so
+`timing_ms` would be arbitrary. The best match is the highest score, then the
+smallest mean angle error. Scores are unchanged; timing becomes exact.
