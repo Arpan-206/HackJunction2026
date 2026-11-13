@@ -1,0 +1,29 @@
+[project]
+name = "apprentice-backend"
+version = "0.1.0"
+description = "FastAPI backend for Apprentice: glove streaming, lessons, scoring and LLM lesson generation."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "google-genai>=1.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+vision = ["mediapipe", "opencv-python-headless"]
+rokoko = ["lz4"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
