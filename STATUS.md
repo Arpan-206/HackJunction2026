@@ -67,7 +67,10 @@ carries the new lesson itself). CORS allows GET from any origin.
 
 Throughput: tick 33.3 ms median with a client connected, no late ticks
 (see DECISIONS D20 for the one exception). A tick costs about 3 ms, of which
-schema validation is 1.5 ms.
+schema validation is 1.5 ms. Soak: 8 minutes of `--fake` with two clients
+(one at 30 Hz, one at 60 Hz with `rots`): `tick_hz` 30.0 throughout, memory
+flat at 105 MB, 0 validation errors, 0 bad acks, 20 000 frames delivered;
+the 60 Hz client saw a 33.4 ms median gap and 36.7 ms p99.
 
 ## Written but untested, and why
 
@@ -145,9 +148,15 @@ cd frontend && npm install && npm run dev  # their app, unchanged, on :5173
 
 Tested: `/api/health`, `/api/lessons`, `/api/dev/state`, `/api/coach/hint`,
 `/api/recordings/start|stop`, `/api/calibrations`, `/ws/gloves` frames
-(flexion in radians, both hands) in `tests/test_compat.py`. Not tested: their
-frontend actually rendering against it (no `npm install` was run tonight).
-Routes that need their lesson generator or motion synthesiser answer 501.
+(flexion in radians, both hands) in `tests/test_compat.py`. Also tested for
+real: their frontend at `origin/main` was installed in a scratch worktree
+(`npm ci`), started with `npm run dev`, and loaded in headless Chrome with
+the core on `:8000` in `--fake` mode. The role page and `/master` rendered
+with no console errors, and while `/master` was open the core showed one
+`/ws/gloves` client receiving frames. Not checked: whether their 3D hand
+follows the stream correctly (SwiftShader headless, no eyes on the motion),
+and every other page. Routes that need their lesson generator or motion
+synthesiser answer 501.
 
 Decision needed in the morning, between the two of you: either the frontend
 moves to SPEC.md's `/ws` (it then gets ghost, score, coach and session for

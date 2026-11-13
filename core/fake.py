@@ -59,8 +59,8 @@ class FakeSource:
         self._target_since_us = self.t0_us
         self._from_pose = dict(POSES[0][1])
         self.transition_s = 1.0
-        self.error_decay_s = max(0.5, float(cfg.fake.step_period_s) - 2.0)
-        self.error_curl = 0.45
+        self.error_decay_s = max(0.5, float(cfg.fake.step_period_s))
+        self.error_curl = 0.7
         self._last_pose = dict(POSES[0][1])
 
     def set_target_step(self, step: int, t_us: int) -> None:
@@ -74,11 +74,13 @@ class FakeSource:
         el = (t_us - self._target_since_us) / 1e6
         u = _ease(el / self.transition_s)
         pose = blend(self._from_pose, target, u)
-        # fading deliberate error on one finger
+        # fading deliberate error on two fingers, so the overall score starts well
+        # under the pass mark and climbs over about step_period_s
         err = self.error_curl * max(0.0, 1.0 - el / self.error_decay_s)
-        f = H.FINGERS[self.target_step % len(H.FINGERS)]
-        sign = -1.0 if target[f] > 0.5 else 1.0
-        pose[f] = float(np.clip(pose[f] + sign * err, 0.0, 1.0))
+        k = self.target_step % len(H.FINGERS)
+        for f in (H.FINGERS[k], H.FINGERS[(k + 2) % len(H.FINGERS)]):
+            sign = -1.0 if target[f] > 0.5 else 1.0
+            pose[f] = float(np.clip(pose[f] + sign * err, 0.0, 1.0))
         self._last_pose = pose
         return pose
 

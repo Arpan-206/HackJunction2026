@@ -141,6 +141,15 @@ class Session:
     def _control_pinch(self, side: str, hand: H.HandState | None) -> None:
         finger = self.cfg.session.control_pinch
         pinched = bool(hand is not None and hand.tracked and hand.pinch.get(finger, False))
+        if pinched:
+            # only the hand in use, and only with the other fingers open (a fist is not a command)
+            active = (self.recorder.master_hand if self.recorder.active else None) if self.mode == "record" \
+                else (self.learner_sides() if self.mode in ("learn", "mirror", "duel") else None)
+            if active is not None and side not in (active if isinstance(active, list) else [active]):
+                pinched = False
+            others = [hand.curl.get(f, 0.0) for f in ("index", "middle", "ring")]
+            if max(others) > float(self.cfg.session.control_pinch_max_other_curl):
+                pinched = False
         t = self.now()
         if not pinched:
             self._pinch_hold[side] = None

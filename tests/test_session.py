@@ -229,3 +229,19 @@ def test_chords_task_state(sess):
     frame = s.tick(clock.now_us())
     assert frame["task"] == {"chord": "Open hand", "next": "Fist"}
     assert s.handle_command("describe_task", {"text": "teach me a piano scale"})["task"] == "piano"
+
+
+def test_control_pinch_ignores_fist_and_other_hand(sess):
+    s, clock = sess
+    s.handle_command("lesson_load", {"lesson_id": fake.FAKE_LESSON_ID})
+    s.handle_command("set_mode", {"mode": "learn"})
+    s.drain()
+    # a fist with the little "pinch" flag set must not restart the step
+    msgs = feed(s, clock, "right", fake.POSES[1][1], n=30, pinch=s.cfg.session.control_pinch)
+    assert not types(msgs, "event", "step_restarted")
+    # the free left hand must not control the learner's step either
+    msgs = feed(s, clock, "left", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch)
+    assert not types(msgs, "event", "step_restarted")
+    # the learner's open hand with the gesture does
+    msgs = feed(s, clock, "right", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch)
+    assert types(msgs, "event", "step_restarted")

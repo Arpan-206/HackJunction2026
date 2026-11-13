@@ -112,6 +112,8 @@ tempo_max = 1.5
 loop_default = true
 control_pinch = "little"
 control_pinch_hold_ms = 500
+# the control gesture needs index, middle and ring under this curl (a fist is not a control pinch)
+control_pinch_max_other_curl = 0.5
 rate_hz_min = 15
 rate_hz_max = 60
 duel_rounds = 5
