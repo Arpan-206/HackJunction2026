@@ -142,10 +142,19 @@ class Lesson:
                    source=d["source"], rate_hz=d["rate_hz"], duration_us=d["duration_us"],
                    steps=[Step.from_json(s) for s in d["steps"]], trace=trace, dir=dir)
 
-    def save(self, lessons_dir: Path) -> Path:
+    def save(self, lessons_dir: Path, keyframes: bool = True) -> Path:
         d = Path(lessons_dir) / self.id
         d.mkdir(parents=True, exist_ok=True)
         (d / "frames").mkdir(exist_ok=True)
+        if keyframes:
+            for s in self.steps:
+                if s.frame is None:
+                    try:
+                        render_keyframe(s, self.master_hand, d / "frames" / f"step_{s.index:02d}.jpg")
+                        s.frame = f"frames/step_{s.index:02d}.jpg"
+                    except Exception as e:   # a missing OpenCV must never block a save
+                        import logging
+                        logging.getLogger("geppetto.recorder").warning("keyframe not rendered: %s", e)
         (d / "lesson.json").write_text(json.dumps(self.to_json(), indent=2))
         if self.trace is not None:
             self.trace.save(d / "trace.npz")
@@ -421,3 +430,40 @@ def digest_step(step: Step) -> dict:
         words[f] = "straight" if c < 0.25 else "half bent" if c < 0.6 else "curled"
     return {"index": step.index, "kind": step.kind, "duration_ms": step.duration_us // 1000,
             "pose": ", ".join(f"{f} {w}" for f, w in words.items())}
+
+
+# ---------------------------------------------------------------------------
+# Keyframe sketches for the codex (glove recordings have no camera image)
+# ---------------------------------------------------------------------------
+
+_CHAINS = [[1, 2, 3, 4, 5], [1, 6, 7, 8, 9, 10], [1, 11, 12, 13, 14, 15], [1, 16, 17, 18, 19, 20], [1, 21, 22, 23, 24, 25]]
+
+
+def render_keyframe(step: Step, side: str, out: Path, size: int = 320) -> Path:
+    """Draw the step's key pose (wrist frame) as a small sepia sketch: front view left, top view right."""
+    import cv2
+    img = np.full((size, size * 2, 3), (235, 240, 245), np.uint8)
+    J = np.asarray(step.key_joints, dtype=float)
+    scale = size * 2.2
+    def view(top: bool):
+        ox = size * (1.5 if top else 0.5)
+        pts = []
+        for p in J:
+            x = ox + p[0] * scale
+            y = (size * 0.5 + p[2] * scale) if top else (size * 0.65 - p[1] * scale)
+            pts.append((int(round(x)), int(round(y))))
+        for chain in _CHAINS:
+            for a, b in zip(chain, chain[1:]):
+                cv2.line(img, pts[a], pts[b], (60, 90, 140), 3, cv2.LINE_AA)
+        for a, b in zip([1, 6, 11, 16, 21, 1], [6, 11, 16, 21, 1, 6]):
+            cv2.line(img, pts[a], pts[b], (120, 140, 170), 2, cv2.LINE_AA)
+        for i, p in enumerate(pts):
+            cv2.circle(img, p, 5 if i == 1 else 3, (40, 60, 110), -1, cv2.LINE_AA)
+    view(False)
+    view(True)
+    cv2.putText(img, f"{step.index + 1}. {step.name} ({side}, {step.kind})", (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (40, 50, 70), 1, cv2.LINE_AA)
+    cv2.putText(img, "front", (10, size - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (120, 120, 120), 1, cv2.LINE_AA)
+    cv2.putText(img, "top", (size + 10, size - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (120, 120, 120), 1, cv2.LINE_AA)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(out), img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    return out

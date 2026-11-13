@@ -39,7 +39,9 @@ def test_http_routes(fake_app):
     assert lj["schema"] == "geppetto.lesson/1"
     core.schemas.validate("lesson", lj)
     assert client.get("/lessons/nope").status_code == 404
-    assert client.get("/lessons/fake-demo/frames/step_00.jpg").status_code == 404
+    r = client.get("/lessons/fake-demo/frames/step_00.jpg")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg" and len(r.content) > 1000
+    assert client.get("/lessons/fake-demo/frames/step_99.jpg").status_code == 404
     assert client.get("/schema/frame.json").json()["$id"].endswith("frame.json")
     assert client.get("/schema/nope.json").status_code == 404
 

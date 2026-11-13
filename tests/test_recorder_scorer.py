@@ -65,6 +65,8 @@ def test_fake_lesson_has_four_hold_steps_and_validates(cfg, schemas, fake_lesson
     assert all(s.kind == "hold" for s in lesson.steps), [s.kind for s in lesson.steps]
     schemas.validate("lesson", lesson.to_json())
     reloaded = Lesson.load(tmp_path / fake.FAKE_LESSON_ID)
+    assert all(s.frame == f"frames/step_{s.index:02d}.jpg" for s in reloaded.steps)
+    assert (tmp_path / fake.FAKE_LESSON_ID / "frames" / "step_03.jpg").stat().st_size > 1000
     assert reloaded.trace is not None and reloaded.trace.angles.shape[1] == 18
     assert reloaded.trace.joints.shape[1:] == (26, 3)
     assert len(list_lessons(tmp_path)) == 1

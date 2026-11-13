@@ -24,18 +24,19 @@ async def record(url: str, out: Path, seconds: float | None) -> None:
     import websockets
     out.parent.mkdir(parents=True, exist_ok=True)
     n, t0, last = 0, time.monotonic(), None
-    async with websockets.connect(url, max_size=None) as ws, open(out, "w") as f:
-        log.info("recording %s -> %s", url, out)
-        while seconds is None or time.monotonic() - t0 < seconds:
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
-            except asyncio.TimeoutError:
-                continue
-            now = time.monotonic()
-            dt_ms = 0 if last is None else int((now - last) * 1000)
-            last = now
-            f.write(json.dumps({"dt_ms": dt_ms, "msg": json.loads(raw)}, separators=(",", ":")) + "\n")
-            n += 1
+    async with websockets.connect(url, max_size=None) as ws:
+        with open(out, "w") as f:
+            log.info("recording %s -> %s", url, out)
+            while seconds is None or time.monotonic() - t0 < seconds:
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    continue
+                now = time.monotonic()
+                dt_ms = 0 if last is None else int((now - last) * 1000)
+                last = now
+                f.write(json.dumps({"dt_ms": dt_ms, "msg": json.loads(raw)}, separators=(",", ":")) + "\n")
+                n += 1
     log.info("wrote %d messages", n)
 
 

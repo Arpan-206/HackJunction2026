@@ -18,10 +18,12 @@ Hand and ghost messages carry an optional `angles` array (18 degrees). The
 scorer does not need it on the wire, but the debug view and anyone tuning
 thresholds do. Additive, optional, ignorable.
 
-## D4. Lesson `frame` is nullable
+## D4. Lesson `frame` is nullable, and glove lessons get a sketch
 SPEC says each step has `frame: "frames/step_00.jpg"`. With glove-only
-recording there is no image to save, so `frame` may be `null`. The HTTP route
-returns 404 for a missing keyframe.
+recording there is no camera image, so the recorder draws a small sketch of
+the key pose (front and top view, OpenCV) into `frames/step_XX.jpg` at save
+time so the codex has something to show. `frame` may still be `null` if the
+sketch cannot be rendered; the HTTP route returns 404 for a missing file.
 
 ## D5. Lesson `source` accepts `fake`
 The fake server generates a demo lesson from its own synthetic master trace.
@@ -80,3 +82,41 @@ recovered from `wrist_q`.
 Inside the 8-degree dead zone every candidate master sample scores 1.0, so
 `timing_ms` would be arbitrary. The best match is the highest score, then the
 smallest mean angle error. Scores are unchanged; timing becomes exact.
+
+## D15. Hourly teammate check is done by hand
+A scheduled job was set up to fetch `origin` every hour, but scheduled jobs
+only fire while this session is idle, and the overnight build is one long
+task. The fetch was run by hand about once an hour instead; results are in
+STATUS.md under "Teammate activity". Nothing was merged, rebased or pushed.
+
+## D16. Attempt logging landed early
+SPEC schedules "visitor attempt logging" for Saturday 21:00. It cost ten
+lines, so every step summary (pass, failed attempt, stuck) is appended to
+`logs/attempts.jsonl` now. This is the data the "later, if there is time"
+per-slot tolerance job would read.
+
+## D17. `tools/ws_log.py` acks every command while replaying
+When the viewer runs against a replayed message log there is no core to
+answer commands. The replayer answers every `cmd` with `ok: true` and
+`result: {"replay": true}` so viewer buttons do not show errors.
+
+## D18. Mirror and duel are minimal
+Mirror: reference is the master's live angles 300 ms ago, best match in a
+250 ms window, ghost is the master's live hand mirrored onto the learner.
+Duel: both non-free hands score the same step; the first to pass wins the
+round, `round_won` is emitted, `frame.task.duel` carries the tally, and the
+primary `frame.score` is the first learner's while `frame.scores` has both.
+Both run in tests on synthetic hands; neither has seen a glove.
+
+## D19. Playback ghost sits at the rest pose
+Recorded wrist positions are NaN tonight (no camera anchor), so a playback
+ghost is drawn at the master hand's `rest_pose` with the recorded wrist
+orientation, placement `recorded`.
+
+## D20. Frame rate: steady at 30 Hz in the foreground
+Tick timing measured 33.3 ms median, zero late ticks, with uvicorn and a
+connected client, on both the asyncio and uvloop loops. One measurement of a
+server launched as a detached background process from a script showed every
+seventh tick 33 ms late (26 Hz at the client); macOS timer throttling of
+background processes is the suspected cause. `/health` now reports `tick_hz`
+so this is visible at a glance. Run the core in a foreground terminal.

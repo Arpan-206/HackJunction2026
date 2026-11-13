@@ -173,7 +173,7 @@ function drawHand(joints, w, h, opts) {
   ctx.setLineDash([]);
   ctx.fillStyle = opts.colour || "#eee";
   pts.forEach((p, i) => { ctx.beginPath(); ctx.arc(p[0], p[1], i === 1 ? 5 : 2.5, 0, 7); ctx.fill(); });
-  if (opts.label) { ctx.fillStyle = opts.colour || "#ccc"; ctx.font = "12px sans-serif"; ctx.fillText(opts.label, pts[1][0] + 8, pts[1][1] + 16); }
+  if (opts.label) { ctx.fillStyle = opts.colour || "#ccc"; ctx.font = "12px sans-serif"; ctx.fillText(opts.label, pts[1][0] + 8, pts[1][1] + (opts.dash ? 30 : -10)); }
 }
 function render() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
