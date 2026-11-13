@@ -6,6 +6,7 @@ import logging
 from pydantic import ValidationError
 
 from app import constants as c
+from app.core.errors import LLMTimeoutError
 from app.core.utils import new_id, utc_now_iso
 from app.schemas.api import GenerateLessonResponse
 from app.schemas.common import Skill
@@ -48,19 +49,35 @@ class LessonGenerator:
         data = draft.model_copy(update={"source": "generated", "steps": steps}).model_dump()
         return Lesson(**data, id=new_id(), created_at=utc_now_iso())
 
-    async def generate(self, text: str, skill: Skill | None) -> GenerateLessonResponse:
+    async def generate_from_video(
+        self, text: str, skill: Skill | None, video_path: str, mime_type: str, filename: str
+    ) -> GenerateLessonResponse:
+        """Generate a lesson from a video; providers without video support get the template plus a note."""
+        client = self._llm.client
+        if not getattr(client, "supports_video", False):
+            draft = template_lesson(f"{text} {filename}", skill)
+            draft = draft.model_copy(update={"summary": f"{c.VIDEO_FAKE_NOTE} {draft.summary}".strip()})
+            return GenerateLessonResponse(lesson=self._finalise(draft), provider="fake", attempts=0)
+        return await self.generate(text or c.VIDEO_DEFAULT_PROMPT, skill, video=(video_path, mime_type))
+
+    async def generate(self, text: str, skill: Skill | None, video: tuple[str, str] | None = None) -> GenerateLessonResponse:
         """Return a lesson, the provider that produced it, and the number of model attempts used."""
         client = self._llm.client
+        video_path, video_mime = video if video else (None, None)
         errors: str | None = None
         attempts = 0
         for _ in range(1 + c.LLM_MAX_RETRIES):
             attempts += 1
-            request = LLMRequest(SYSTEM_PROMPT, self._prompt(text, skill, errors), text, skill, llm_schema(LessonBase))
+            request = LLMRequest(SYSTEM_PROMPT, self._prompt(text, skill, errors), text, skill, llm_schema(LessonBase),
+                                 video_path=video_path, video_mime=video_mime)
             try:
                 raw = await client.generate_json(request)
                 draft = LessonBase.model_validate_json(raw)
             except ValidationError as exc:
                 errors = str(exc)
+            except LLMTimeoutError as exc:
+                log.warning("LLM timed out (%s); falling back without retrying", exc)
+                break
             except Exception as exc:
                 errors = f"{type(exc).__name__}: {exc}"
                 log.warning("LLM call failed on attempt %d: %s", attempts, exc)

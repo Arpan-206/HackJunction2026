@@ -39,6 +39,10 @@ class ServiceUnavailableError(AppError):
     status_code = 503
 
 
+class LLMTimeoutError(ServiceUnavailableError):
+    """An LLM provider call exceeded its time budget; callers fall back without retrying."""
+
+
 class NotImplementedFeatureError(AppError):
     """The feature exists as a stub only."""
 

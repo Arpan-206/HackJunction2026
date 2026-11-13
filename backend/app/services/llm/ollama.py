@@ -1,11 +1,12 @@
 """Local Gemma via Ollama, with the `format` field carrying a JSON schema for constrained decoding."""
 
+import asyncio
 from typing import Any
 
 import httpx
 
 from app import constants as c
-from app.core.errors import ServiceUnavailableError
+from app.core.errors import LLMTimeoutError, ServiceUnavailableError
 from app.services.llm.base import LLMRequest
 
 
@@ -20,6 +21,13 @@ class OllamaLLM:
         self._model = model
 
     async def _call(self, request: LLMRequest, schema: dict[str, Any] | None) -> str:
+        """Run one chat call, capping the total time at LLM_TIMEOUT_S."""
+        try:
+            return await asyncio.wait_for(self._chat(request, schema), timeout=c.LLM_TIMEOUT_S)
+        except TimeoutError as exc:
+            raise LLMTimeoutError(f"Ollama did not answer within {c.LLM_TIMEOUT_S:g} s") from exc
+
+    async def _chat(self, request: LLMRequest, schema: dict[str, Any] | None) -> str:
         """Run one non-streaming chat call."""
         body: dict[str, Any] = {
             "model": self._model,

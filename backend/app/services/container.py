@@ -11,6 +11,8 @@ from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
 from app.services.llm.lesson_generator import LessonGenerator
+from app.services.llm.motion_text import MotionTextService
+from app.services.llm.plan import PlanService
 from app.services.llm.registry import LLMState
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder
@@ -31,6 +33,8 @@ class Services:
     llm: LLMState
     generator: LessonGenerator
     coach: CoachService
+    planner: PlanService
+    motion_text: MotionTextService
     gloves: GloveManager
     recorder: Recorder
     calibrations: CalibrationService
@@ -49,6 +53,7 @@ def build_services(settings: Settings) -> Services:
     gloves = GloveManager(settings, GloveSmoother())
     recorder = Recorder(JsonStore(data / "recordings", Recording))
     gloves.add_sink(recorder.push)
+    calibrations = CalibrationService(JsonStore(data / "calibrations", Calibration), gloves)
     return Services(
         settings=settings,
         moves=moves,
@@ -56,10 +61,12 @@ def build_services(settings: Settings) -> Services:
         llm=llm,
         generator=LessonGenerator(llm, moves),
         coach=CoachService(llm),
+        planner=PlanService(llm),
+        motion_text=MotionTextService(llm),
         gloves=gloves,
         recorder=recorder,
-        calibrations=CalibrationService(JsonStore(data / "calibrations", Calibration), gloves),
-        scoring=ScoringService(recorder),
+        calibrations=calibrations,
+        scoring=ScoringService(recorder, calibrations),
         vision=MediaPipeHands(),
         dev=DevService(gloves, llm),
     )

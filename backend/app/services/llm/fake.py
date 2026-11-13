@@ -1,10 +1,14 @@
 """Deterministic offline provider: lesson templates for table tennis, piano and a general fallback."""
 
+import json
 import re
 
+from app import constants as c
 from app.core.utils import new_id
-from app.schemas.common import Skill
+from app.schemas.api import CoachPlanDraft, CoachPlanRequest, Drill, MotionDraft
+from app.schemas.common import FingerValues, Skill
 from app.schemas.lesson import LessonBase, Step
+from app.schemas.motion import FingerSequence, GripAndSwing, HoldPose, Idle, Pinch
 from app.services.llm.base import LLMRequest
 from app.services.moves import MoveCatalog
 from app.services.storage.seed import load_seed_lessons
@@ -51,13 +55,83 @@ def template_lesson(text: str, hint: Skill | None = None) -> LessonBase:
     )
 
 
+_MOTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"pinch", re.I), "pinch"),
+    (re.compile(r"grip|forehand|backhand|penhold|shakehand|swing", re.I), "grip_and_swing"),
+    (re.compile(r"scale|sequence|piano", re.I), "finger_sequence"),
+    (re.compile(r"fist|hold", re.I), "hold_pose"),
+)
+_SLOWER = re.compile(r"\bslow(?:er|ly)?\b", re.I)
+
+
+def template_motion(text: str) -> MotionDraft:
+    """Pick a motion preset from keywords; 'slow' doubles the beat length within bounds."""
+    preset = next((name for pattern, name in _MOTION_RULES if pattern.search(text)), "idle")
+    lowered = text.lower()
+    if preset == "pinch":
+        motion = Pinch(fingers=[3] if "middle" in lowered else [2])
+    elif preset == "grip_and_swing":
+        motion = GripAndSwing(
+            grip="penhold" if "penhold" in lowered else "shakehand",
+            swing="backhand" if "backhand" in lowered else "forehand",
+        )
+    elif preset == "finger_sequence":
+        motion = FingerSequence(sequence=list(c.MOTION_SCALE_SEQUENCE))
+    elif preset == "hold_pose":
+        motion = HoldPose(pose=FingerValues.from_list(list(c.MOTION_FIST_POSE)))
+    else:
+        motion = Idle()
+    beat = getattr(motion, "beat_ms", None)
+    if beat is not None and _SLOWER.search(text):
+        motion = motion.model_copy(update={"beat_ms": min(beat * c.MOTION_SLOWER_FACTOR, c.MOTION_MAX_BEAT_MS)})
+    return MotionDraft(motion=motion, explanation=f"Chose the {preset.replace('_', ' ')} preset for your request.")
+
+
+def template_plan(request: CoachPlanRequest) -> CoachPlanDraft:
+    """Derive drills from the weakest finger of the weakest steps, deterministically."""
+    titles = {s.step_id: s.title for s in request.steps}
+    by_step: dict[str, list[FingerValues]] = {}
+    overall: dict[str, list[float]] = {}
+    for attempt in request.attempts:
+        by_step.setdefault(attempt.step_id, []).append(attempt.score.per_finger)
+        overall.setdefault(attempt.step_id, []).append(attempt.score.overall)
+    ranked = sorted(by_step, key=lambda sid: (sum(overall[sid]) / len(overall[sid]), sid))
+    drills: list[Drill] = []
+    weak: list[str] = []
+    for step_id in ranked[: c.PLAN_MAX_DRILLS]:
+        means = [sum(v.as_list()[i] for v in by_step[step_id]) / len(by_step[step_id]) for i in range(len(c.FINGERS))]
+        finger = c.FINGERS[means.index(min(means))]
+        title = titles.get(step_id, step_id)
+        drills.append(Drill(
+            step_id=step_id, focus_finger=finger,  # type: ignore[arg-type]
+            exercise=f"Repeat '{title}' slowly five times, keeping your {finger} finger relaxed and in line with the guide hand.",
+        ))
+        weak.append(f"{finger} in '{title}'")
+    if not drills:
+        first = request.steps[0] if request.steps else None
+        drills.append(Drill(
+            step_id=first.step_id if first else "", focus_finger=None,
+            exercise=f"Run through '{first.title if first else request.lesson_title}' once, slowly, to set a baseline.",
+        ))
+        return CoachPlanDraft(
+            summary=f"You have not scored an attempt in {request.lesson_title} yet. Start with one slow pass to set a baseline.",
+            drills=drills, master_note="No attempts recorded yet, so there is nothing to report.",
+        )
+    summary = f"Good effort on {request.lesson_title}. Your biggest gain is in the {weak[0]}. Slow down and practise the drills below."
+    return CoachPlanDraft(summary=summary, drills=drills, master_note=f"This learner struggles most with: {'; '.join(weak)}.")
+
+
 class FakeLLM:
     """Offline provider with no network access; output depends only on the request."""
 
     name = "fake"
 
     async def generate_json(self, request: LLMRequest) -> str:
-        """Return the template lesson for the request as JSON."""
+        """Return the template lesson, plan or motion for the request as JSON."""
+        if request.task == "plan":
+            return template_plan(CoachPlanRequest.model_validate(json.loads(request.user_text))).model_dump_json()
+        if request.task == "motion":
+            return template_motion(request.user_text).model_dump_json()
         return template_lesson(request.user_text, request.skill).model_dump_json()
 
     async def generate_text(self, request: LLMRequest) -> str:

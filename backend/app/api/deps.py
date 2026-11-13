@@ -11,6 +11,8 @@ from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
 from app.services.llm.lesson_generator import LessonGenerator
+from app.services.llm.motion_text import MotionTextService
+from app.services.llm.plan import PlanService
 from app.services.llm.registry import LLMState
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder
@@ -61,6 +63,16 @@ def _coach(s: ServicesDep) -> CoachService:
     return s.coach
 
 
+def _planner(s: ServicesDep) -> PlanService:
+    """Return the practice-plan service."""
+    return s.planner
+
+
+def _motion_text(s: ServicesDep) -> MotionTextService:
+    """Return the text-to-motion service."""
+    return s.motion_text
+
+
 def _vision(s: ServicesDep) -> MediaPipeHands:
     """Return the vision service."""
     return s.vision
@@ -88,6 +100,8 @@ CalibrationsDep = Annotated[CalibrationService, Depends(_calibrations)]
 RecorderDep = Annotated[Recorder, Depends(_recorder)]
 ScoringDep = Annotated[ScoringService, Depends(_scoring)]
 CoachDep = Annotated[CoachService, Depends(_coach)]
+PlannerDep = Annotated[PlanService, Depends(_planner)]
+MotionTextDep = Annotated[MotionTextService, Depends(_motion_text)]
 VisionDep = Annotated[MediaPipeHands, Depends(_vision)]
 DevDep = Annotated[DevService, Depends(_dev)]
 GlovesDep = Annotated[GloveManager, Depends(_gloves)]

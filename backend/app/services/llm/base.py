@@ -1,20 +1,23 @@
 """The contract every LLM provider implements."""
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from app.schemas.common import Skill
 
 
 @dataclass(frozen=True)
 class LLMRequest:
-    """One model call. user_text is the raw request, which offline providers use instead of parsing the prompt."""
+    """One model call. user_text is the raw request, which offline providers use instead of parsing the prompt. task tells offline providers which output to build."""
 
     system: str
     prompt: str
     user_text: str
     skill: Skill | None = None
     schema: dict[str, Any] | None = None
+    task: Literal["lesson", "plan", "motion"] = "lesson"
+    video_path: str | None = None
+    video_mime: str | None = None
 
 
 class LLMClient(Protocol):

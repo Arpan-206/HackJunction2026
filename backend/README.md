@@ -39,6 +39,16 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 - `app/services`: gloves (simulator, Rokoko UDP, SDK stub, manager), motion synthesiser, One Euro smoothing, scoring, recorder, calibration, LLM providers, vision, JSON storage.
 - `app/data`: move catalogue and seed lessons.
 
+## LLM endpoints
+
+`POST /api/lessons/generate`, `POST /api/coach/plan` (practice plan and master note from scored attempts) and `POST /api/motion/from_text` (free text to a `MotionSpec`) share one pattern: a prompt in `app/services/llm`, pydantic validation, up to 2 retries with errors fed back, then the deterministic fake fallback (`provider: "fake"`). Tests in `tests/test_llm_features.py`.
+
+`POST /api/lessons/generate_from_video` takes a multipart `video` (mp4, webm or mov, up to 50 MB; 413 and 415 otherwise) plus optional `prompt` and `skill`, and returns the same shape. Gemini uploads the file with the google-genai Files API, polls until it is ACTIVE, then generates with the video as a part (own 120 s timeout); other providers return the template with a note that video analysis needs Gemini. The temporary file is always deleted. Tests in `tests/test_video.py`.
+
+## Calibrated scoring
+
+`POST /api/score` accepts `attempt_calibration_id` or `use_latest_calibration` (and optionally `reference_calibration_id`). The attempt is normalised by the learner's flat and fist ranges and mapped into the reference's space, so a stiffer hand is not penalised for a smaller range. Incomplete calibrations are ignored with a message in `warnings`. Tests in `tests/test_scoring.py`.
+
 ## Rokoko Studio setup
 
 In Studio: Livestreaming, Custom, UDP, JSON v3 (or v4), port 14043, target the laptop. Then switch the source live with `POST /api/dev/state {"glove_source": "rokoko_udp"}`. The JSON field names are unverified; all payload-shape logic is in `app/services/gloves/rokoko_mapper.py` and the flexion axis and sign are in `app/constants.py` (`ROKOKO_FLEX_AXIS`, `ROKOKO_FLEX_SIGN`). The first unrecognised frame shape is logged once.

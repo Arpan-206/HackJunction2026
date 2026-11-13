@@ -109,6 +109,32 @@ interface ScoreResult {
   within_tolerance: boolean;
   worst_finger: Finger;
   hint: string;              // algorithmic plain-language tip
+  warnings: string[];        // e.g. an incomplete calibration was ignored; empty normally
+}
+
+interface CoachPlanRequest {
+  lesson_title: string;
+  steps: { step_id: string; title: string }[];            // at most 20
+  attempts: { step_id: string; score: ScoreResult }[];    // at most 60
+}
+
+interface Drill {
+  step_id: string;
+  focus_finger: Finger | null;
+  exercise: string;
+}
+
+interface CoachPlanResponse {
+  summary: string;           // at most 60 words, second person
+  drills: Drill[];           // 1 to 4
+  master_note: string;       // where this learner struggles, for the master
+  provider: string;
+}
+
+interface MotionFromTextResponse {
+  motion: MotionSpec;
+  explanation: string;
+  provider: string;          // 'fake' when the keyword rules answered
 }
 ```
 
@@ -125,14 +151,17 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/lessons` | `Lesson` without id/created_at | `Lesson` |
 | PUT | `/lessons/{id}` | `Lesson` | `Lesson` |
 | POST | `/lessons/generate` | `{prompt: string, skill?: Skill}` | `{lesson: Lesson, provider: string, attempts: number}` |
+| POST | `/lessons/generate_from_video` | multipart: `video` (mp4, webm or mov, max 50 MB), `prompt?`, `skill?` | `{lesson: Lesson, provider: string, attempts: number}` (413 too large, 415 wrong type; non-Gemini providers return the template with `provider: "fake"` and a summary note) |
 | POST | `/calibrations` | `{side, phase: 'flat' or 'fist', duration_s?: number}` | `Calibration` (partial until both phases captured) |
 | GET | `/calibrations/latest?side=right` | | `Calibration` or 404 |
 | POST | `/recordings/start` | `{lesson_id?, step_id?}` | `{recording_id}` |
 | POST | `/recordings/{id}/stop` | | `Recording` |
 | GET | `/recordings/{id}` | | `Recording` |
 | POST | `/motion/preview` | `{motion: MotionSpec, side: Side, duration_s: number}` | `{frames: GloveFrame[]}` (synthesised guide hands) |
-| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id, tolerance}` | `ScoreResult` |
+| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], tolerance, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string}` (at least one attempt source; calibration fields optional, see notes) | `ScoreResult` |
 | POST | `/coach/hint` | `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms}` | `{hint: string, provider: string}` |
+| POST | `/coach/plan` | `CoachPlanRequest` | `CoachPlanResponse` (Gemini practice plan; fake derives drills from the worst fingers) |
+| POST | `/motion/from_text` | `{text: string (max 200 chars), side?: Side}` | `MotionFromTextResponse` (LLM picks a preset; fake uses keyword rules) |
 | POST | `/vision/hands` | multipart `image` (jpeg) | `{hands: {side, wrist_pos, landmarks: [x,y,z][]}[]}` (MediaPipe) |
 | GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion}` |
 | POST | `/dev/state` | partial of the above | new state |
@@ -145,13 +174,18 @@ Routes are thin: validate input, call one service, return a schema. No business 
 
 `fake` (deterministic templates, offline, default in tests), `gemini` (Gemini Flash via google-genai, structured output with the JSON schema of `Lesson`), `ollama` (local Gemma 4 via Ollama `format` = JSON schema). Every provider's output is validated with the same pydantic model and retried up to 2 times with the validation errors fed back; on final failure the `fake` provider's template is returned and `provider` says so.
 
+`/coach/plan` and `/motion/from_text` use the same providers, validation and retry rules; oversize input is a 422, and `provider` is `fake` when the offline fallback answered.
+
 ## Smoothing
 
 The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angle and normalised-lerp smoothing on the wrist quaternion, with a small deadband to remove the natural micro-tremor. Parameters are live-tunable via `/dev/state`. The frontend additionally interpolates between frames for rendering only.
 
 ## Backend notes (clarifications added by the backend implementation)
 
+- `POST /score` with `attempt_frames` scores those frames instead of the stored recording (frames win if both are sent). The backend records the unmodified glove stream, so any client-side change (for example the clumsy apprentice simulation) only reaches the scorer through `attempt_frames`. Frame `t` is rebased by the scorer; start the frames at the beat the reference motion starts on, because a `reference_motion` is synthesised from `t = 0`.
 - `POST /coach/hint` `deviations` are signed degrees per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late.
+- Calibrated scoring: with `attempt_calibration_id` (or `use_latest_calibration: true`, which uses the latest calibration for the attempt's side), each attempt joint is normalised to 0..1 as `(x - flat) / (fist - flat)`, clipped, then mapped into the reference's angle space using `reference_calibration_id` if given, otherwise the nominal range (flat and fist of the guide hand at curl 0 and 1). The reference is never altered. Joints with a calibrated range under 0.05 rad, or a calibration with an uncaptured phase, are left uncalibrated and a message is added to `ScoreResult.warnings`. Without these fields scoring is unchanged. `reference_calibration_id` has no effect on its own. Unknown ids give 404.
+- `POST /lessons/generate_from_video` stores nothing: the upload goes to a temporary file that is deleted after the call. Gemini uploads the file, waits until it is ACTIVE (60 s), then generates with a 120 s budget; on timeout or repeated invalid output it falls back to the fake template. Ollama and fake cannot read video.
 - `POST /lessons/generate` returns an unsaved lesson (it has an `id` and `created_at`). `PUT /lessons/{id}` creates the lesson if the id is unknown, so the generated lesson can be saved after editing. `POST /lessons` returns 201.
 - Step ids are optional in `POST`/`PUT` bodies (the server assigns them); `Step.tolerance`, `repetitions`, `hands` and `prop` have defaults.
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
