@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,9 +55,11 @@ class Core:
         self.coach = Coach(None, cfg.coach, cfg.score.timing_hint_ms)
         self.session = Session(cfg, self.clock, self.lessons_dir, self.coach, fake=fake,
                                on_step=self._on_step, on_calibrate=self._on_calibrate)
+        self.session.attempts_log = self.logs_dir / "attempts.jsonl"
         self.clients: dict[int, ClientState] = {}
         self.started = time.time()
         self.frames = 0
+        self._tick_times: deque[float] = deque(maxlen=90)
         self.validation_errors = 0
         self.last_validation_error: str | None = None
         self.fake_source: fake_mod.FakeSource | None = None
@@ -117,6 +120,7 @@ class Core:
         next_t = time.monotonic()
         while not self._stop.is_set():
             t = self.clock.now_us()
+            self._tick_times.append(time.monotonic())
             try:
                 self.poll_sources(t)
                 frame = self.session.tick(t)
@@ -259,6 +263,13 @@ class Core:
                     "error": {"code": "internal", "message": f"{type(e).__name__}: {e}"[:300]}}
 
     # ------------------------------------------------------------------ http
+    def tick_hz(self) -> float | None:
+        """Measured tick rate over the last ~3 s. The viewer should see about frame_rate_hz."""
+        tt = list(self._tick_times)
+        if len(tt) < 2 or tt[-1] <= tt[0]:
+            return None
+        return round((len(tt) - 1) / (tt[-1] - tt[0]), 1)
+
     def health(self) -> dict:
         hands = self.session.hands
         return {
@@ -267,6 +278,7 @@ class Core:
             "hands": {s: None if hands.get(s) is None else {"tracked": hands[s].tracked, "source": hands[s].source} for s in SIDES},
             "anchor": self.session.anchor, "gemma": "off", "uptime_s": round(time.time() - self.started, 1),
             "fake": self.fake, "frames": self.frames, "clients": len(self.clients),
+            "tick_hz": self.tick_hz(),
             "rgmp": None if self.glove_source is None else {"connected": self.glove_source.connected,
                                                             "frames": self.glove_source.frames,
                                                             "devices": dict(self.glove_source.sides)},

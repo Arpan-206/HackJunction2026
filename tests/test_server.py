@@ -13,6 +13,7 @@ from tests.conftest import ROOT
 def fake_app(tmp_path):
     cfg = load_config(ROOT / "config.toml")
     core = Core(cfg, fake=True, validate=True, lessons_dir=tmp_path / "lessons", logs_dir=tmp_path / "logs")
+    core.session.attempts_log = tmp_path / "logs" / "attempts.jsonl"
     app = create_app(core)
     with TestClient(app) as client:
         yield core, client

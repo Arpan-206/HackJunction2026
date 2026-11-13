@@ -84,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     port = args.port or int(cfg.server.port)
     log.info("Geppetto core on http://%s:%d  (ws://%s:%d/ws, debug view at /debug)%s", host, port, host, port,
              "  FAKE MODE" if args.fake else "")
-    uvicorn.run(app, host=host, port=port, log_level=args.log_level, ws="websockets")
+    uvicorn.run(app, host=host, port=port, log_level=args.log_level)
     return 0
 
 

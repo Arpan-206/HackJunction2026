@@ -1,6 +1,7 @@
 """Modes, roles and the step state machine. Everything the viewer sees comes through here."""
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Callable
@@ -63,6 +64,20 @@ class Session:
         self._pinch_fired: dict[str, bool] = {"left": False, "right": False}
         self.answers: dict[str, str] = {}
         self.seq = 0
+        root = Path(cfg.get_path("_root", "."))
+        self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
+
+    def log_attempt(self, summary: dict) -> None:
+        """Append a step summary to logs/attempts.jsonl (visitor attempt log, for tuning tolerances later)."""
+        if self.attempts_log is None:
+            return
+        try:
+            self.attempts_log.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.attempts_log, "a") as f:
+                f.write(json.dumps({"t": self.now(), "lesson_id": self.lesson.id if self.lesson else None,
+                                    "mode": self.mode, **summary}) + "\n")
+        except OSError as e:
+            log.warning("attempt log failed: %s", e)
 
     # ------------------------------------------------------------------ messages
     def now(self) -> int:
@@ -227,6 +242,7 @@ class Session:
     def _advance_after_pass(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None and self.step_index is not None
         fs = sc.last
+        self.log_attempt(sc.summary(t_us, self.task, self.lesson.title, stuck=False))
         self.emit_event("step_passed", side, {"step": self.step_index, "score": round(float(fs.overall), 3) if fs else 1.0,
                                               "attempts": sc.attempt, "time_ms": int((t_us - self.step_t0_us) / 1000)})
         self.emit_coach(self.coach.praise(self.step_index, side))
@@ -247,6 +263,7 @@ class Session:
     def _attempt_failed(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None and self.step_index is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=False)
+        self.log_attempt(summary)
         log.info("attempt failed: %s", summary)
         self.emit_coach(self.coach.on_summary(t_us, summary))
         if self.loop:
@@ -261,6 +278,7 @@ class Session:
     def _stuck(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=True)
+        self.log_attempt(summary)
         log.info("stuck: %s", summary)
         self.emit_event("stuck", side, {"step": summary["step"]["index"], "score": summary["overall"],
                                         "attempts": sc.attempt, "time_ms": int(summary["stuck_s"] * 1000)})

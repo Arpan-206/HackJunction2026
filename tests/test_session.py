@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 
@@ -13,6 +15,7 @@ def sess(cfg, tmp_path):
     clock = FakeClock()
     coach = Coach(None, cfg.coach, cfg.score.timing_hint_ms)
     s = Session(cfg, clock, tmp_path, coach, fake=True)
+    s.attempts_log = tmp_path / "attempts.jsonl"
     fake.build_fake_lesson(cfg, tmp_path)
     return s, clock
 
@@ -83,6 +86,10 @@ def test_learn_flow_passes_and_advances(sess, schemas):
     frame = s.tick(clock.now_us())
     assert frame["ghost"]["right"]["lesson_t"] == s.lesson.steps[1].key_t_us
     schemas.validate_message(frame)
+    lines = [json.loads(l) for l in s.attempts_log.read_text().splitlines()]
+    assert lines and lines[-1]["passed"] is True and lines[-1]["lesson_id"] == fake.FAKE_LESSON_ID
+    for l in lines:
+        schemas.validate("step_summary", {k: v for k, v in l.items() if k not in ("t", "lesson_id", "mode")})
 
 
 def test_ghost_is_mirrored_for_opposite_hand(sess):
