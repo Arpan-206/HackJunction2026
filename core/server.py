@@ -18,6 +18,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+from . import compat as compat_mod
 from . import fake as fake_mod
 from . import hand as H
 from .clock import Clock
@@ -58,6 +59,7 @@ class Core:
                                on_step=self._on_step, on_calibrate=self._on_calibrate)
         self.session.attempts_log = self.logs_dir / "attempts.jsonl"
         self.clients: dict[int, ClientState] = {}
+        self.compat_clients: dict[int, ClientState] = {}
         self.started = time.time()
         self.frames = 0
         self._tick_times: deque[float] = deque(maxlen=90)
@@ -133,6 +135,10 @@ class Core:
                 self._check(frame)
                 self.frames += 1
                 self.broadcast_frame(frame, t)
+                if self.compat_clients:
+                    text = json.dumps(compat_mod.glove_frame(self, t), separators=(",", ":"))
+                    for c in list(self.compat_clients.values()):
+                        self._enqueue(c, text)
                 if self.glove_control is not None:
                     self.glove_control.on_messages(msgs)
                     if self.frames % 10 == 0:
@@ -228,6 +234,30 @@ class Core:
             sender.cancel()
             self.clients.pop(key, None)
 
+    async def handle_compat_ws(self, ws: WebSocket) -> None:
+        """/ws/gloves: the teammate frontend's GloveFrame stream (core/compat.py)."""
+        await ws.accept()
+        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz))
+        key = id(ws)
+        self.compat_clients[key] = c
+        sender = asyncio.create_task(self._sender(c))
+        try:
+            while True:
+                raw = await ws.receive_text()
+                try:
+                    msg = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(msg, dict) and msg.get("type") == "set_motion":
+                    log.info("compat: set_motion ignored (no simulator presets in the core): %s", msg.get("motion"))
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            log.exception("compat websocket closed with error")
+        finally:
+            sender.cancel()
+            self.compat_clients.pop(key, None)
+
     async def _sender(self, c: ClientState) -> None:
         try:
             while True:
@@ -280,7 +310,7 @@ class Core:
             "hands": {s: None if hands.get(s) is None else {"tracked": hands[s].tracked, "source": hands[s].source} for s in SIDES},
             "anchor": self.session.anchor, "gemma": "off", "uptime_s": round(time.time() - self.started, 1),
             "fake": self.fake, "frames": self.frames, "clients": len(self.clients),
-            "tick_hz": self.tick_hz(),
+            "compat_clients": len(self.compat_clients), "tick_hz": self.tick_hz(),
             "rgmp": None if self.glove_source is None else {"connected": self.glove_source.connected,
                                                             "frames": self.glove_source.frames,
                                                             "devices": dict(self.glove_source.sides)},
@@ -346,6 +376,8 @@ def create_app(core: Core) -> FastAPI:
         if name not in core.schemas.docs:
             return JSONResponse({"error": "not_found", "available": core.schemas.names()}, status_code=404)
         return JSONResponse(core.schemas.get(name))
+
+    compat_mod.install_compat(app, core)
 
     @app.get("/debug")
     def debug_view():

@@ -131,3 +131,31 @@ nothing inside 300 ms is `miss`. The piece loops after its last beat when
 `loop` is on. All numbers are in `[piano]` in config.toml. Which key the
 finger is over (wrist x from a camera) is not done; without a camera the
 viewer lights the key the note names, as SPEC says.
+
+## D22. A compatibility layer for the teammate's contract, SPEC.md unchanged
+At 23:34 on Friday the teammate pushed ten commits to `main`: a React
+`frontend/`, a FastAPI `backend/` and `docs/CONTRACT.md`, all written against
+a different contract from SPEC.md (REST under `/api` on port 8000, a
+`/ws/gloves` stream of per-finger flexion triples in radians, lessons made of
+"moves" and "motion specs", scores 0 to 100). Their backend's Rokoko SDK
+source is a stub that answers 501; it reads Rokoko Studio's UDP stream
+instead. Nobody could be asked which contract wins.
+
+Choice: SPEC.md stays the core's contract and `/ws` is unchanged. In addition
+`core/compat.py` serves, side by side on the same port, what the committed
+frontend calls: `/ws/gloves` (GloveFrame at the tick rate, hands converted
+from the 18 angles) and the `/api/*` routes the core can honour (health,
+lessons mapped to their Lesson shape, dev state, calibrations, recordings
+start/stop mapped to record mode, coach hint from the rule table). Routes
+that need their lesson generator, motion synthesiser or recording store
+answer 501 with a message. Running `python -m core --port 8000` lets the
+committed frontend's Vite proxy reach the core with no change on their side.
+
+Known limits of the mapping: thumb CMC flexion is the angle between the
+thumb and index metacarpals; `spread` is the raw angle between neighbouring
+proximal bones, not zeroed at neutral; `wrist_pos` is null for gloves (rest
+anchor) and set for camera hands; `Recording.frames` is empty (the lesson's
+`trace.npz` holds the data). Nothing under `frontend/`, `backend/`, `docs/`
+or `genui/` was touched. The morning decision is whether the frontend
+switches to SPEC.md's richer `/ws` (ghost, score, coach, session) or keeps
+CONTRACT.md and the core keeps serving both.

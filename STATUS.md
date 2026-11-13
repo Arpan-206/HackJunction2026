@@ -36,6 +36,10 @@ python -m tools.ws_log record --out logs/ws_demo.jsonl --seconds 60
 python -m tools.ws_log replay logs/ws_demo.jsonl --port 8765 --loop
 ```
 
+Viewer notes: `hello.lessons` is read once at connect; after a `record_stop`
+or `lesson_delete` the viewer should `GET /lessons` again (a `lesson` message
+carries the new lesson itself). CORS allows GET from any origin.
+
 `config.toml` holds every threshold. `[sources]` picks `glove`, `camera` or
 `none` per hand (also at runtime with the `set_sources` command).
 
@@ -117,7 +121,37 @@ in this clone only (DECISIONS D12). 75 tests pass.
 Not done tonight, on purpose: Gemma (rule lines only), the camera wrist
 anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
 
-## Teammate activity
+## Teammate activity (read this first)
 
-Checked `origin` at 01:07 (clone), 01:20 and 01:28: `origin/main` is still
-the single "Research" commit. No new branches. Nothing to merge.
+`origin/main` moved from the single "Research" commit to ten commits by
+Szymon Arciszewski, all stamped Fri 23:34 and fetched here at 01:38:
+
+| Area | What landed | Why it matters to the core |
+| --- | --- | --- |
+| `docs/CONTRACT.md` | A frontend/backend contract: REST under `/api` on port 8000, `/ws/gloves` streaming `GloveFrame {t, source, hands[{side, wrist_quat, wrist_pos, flexion[finger] = [a, b, c] radians, spread}]}`, lessons of steps with "move" catalogue ids and "motion specs", scores 0 to 100 | It is not SPEC.md. No `hello`/`frame`/`session`/`event`/`coach`/`ack`, no ghost, no 26 joints on the wire |
+| `backend/` | A full FastAPI app for that contract: simulator source, Rokoko Studio UDP source (port 14043, JSON v3/v4), One Euro smoothing, JSON-file lessons/recordings, scoring, LLM lesson generation (fake/gemini/ollama), MediaPipe route. **The Rokoko Device SDK source is a stub that answers 501** (`backend/app/services/gloves/rokoko_sdk.py`) | Overlaps this `core/` almost entirely, except the one thing it does not do: read the solver's RGMP/RCSP, which `core/rgmp.py` and `core/rcsp.py` do |
+| `frontend/` | React + react-three-fiber app: role select, master studio (calibrate, record takes, lesson editor), apprentice training room (ghost, marionette, strings modes), piano and table-tennis tests, dev panel. Vite proxies `/api` and `/ws` to `localhost:8000` | This is the viewer. It consumes `/ws/gloves`, not `/ws` |
+| `genui/` | A Gemini "generative UI" prototype with its own renderer | Not related to the core |
+
+What was done about it (DECISIONS D22): nothing of theirs was touched;
+`core/compat.py` now serves their `/ws/gloves` and the `/api/*` routes the
+core can honour, on the same port as `/ws`. So the committed frontend can run
+against this core, with real gloves, by starting the core on their port:
+
+```bash
+python -m core --fake --port 8000          # or --solver HOST:12277 --rcsp HOST:45451 --port 8000
+cd frontend && npm install && npm run dev  # their app, unchanged, on :5173
+```
+
+Tested: `/api/health`, `/api/lessons`, `/api/dev/state`, `/api/coach/hint`,
+`/api/recordings/start|stop`, `/api/calibrations`, `/ws/gloves` frames
+(flexion in radians, both hands) in `tests/test_compat.py`. Not tested: their
+frontend actually rendering against it (no `npm install` was run tonight).
+Routes that need their lesson generator or motion synthesiser answer 501.
+
+Decision needed in the morning, between the two of you: either the frontend
+moves to SPEC.md's `/ws` (it then gets ghost, score, coach and session for
+free and the core does all the maths, as SPEC.md intends), or it stays on
+CONTRACT.md and the core keeps serving both. Either way only one process
+should own the gloves: their backend cannot read the SDK stream, this core
+can.
