@@ -19,14 +19,14 @@ def _clumsy_frames(lag_s: float = 0.3, under_deg: float = 25.0) -> list[dict]:
     for i in range(int(DURATION_S * FPS)):
         t = i / FPS
         lagged = synthesiser.frame_at(spec, max(0.0, t - lag_s), ("right",)).hands[0]
-        ring = tuple(v - math.radians(under_deg) for v in lagged.flexion["ring"])
+        ring = tuple(v - math.radians(under_deg) / 3 for v in lagged.flexion["ring"])  # under_deg is the TOTAL over 3 joints
         hand = lagged.model_copy(update={"flexion": {**lagged.flexion, "ring": ring}})
         out.append(synthesiser.frame_at(spec, t, ("right",)).model_copy(update={"hands": [hand]}).model_dump(mode="json"))
     return out
 
 
 def test_inline_clumsy_attempt_names_ring_finger(client: TestClient) -> None:
-    """A ring finger 25 degrees under-curled and 300 ms late scores clearly lower and is the worst finger."""
+    """A ring finger 25 degrees (total flexion) under-curled and 300 ms late scores clearly lower and is the worst finger."""
     result = client.post("/api/score", json={"reference_motion": MOTION, "attempt_frames": _clumsy_frames()}).json()
     scores = result["per_finger"]
     assert result["worst_finger"] == "ring"

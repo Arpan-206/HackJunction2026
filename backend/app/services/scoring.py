@@ -63,7 +63,11 @@ def dtw_path(a: np.ndarray, b: np.ndarray, window_fraction: float = c.DTW_WINDOW
 
 
 def compare(reference: np.ndarray, attempt: np.ndarray, fps: float = c.SCORE_FPS) -> Comparison:
-    """Align each finger separately and measure joint error, signed deviation and timing offset."""
+    """Align each finger separately and measure total-flexion error, signed deviation and timing offset.
+
+    DTW aligns on per-joint angles, but the error and deviation are of each finger's total flexion (the sum of its
+    three joints), the same metric the frontend live coach compares against the tolerance.
+    """
     errors: dict[str, float] = {}
     deviations: dict[str, float] = {}
     lags: list[float] = []
@@ -72,7 +76,7 @@ def compare(reference: np.ndarray, attempt: np.ndarray, fps: float = c.SCORE_FPS
         path = dtw_path(ref, att)
         ri = np.array([p[0] for p in path])
         ai = np.array([p[1] for p in path])
-        diff = att[ai] - ref[ri]
+        diff = att[ai].sum(axis=1) - ref[ri].sum(axis=1)
         errors[finger] = math.degrees(float(np.abs(diff).mean()))
         deviations[finger] = math.degrees(float(diff.mean()))
         lags.append(float((ai - ri).mean()))
