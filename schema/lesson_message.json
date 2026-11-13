@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/lesson_message.json",
+  "title": "lesson: sent when a lesson is loaded or renamed",
+  "type": "object",
+  "required": ["v", "type", "t", "lesson"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "lesson" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "lesson": { "$ref": "lesson.json" }
+  }
+}

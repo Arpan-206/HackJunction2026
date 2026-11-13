@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/event.json",
+  "title": "event: something discrete happened",
+  "type": "object",
+  "required": ["v", "type", "t", "name", "hand", "data"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "event" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "name": {
+      "type": "string",
+      "enum": [
+        "pinch_down", "pinch_up", "button",
+        "recording_started", "step_marked", "recording_stopped",
+        "step_started", "step_passed", "lesson_complete", "step_restarted",
+        "finger_down", "note", "strike", "round_won", "device", "calibrated", "stuck"
+      ]
+    },
+    "hand": { "oneOf": [{ "$ref": "common.json#/$defs/side" }, { "type": "null" }] },
+    "data": { "type": "object" }
+  }
+}

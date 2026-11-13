@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/hello.json",
+  "title": "hello: sent once on connect",
+  "type": "object",
+  "required": ["v", "type", "t", "joint_names", "fingers", "tasks", "modes", "lessons", "session"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "hello" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "joint_names": { "type": "array", "items": { "type": "string" }, "minItems": 26, "maxItems": 26 },
+    "fingers": { "type": "array", "items": { "$ref": "common.json#/$defs/finger" }, "minItems": 5, "maxItems": 5 },
+    "tasks": { "type": "array", "items": { "type": "string" } },
+    "modes": { "type": "array", "items": { "$ref": "common.json#/$defs/mode" } },
+    "lessons": { "type": "array", "items": { "$ref": "common.json#/$defs/lesson_summary" } },
+    "session": { "$ref": "common.json#/$defs/session_state" },
+    "fake": { "type": "boolean" }
+  }
+}

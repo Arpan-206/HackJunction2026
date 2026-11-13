@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/step_summary.json",
+  "title": "Step summary: the only thing a coach model sees about an attempt",
+  "type": "object",
+  "required": ["task", "lesson", "step", "attempt", "passed", "overall", "best", "history", "fingers", "timing_ms", "stuck_s"],
+  "properties": {
+    "task": { "type": "string" },
+    "lesson": { "type": "string" },
+    "hand": { "$ref": "common.json#/$defs/side" },
+    "step": {
+      "type": "object",
+      "required": ["index", "name", "kind"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "name": { "type": "string" },
+        "kind": { "type": "string", "enum": ["hold", "move"] }
+      }
+    },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "passed": { "type": "boolean" },
+    "overall": { "$ref": "common.json#/$defs/unit" },
+    "best": { "$ref": "common.json#/$defs/unit" },
+    "history": { "type": "array", "items": { "$ref": "common.json#/$defs/unit" } },
+    "fingers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["score", "err_deg", "hint"],
+        "properties": {
+          "score": { "$ref": "common.json#/$defs/unit" },
+          "err_deg": { "type": "number" },
+          "hint": { "$ref": "common.json#/$defs/hint" }
+        }
+      }
+    },
+    "timing_ms": { "type": ["integer", "null"] },
+    "stuck_s": { "type": ["number", "null"] },
+    "worst_at_ms": { "type": ["integer", "null"] }
+  }
+}

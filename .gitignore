@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/*.json
+logs/*.jsonl
+logs/*.log
+models/*.task
+lessons/*/trace.npz
+*.rgmp
+.DS_Store

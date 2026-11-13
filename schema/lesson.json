@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/lesson.json",
+  "title": "lesson.json: lesson metadata and steps",
+  "type": "object",
+  "required": ["schema", "id", "title", "task", "task_config", "created", "master", "source", "rate_hz", "duration_us", "steps"],
+  "properties": {
+    "schema": { "const": "geppetto.lesson/1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$" },
+    "title": { "type": "string" },
+    "task": { "type": "string" },
+    "task_config": { "type": "object" },
+    "created": { "type": "string" },
+    "master": {
+      "type": "object",
+      "required": ["name", "hand"],
+      "properties": { "name": { "type": "string" }, "hand": { "$ref": "common.json#/$defs/side" } }
+    },
+    "source": { "type": "string", "pattern": "^(glove|camera|fake|dataset:.+)$" },
+    "rate_hz": { "type": "number", "exclusiveMinimum": 0 },
+    "duration_us": { "$ref": "common.json#/$defs/t_us" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "name", "note", "kind", "t0_us", "t1_us", "key_t_us", "key_angles", "key_joints", "weights", "hold_ms", "frame", "named_by"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "name": { "type": "string" },
+          "note": { "type": ["string", "null"] },
+          "kind": { "type": "string", "enum": ["hold", "move"] },
+          "t0_us": { "$ref": "common.json#/$defs/t_us" },
+          "t1_us": { "$ref": "common.json#/$defs/t_us" },
+          "key_t_us": { "$ref": "common.json#/$defs/t_us" },
+          "key_angles": { "$ref": "common.json#/$defs/angles18" },
+          "key_joints": { "$ref": "common.json#/$defs/joints26" },
+          "key_wrist_q": { "$ref": "common.json#/$defs/quat" },
+          "weights": { "$ref": "common.json#/$defs/per_finger_number" },
+          "hold_ms": { "type": "integer", "minimum": 0 },
+          "frame": { "type": ["string", "null"] },
+          "named_by": { "type": "string", "enum": ["auto", "gemma", "manual"] }
+        }
+      }
+    }
+  }
+}
