@@ -1,0 +1,28 @@
+# Dependencies and builds
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets and local config
+.env
+.env.local
+.claude/settings.local.json
+
+# Runtime data and test output
+backend/data/
+genui/test/output/
+playwright-report/
+test-results/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
