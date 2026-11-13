@@ -1,0 +1,116 @@
+/*
+ * Design tokens. Three complete themes, switched with <html data-theme="...">.
+ * Components must only use the semantic tokens (--bg, --surface, --text, ...), never raw palette values.
+ */
+:root {
+  --font-display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-note: 'EB Garamond', Garamond, Georgia, serif;
+  --font-ui: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 14px;
+  --target: 44px;
+  --rail-w: 92px;
+
+  --step--1: clamp(0.9rem, 0.88rem + 0.1vw, 1rem);
+  --step-0: clamp(1.05rem, 1rem + 0.25vw, 1.2rem);
+  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.6rem, 1.4rem + 1vw, 2.1rem);
+  --step-3: clamp(2.1rem, 1.7rem + 2vw, 3.2rem);
+  --step-4: clamp(2.8rem, 2rem + 4vw, 5rem);
+}
+
+:root,
+:root[data-theme='bottega'] {
+  color-scheme: light;
+  --lapis: #1f2e78;
+  --lapis-deep: #172259;
+  --bg: #e8e9e6;
+  --surface: #f4f4f1;
+  --surface-2: #dfe1dd;
+  --text: #1c1d24;
+  --text-2: #4a4c57;
+  --line: #c3c6c8;
+  --line-strong: #1c1d24;
+  --rail-bg: #172259;
+  --rail-bg-2: #1f2e78;
+  --rail-text: #e8e9e6;
+  --rail-text-2: #aab3e0;
+  --accent: #1f2e78;
+  --accent-hover: #2a3d99;
+  --accent-text: #f4f4f1;
+  --accent-soft: #dde1f2;
+  --gold: #d9b45a;
+  --gold-text: #6b5214;
+  --focus: #d9b45a;
+  --focus-inner: #1c1d24;
+  --danger: #b2321b;
+  --danger-soft: #f3dcd6;
+  --ok: #2f7a57;
+  --ok-soft: #d6e8df;
+  --stage-bg: #8fa0b3;
+  --shadow: 0 1px 0 rgba(28, 29, 36, 0.06), 0 10px 28px -12px rgba(23, 34, 89, 0.35);
+}
+
+:root[data-theme='notte'] {
+  color-scheme: dark;
+  --lapis: #18225c;
+  --lapis-deep: #0b1138;
+  --bg: #0d1334;
+  --surface: #151e52;
+  --surface-2: #1d2863;
+  --text: #f1ebdc;
+  --text-2: #b8bfdc;
+  --line: #2b3677;
+  --line-strong: #e2be6a;
+  --rail-bg: #070b24;
+  --rail-bg-2: #0d1334;
+  --rail-text: #f1ebdc;
+  --rail-text-2: #8f9acb;
+  --accent: #e2be6a;
+  --accent-hover: #efcd80;
+  --accent-text: #14193f;
+  --accent-soft: #262f6e;
+  --gold: #e2be6a;
+  --gold-text: #e2be6a;
+  --focus: #e2be6a;
+  --focus-inner: #070b24;
+  --danger: #ee7a62;
+  --danger-soft: #3d2330;
+  --ok: #5cc496;
+  --ok-soft: #1a3b3a;
+  --stage-bg: #1a2554;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px -14px rgba(0, 0, 0, 0.7);
+}
+
+:root[data-theme='affresco'] {
+  color-scheme: light;
+  --lapis: #6f84a8;
+  --lapis-deep: #3a4a63;
+  --bg: #e2e3cf;
+  --surface: #eeeedf;
+  --surface-2: #d6d8c2;
+  --text: #2a2b22;
+  --text-2: #565849;
+  --line: #bcc0a4;
+  --line-strong: #2a2b22;
+  --rail-bg: #3f4c33;
+  --rail-bg-2: #4a5a3c;
+  --rail-text: #eeeedf;
+  --rail-text-2: #b9c4a4;
+  --accent: #8a4a32;
+  --accent-hover: #9d5a3f;
+  --accent-text: #f7f3e6;
+  --accent-soft: #eadccc;
+  --gold: #c9a24b;
+  --gold-text: #6b5214;
+  --focus: #c9a24b;
+  --focus-inner: #2a2b22;
+  --danger: #9a3a22;
+  --danger-soft: #efd9cf;
+  --ok: #4a7a45;
+  --ok-soft: #d9e4cc;
+  --stage-bg: #a9b4bc;
+  --shadow: 0 1px 0 rgba(42, 43, 34, 0.06), 0 10px 26px -12px rgba(63, 76, 51, 0.4);
+}

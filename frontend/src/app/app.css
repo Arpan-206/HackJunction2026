@@ -1,0 +1,386 @@
+/* ---------- Shell ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  background: linear-gradient(180deg, var(--rail-bg-2), var(--rail-bg));
+  color: var(--rail-text);
+}
+.rail__brand {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  text-decoration: none;
+  color: var(--rail-text);
+  font: 500 0.72rem var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.rail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+.rail__link {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0.65rem 0.25rem;
+  min-height: var(--target);
+  border-radius: var(--radius-s);
+  color: var(--rail-text-2);
+  text-decoration: none;
+  font: 700 0.82rem var(--font-ui);
+  letter-spacing: 0.04em;
+  border-left: 4px solid transparent;
+}
+.rail__link:hover {
+  color: var(--rail-text);
+}
+.rail__link[aria-current='page'] {
+  color: var(--rail-text);
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: var(--gold);
+}
+.rail__foot {
+  margin-top: auto;
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  font: 700 0.72rem var(--font-ui);
+  color: var(--rail-text-2);
+  text-align: center;
+}
+.glove-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--rail-text-2);
+  margin-right: 0.35rem;
+}
+.glove-dot--open {
+  background: #5cc496;
+}
+.glove-dot--connecting {
+  background: var(--gold);
+}
+.theme-select {
+  width: 100%;
+  min-height: 36px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--rail-text);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-s);
+  font: 700 0.78rem var(--font-ui);
+}
+.theme-select option {
+  color: #1c1d24;
+}
+.main {
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  max-width: 1500px;
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .rail {
+    position: sticky;
+    top: auto;
+    bottom: 0;
+    grid-row: 2;
+    height: auto;
+    flex-direction: row;
+    padding: 0.25rem 0.5rem;
+    z-index: 20;
+  }
+  .rail__brand,
+  .rail__foot {
+    display: none;
+  }
+  .rail__nav {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+  .rail__link {
+    flex: 1;
+    border-left: 0;
+    border-top: 4px solid transparent;
+  }
+  .rail__link[aria-current='page'] {
+    border-top-color: var(--gold);
+  }
+  .main {
+    grid-row: 1;
+    padding: 1.25rem 1rem;
+  }
+}
+
+/* ---------- Page header ---------- */
+.page-head {
+  margin-bottom: clamp(1.25rem, 3vw, 2.25rem);
+  display: grid;
+  gap: 0.4rem;
+}
+.page-head__kicker {
+  font: italic 400 var(--step-1) var(--font-note);
+  color: var(--text-2);
+}
+.page-head h1 {
+  font-size: var(--step-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.page-head__rule {
+  height: 3px;
+  width: 6rem;
+  background: var(--gold);
+  margin-top: 0.4rem;
+}
+
+/* ---------- Choice cards (master home) ---------- */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: clamp(1rem, 2vw, 1.75rem);
+}
+.choice {
+  position: relative;
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+  padding: clamp(1.4rem, 2.5vw, 2.2rem);
+  text-decoration: none;
+  color: var(--text);
+  min-height: 18rem;
+}
+.choice__icon {
+  color: var(--accent);
+  width: 4.5rem;
+  height: 4.5rem;
+}
+.choice h2 {
+  font-size: var(--step-2);
+  text-transform: uppercase;
+}
+.choice__cta {
+  margin-top: auto;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.section-title {
+  margin: clamp(1.75rem, 4vw, 3rem) 0 1rem;
+  font-size: var(--step-1);
+  text-transform: uppercase;
+}
+.lesson-list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.lesson-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  text-decoration: none;
+  color: var(--text);
+  min-height: 64px;
+}
+
+/* ---------- Placeholder ---------- */
+.placeholder {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 44rem;
+}
+.placeholder code {
+  font: 600 0.95em ui-monospace, Consolas, monospace;
+  background: var(--surface-2);
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-s);
+}
+
+/* ---------- Role select ---------- */
+.roles {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+  position: relative;
+}
+.roles::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 78%);
+  opacity: 0.88;
+  pointer-events: none;
+}
+.roles > * {
+  position: relative;
+}
+.roles__head {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  padding: clamp(1.25rem, 3.5vh, 2.5rem) 1rem 0;
+  text-align: center;
+}
+.roles__brand {
+  font: 500 clamp(1.9rem, 0.4rem + 6.6vw, 6rem) / 1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+:root[data-theme='notte'] .roles__brand {
+  color: var(--gold);
+}
+.roles__motto {
+  font: italic 400 clamp(1.15rem, 1rem + 0.9vw, 1.9rem) var(--font-note);
+  color: var(--text-2);
+  max-width: 56rem;
+}
+.roles__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: clamp(0.75rem, 2vw, 2rem);
+  align-items: stretch;
+  padding: clamp(1rem, 3vh, 2rem) clamp(1rem, 4vw, 4rem);
+  max-width: 1700px;
+  width: 100%;
+  margin: 0 auto;
+}
+.roles__between {
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+}
+.roles__between svg {
+  width: clamp(3rem, 5vw, 5rem);
+  height: auto;
+}
+.role {
+  display: grid;
+  grid-template-rows: minmax(15rem, 1fr) 15.5rem;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  outline: 1px solid var(--line-strong);
+  outline-offset: 5px;
+  border-radius: 2px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.2s;
+  min-height: min(62vh, 640px);
+}
+.role:hover {
+  transform: translateY(-4px);
+}
+.role:focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 5px;
+}
+.role__stage {
+  position: relative;
+  min-height: 15rem;
+  background: var(--stage-bg);
+  border-bottom: 1px solid var(--line-strong);
+}
+.role__plate {
+  display: grid;
+  gap: 0.35rem;
+  padding: clamp(1rem, 2vw, 1.6rem) clamp(1.1rem, 2.2vw, 2rem) clamp(1.1rem, 2vw, 1.7rem);
+}
+.role__kicker {
+  font: italic 400 clamp(1.1rem, 1rem + 0.6vw, 1.5rem) var(--font-note);
+  color: var(--text-2);
+}
+.role__title {
+  font: 500 clamp(1.7rem, 1.1rem + 1.7vw, 2.7rem) / 1.05 var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.role__desc {
+  font: italic 400 clamp(1.1rem, 1rem + 0.5vw, 1.45rem) / 1.35 var(--font-note);
+  color: var(--text-2);
+  max-width: 34rem;
+}
+.role__cta {
+  margin-top: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font: 700 var(--step-0) var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+:root[data-theme='notte'] .role__cta {
+  color: var(--gold);
+}
+.role__cta svg {
+  transition: transform 0.2s;
+}
+.role:hover .role__cta svg {
+  transform: translateX(6px);
+}
+.roles__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 4vw, 4rem) 1.25rem;
+  font: italic 400 1.05rem var(--font-note);
+  color: var(--text-2);
+}
+.roles__foot .theme-select {
+  width: auto;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line-strong);
+  padding: 0 0.6rem;
+}
+.roles__foot .theme-select option {
+  color: #1c1d24;
+}
+@media (max-width: 860px) {
+  .roles__stage {
+    grid-template-columns: 1fr;
+  }
+  .roles__between {
+    display: none;
+  }
+  .role {
+    min-height: 0;
+    grid-template-rows: 15rem auto;
+  }
+}

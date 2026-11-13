@@ -1,0 +1,182 @@
+import { useEffect, useRef, useState } from 'react';
+import { useDevState, useGloveStream, type GloveSource, type LlmProvider, type MotionSpec } from '../api';
+import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
+import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
+import './devPanel.css';
+
+const STORAGE_KEY = 'apprentice.devpanel';
+
+const MOTIONS: Record<string, MotionSpec> = {
+  finger_sequence: { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5], beat_ms: 620 },
+  grip_and_swing: { preset: 'grip_and_swing', grip: 'shakehand', swing: 'forehand', beat_ms: 1500 },
+  pinch: { preset: 'pinch', fingers: [2, 3], beat_ms: 900 },
+  hold_pose: { preset: 'hold_pose', pose: { thumb: 0.5, index: 0.6, middle: 0.6, ring: 0.6, little: 0.6 } },
+  idle: { preset: 'idle' },
+};
+
+function shouldShow(): boolean {
+  try {
+    if (new URLSearchParams(location.search).get('dev') === '1') {
+      localStorage.setItem(STORAGE_KEY, '1');
+      return true;
+    }
+    if (new URLSearchParams(location.search).get('dev') === '0') {
+      localStorage.removeItem(STORAGE_KEY);
+      return import.meta.env.VITE_DEV_PANEL === 'true';
+    }
+    return localStorage.getItem(STORAGE_KEY) === '1' || import.meta.env.VITE_DEV_PANEL === 'true';
+  } catch {
+    return import.meta.env.VITE_DEV_PANEL === 'true';
+  }
+}
+
+/**
+ * Floating developer panel (backend switches, smoothing, theme, guidance default).
+ * Delete this import and the <DevPanel /> in main.tsx before the demo.
+ */
+export function DevPanel() {
+  const [visible] = useState(shouldShow);
+  const [open, setOpen] = useState(false);
+  if (!visible) return null;
+  return (
+    <aside className="dev" aria-label="Developer panel">
+      {open && <Body />}
+      <button type="button" className="dev__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {open ? 'Close dev' : 'Dev'}
+      </button>
+    </aside>
+  );
+}
+
+function Body() {
+  const { state, error, online, update } = useDevState();
+  const glove = useGloveStream(true);
+  const { theme, setTheme } = useTheme();
+  const settings = useSettings();
+  const [msg, setMsg] = useState<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const [cut, setCut] = useState(1);
+  const [beta, setBeta] = useState(0.02);
+
+  useEffect(() => {
+    if (state) {
+      setCut(state.smoothing.min_cutoff);
+      setBeta(state.smoothing.beta);
+    }
+  }, [state?.smoothing.min_cutoff, state?.smoothing.beta]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const send = (patch: Parameters<typeof update>[0]) => {
+    update(patch).then(() => setMsg(null), (e: Error) => setMsg(e.message));
+  };
+  const debounced = (patch: Parameters<typeof update>[0]) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => send(patch), 250);
+  };
+
+  const motionKey = state ? (Object.keys(MOTIONS).find((k) => MOTIONS[k].preset === state.simulator_motion.preset) ?? 'idle') : 'idle';
+
+  return (
+    <div className="dev__body">
+      <p className="dev__status">
+        <span className={`dev__dot ${online ? 'dev__dot--ok' : ''}`} />
+        Backend {online ? 'online' : error ? 'offline' : 'checking'}
+        <span className="dev__sep" />
+        <span className={`dev__dot ${glove.status === 'open' ? 'dev__dot--ok' : ''}`} />
+        Gloves WS {glove.status}
+      </p>
+      {msg && <p className="dev__err">{msg}</p>}
+
+      <label>
+        Glove source
+        <select disabled={!state} value={state?.glove_source ?? ''} onChange={(e) => send({ glove_source: e.target.value as GloveSource })}>
+          {!state && <option value="">unknown</option>}
+          <option value="simulator">simulator</option>
+          <option value="rokoko_udp">rokoko_udp</option>
+          <option value="rokoko_sdk">rokoko_sdk</option>
+        </select>
+      </label>
+
+      <label>
+        Simulator motion
+        <select
+          disabled={!state}
+          value={motionKey}
+          onChange={(e) => {
+            send({ simulator_motion: MOTIONS[e.target.value] });
+            glove.setMotion(MOTIONS[e.target.value]);
+          }}
+        >
+          {Object.keys(MOTIONS).map((k) => (
+            <option key={k}>{k}</option>
+          ))}
+        </select>
+      </label>
+
+      <fieldset disabled={!state}>
+        <legend>Smoothing (One Euro)</legend>
+        <label className="dev__row">
+          <input type="checkbox" checked={state?.smoothing.enabled ?? false} onChange={(e) => send({ smoothing: { enabled: e.target.checked } })} />
+          Enabled
+        </label>
+        <label>
+          min_cutoff {cut.toFixed(2)}
+          <input
+            type="range"
+            min="0.05"
+            max="10"
+            step="0.05"
+            value={cut}
+            onChange={(e) => {
+              setCut(Number(e.target.value));
+              debounced({ smoothing: { min_cutoff: Number(e.target.value) } });
+            }}
+          />
+        </label>
+        <label>
+          beta {beta.toFixed(3)}
+          <input
+            type="range"
+            min="0"
+            max="0.2"
+            step="0.001"
+            value={beta}
+            onChange={(e) => {
+              setBeta(Number(e.target.value));
+              debounced({ smoothing: { beta: Number(e.target.value) } });
+            }}
+          />
+        </label>
+      </fieldset>
+
+      <label>
+        LLM provider
+        <select disabled={!state} value={state?.llm_provider ?? ''} onChange={(e) => send({ llm_provider: e.target.value as LlmProvider })}>
+          {!state && <option value="">unknown</option>}
+          <option value="fake">fake</option>
+          <option value="gemini">gemini</option>
+          <option value="ollama">ollama</option>
+        </select>
+      </label>
+
+      <label>
+        Theme
+        <select value={theme} onChange={(e) => setTheme(e.target.value as ThemeId)}>
+          {THEME_IDS.map((id) => (
+            <option key={id} value={id}>
+              {THEMES[id].label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        Apprentice guidance default
+        <select value={settings.guidanceMode} onChange={(e) => setSettings({ guidanceMode: e.target.value as GuidanceMode })}>
+          <option value="ghost">ghost</option>
+          <option value="shadow">shadow</option>
+          <option value="side_by_side">side by side</option>
+        </select>
+      </label>
+    </div>
+  );
+}
