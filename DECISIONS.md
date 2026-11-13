@@ -120,3 +120,14 @@ server launched as a detached background process from a script showed every
 seventh tick 33 ms late (26 Hz at the client); macOS timer throttling of
 background processes is the suspected cause. `/health` now reports `tick_hz`
 so this is visible at a glance. Run the core in a foreground terminal.
+
+## D21. Piano landed early, with the SPEC's numbers untuned
+SPEC schedules piano for Saturday 18:00 but the press detector is twenty
+lines once angles exist, so it is in. A finger's resting flexion is a slow
+running average (2 s) updated only while the finger is up, so the "12 degrees
+past rest" rule tracks a drifting hand. Verdict windows: 120 ms `good`,
+300 ms `early`/`late`, a different finger inside 300 ms is `wrong_finger`,
+nothing inside 300 ms is `miss`. The piece loops after its last beat when
+`loop` is on. All numbers are in `[piano]` in config.toml. Which key the
+finger is over (wrist x from a camera) is not done; without a camera the
+viewer lights the key the note names, as SPEC says.

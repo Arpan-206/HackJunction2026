@@ -44,6 +44,8 @@ def test_http_routes(fake_app):
     assert client.get("/lessons/fake-demo/frames/step_99.jpg").status_code == 404
     assert client.get("/schema/frame.json").json()["$id"].endswith("frame.json")
     assert client.get("/schema/nope.json").status_code == 404
+    r = client.get("/lessons", headers={"Origin": "http://localhost:5173"})
+    assert r.headers.get("access-control-allow-origin") == "*"
 
 
 def test_ws_hello_frames_and_acks(fake_app, schemas):

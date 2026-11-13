@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import fake as fake_mod
@@ -310,6 +311,8 @@ def create_app(core: Core) -> FastAPI:
                 core._task.cancel()
 
     app = FastAPI(title="Geppetto core", lifespan=lifespan)
+    # the viewer dev server (another origin, e.g. :5173) fetches /lessons and /schema
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "OPTIONS"], allow_headers=["*"])
     app.state.core = core
 
     @app.websocket("/ws")

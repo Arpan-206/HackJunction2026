@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, about 01:45 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, about 02:00 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -45,10 +45,11 @@ python -m tools.ws_log replay logs/ws_demo.jsonl --port 8765 --loop
 | --- | --- | --- |
 | `schema/` (12 files) | JSON Schema for hello, frame, session, lesson, event, coach, ack, cmd, lesson.json, step summary | Every message the fake server emits is validated at runtime (`/health` shows `validation_errors`); tests validate every message type and the SPEC's own examples |
 | `core/hand.py` | 26 OpenXR joints to 18 angles, curl, pinch with hysteresis, mirroring, wrist frame, joint rotations, MediaPipe 21 to 26 conversion | Flat hand gives flexions near 0, fist near 90 (thumb 60); a hand and its mirror give identical angles; angles invariant to rigid motion and scale; pinch on 15 mm off 30 mm; round trips |
-| `core/fake.py` | Two synthetic gloves and a synthetic 4-step lesson. The right hand plays a learner that passes a step about every 8 s | Server test waits for a real `step_passed` from the real scorer on fake hands |
+| `core/fake.py` | Two synthetic gloves and two synthetic lessons: `fake-demo` (4 hold steps; the right hand plays a learner that passes a step about every 8 s) and `fake-wave` (one `move` step, for a moving ghost and `timing_ms`) | Server test waits for a real `step_passed` from the real scorer on fake hands; a second test loads `fake-wave`, sees the ghost's `lesson_t` advance and an integer `timing_ms`, then a moving `recorded` ghost in playback |
 | `core/server.py` + `__main__.py` | FastAPI: `/ws`, `/health`, `/lessons`, `/lessons/{id}`, `/lessons/{id}/frames/{name}.jpg`, `/schema/{name}.json`, `/debug`. 30 Hz tick, per-client `subscribe` rate and `rots`, one ack per command | TestClient websocket test: hello, session, lesson, frames, ping ack, bad command ack, bad JSON ack, subscribe with rots, playback switch; also run over a real socket |
-| `core/recorder.py` | Lesson folders (`lesson.json` + `trace.npz`), marks, auto step cuts (still 400 ms under 20 deg/s), stillest-300 ms key pose, hold/move kind, static-finger weights, chord step names | Fake master: 4 marked steps all `hold`, key poses match; unmarked 4-pose take auto-cuts into 4 hold steps; a wave gives one `move` step; save/load; schema |
+| `core/recorder.py` | Lesson folders (`lesson.json` + `trace.npz` + `frames/step_XX.jpg` sketches of each key pose), marks, auto step cuts (still 400 ms under 20 deg/s), stillest-300 ms key pose, hold/move kind, static-finger weights, chord step names | Fake master: 4 marked steps all `hold`, key poses match; unmarked 4-pose take auto-cuts into 4 hold steps; a wave gives one `move` step; save/load; schema |
 | `core/scorer.py` | Per-frame per-finger error, 8/45 degree map, weighted overall, 150 ms EMA, hints, hold timer, move matching in a 250 ms window with `timing_ms`, mean-pass for move, stuck detection, DTW worst moment, step summaries; mirror scorer | Identical gives 1.0; 45 degree finger gives 0; hint directions; hold passes after `hold_ms`; move step passes when followed and reports about -100 ms when 100 ms early; fails when wrong; summary validates |
+| `core/tasks/piano.py` | Key press per finger (knuckle flexion faster than 250 deg/s ending 12 deg past rest, release within 6), `finger_down` events, note verdicts `good` (120 ms), `early`/`late` (300 ms), `wrong_finger`, `miss`, piece scheduling at `tempo_bpm`, `frame.task` with `beat`, `next`, `down`, `last` | Synthetic flexion curves: a fast rise is a press, a slow rise and a small twitch are not; a 4-note piece gets good, late, wrong_finger and miss; a session with `set_task piano` emits `finger_down` and `note` events that validate |
 | `core/coach.py` | `CoachClient` protocol; `RuleCoach` with the SPEC rule table; rate limiter (one tip per hand per 4 s, newest summary replaces a queued one); keyword `describe_task` | Rule lines, rate limit, message schema |
 | `core/session.py` | Modes idle/record/learn/mirror/duel/playback, roles, sources, step state machine, ghost (mirrored onto the opposite hand, glued to the learner wrist), glove button mapping, thumb-to-little pinch control, all 21 commands with error codes, attempt log | Learn: wrong pose gives stuck + tip, right pose passes and advances; ghost mirrored for the opposite hand; record start/mark/stop makes a loadable lesson that then passes in learn; discard; button and pinch controls; mirror, duel, playback; camera tolerances; chords task state |
 | `core/rgmp.py` | Definition-driven RGMP parser (offsets from the definition, any data_type), joint mapping from config with aliases and an enum-order fallback, hand detection, newest frame per device, clock mapping (min arrival minus timestamp over 5 s), 250 ms silence, disconnect, yaw calibration, raw capture to file | Both guessed layouts (one FLOAT[7] TRANSFORM per joint, and split FLOAT[3]+FLOAT[4]); resync after garbage; split TCP chunks; live run against `tools/fake_rgmp_server.py` on a socket; capture file replayed with `tools/replay.py` into a second reader; silence; calibration zeroes yaw |
@@ -77,7 +78,8 @@ schema validation is 1.5 ms.
 | Mirror and duel modes with two people | Only synthetic hands | Two gloves, roles master and learner, `set_mode mirror` |
 | Ghost placement `recorded` and `anchor: camera/held` from markers | No camera anchor was built; wrist position is the `rest_pose` for gloves | Out of scope tonight (SPEC Input B) |
 | `calibrate_camera` | Returns error code `device` on purpose | Needs the marker anchor |
-| Tasks `piano` and `boxing` | Screens can be selected; `frame.task` says `{"implemented": false}` | Not started |
+| Task `piano` on a real hand | Thresholds (`[piano]` in config.toml) are the SPEC's numbers, tuned on nothing | Tap a table with each finger and watch the `finger_down` events in `/debug`; raise `press_min_deg` if idle fingers trigger, lower `press_velocity_deg_s` if real taps are missed |
+| Task `boxing` | Needs the raw accelerometer stream on 12276 | Not started; `frame.task` says `{"implemented": false}` |
 | Gemma | Off by design tonight (`session.gemma` is `off`); `CoachClient` is the interface a model client implements | Implement `CoachClient` in a new module; `Coach` falls back to rules when it returns None |
 | Lesson keyframes `frames/step_XX.jpg` | No images from glove recordings; `frame` is `null` | Camera-source recordings could save them later |
 
@@ -108,8 +110,12 @@ schema validation is 1.5 ms.
 
 ## Branch and commits
 
-Seven commits on `core-overnight`, nothing pushed, nothing under `viewer/`
-touched. Commit signing was disabled in this clone only (DECISIONS D12).
+Twelve commits on `core-overnight` (`git log --oneline main..core-overnight`),
+nothing pushed, nothing under `viewer/` touched. Commit signing was disabled
+in this clone only (DECISIONS D12). 75 tests pass.
+
+Not done tonight, on purpose: Gemma (rule lines only), the camera wrist
+anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
 
 ## Teammate activity
 
