@@ -126,7 +126,7 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Fourteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+Fifteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
 nothing pushed, nothing of the teammate's touched. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
@@ -143,7 +143,24 @@ anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
 `origin/main` moved from the single "Research" commit to ten commits by
 Szymon Arciszewski, all stamped Fri 23:34 and fetched here at 01:38. Checked
 again at 01:47: nothing newer. Earlier checks at 01:07 and 01:20 saw nothing.
-Checked again at 01:52: new commits, see git log 2c7ff54..072d5a4.
+Checked at 01:52: four more commits by Szymon Arciszewski (authored 23:48 to
+23:50, pushed just before 01:52), `2c7ff54..072d5a4`:
+
+| Commit | What | Touches |
+| --- | --- | --- |
+| `9ebf8af` | Score inline attempt frames and apply learner calibration | `backend/app`, `docs/CONTRACT.md` |
+| `ad007e4` | Add coach plan, text-to-motion and video-to-lesson endpoints | `backend/app`, `docs/CONTRACT.md` |
+| `9437d14` | Pitch, demo runbook, judge Q&A and idea notes | `docs/ideas/` (7 files) |
+| `072d5a4` | Score finger error on total flexion to match the live coach | `backend/app`, `backend/tests` |
+
+Contract changes: `POST /score` now takes `attempt_frames` and calibration
+ids; new `POST /coach/plan`, `POST /motion/from_text`,
+`POST /lessons/generate_from_video`; their scoring metric is the mean error
+of each finger's total flexion mapped by `100 * exp(-0.5 * (err / (1.5 *
+angle_deg))^2)`. Nothing under `frontend/` changed. No effect on SPEC.md or
+on `core/`; `core/compat.py` does not serve the three new endpoints (404)
+and `/api/score` still answers 501. Read `docs/ideas/` for their demo
+runbook before the morning stand-up.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
