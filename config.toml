@@ -133,3 +133,14 @@ right = { p = [0.15, 0.10, -0.20], q = [0.0, 0.0, 0.0, 1.0] }
 step_period_s = 8.0
 rate_hz = 83.33
 hand_rate_hz = 60
+
+[piano]
+# Key press: knuckle flexion rises faster than press_velocity_deg_s and ends at
+# least press_min_deg past its resting value. Release when back within release_deg.
+press_velocity_deg_s = 250
+press_min_deg = 12
+release_deg = 6
+rest_tau_ms = 2000
+good_ms = 120
+near_ms = 300
+default_tempo_bpm = 70

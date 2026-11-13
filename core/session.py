@@ -13,6 +13,7 @@ from .coach import Coach, CoachLine
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
 from .scorer import FrameScore, MirrorScorer, StepScorer, Tolerances
 from .tasks import TASKS, task_state
+from .tasks.piano import PianoTask
 
 log = logging.getLogger("geppetto.session")
 
@@ -63,6 +64,7 @@ class Session:
         self._pinch_hold: dict[str, int | None] = {"left": None, "right": None}
         self._pinch_fired: dict[str, bool] = {"left": False, "right": False}
         self.answers: dict[str, str] = {}
+        self.piano: PianoTask | None = None
         self.seq = 0
         root = Path(cfg.get_path("_root", "."))
         self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
@@ -397,6 +399,8 @@ class Session:
             if h is not None and h.tracked:
                 self.recorder.add(h)
 
+        if self.task == "piano":
+            self._piano_tick(t)
         frame["task"] = task_state(self)
         self.emit_coach_flush(t)
         return frame
@@ -451,6 +455,18 @@ class Session:
         self.emit_session()
         return {"mode": self.mode}
 
+    def _reset_task(self) -> None:
+        self.piano = PianoTask(self.cfg.piano, self.task_config, self.now(), self.loop) if self.task == "piano" else None
+
+    def _piano_tick(self, t_us: int) -> None:
+        if self.piano is None:
+            return
+        side = self.primary_learner() or next((s for s in SIDES if self.hands.get(s) is not None), None)
+        h = self.hands.get(side) if side else None
+        angles = h.angles if (h is not None and h.tracked) else None
+        for name, data in self.piano.update(t_us, angles):
+            self.emit_event(name, side, data)
+
     def cmd_set_task(self, args: dict) -> dict:
         task = args.get("task")
         if task not in TASKS:
@@ -459,6 +475,7 @@ class Session:
         if not isinstance(config, dict):
             raise CommandError("bad_args", "config must be an object")
         self.task, self.task_config = task, dict(config)
+        self._reset_task()
         self.emit_session()
         return {"task": task, "config": self.task_config}
 
@@ -562,6 +579,7 @@ class Session:
         self.step_index = 0
         self.task = lesson.task if lesson.task in TASKS else self.task
         self.task_config = dict(lesson.task_config)
+        self._reset_task()
         self.emit_lesson()
         if self.mode in ("learn", "duel"):
             self.start_step(0)
@@ -649,6 +667,7 @@ class Session:
         if picked is None:
             raise CommandError("not_found", "no task matched that description (rule-based tonight, no model)")
         self.task, self.task_config = picked["task"], dict(picked.get("config", {}))
+        self._reset_task()
         self.emit_session()
         return {"task": self.task, "config": self.task_config, "source": "rule"}
 
