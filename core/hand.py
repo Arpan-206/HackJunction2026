@@ -178,9 +178,35 @@ class HandState:
         return msg
 
 
+def joint_rotations(joints_local: np.ndarray) -> np.ndarray:
+    """Per-joint orientations (26, 4) from positions, OpenXR style: -Z along the
+    bone toward the fingertip, +Y toward the back of the hand. Palm and wrist
+    get the identity (they define the wrist frame)."""
+    J = np.asarray(joints_local, dtype=float)
+    rots = np.tile(geom.IDENTITY_Q, (26, 1))
+    up = np.array([0.0, 1.0, 0.0])
+    for f, base in FINGER_BASE.items():
+        n = 4 if f == "thumb" else 5
+        idx = list(range(base, base + n))
+        for k, j in enumerate(idx):
+            d = (J[idx[k + 1]] - J[j]) if k < n - 1 else (J[j] - J[idx[k - 1]])
+            if np.linalg.norm(d) < 1e-9:
+                continue
+            z = -geom.normalize(d)
+            y = up - np.dot(up, z) * z
+            if np.linalg.norm(y) < 1e-6:
+                y = np.cross(z, np.array([1.0, 0.0, 0.0]))
+            y = geom.normalize(y)
+            x = np.cross(y, z)
+            rots[j] = geom.quat_from_matrix(np.stack([x, y, z], axis=1))
+    return rots
+
+
 def finish_hand(h: HandState, hand_cfg, pinch_tracker: PinchTracker | None = None) -> list[tuple[str, str]]:
-    """Fill angles, curl and pinch on a HandState. Returns pinch events."""
+    """Fill angles, curl, pinch and (if missing) joint rotations on a HandState. Returns pinch events."""
     h.angles = angle_features(h.joints_local)
+    if h.rots_local is None:
+        h.rots_local = joint_rotations(h.joints_local)
     h.curl = curl_from_angles(h.angles, hand_cfg.curl_full_deg, hand_cfg.curl_full_thumb_deg)
     if pinch_tracker is None:
         pinch_tracker = PinchTracker(hand_cfg.pinch_on_m, hand_cfg.pinch_off_m)
