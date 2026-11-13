@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://apprentice.local/page.schema.json",
+  "title": "ApprenticePage",
+  "description": "A screen of the Apprentice skill-teaching app, composed only from the component catalog below. The renderer owns all styling; the model only chooses components and fills their content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "skill", "screen", "header", "main", "side"],
+  "properties": {
+    "version": { "type": "integer", "enum": [1] },
+    "skill": { "type": "string", "minLength": 2, "maxLength": 40, "description": "Name of the hand skill, e.g. 'Table Piano' or 'Table Tennis'." },
+    "screen": { "type": "string", "enum": ["master_capture", "learner_training", "duel"], "description": "Which kind of screen this is." },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "subtitle"],
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 60 },
+        "subtitle": { "type": "string", "maxLength": 90, "description": "Short meta line, e.g. 'Right hand, Beginner, Draft'." },
+        "breadcrumbs": { "type": "array", "maxItems": 3, "items": { "type": "string", "maxLength": 30 } },
+        "stepper": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["steps", "current"],
+          "description": "Workflow progress, e.g. Capture, Assay, Publish.",
+          "properties": {
+            "steps": { "type": "array", "minItems": 2, "maxItems": 5, "items": { "type": "string", "maxLength": 20 } },
+            "current": { "type": "integer", "minimum": 0, "maximum": 4, "description": "Zero-based index of the current step." }
+          }
+        }
+      }
+    },
+    "main": { "type": "array", "minItems": 1, "maxItems": 5, "description": "Wide left column, top to bottom. Must contain exactly one hand_stage.", "items": { "$ref": "#/$defs/component" } },
+    "side": { "type": "array", "minItems": 1, "maxItems": 6, "description": "Narrow right column, top to bottom.", "items": { "$ref": "#/$defs/component" } }
+  },
+  "$defs": {
+    "finger": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Finger number: 1 thumb, 2 index, 3 middle, 4 ring, 5 little." },
+    "tone": { "type": "string", "enum": ["neutral", "good", "warn", "bad"] },
+    "component": {
+      "anyOf": [
+        { "$ref": "#/$defs/hand_stage" },
+        { "$ref": "#/$defs/step_timeline" },
+        { "$ref": "#/$defs/finger_lanes" },
+        { "$ref": "#/$defs/metric_row" },
+        { "$ref": "#/$defs/checklist" },
+        { "$ref": "#/$defs/take_list" },
+        { "$ref": "#/$defs/scoreboard" },
+        { "$ref": "#/$defs/callout" },
+        { "$ref": "#/$defs/note_field" },
+        { "$ref": "#/$defs/action_bar" }
+      ]
+    },
+    "hand_stage": {
+      "type": "object",
+      "description": "The 3D chalk-study view of the glove hands. The visual centrepiece.",
+      "additionalProperties": false,
+      "required": ["type", "hands", "prop", "motion", "caption"],
+      "properties": {
+        "type": { "type": "string", "enum": ["hand_stage"] },
+        "hands": { "type": "string", "enum": ["right", "left", "both"], "description": "'both' shows two hands, e.g. two players or a two-handed skill." },
+        "prop": { "type": "string", "enum": ["none", "keyboard", "racket"], "description": "Object drawn with the hands." },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["finger_sequence", "grip_and_swing", "hold_pose", "idle"], "description": "finger_sequence: fingers press one after another (keys, strings, taps). grip_and_swing: hand grips the prop and swings from the wrist. hold_pose: a static hand shape. idle: relaxed." },
+            "sequence": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/finger" }, "description": "Required for finger_sequence: the order fingers press." },
+            "beat_ms": { "type": "integer", "minimum": 250, "maximum": 2000, "description": "Time per press or per swing." },
+            "pose": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Required for hold_pose: curl of each finger, 0 open to 1 fully curled.",
+              "properties": {
+                "thumb": { "type": "number", "minimum": 0, "maximum": 1 },
+                "index": { "type": "number", "minimum": 0, "maximum": 1 },
+                "middle": { "type": "number", "minimum": 0, "maximum": 1 },
+                "ring": { "type": "number", "minimum": 0, "maximum": 1 },
+                "little": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        },
+        "focus_finger": { "type": "integer", "minimum": 0, "maximum": 5, "description": "Finger to highlight in gold, 0 for none." },
+        "show_joints": { "type": "boolean" },
+        "show_trails": { "type": "boolean" },
+        "caption": { "type": "string", "maxLength": 140, "description": "Notebook-style figure caption under the study." }
+      }
+    },
+    "step_timeline": {
+      "type": "object",
+      "description": "The lesson split into ordered steps.",
+      "additionalProperties": false,
+      "required": ["type", "title", "steps"],
+      "properties": {
+        "type": { "type": "string", "enum": ["step_timeline"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "steps": {
+          "type": "array", "minItems": 2, "maxItems": 10,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["label", "detail"],
+            "properties": {
+              "label": { "type": "string", "maxLength": 14, "description": "Very short, e.g. 'C' or 'Backswing'." },
+              "detail": { "type": "string", "maxLength": 40 },
+              "finger": { "$ref": "#/$defs/finger" }
+            }
+          }
+        }
+      }
+    },
+    "finger_lanes": {
+      "type": "object",
+      "description": "Live flexion plot per finger, fed by the hand_stage.",
+      "additionalProperties": false,
+      "required": ["type", "title", "fingers"],
+      "properties": {
+        "type": { "type": "string", "enum": ["finger_lanes"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "fingers": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "$ref": "#/$defs/finger" } }
+      }
+    },
+    "metric_row": {
+      "type": "object",
+      "description": "A row of 2 to 4 measured values.",
+      "additionalProperties": false,
+      "required": ["type", "title", "metrics"],
+      "properties": {
+        "type": { "type": "string", "enum": ["metric_row"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "metrics": {
+          "type": "array", "minItems": 2, "maxItems": 4,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["label", "value", "tone"],
+            "properties": {
+              "label": { "type": "string", "maxLength": 24 },
+              "value": { "type": "string", "maxLength": 10 },
+              "unit": { "type": "string", "maxLength": 8 },
+              "tone": { "$ref": "#/$defs/tone" }
+            }
+          }
+        }
+      }
+    },
+    "checklist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "title", "items"],
+      "properties": {
+        "type": { "type": "string", "enum": ["checklist"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "items": {
+          "type": "array", "minItems": 1, "maxItems": 6,
+          "items": { "type": "object", "additionalProperties": false, "required": ["label", "done"], "properties": { "label": { "type": "string", "maxLength": 40 }, "done": { "type": "boolean" } } }
+        }
+      }
+    },
+    "take_list": {
+      "type": "object",
+      "description": "Recorded takes of the master, with consistency scores.",
+      "additionalProperties": false,
+      "required": ["type", "title", "takes"],
+      "properties": {
+        "type": { "type": "string", "enum": ["take_list"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "takes": {
+          "type": "array", "minItems": 1, "maxItems": 6,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "duration", "status"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 16 },
+              "duration": { "type": "string", "maxLength": 8, "description": "e.g. '0:21.4'" },
+              "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "status": { "type": "string", "enum": ["kept", "set_aside", "recording"] },
+              "note": { "type": "string", "maxLength": 50 }
+            }
+          }
+        }
+      }
+    },
+    "scoreboard": {
+      "type": "object",
+      "description": "Two-player score, one glove each.",
+      "additionalProperties": false,
+      "required": ["type", "title", "players"],
+      "properties": {
+        "type": { "type": "string", "enum": ["scoreboard"] },
+        "title": { "type": "string", "maxLength": 40 },
+        "players": {
+          "type": "array", "minItems": 2, "maxItems": 2,
+          "items": { "type": "object", "additionalProperties": false, "required": ["name", "glove", "score"], "properties": { "name": { "type": "string", "maxLength": 20 }, "glove": { "type": "string", "enum": ["left", "right"] }, "score": { "type": "integer", "minimum": 0, "maximum": 99 } } }
+        }
+      }
+    },
+    "callout": {
+      "type": "object",
+      "description": "A single message. 'correction' is for telling a learner what to fix.",
+      "additionalProperties": false,
+      "required": ["type", "tone", "text"],
+      "properties": {
+        "type": { "type": "string", "enum": ["callout"] },
+        "tone": { "type": "string", "enum": ["info", "success", "correction"] },
+        "text": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "note_field": {
+      "type": "object",
+      "description": "A text field for the master's coaching note.",
+      "additionalProperties": false,
+      "required": ["type", "label", "placeholder"],
+      "properties": {
+        "type": { "type": "string", "enum": ["note_field"] },
+        "label": { "type": "string", "maxLength": 50 },
+        "hint": { "type": "string", "maxLength": 90 },
+        "placeholder": { "type": "string", "maxLength": 80 }
+      }
+    },
+    "action_bar": {
+      "type": "object",
+      "description": "Primary and optional secondary buttons. Actions are fixed app commands.",
+      "additionalProperties": false,
+      "required": ["type", "primary"],
+      "properties": {
+        "type": { "type": "string", "enum": ["action_bar"] },
+        "primary": { "$ref": "#/$defs/action" },
+        "secondary": { "type": "array", "maxItems": 2, "items": { "$ref": "#/$defs/action" } },
+        "hint": { "type": "string", "maxLength": 80 }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "command"],
+      "properties": {
+        "label": { "type": "string", "maxLength": 24 },
+        "command": { "type": "string", "enum": ["record_take", "stop_take", "send_to_assay", "publish", "start_training", "retry", "start_match", "reset_match"] },
+        "disabled": { "type": "boolean" }
+      }
+    }
+  }
+}

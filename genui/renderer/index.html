@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apprentice</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="three.min.js"></script>
+<script src="hand3d.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="#">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#D9B45A" stroke-width="1.6" aria-hidden="true"><path d="M4 28V14a12 12 0 0 1 24 0v14"/><path d="M9 28V15a7 7 0 0 1 14 0v13"/><circle cx="16" cy="9" r="1.6" fill="#D9B45A"/><path d="M2 28h28"/></svg>
+      <span>Apprentice</span>
+    </a>
+    <ul class="nav">
+      <li><a href="#">Bottega</a></li>
+      <li><a href="#" aria-current="page">Studio</a></li>
+      <li><a href="#">Assay</a></li>
+      <li><a href="#">Ledger</a></li>
+    </ul>
+    <section class="gloves" aria-label="Gloves">
+      <span class="muted">Smartgloves II</span>
+      <span><i class="dot on"></i>Right, streaming</span>
+      <span class="muted"><i class="dot"></i>Left, idle</span>
+    </section>
+  </nav>
+  <main id="page" class="page" aria-live="polite"></main>
+</div>
+<script src="renderer.js"></script>
+</body>
+</html>
