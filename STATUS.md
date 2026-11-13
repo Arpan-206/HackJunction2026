@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 01:50 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, 01:52 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -143,6 +143,7 @@ anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
 `origin/main` moved from the single "Research" commit to ten commits by
 Szymon Arciszewski, all stamped Fri 23:34 and fetched here at 01:38. Checked
 again at 01:47: nothing newer. Earlier checks at 01:07 and 01:20 saw nothing.
+Checked again at 01:52: new commits, see git log 2c7ff54..072d5a4.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
