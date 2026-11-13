@@ -101,7 +101,10 @@ class RcspClient:
                     for mtype, body in self.parser.feed(data):
                         self._dispatch(mtype, body)
             except (ConnectionRefusedError, OSError) as e:
-                log.warning("RCSP connect failed: %s", e)
+                self._failures = getattr(self, "_failures", 0) + 1
+                (log.warning if self._failures <= 2 else log.debug)(
+                    "RCSP connect to %s:%d failed: %s; retrying every %.1fs%s", self.host, self.port, e, self.reconnect_s,
+                    " (further retries logged at debug level)" if self._failures == 2 else "")
             finally:
                 self.connected.clear()
                 self._writer = None

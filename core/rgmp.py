@@ -430,7 +430,10 @@ class GloveSource:
                     log.warning("RGMP connection closed")
             except (ConnectionRefusedError, OSError) as e:
                 self.connected = False
-                log.warning("RGMP connect to %s:%d failed: %s; retry in %.1fs", self.host, self.port, e, self.cfg.glove.reconnect_s)
+                self._failures = getattr(self, "_failures", 0) + 1
+                (log.warning if self._failures <= 2 else log.debug)(
+                    "RGMP connect to %s:%d failed: %s; retrying every %.1fs%s", self.host, self.port, e,
+                    self.cfg.glove.reconnect_s, " (further retries logged at debug level)" if self._failures == 2 else "")
             if self.replay is not None and getattr(self.replay, "finished", False) and not self.replay.loop:
                 log.info("replay finished")
                 return
