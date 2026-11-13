@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, about 02:00 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, 01:50 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -10,7 +10,7 @@ gloves. Then read DECISIONS.md.
 ```bash
 cd repo
 source .venv/bin/activate              # Python 3.12 virtualenv, already populated
-python -m pytest -q                    # 69 tests, about 16 s
+python -m pytest -q                    # 88 tests, about 28 s
 
 python -m core --fake                  # synthetic gloves + synthetic lesson, learn mode, 30 Hz on :8765
 open http://localhost:8765/debug       # 2D canvas debug view (connects to /ws, has buttons for every command)
@@ -65,12 +65,21 @@ carries the new lesson itself). CORS allows GET from any origin.
 | `tools/debug_view.html` | Plain canvas page: hands (finger colours from the score), sepia ghost, score bars, coach line, session, event log, buttons for every command, measured frames/s | Served at `/debug`; JS passes `node --check`; rendered in headless Chrome against `--fake` (screenshot checked) |
 | `core/camera/` | MediaPipe HandLandmarker (installed 1.2.3 tasks API, checked against the package, VIDEO mode) in a thread; webcam or video file; 21 landmarks to the same Hand object with `source: "camera"`, `anchor: "camera"`, wrist on a plane in front of the viewer, One Euro filter; wider `[score.camera]` tolerances | Synthetic landmarks round-trip angles and handedness for both hands and both mirror settings; ingest/poll with a fake result; the landmarker ran on blank frames and on a synthetic 45-frame video (0 hands, no error, 5.6 ms/frame) |
 
-Throughput: tick 33.3 ms median with a client connected, no late ticks
-(see DECISIONS D20 for the one exception). A tick costs about 3 ms, of which
-schema validation is 1.5 ms. Soak: 8 minutes of `--fake` with two clients
-(one at 30 Hz, one at 60 Hz with `rots`): `tick_hz` 30.0 throughout, memory
-flat at 105 MB, 0 validation errors, 0 bad acks, 20 000 frames delivered;
-the 60 Hz client saw a 33.4 ms median gap and 36.7 ms p99.
+Throughput and soak, measured on `--fake` (see DECISIONS D20 for the one
+exception to the tick rate):
+
+| Measure | Value |
+| --- | --- |
+| Tick period, median, with a client | 33.3 ms |
+| Late ticks (over 45 ms) in 150 | 0 |
+| Cost of one tick | about 3 ms |
+| Of which schema validation | 1.5 ms |
+| Soak length, two clients (30 Hz and 60 Hz with `rots`) | 8 min |
+| `tick_hz` during the soak | 30.0 throughout |
+| Memory during the soak | 105 MB, flat |
+| Validation errors, bad acks | 0, 0 |
+| Frames delivered to the two clients | 9 616 and 10 802 |
+| Frame gap at the 60 Hz client, median and p99 | 33.4 ms and 36.7 ms |
 
 ## Written but untested, and why
 
@@ -117,9 +126,14 @@ the 60 Hz client saw a 33.4 ms median gap and 36.7 ms p99.
 
 ## Branch and commits
 
-Twelve commits on `core-overnight` (`git log --oneline main..core-overnight`),
-nothing pushed, nothing under `viewer/` touched. Commit signing was disabled
-in this clone only (DECISIONS D12). 75 tests pass.
+Fourteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+nothing pushed, nothing of the teammate's touched. Commit signing was disabled
+in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
+about 28 s). A code review of the branch found 14 defects at 01:50; all 14
+are fixed and 7 have regression tests (DECISIONS D23). The branch is based on the old `main` (the "Research" commit);
+it merges cleanly in principle because it only adds `core/`, `schema/`,
+`tools/`, `tests/`, `lessons/`, `config.toml` and the three markdown files,
+none of which exist on the new `main`.
 
 Not done tonight, on purpose: Gemma (rule lines only), the camera wrist
 anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
@@ -127,7 +141,8 @@ anchor (markers, Record3D), boxing, the piano dataset importer, viewer work.
 ## Teammate activity (read this first)
 
 `origin/main` moved from the single "Research" commit to ten commits by
-Szymon Arciszewski, all stamped Fri 23:34 and fetched here at 01:38:
+Szymon Arciszewski, all stamped Fri 23:34 and fetched here at 01:38. Checked
+again at 01:47: nothing newer. Earlier checks at 01:07 and 01:20 saw nothing.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |

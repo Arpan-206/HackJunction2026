@@ -12,6 +12,7 @@ log = logging.getLogger("geppetto.rcsp")
 
 HEADER = struct.Struct("<BBBBI")   # marker 0xDC, version 1, header size 8, type, body length (LE)
 MARKER, VERSION, HEADER_SIZE = 0xDC, 1, 8
+MAX_BODY = 8_000_000
 T_COMMAND, T_OK, T_ERROR, T_EVENT = 1, 2, 3, 4
 
 LED_COLOURS = {
@@ -39,8 +40,9 @@ class RcspParser:
         out = []
         while len(self.buf) >= HEADER_SIZE:
             marker, version, hsize, mtype, length = HEADER.unpack_from(self.buf, 0)
-            if marker != MARKER:
-                del self.buf[0]
+            if marker != MARKER or version != VERSION or hsize not in (0, HEADER_SIZE) \
+                    or mtype not in (T_COMMAND, T_OK, T_ERROR, T_EVENT) or length > MAX_BODY:
+                del self.buf[0]      # not a header: resync one byte further
                 continue
             hsize = hsize or HEADER_SIZE
             if len(self.buf) < hsize + length:
@@ -48,9 +50,14 @@ class RcspParser:
             body = bytes(self.buf[hsize:hsize + length])
             del self.buf[:hsize + length]
             try:
-                out.append((mtype, json.loads(body.decode("utf-8")) if body else {}))
-            except json.JSONDecodeError:
+                parsed = json.loads(body.decode("utf-8")) if body else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 log.warning("RCSP body is not JSON: %r", body[:80])
+                continue
+            if not isinstance(parsed, dict):
+                log.warning("RCSP body is not an object: %r", body[:80])
+                continue
+            out.append((mtype, parsed))
         return out
 
 
@@ -99,7 +106,10 @@ class RcspClient:
                     if not data:
                         break
                     for mtype, body in self.parser.feed(data):
-                        self._dispatch(mtype, body)
+                        try:
+                            self._dispatch(mtype, body)
+                        except Exception:
+                            log.exception("RCSP message handling failed")
             except (ConnectionRefusedError, OSError) as e:
                 self._failures = getattr(self, "_failures", 0) + 1
                 (log.warning if self._failures <= 2 else log.debug)(
@@ -107,6 +117,8 @@ class RcspClient:
                     " (further retries logged at debug level)" if self._failures == 2 else "")
             finally:
                 self.connected.clear()
+                if self._writer is not None:
+                    self._writer.close()
                 self._writer = None
                 for fut in self._pending.values():
                     if not fut.done():

@@ -82,7 +82,7 @@ class ReplayServer:
                             delay = wall - time.monotonic()
                             if delay > 0:
                                 await asyncio.sleep(delay)
-                        else:
+                        elif dt < 0 or dt >= 1.0:   # a jump in the capture: restart pacing from now
                             wall = time.monotonic()
                     if ts is not None:
                         prev_ts = ts

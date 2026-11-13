@@ -172,9 +172,12 @@ class StepScorer:
             return self.step.key_angles, None, self.step.key_angles[None, :]
         w = int(self.cfg.move_window_ms) * 1000
         tr = self.lesson.trace
-        sl = tr.window(max(self.step.t0_us, ghost_t_us - w), min(self.step.t1_us, ghost_t_us + w))
+        gt = int(np.clip(ghost_t_us, self.step.t0_us, self.step.t1_us))
+        sl = tr.window(max(self.step.t0_us, gt - w), min(self.step.t1_us, gt + w))
         cands = tr.angles[sl]
         times = tr.t_us[sl]
+        if cands.shape[0] == 0:   # cannot happen after the clamp, but never wedge the tick loop
+            return self.step.key_angles, None, self.step.key_angles[None, :]
         return cands, times, cands
 
     def update(self, t_us: int, learner_angles: np.ndarray, ghost_t_us: int | None = None) -> FrameScore:
@@ -185,7 +188,8 @@ class StepScorer:
         self.learner_seq.append((t_us, learner_angles.copy()))
 
         timing_ms: int | None = None
-        if self.step.kind == "move" and self.lesson.trace is not None and ghost_t_us is not None:
+        if self.step.kind == "move" and self.lesson.trace is not None and ghost_t_us is not None \
+                and self._reference(ghost_t_us)[1] is not None:
             cands, times, _ = self._reference(ghost_t_us)
             best_i, best_key, best_fs = 0, None, None
             for i in range(cands.shape[0]):
@@ -282,16 +286,24 @@ class StepScorer:
         sl = tr.window(self.step.t0_us, self.step.t1_us)
         master = tr.angles[sl]
         learner = np.stack([a for _, a in self.learner_seq])
+        idx = np.arange(len(learner))
+        if len(learner) > DTW_MAX_LEN:
+            idx = np.linspace(0, len(learner) - 1, DTW_MAX_LEN).astype(int)
+            learner = learner[idx]
         path_cost = dtw_path_costs(learner, master)
         if path_cost is None:
             return None
-        i = int(np.argmax(path_cost))
+        i = int(idx[int(np.argmax(path_cost))])
         return int((self.learner_seq[i][0] - self.t_attempt_us) / 1000)
 
 
-def dtw_path_costs(a: np.ndarray, b: np.ndarray, max_len: int = 1500) -> np.ndarray | None:
+DTW_MAX_LEN = 300   # 300 x 300 runs in about 20 ms; it runs once per failed or stuck move step
+
+
+def dtw_path_costs(a: np.ndarray, b: np.ndarray, max_len: int = DTW_MAX_LEN) -> np.ndarray | None:
     """Dynamic time warping of two angle sequences. Returns, per sample of `a`,
-    the mean absolute angle error at its matched sample of `b`."""
+    the mean absolute angle error at its matched sample of `b`. `a` is assumed
+    to be at most max_len long (the caller downsamples and keeps the index map)."""
     if len(a) < 2 or len(b) < 2:
         return None
     if len(a) > max_len:

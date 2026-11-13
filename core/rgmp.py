@@ -241,10 +241,13 @@ class JointMapping:
             bits = int(frame.value(self.flags)[0])
             bm = self.flags.raw.get("bit_mapping") or {}
             for k, v in (bm.items() if isinstance(bm, dict) else []):
-                if "heading" in str(v).lower():
-                    reliable = bool(bits & (1 << int(k)))
-                elif "heading" in str(k).lower():
-                    reliable = bool(bits & (1 << int(v)))
+                try:
+                    if "heading" in str(v).lower():
+                        reliable = bool(bits & (1 << int(k)))
+                    elif "heading" in str(k).lower():
+                        reliable = bool(bits & (1 << int(v)))
+                except (TypeError, ValueError):
+                    continue
         return joints, rots, reliable
 
 
@@ -275,14 +278,15 @@ def build_joint_mapping(definition: DeviceDefinition, rgmp_cfg) -> JointMapping 
         if j is None:
             m.unmapped.append(f"{raw_name} ({s.measure_type} {s.data_type})")
             continue
-        if s.count == 7 or s.measure_type in pose_types:
+        # the value count decides what the stream can hold; measure_type only breaks ties
+        if s.count == 7:
             m.poses[j] = s
-        elif s.count == 3 or s.measure_type in pos_types:
+        elif s.count == 3 and (s.measure_type in pos_types or s.measure_type not in rot_types):
             m.positions[j] = s
-        elif s.count == 4 or s.measure_type in rot_types:
+        elif s.count == 4 and (s.measure_type in rot_types or s.measure_type not in pos_types):
             m.rotations[j] = s
         else:
-            m.unmapped.append(f"{raw_name} ({s.measure_type} {s.data_type})")
+            m.unmapped.append(f"{raw_name} ({s.measure_type} {s.data_type}: {s.count} values)")
     if m.joints_covered() < 26:
         # Fallback: 26 pose streams in OpenXR enum order with names we do not know.
         poses = [s for s in g.streams if s.count == 7]
@@ -423,7 +427,11 @@ class GloveSource:
                         data = await reader.read(65536)
                         if not data:
                             break
-                        self.feed(data)
+                        try:
+                            self.feed(data)
+                        except Exception:
+                            log.exception("RGMP frame handling failed; dropping buffered bytes and carrying on")
+                            self.parser.buf.clear()
                 finally:
                     writer.close()
                     self.connected = False

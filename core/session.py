@@ -278,7 +278,8 @@ class Session:
         log.info("attempt failed: %s", summary)
         self.emit_coach(self.coach.on_summary(t_us, summary))
         if self.loop:
-            sc.new_attempt(t_us)
+            for other in self.scorers.values():      # duel: every hand starts the step again
+                other.new_attempt(t_us)
             self.step_t0_us = t_us
             self.emit_event("step_restarted", side, {"step": self.step_index, "score": summary["overall"],
                                                      "attempts": sc.attempt, "time_ms": 0})
@@ -443,6 +444,8 @@ class Session:
         if mode == "mirror":
             if not self.sides_with_role("master") or not self.learner_sides():
                 raise CommandError("bad_state", "mirror needs one master and one learner role")
+        if mode == "learn" and not self.learner_sides():
+            raise CommandError("bad_state", "learn needs a learner role")
         if self.recorder.active and mode != "record":
             self.recorder.stop(self.now(), save=False)
             self.emit_event("recording_stopped", None, {"lesson_id": None})
@@ -450,8 +453,6 @@ class Session:
         self.scorers = {}
         self.mirror = None
         if mode in ("learn", "duel"):
-            if mode == "learn" and not self.learner_sides():
-                raise CommandError("bad_state", "learn needs a learner role")
             if mode == "duel":
                 self.duel = {"round": 1, "rounds": self.duel["rounds"], "wins": {"left": 0, "right": 0}}
             self.start_step(self.step_index or 0)
@@ -483,6 +484,13 @@ class Session:
         config = args.get("config", {})
         if not isinstance(config, dict):
             raise CommandError("bad_args", "config must be an object")
+        if task == "piano":
+            tempo = config.get("tempo_bpm", self.cfg.piano.default_tempo_bpm)
+            if not isinstance(tempo, (int, float)) or isinstance(tempo, bool) or tempo <= 0:
+                raise CommandError("bad_args", "tempo_bpm must be a positive number")
+            for n in config.get("notes", []):
+                if not isinstance(n, dict) or not isinstance(n.get("beat"), (int, float)) or n.get("finger") not in H.FINGERS:
+                    raise CommandError("bad_args", "each note needs a numeric beat and a finger name")
         self.task, self.task_config = task, dict(config)
         self._reset_task()
         self.emit_session()
@@ -665,6 +673,8 @@ class Session:
         if not isinstance(on, bool):
             raise CommandError("bad_args", "on must be a boolean")
         self.loop = on
+        if self.piano is not None:
+            self.piano.loop = on
         self.emit_session()
         return {"on": self.loop}
 

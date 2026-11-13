@@ -144,6 +144,12 @@ class Lesson:
 
     def save(self, lessons_dir: Path, keyframes: bool = True) -> Path:
         d = Path(lessons_dir) / self.id
+        if self.dir is None and d.exists():      # a new lesson must never overwrite an older one
+            n = 2
+            while (Path(lessons_dir) / f"{self.id}-{n}").exists():
+                n += 1
+            self.id = f"{self.id}-{n}"
+            d = Path(lessons_dir) / self.id
         d.mkdir(parents=True, exist_ok=True)
         (d / "frames").mkdir(exist_ok=True)
         if keyframes:
@@ -303,7 +309,7 @@ class Recorder:
             id=lesson_id or make_lesson_id(self.title, created), title=self.title, task=self.task,
             task_config=self.task_config, created=created.isoformat(timespec="seconds"),
             master_name=self.master_name, master_hand=self.master_hand, source=self.source,
-            rate_hz=float(self.cfg.rate_hz), duration_us=int(t[-1]), steps=steps, trace=trace,
+            rate_hz=round(float(len(t) - 1) / max(1e-6, t[-1] / 1e6), 2), duration_us=int(t[-1]), steps=steps, trace=trace,
         )
         return lesson
 

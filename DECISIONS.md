@@ -159,3 +159,16 @@ anchor) and set for camera hands; `Recording.frames` is empty (the lesson's
 or `genui/` was touched. The morning decision is whether the frontend
 switches to SPEC.md's richer `/ws` (ghost, score, coach, session) or keeps
 CONTRACT.md and the core keeps serving both.
+
+## D23. A code review ran before the final commit
+A medium-effort review of `main..core-overnight` at 01:50 reported eight
+confirmed defects and six smaller ones. All are fixed in the commit after it:
+a move step whose ghost time ran past the step end wedged the tick loop;
+the glove reader task died on any exception in frame handling; `set_mode`
+changed state before rejecting a bad request; the RCSP parser could stall on
+a fake marker byte and crash on a non-object body; piano accepted a zero
+tempo; two lessons saved in the same minute overwrote each other; a failed
+duel step reset only one hand; `set_loop` did not reach the piano piece;
+DTW could block the loop for half a second on long steps; the replay tool
+paced two-glove captures slowly; the recorded `rate_hz` was a constant.
+Seven of these have regression tests in `tests/test_review_fixes.py`.
