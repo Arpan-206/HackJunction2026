@@ -48,14 +48,20 @@ class ScoreRequest(BaseModel):
 
     reference_recording_id: str | None = None
     reference_motion: MotionSpec | None = None
-    attempt_recording_id: str
+    attempt_recording_id: str | None = None
+    attempt_frames: list[GloveFrame] | None = Field(default=None, max_length=c.MAX_RECORDING_FRAMES)
     tolerance: Tolerance = Field(default_factory=Tolerance)
+    use_latest_calibration: bool = False
+    attempt_calibration_id: str | None = None
+    reference_calibration_id: str | None = None
 
     @model_validator(mode="after")
     def _one_reference(self) -> "ScoreRequest":
-        """Require exactly one reference source."""
+        """Require exactly one reference source and at least one attempt source."""
         if (self.reference_recording_id is None) == (self.reference_motion is None):
             raise ValueError("provide exactly one of reference_recording_id or reference_motion")
+        if self.attempt_recording_id is None and self.attempt_frames is None:
+            raise ValueError("provide attempt_recording_id or attempt_frames")
         return self
 
 
@@ -68,3 +74,4 @@ class ScoreResult(BaseModel):
     within_tolerance: bool
     worst_finger: Finger
     hint: str
+    warnings: list[str] = Field(default_factory=list)

@@ -111,12 +111,41 @@ FLEXION_MAX_RAD = 2.2
 # LLM.
 LLM_MAX_RETRIES = 2
 LLM_TIMEOUT_S = 90.0
+LLM_GEMINI_TIMEOUT_S = 8.0
+LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
 OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
 
+# Practice plan and text-to-motion.
+PLAN_MAX_STEPS = 20
+PLAN_MAX_ATTEMPTS = 60
+PLAN_MIN_DRILLS = 1
+PLAN_MAX_DRILLS = 4
+PLAN_SUMMARY_MAX_WORDS = 60
+PLAN_TEXT_MAX_CHARS = 200
+MOTION_TEXT_MAX_CHARS = 200
+MOTION_MIN_BEAT_MS = 150.0
+MOTION_MAX_BEAT_MS = 4000.0
+MOTION_SLOWER_FACTOR = 2.0
+MOTION_SCALE_SEQUENCE = (1, 2, 3, 4, 5)
+MOTION_FIST_POSE = (1.0, 1.0, 1.0, 1.0, 1.0)
+
 # Vision.
 VISION_MAX_HANDS = 2
 VISION_MIN_CONFIDENCE = 0.5
+
+# Calibration-aware scoring.
+CALIBRATION_MIN_RANGE_RAD = 0.05
+
+# Video to lesson.
+VIDEO_MAX_BYTES = 50 * 1024 * 1024
+VIDEO_UPLOAD_CHUNK_BYTES = 1024 * 1024
+VIDEO_MIME_TYPES = ("video/mp4", "video/webm", "video/quicktime")
+VIDEO_SUFFIXES = {"video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov"}
+VIDEO_DEFAULT_PROMPT = "Teach the hand skill shown in this video."
+VIDEO_PROCESSING_TIMEOUT_S = 60.0
+VIDEO_POLL_INTERVAL_S = 1.0
+VIDEO_FAKE_NOTE = "Video analysis needs the Gemini provider; this is a generic template based on your text and the file name."

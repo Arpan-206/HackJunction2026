@@ -10,7 +10,9 @@ from app.core.errors import BadRequestError
 from app.schemas.common import FingerValues, Side, Tolerance
 from app.schemas.frames import GloveFrame
 from app.schemas.records import Recording, ScoreRequest, ScoreResult
+from app.schemas.records import Calibration
 from app.services import hints
+from app.services.calibration import CalibrationService
 from app.services.motion import synthesiser
 from app.services.recorder import Recorder
 
@@ -101,23 +103,99 @@ def to_result(cmp: Comparison, tolerance: Tolerance) -> ScoreResult:
     )
 
 
+def _ranges(cal: Calibration) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    """Return (flat, fist, usable mask) as (5, 3) arrays, or None if a phase is missing (all zeros)."""
+    flat = np.array([cal.flat[f] for f in c.FINGERS], dtype=float)
+    fist = np.array([cal.fist[f] for f in c.FINGERS], dtype=float)
+    if not flat.any() or not fist.any():
+        return None
+    return flat, fist, (fist - flat) > c.CALIBRATION_MIN_RANGE_RAD
+
+
+def _standard() -> tuple[np.ndarray, np.ndarray]:
+    """Return the nominal (flat, fist) flexion of the guide hand (curl 0 and curl 1), used when the reference has no calibration."""
+    scale = np.array([c.THUMB_FLEXION_SCALE] + [1.0] * (len(c.FINGERS) - 1))[:, None]
+    relaxed = np.array(c.RELAXED_FLEXION, dtype=float)
+    return relaxed * scale, (relaxed + np.array(c.FULL_FLEXION, dtype=float)) * scale
+
+
+def calibrate_attempt(
+    attempt: np.ndarray, own: Calibration, reference: Calibration | None, warnings: list[str]
+) -> np.ndarray:
+    """Normalise an attempt (T, 5, 3) by its own flat/fist range, then map it into the reference's angle space.
+
+    Joints whose calibrated range is below the epsilon are left unchanged, so nothing divides by zero.
+    """
+    own_range = _ranges(own)
+    if own_range is None:
+        warnings.append("attempt calibration is incomplete (flat or fist not captured); scored without calibration")
+        return attempt
+    flat, fist, usable = own_range
+    ref_flat, ref_fist = _standard()
+    if reference is not None:
+        ref_range = _ranges(reference)
+        if ref_range is None:
+            warnings.append("reference calibration is incomplete; using nominal reference ranges")
+        else:
+            ref_flat, ref_fist = ref_range[0], ref_range[1]
+    if not usable.all():
+        warnings.append("some joints have too small a calibrated range and were left uncalibrated")
+    span = np.where(usable, fist - flat, 1.0)
+    normalised = np.clip((attempt - flat) / span, 0.0, 1.0)
+    mapped = ref_flat + normalised * (ref_fist - ref_flat)
+    return np.where(usable, mapped, attempt)
+
+
 class ScoringService:
     """Scores stored attempts against stored recordings or synthesised motions."""
 
-    def __init__(self, recorder: Recorder) -> None:
-        """Use the recorder to load stored recordings."""
+    def __init__(self, recorder: Recorder, calibrations: CalibrationService | None = None) -> None:
+        """Use the recorder to load stored recordings and, optionally, calibrations."""
         self._recorder = recorder
+        self._calibrations = calibrations
 
     def score(self, request: ScoreRequest) -> ScoreResult:
         """Return the score for an attempt."""
-        attempt = self._recorder.get(request.attempt_recording_id)
+        attempt = self._attempt(request)
         if request.reference_recording_id is not None:
             reference = self._recorder.get(request.reference_recording_id)
             side = self._side_of(reference)
         else:
             side = self._side_of(attempt)
             reference = self._synthesised(request, attempt, side)
-        return to_result(compare(resample(reference.frames, side), resample(attempt.frames, side)), request.tolerance)
+        reference_data = resample(reference.frames, side)
+        attempt_data = resample(attempt.frames, side)
+        warnings: list[str] = []
+        own, ref_cal = self._calibrations_for(request, side)
+        if own is not None:
+            attempt_data = calibrate_attempt(attempt_data, own, ref_cal, warnings)
+        result = to_result(compare(reference_data, attempt_data), request.tolerance)
+        return result.model_copy(update={"warnings": warnings})
+
+    def _calibrations_for(self, request: ScoreRequest, side: Side) -> tuple[Calibration | None, Calibration | None]:
+        """Resolve the attempt and reference calibrations the request asks for."""
+        wanted = request.attempt_calibration_id or request.reference_calibration_id or request.use_latest_calibration
+        if not wanted:
+            return None, None
+        if self._calibrations is None:
+            raise BadRequestError("calibration is not available")
+        if request.attempt_calibration_id is not None:
+            own: Calibration | None = self._calibrations.get(request.attempt_calibration_id)
+        elif request.use_latest_calibration:
+            own = self._calibrations.latest(side)
+        else:
+            own = None
+        ref = self._calibrations.get(request.reference_calibration_id) if request.reference_calibration_id else None
+        return own, ref
+
+    def _attempt(self, request: ScoreRequest) -> Recording:
+        """Return the attempt: inline frames win over a stored recording, since only they carry client-side changes."""
+        if request.attempt_frames is not None:
+            frames = request.attempt_frames
+            duration = frames[-1].t - frames[0].t if frames else 0.0
+            return Recording(id="inline", started_at="", duration_s=duration, fps=c.SCORE_FPS, frames=frames)
+        assert request.attempt_recording_id is not None
+        return self._recorder.get(request.attempt_recording_id)
 
     @staticmethod
     def _side_of(recording: Recording) -> Side:

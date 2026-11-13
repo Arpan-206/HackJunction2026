@@ -64,3 +64,10 @@ class CalibrationService:
         if not matches:
             raise NotFoundError(f"no calibration for {side} hand")
         return max(matches, key=lambda cal: cal.created_at)
+
+    def get(self, calibration_id: str) -> Calibration:
+        """Return a calibration by id or raise NotFoundError."""
+        found = self._store.get(calibration_id)
+        if found is None:
+            raise NotFoundError(f"calibration {calibration_id} not found")
+        return found
