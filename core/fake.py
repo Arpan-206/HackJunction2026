@@ -10,6 +10,7 @@ from . import hand as H
 from .recorder import Lesson, Recorder
 
 FAKE_LESSON_ID = "fake-demo"
+FAKE_WAVE_ID = "fake-wave"
 
 # Poses the fake master teaches and the fake learner reaches, as per-finger curl.
 POSES: list[tuple[str, dict[str, float]]] = [
@@ -137,5 +138,30 @@ def build_fake_lesson(cfg, lessons_dir: Path, hold_s: float = 2.0, move_s: float
         s.name = name
         s.named_by = "manual"
         s.note = f"Reach the {name.lower()} shape and hold it."
+    lesson.save(Path(lessons_dir))
+    return lesson
+
+
+def wave_curl(t_s: float, period_s: float = 2.0) -> dict[str, float]:
+    return {f: float(0.5 + 0.45 * np.sin(2 * np.pi * t_s / period_s + 0.7 * i)) for i, f in enumerate(H.FINGERS)}
+
+
+def build_fake_wave_lesson(cfg, lessons_dir: Path, seconds: float = 4.0, master_hand: str = "right") -> Lesson:
+    """A one-step `move` lesson: a finger wave, so the viewer can see a moving ghost and timing_ms."""
+    rec = Recorder(cfg.record, cfg.score.hold_ms_default)
+    rate = float(cfg.fake.rate_hz)
+    rec.start(0, "Fake wave: follow the fingers", "general", {}, master_hand, source="fake", master_name="fake")
+    rest_p = np.asarray(cfg.rest_pose[master_hand].p, dtype=float)
+    for i in range(int(seconds * rate)):
+        t_s = i / rate
+        p, q = sway(t_s, master_hand, rest_p, amp=0.3)
+        h = H.synth_hand(side=master_hand, curl=wave_curl(t_s), wrist_p=p, wrist_q=q, t_us=int(t_s * 1e6), device_id=2)
+        H.finish_hand(h, cfg.hand)
+        rec.add(h)
+    lesson = rec.stop(int(seconds * 1e6), save=True, lesson_id=FAKE_WAVE_ID)
+    assert lesson is not None and lesson.steps[0].kind == "move"
+    lesson.steps[0].name = "Finger wave"
+    lesson.steps[0].named_by = "manual"
+    lesson.steps[0].note = "Ripple the fingers in time with the ghost."
     lesson.save(Path(lessons_dir))
     return lesson

@@ -34,7 +34,7 @@ def test_http_routes(fake_app):
     h = client.get("/health").json()
     assert h["ok"] and h["fake"] and h["mode"] == "learn" and h["lesson_id"] == "fake-demo"
     lessons = client.get("/lessons").json()
-    assert lessons[0]["id"] == "fake-demo" and lessons[0]["steps_total"] == 4
+    assert [l["id"] for l in lessons] == ["fake-demo", "fake-wave"] and lessons[0]["steps_total"] == 4
     lj = client.get("/lessons/fake-demo").json()
     assert lj["schema"] == "geppetto.lesson/1"
     core.schemas.validate("lesson", lj)
@@ -123,4 +123,30 @@ def test_fake_learner_passes_steps(fake_app, schemas):
         assert passed["hand"] == "right" and passed["data"]["step"] == 0
         coach, _ = recv_until(ws, "coach")
         assert coach["kind"] == "praise" and coach["source"] == "rule"
+    assert core.validation_errors == 0, core.last_validation_error
+
+
+def test_fake_wave_lesson_moves_the_ghost(fake_app, schemas):
+    core, client = fake_app
+    with client.websocket_connect("/ws") as ws:
+        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "w1", "name": "lesson_load", "args": {"lesson_id": "fake-wave"}}))
+        ack, _ = recv_until(ws, "ack")
+        assert ack["ok"] and ack["result"]["steps_total"] == 1
+        # learn mode on a move step: ghost time advances, timing_ms is an integer
+        f1, _ = recv_until(ws, "frame")
+        f2 = None
+        for _ in range(10):
+            f2, _ = recv_until(ws, "frame")
+        assert f2["ghost"]["right"]["lesson_t"] > f1["ghost"]["right"]["lesson_t"]
+        assert f2["score"] is not None and isinstance(f2["score"]["timing_ms"], int)
+        assert 0 < f2["score"]["step_progress"] <= 1
+        schemas.validate_message(f2)
+        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "w2", "name": "set_mode", "args": {"mode": "playback"}}))
+        ack, _ = recv_until(ws, "ack")
+        assert ack["ok"]
+        f, _ = recv_until(ws, "frame")
+        g1 = f["ghost"]["right"]["joints"]
+        for _ in range(6):
+            f, _ = recv_until(ws, "frame")
+        assert f["ghost"]["right"]["joints"] != g1 and f["ghost"]["right"]["placement"] == "recorded"
     assert core.validation_errors == 0, core.last_validation_error

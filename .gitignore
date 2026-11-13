@@ -10,3 +10,4 @@ lessons/*/trace.npz
 *.rgmp
 .DS_Store
 lessons/fake-demo/
+lessons/fake-wave/

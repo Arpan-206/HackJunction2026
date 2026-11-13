@@ -78,6 +78,7 @@ class Core:
         t0 = self.clock.now_us()
         self.fake_source = fake_mod.FakeSource(self.cfg, t0)
         fake_mod.build_fake_lesson(self.cfg, self.lessons_dir)
+        fake_mod.build_fake_wave_lesson(self.cfg, self.lessons_dir)
         self.session.load_lesson(fake_mod.FAKE_LESSON_ID)
         self.session.roles = {"left": "free", "right": "learner"}
         self.session.handle_command("set_mode", {"mode": "learn"})
