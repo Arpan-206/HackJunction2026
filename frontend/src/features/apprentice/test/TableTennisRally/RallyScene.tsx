@@ -11,16 +11,25 @@ import {
   PlaneGeometry,
   SphereGeometry,
   DoubleSide,
+  Euler,
+  Vector3,
 } from 'three';
 import type { GloveStreamHandle } from '../../../../api';
-import { Hand, HandCanvas, Racket, RacketSketch } from '../../../../three';
+import { Hand, HandCanvas, Racket, RACKET_BLADE, RacketSketch } from '../../../../three';
 import { toonGradient } from '../../../../three/materials';
 import { TABLE } from './ball';
 import { PADDLE_Z, type RallyGame } from './rally';
 
-const HAND_SCALE = 0.3;
-/** Blade centre relative to the hand origin, in hand units: see three/props.tsx. */
-const BLADE = { x: -1.2 * HAND_SCALE, y: -0.21 * HAND_SCALE, z: -0.78 * HAND_SCALE };
+/** Hand size on the court: a little larger than life so the grip reads from the back of the room. */
+const HAND_SCALE = 0.2;
+/**
+ * How the near player's right hand turns, seen from behind them: palm down, fingers towards the net and a little to the
+ * left, thumb side raised, so the blade stands up and to the left of the hand, facing the net, and the hand and wrist sit
+ * below and to the right of it, clear of the ball's path. The far player's left hand is the mirror image, turned round.
+ */
+const TURN = { pitch: 0.35, yaw: 0.3, roll: -1.05 };
+const TURN_A = new Euler(TURN.pitch, TURN.yaw, TURN.roll, 'YXZ');
+const TURN_B = new Euler(TURN.pitch, Math.PI - TURN.yaw, -TURN.roll, 'YXZ');
 const LAPIS = '#1f2e78';
 const LAPIS_LIGHT = '#2c3f9c';
 
@@ -143,19 +152,33 @@ interface PlayerHandProps {
   showProp: boolean;
 }
 
-/** A wooden hand holding a racket whose blade is kept on the ball; the glove supplies the wrist and finger pose. */
+/**
+ * A wooden hand holding a racket whose blade is kept on the ball; the glove supplies the wrist and finger pose. A marker
+ * at the blade's centre moves with the hand, so wherever the wrist turns, the whole hand is shifted to put the blade
+ * back on the paddle point.
+ */
 function PlayerHand({ game, gloves, who, side, showProp }: PlayerHandProps) {
   const group = useRef<Group>(null);
+  const blade = useRef<Group>(null);
+  const at = useMemo(() => new Vector3(), []);
   useFrame(() => {
+    const g = group.current;
+    const b = blade.current;
+    if (!g || !b) return;
     const p = game.paddle[who];
-    const z = who === 'a' ? PADDLE_Z + BLADE.z : -PADDLE_Z - BLADE.z;
-    group.current?.position.set(p.x + BLADE.x, p.y - BLADE.y, z);
+    b.getWorldPosition(at);
+    g.position.x += p.x - at.x;
+    g.position.y += p.y - at.y;
+    g.position.z += (who === 'a' ? PADDLE_Z : -PADDLE_Z) - at.z;
   });
   return (
     <group ref={group}>
-      <Hand side={side} style="wood" live={gloves.latest} scale={HAND_SCALE} rotation={who === 'a' ? [0, Math.PI, 0] : [0, 0, 0]}>
-        {showProp ? <Racket /> : <RacketSketch weight={2.4} />}
-      </Hand>
+      <group rotation={who === 'a' ? TURN_A : TURN_B}>
+        <Hand side={side} style="wood" live={gloves.latest} scale={HAND_SCALE} rotation={[0, 0, 0]}>
+          {showProp ? <Racket /> : <RacketSketch weight={2.4} />}
+          <group ref={blade} position={RACKET_BLADE} />
+        </Hand>
+      </group>
     </group>
   );
 }

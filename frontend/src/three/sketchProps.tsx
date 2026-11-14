@@ -4,6 +4,7 @@ import { BufferGeometry, CatmullRomCurve3, Group, Mesh, MeshBasicMaterial, Plane
 import { FINGERS, type Prop } from '../api/types';
 import type { HandHandle } from './Hand';
 import { useStageColors } from './stageContext';
+import { RACKET_GRIP } from './props';
 
 /**
  * Chalk sketches that stand in for a prop when props are off: the racket's outline in the hand, the keys drawn on the bench
@@ -56,7 +57,7 @@ export function RacketSketch({ weight = 1 }: { weight?: number }) {
   }, [weight]);
   useDisposeAll(geos);
   return (
-    <group position={[0, -0.4, -0.92]} rotation={[0, -0.45, 0.05, 'YXZ']}>
+    <group position={RACKET_GRIP.position} rotation={RACKET_GRIP.rotation}>
       {geos.map((g, i) => (
         <mesh key={i} geometry={g} material={mat} renderOrder={5} userData={{ noCast: true }} />
       ))}

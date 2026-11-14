@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three';
+import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three';
 import type { HandHandle } from './Hand';
 import { toonGradient } from './materials';
 import { Optional } from './atmosphere';
@@ -40,6 +40,15 @@ function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: 
  * A table-tennis racket in hand space (handle across the palm, blade towards the thumb side). Mount it as a child
  * of <Hand> so it follows the wrist: `<Hand><Racket /></Hand>`.
  */
+/**
+ * Where the racket sits in hand space: the handle lies in the tunnel the curled fingers make in the grip pose,
+ * diagonally across the palm from under the index knuckle to the base of the little finger, as a shakehand grip holds
+ * it. Shared by <Racket /> and its chalk outline.
+ */
+export const RACKET_GRIP = { position: [0, -0.4, -0.92] as [number, number, number], rotation: [0, -0.45, 0.05, 'YXZ'] as [number, number, number, 'YXZ'] };
+/** The blade's centre in hand space (the blade is a disc at x = -1.2 along the racket's own axis). */
+export const RACKET_BLADE = new Vector3(-1.2, 0, 0).applyEuler(new Euler(...RACKET_GRIP.rotation)).add(new Vector3(...RACKET_GRIP.position));
+
 export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
   const stage = useStageColors();
   const group = useMemo(() => {
@@ -83,10 +92,8 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
     faceB.translate(-1.2, 0, -0.034);
     g.add(new Mesh(faceB, black));
 
-    // The handle lies in the tunnel the curled fingers make in the grip pose: diagonally across the palm, from under the
-    // index knuckle to the base of the little finger, as a shakehand grip holds it.
-    g.position.set(0, -0.4, -0.92);
-    g.rotation.set(0, -0.45, 0.05, 'YXZ');
+    g.position.set(...RACKET_GRIP.position);
+    g.rotation.set(...RACKET_GRIP.rotation);
     return g;
   }, [stage.ink, rubber]);
 
