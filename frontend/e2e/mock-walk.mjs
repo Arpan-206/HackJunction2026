@@ -121,7 +121,8 @@ try {
   step('apprentice: the dashboard lists every skill; search finds the saved lessons by their course titles');
   await page.goto(`${BASE}/apprentice`);
   await expectVisible(page.getByRole('link', { name: /Table tennis/ }), 'table tennis skill card');
-  await expectVisible(page.getByRole('link', { name: /Shadow puppets/ }), 'workshop skill card');
+  await expectVisible(page.getByRole('link', { name: /Shadow puppets/ }), 'shadow puppets skill card');
+  await expectVisible(page.getByRole('link', { name: /Fingerspelling/ }), 'workshop skill card');
   await settle(3500);
   await shot('10-dashboard');
   await page.keyboard.press('/');
@@ -138,7 +139,7 @@ try {
   await page.getByRole('searchbox').fill('');
 
   step('apprentice: a workshop skill page has no start button');
-  await page.getByRole('link', { name: /Shadow puppets/ }).click();
+  await page.getByRole('link', { name: /Fingerspelling/ }).click();
   await expectVisible(page.getByText(/Not teachable yet/), 'workshop note');
   if (await page.getByRole('link', { name: /Start lesson/ }).count()) throw new Error('a workshop skill must not offer a start button');
 
@@ -165,6 +166,15 @@ try {
   await shot('13-score');
   const overall = await page.getByLabel(/Overall score/).first().getAttribute('aria-label');
   console.log(`  ${overall}`);
+
+  step('apprentice: shadow puppets by lamplight, both shadows on the wall');
+  await page.goto(`${BASE}/apprentice/lessons/seed-shadow-puppets/steps/0`);
+  await expectVisible(page.locator('.sp-theatre__name', { hasText: 'The rabbit' }), 'shape name above the wall');
+  await expectVisible(page.getByText('The expert', { exact: true }), 'expert label on the bench');
+  await page.getByRole('button', { name: /Start with the strings/ }).click();
+  await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button in the theatre');
+  await settle(2500);
+  await shot('13b-shadow-puppets');
 
   step('apprentice: table tennis rally test');
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/test`);
