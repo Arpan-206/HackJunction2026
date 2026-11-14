@@ -190,13 +190,16 @@ def test_only_the_four_demo_skills_ship(client: TestClient) -> None:
     """The seed lessons and the move catalogue hold the four demo skills (plus general moves), nothing retired."""
     lessons = client.get("/api/lessons").json()
     seeds = {lesson["skill"] for lesson in lessons if lesson["source"] == "seed"}
-    assert seeds == {
-        "table_tennis",
-        "piano",
-        "finnish_fingerspelling",
-        "shadow_puppets",
-        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
-    }
+    assert (
+        seeds
+        == {
+            "table_tennis",
+            "piano",
+            "finnish_fingerspelling",
+            "shadow_puppets",
+            "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
+        }
+    )
     assert client.get("/api/moves", params={"skill": "crochet"}).status_code == 422
 
 
@@ -238,10 +241,13 @@ def test_a_retired_seed_in_the_store_is_removed_before_it_is_read(tmp_path) -> N
     ids = store.ids()
     assert "seed-crochet" not in ids
     assert "seed-finnish-fingerspelling" in ids
-    assert {lesson.skill for lesson in store.list()} == {
-        "table_tennis",
-        "piano",
-        "finnish_fingerspelling",
-        "shadow_puppets",
-        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
-    }
+    assert (
+        {lesson.skill for lesson in store.list()}
+        == {
+            "table_tennis",
+            "piano",
+            "finnish_fingerspelling",
+            "shadow_puppets",
+            "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
+        }
+    )

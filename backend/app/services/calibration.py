@@ -61,7 +61,11 @@ class CalibrationService:
         calibration = Calibration(
             id=new_id(),
             side=side,
-            **{name: phases[name] for name in ("flat", "fist", "thumb") if name in phases},
+            **{
+                name: phases[name]
+                for name in ("flat", "fist", "thumb")
+                if name in phases
+            },
             created_at=utc_now_iso(),
         )
         return self._store.save(calibration)

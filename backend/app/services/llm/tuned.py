@@ -45,10 +45,13 @@ class NotAFingerCue(ValueError):
 
 def user_prompt(ex: dict) -> str:
     """Same text as coach_tune/prompt.py user_prompt."""
-    errors = "; ".join(
-        f"{e['finger']} {e['hint'].replace('_', ' ')} by {round(float(e['err_deg']))} degrees (fix: {FIX[e['hint']]})"
-        for e in ex["errors"][:3]
-    ) or "none"
+    errors = (
+        "; ".join(
+            f"{e['finger']} {e['hint'].replace('_', ' ')} by {round(float(e['err_deg']))} degrees (fix: {FIX[e['hint']]})"
+            for e in ex["errors"][:3]
+        )
+        or "none"
+    )
     return (
         f"Task: {ex['task']}. Step {ex['step_index'] + 1}: {ex['step_name']} ({ex['kind']}). "
         f"Hand: {ex['hand']}. Score: {round(float(ex['score']))} of 100. "
@@ -56,15 +59,27 @@ def user_prompt(ex: dict) -> str:
     )
 
 
-def example_from_request(request: CoachHintRequest, lang: str = "en") -> tuple[dict, dict]:
+def example_from_request(
+    request: CoachHintRequest, lang: str = "en"
+) -> tuple[dict, dict]:
     """The training-format example for one hint request, plus the algorithmic draft it must agree with."""
     draft = hints.build_hint_draft(request)
     if draft.cue_type not in ("curl", "extend") or not draft.focus_finger:
         raise NotAFingerCue(draft.cue_type)
     dev = request.deviations.model_dump()
     # Positive deviation: curled more than the guide (too_curled); negative: too straight (too_flat).
-    ranked = sorted((f for f in c.FINGERS if abs(dev[f]) > 0), key=lambda f: (f != draft.focus_finger, -abs(dev[f])))
-    errors = [{"finger": f, "hint": "too_curled" if dev[f] > 0 else "too_flat", "err_deg": abs(dev[f])} for f in ranked]
+    ranked = sorted(
+        (f for f in c.FINGERS if abs(dev[f]) > 0),
+        key=lambda f: (f != draft.focus_finger, -abs(dev[f])),
+    )
+    errors = [
+        {
+            "finger": f,
+            "hint": "too_curled" if dev[f] > 0 else "too_flat",
+            "err_deg": abs(dev[f]),
+        }
+        for f in ranked
+    ]
     worst = max(abs(dev[f]) for f in c.FINGERS)
     score = max(0.0, min(100.0, 100.0 * (1.0 - max(0.0, worst - 15.0) / 45.0)))
     ex = {
@@ -106,17 +121,27 @@ class TunedCoachLLM:
     async def _line(self, ex: dict) -> str:
         body: dict[str, Any] = {
             "model": self._model,
-            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user_prompt(ex)}],
+            "messages": [
+                {"role": "system", "content": SYSTEM},
+                {"role": "user", "content": user_prompt(ex)},
+            ],
             "temperature": 0.2,
             "max_tokens": TUNED_MAX_TOKENS,
         }
         try:
-            async with httpx.AsyncClient(timeout=self._timeout, headers=self._headers, transport=self._transport) as client:
+            async with httpx.AsyncClient(
+                timeout=self._timeout, headers=self._headers, transport=self._transport
+            ) as client:
                 response = await client.post(self._url, json=body)
                 response.raise_for_status()
         except httpx.HTTPError as exc:
             raise ServiceUnavailableError(f"tuned coach request failed: {exc}") from exc
-        text = (response.json()["choices"][0]["message"].get("content") or "").strip().strip('"').strip()
+        text = (
+            (response.json()["choices"][0]["message"].get("content") or "")
+            .strip()
+            .strip('"')
+            .strip()
+        )
         return text.splitlines()[0].strip() if text else ""
 
     async def generate_json(self, request: LLMRequest) -> str:
@@ -128,7 +153,9 @@ class TunedCoachLLM:
         try:
             line = await asyncio.wait_for(self._line(ex), timeout=self._timeout)
         except TimeoutError as exc:
-            raise LLMTimeoutError(f"tuned coach did not answer within {self._timeout:g} s") from exc
+            raise LLMTimeoutError(
+                f"tuned coach did not answer within {self._timeout:g} s"
+            ) from exc
         if not line:
             raise ServiceUnavailableError("tuned coach gave an empty line")
         return json.dumps({**draft, "hint": line})

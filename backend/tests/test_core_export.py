@@ -11,8 +11,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from fastapi.testclient import TestClient
-
 from app import constants as c
 from app.core.config import Settings
 from app.main import create_app
@@ -21,6 +19,7 @@ from app.schemas.lesson import Lesson, Step
 from app.schemas.records import Recording
 from app.services import core_export as V
 from app.services.storage.json_store import JsonStore
+from fastapi.testclient import TestClient
 
 CORE = V.load_core()
 pytestmark = pytest.mark.skipif(
@@ -96,9 +95,9 @@ def test_angles_invert_the_core_compat_mapping() -> None:
 
 def test_all_zero_spread_counts_as_unknown() -> None:
     """The simulator and the UDP mapper send spread as zeros; the synthetic fan stands in, not four 0 degree angles."""
-    from core import hand as H
-
     from app.schemas.common import FingerValues
+
+    from core import hand as H
 
     zero = _hand("right", 0.4).model_copy(update={"spread": FingerValues()})
     angles, joints = V.angles_deg(zero, CORE)
