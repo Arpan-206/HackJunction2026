@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { HandCanvas, Keyboard, PropCue, type HandHandle } from '../../../three';
 import { FaultMarks } from '../../apprentice/training/modes/FaultMarks';
 import { LearnerHand, MasterHand } from '../../apprentice/training/modes/LearnerHand';
@@ -11,9 +11,10 @@ import { EXPERT_STAGE_CAMERA, expertFrame, expertStage } from '../components/cam
 /**
  * The reference take as the apprentice will meet it, in the training room's own Strings or Ghost guidance, built from the
  * same pieces as the training modes but seen from the expert's first-person view (behind and above the wrist) with the
- * expert stage's camera buttons. The training room keeps its own cameras.
+ * expert stage's camera buttons. The training room keeps its own cameras. Memoised: its props are stable while a take
+ * plays, so the scrubber's 10 Hz position updates on the Replay screen do not re-render the whole canvas.
  */
-export function ReplayStage({ view, ...p }: ModeProps & { view: 'strings' | 'ghost' }) {
+export const ReplayStage = memo(function ReplayStage({ view, ...p }: ModeProps & { view: 'strings' | 'ghost' }) {
   const { coach, gloves, side, prop, cue, policy, toleranceDeg } = p;
   const learner = useRef<HandHandle>(null);
   const master = useRef<HandHandle>(null);
@@ -46,4 +47,4 @@ export function ReplayStage({ view, ...p }: ModeProps & { view: 'strings' | 'gho
       <CameraControls rig={rig} base={preset} />
     </>
   );
-}
+});
