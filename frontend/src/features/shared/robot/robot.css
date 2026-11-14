@@ -1,0 +1,182 @@
+/* ---------- Robot twin (shared by /robot, the training room and the expert studio) ---------- */
+.rb-twin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 18rem;
+}
+.rb-twin--tall {
+  height: clamp(460px, 68vh, 920px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.rb-twin--studio {
+  height: clamp(16rem, 36vh, 24rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.rb-twin__caps {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+}
+.rb-twin__cap {
+  font: italic 500 var(--step-0) / 1.2 var(--font-note);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  padding: 0.15rem 0.7rem;
+  border-radius: var(--radius-s);
+}
+.rb-twin__note {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
+  pointer-events: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-s);
+}
+
+/* ---------- Panel ---------- */
+.rb-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+.rb-state {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--step-0);
+  line-height: 1.35;
+}
+.rb-state__dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--line);
+  transform: translateY(1px);
+}
+.rb-state--ok .rb-state__dot {
+  background: var(--ok);
+}
+.rb-state--wait .rb-state__dot {
+  background: var(--text-2);
+  animation: ap-pulse 1.4s ease-in-out infinite;
+}
+.rb-source--off {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.rb-error {
+  margin: 0;
+  color: var(--danger);
+}
+.rb-fidelity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.rb-fidelity__row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 5rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: var(--step-0);
+}
+.rb-fidelity__row--missing {
+  color: var(--text-2);
+}
+.rb-fidelity__row--missing .rb-bar {
+  background: repeating-linear-gradient(90deg, var(--surface-2) 0 6px, transparent 6px 10px);
+}
+.rb-fidelity__value {
+  text-align: right;
+  font-size: 1em;
+}
+.rb-bar {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.rb-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--text-2);
+  border-radius: 5px;
+  transition: width 0.15s linear;
+}
+.rb-joints__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--step--1);
+}
+.rb-joints__table th,
+.rb-joints__table td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.rb-joints__table th[scope='row'] {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.rb-joints__table td:last-child {
+  min-width: 6rem;
+}
+
+/* ---------- /robot screen ---------- */
+.rb-screen__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 25rem);
+  gap: 1.25rem;
+  align-items: start;
+}
+.rb-screen__stage {
+  display: grid;
+  gap: 0.75rem;
+}
+.rb-screen__cap {
+  margin: 0;
+  font-size: var(--step-0);
+}
+
+/* ---------- Expert studio pane ---------- */
+.rb-studio__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .rb-screen__grid,
+  .rb-studio__grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rb-bar__fill {
+    transition: none;
+  }
+  .rb-state--wait .rb-state__dot {
+    animation: none;
+  }
+}
