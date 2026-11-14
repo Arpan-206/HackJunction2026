@@ -1,0 +1,51 @@
+{
+  "id": "seed-table-tennis",
+  "title": "Table Tennis: grip and forehand",
+  "skill": "table_tennis",
+  "summary": "Learn the shakehand grip, a clean forehand swing and the wrist snap at contact.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-13T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-tt-grip",
+      "title": "Lesson 1: The shakehand grip",
+      "instruction": "Hold the racket like a handshake. Thumb and index finger rest on the rubber, the other three fingers wrap round the handle.",
+      "move_id": "tt_shakehand_grip",
+      "hands": "right",
+      "prop": "racket",
+      "motion": {"preset": "hold_pose", "pose": {"thumb": 0.62, "index": 0.8, "middle": 0.84, "ring": 0.86, "little": 0.88}},
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "video_url": null
+    },
+    {
+      "id": "seed-tt-forehand",
+      "title": "Lesson 2: Forehand swing",
+      "instruction": "Keep the grip steady, swing back, drive through the ball and follow through across your body.",
+      "move_id": "tt_forehand_swing",
+      "hands": "right",
+      "prop": "racket",
+      "motion": {"preset": "grip_and_swing", "grip": "shakehand", "swing": "forehand", "beat_ms": 1500},
+      "reference_recording_id": null,
+      "repetitions": 5,
+      "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "video_url": null
+    },
+    {
+      "id": "seed-tt-snap",
+      "title": "Lesson 3: Wrist snap at contact",
+      "instruction": "Stay relaxed until the ball arrives, then snap the wrist and squeeze the handle for a split second.",
+      "move_id": "tt_wrist_snap",
+      "hands": "right",
+      "prop": "racket",
+      "motion": {"preset": "grip_and_swing", "grip": "shakehand", "swing": "forehand", "beat_ms": 900},
+      "reference_recording_id": null,
+      "repetitions": 5,
+      "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "video_url": null
+    }
+  ],
+  "test": {"kind": "table_tennis_rally", "opponent": "bot", "rounds": 3}
+}
