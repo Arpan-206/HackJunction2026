@@ -47,7 +47,7 @@ class CalibrationRequest(BaseModel):
     """POST /calibrations."""
 
     side: Side
-    phase: Literal["flat", "fist"]
+    phase: Literal["flat", "fist", "thumb"]
     duration_s: float = Field(
         default=c.CALIBRATION_DEFAULT_DURATION_S, gt=0, le=c.CALIBRATION_MAX_DURATION_S
     )

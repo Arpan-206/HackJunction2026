@@ -54,14 +54,14 @@ class CalibrationService:
         }
 
     async def capture(self, side: Side, phase: Phase, duration_s: float) -> Calibration:
-        """Capture one phase and return the calibration so far (the other phase is zeros until captured)."""
+        """Capture one phase and return the calibration so far (flat or fist is zeros, thumb None, until captured)."""
         averaged = await self._capture(side, duration_s)
         phases = self._pending.setdefault(side, {})
         phases[phase] = averaged
         calibration = Calibration(
             id=new_id(),
             side=side,
-            **{name: phases[name] for name in ("flat", "fist") if name in phases},
+            **{name: phases[name] for name in ("flat", "fist", "thumb") if name in phases},
             created_at=utc_now_iso(),
         )
         return self._store.save(calibration)

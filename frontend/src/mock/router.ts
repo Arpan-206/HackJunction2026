@@ -1,4 +1,5 @@
 import type {
+  CalibrationCapturePhase,
   Calibration,
   Finger,
   FingerWeights,
@@ -167,16 +168,16 @@ function normaliseLesson(raw: unknown): LessonDraftBody {
  * person does, so the captured pose is the guide hand at curl 0 (flat) or curl 1 (fist), which keeps the calibrated
  * range meaningful and makes calibrated scoring behave like it would with a real glove.
  */
-async function captureFlexion(sideName: Side, phase: 'flat' | 'fist', durationS: number): Promise<Record<Finger, JointTriple>> {
+async function captureFlexion(sideName: Side, phase: CalibrationCapturePhase, durationS: number): Promise<Record<Finger, JointTriple>> {
   await sleep(durationS * 1000);
   const level = phase === 'fist' ? 1 : 0;
-  const pose = { thumb: level, index: level, middle: level, ring: level, little: level };
+  const pose = { thumb: phase === 'flat' ? 0 : 1, index: level, middle: level, ring: level, little: level };
   const hand = handFrame({ preset: 'hold_pose', pose }, sideName, 0);
   return hand.flexion;
 }
 
 const zeroFlexion = (): Record<Finger, JointTriple> => ({ thumb: [0, 0, 0], index: [0, 0, 0], middle: [0, 0, 0], ring: [0, 0, 0], little: [0, 0, 0] });
-const pendingPhases = new Map<Side, Partial<Record<'flat' | 'fist', Record<Finger, JointTriple>>>>();
+const pendingPhases = new Map<Side, Partial<Record<CalibrationCapturePhase, Record<Finger, JointTriple>>>>();
 
 interface Take {
   lesson_id: string | null;
@@ -326,14 +327,14 @@ route('PUT', '/lessons/([^/]+)', (req, [id]) => {
 route('POST', '/calibrations', async (req) => {
   const b = body(req);
   const sideName = side(b.side);
-  if (b.phase !== 'flat' && b.phase !== 'fist') invalid("phase must be 'flat' or 'fist'");
+  if (b.phase !== 'flat' && b.phase !== 'fist' && b.phase !== 'thumb') invalid("phase must be 'flat', 'fist' or 'thumb'");
   const duration = b.duration_s === undefined ? 1.5 : Number(b.duration_s);
   if (!(duration > 0 && duration <= 10)) invalid('duration_s must be greater than 0 and at most 10');
-  const averaged = await captureFlexion(sideName, b.phase as 'flat' | 'fist', duration);
+  const averaged = await captureFlexion(sideName, b.phase as CalibrationCapturePhase, duration);
   const phases = pendingPhases.get(sideName) ?? {};
-  phases[b.phase as 'flat' | 'fist'] = averaged;
+  phases[b.phase as CalibrationCapturePhase] = averaged;
   pendingPhases.set(sideName, phases);
-  const cal: Calibration = { id: newId(), side: sideName, flat: phases.flat ?? zeroFlexion(), fist: phases.fist ?? zeroFlexion(), created_at: nowIso() };
+  const cal: Calibration = { id: newId(), side: sideName, flat: phases.flat ?? zeroFlexion(), fist: phases.fist ?? zeroFlexion(), thumb: phases.thumb ?? null, created_at: nowIso() };
   return ok(getStore().saveCalibration(cal));
 });
 route('GET', '/calibrations/latest', (req) => ok(latestCalibration(side(req.query.get('side') ?? undefined))));

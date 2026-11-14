@@ -103,6 +103,7 @@ interface Calibration {
   side: Side;
   flat: Record<Finger, [number, number, number]>;  // averaged flexion with the hand flat
   fist: Record<Finger, [number, number, number]>;  // averaged flexion in a loose fist
+  thumb: Record<Finger, [number, number, number]> | null;  // additive: flat hand, thumb folded; null until captured
   created_at: string;
 }
 
@@ -168,7 +169,7 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | PUT | `/lessons/{id}` | `Lesson` | `Lesson` |
 | POST | `/lessons/generate` | `{prompt: string, skill?: Skill}` | `{lesson: Lesson, provider: string, attempts: number}` |
 | POST | `/lessons/generate_from_video` | multipart: `video` (mp4, webm or mov, max 50 MB), `prompt?`, `skill?` | `{lesson: Lesson, provider: string, attempts: number}` (413 too large, 415 wrong type; non-Gemini providers return the template with `provider: "fake"` and a summary note) |
-| POST | `/calibrations` | `{side, phase: 'flat' or 'fist', duration_s?: number}` | `Calibration` (partial until both phases captured) |
+| POST | `/calibrations` | `{side, phase: 'flat' or 'fist' or 'thumb', duration_s?: number}` | `Calibration` (partial until both phases captured) |
 | GET | `/calibrations/latest?side=right` | | `Calibration` or 404 |
 | POST | `/recordings/start` | `{lesson_id?, step_id?, hands?: 'left' or 'right' or 'both'}` (default `both`) | `{recording_id}` |
 | POST | `/recordings/{id}/stop` | | `Recording` |
@@ -222,7 +223,7 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 - `POST /lessons/generate` returns an unsaved lesson (it has an `id` and `created_at`). `PUT /lessons/{id}` creates the lesson if the id is unknown, so the generated lesson can be saved after editing. `POST /lessons` returns 201.
 - Step ids are optional in `POST`/`PUT` bodies (the server assigns them); `Step.tolerance`, `repetitions`, `hands` and `prop` have defaults.
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
-- `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros.
+- `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros. The `thumb` phase (added 14 Nov for the demo kiosk, additive) is a flat hand with the thumb folded across the palm: the thumb barely moves between flat and a loose fist, so this pose holds its real range. It is stored as `thumb` (null until captured) and nothing scores with it yet.
 - Errors are `{detail: string}` with 404 (missing), 501 (rokoko_sdk stub), 503 (optional dependency or LLM provider missing), 409 (UDP port busy, or ingest while the source is not `external`), 422 (invalid ingested frame).
 
 ## Real gloves: status, calibration area, demo mode
