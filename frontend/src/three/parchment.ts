@@ -7,11 +7,17 @@ import type { StageColors } from '../theme/themes';
  */
 export const CODEX_STAGE: StageColors = {
   background: '#E2CDA2',
+  paper: '#E9D3A4',
+  paperFalloff: 0.2,
   grid: '#4B3621',
   gridOpacity: 0.16,
   circle: '#4B3621',
-  chalk: '#F2E6CA',
+  chalk: '#4B3621',
+  thread: '#4B3621',
+  hand: '#F2E6CA',
   ink: '#3B2614',
+  hatch: '#3B2614',
+  hatchOpacity: 0.62,
   ghost: '#6B4A28',
   gold: '#C9A24B',
   vermilion: '#B2321B',
@@ -19,6 +25,7 @@ export const CODEX_STAGE: StageColors = {
   shadow: '#3B2614',
   skyLight: '#FFF1D6',
   groundLight: '#8A6B45',
+  keyLight: '#FFE6BF',
 };
 
 /** Small deterministic generator so a page always gets the same sheet. */

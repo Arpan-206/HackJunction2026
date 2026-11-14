@@ -11,6 +11,7 @@ One lesson folder = one episode. A step's name becomes the LeRobot `task`
 string for the frames inside that step, so an episode can carry several
 task labels if the lesson has several steps.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,9 +25,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core import hand as H  # noqa: E402
-from core.config import load_config  # noqa: E402
-from core.robot import Retargeter  # noqa: E402
+from core import hand as H
+from core.config import load_config
+from core.robot import Retargeter
 
 
 @dataclass
@@ -108,10 +109,14 @@ def lesson_to_frames(lesson: Lesson, rt: Retargeter) -> list[dict]:
     frames = []
     for i in range(n):
         targets = rt.targets(lesson.angles[i], side)
-        action = np.array([targets.q[key_to_urdf_name[k]] for k in action_keys], dtype=np.float32)
+        action = np.array(
+            [targets.q[key_to_urdf_name[k]] for k in action_keys], dtype=np.float32
+        )
         frame = {
             "observation.state.angles_deg": lesson.angles[i].astype(np.float32),
-            "observation.state.joints_xyz": lesson.joints[i].reshape(-1).astype(np.float32),
+            "observation.state.joints_xyz": lesson.joints[i]
+            .reshape(-1)
+            .astype(np.float32),
             "observation.state.wrist_quat": lesson.wrist_q[i].astype(np.float32),
             "observation.state.hand_side_onehot": np.array(
                 [1, 0] if side == "left" else [0, 1], dtype=np.int64
@@ -124,7 +129,9 @@ def lesson_to_frames(lesson: Lesson, rt: Retargeter) -> list[dict]:
     return frames
 
 
-def dataset_features(angle_names: list[str], n_joints: int, action_names: list[str]) -> dict:
+def dataset_features(
+    angle_names: list[str], n_joints: int, action_names: list[str]
+) -> dict:
     return {
         "observation.state.angles_deg": {
             "dtype": "float32",
@@ -158,11 +165,11 @@ def dataset_features(angle_names: list[str], n_joints: int, action_names: list[s
 
 
 __all__ = [
-    "Lesson",
-    "load_lesson",
-    "build_retargeter",
-    "robot_action_names",
-    "lesson_to_frames",
-    "dataset_features",
     "H",
+    "Lesson",
+    "build_retargeter",
+    "dataset_features",
+    "lesson_to_frames",
+    "load_lesson",
+    "robot_action_names",
 ]

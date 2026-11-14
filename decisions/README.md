@@ -23,8 +23,13 @@ python decisions/tests/make_fixtures.py                  # rebuild the fixtures 
 
 ```python
 from decisions import pick_action, check_outcome, finger_rubric
-d = pick_action(step_summary)             # step_summary: schema/step_summary.json
-o = check_outcome(jpeg_bytes, "Is the hand closed around the cup?", context={"curl": hand.curl, "pinch": hand.pinch})
+
+d = pick_action(step_summary)  # step_summary: schema/step_summary.json
+o = check_outcome(
+    jpeg_bytes,
+    "Is the hand closed around the cup?",
+    context={"curl": hand.curl, "pinch": hand.pinch},
+)
 r = finger_rubric(step.to_json(), step.to_json(), lesson=lesson.to_json())
 ```
 

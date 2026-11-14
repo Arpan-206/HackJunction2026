@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import type { MotionSpec, Prop, Side } from '../../../api';
-import { Hand, HandCanvas, Keyboard, Racket } from '../../../three';
+import { useMemo } from 'react';
+import { useMediaSrc, type MotionSpec, type Prop, type Side } from '../../../api';
+import { Hand, HandStill, Keyboard, Racket } from '../../../three';
 import { synthFrame } from '../../../three/motion';
 import { keyPoseTime } from '../skills/catalogue';
 
@@ -13,63 +12,37 @@ interface VideoSlotProps {
   side: Side;
 }
 
-/** Renders a few frames, then reads the canvas once and hands back an image so the WebGL context can be released. */
-function Snapshot({ onSnap }: { onSnap: (url: string) => void }): null {
-  const done = useRef(false);
-  useFrame(({ gl, scene, camera, clock }) => {
-    if (done.current || clock.elapsedTime < 0.9) return;
-    done.current = true;
-    gl.render(scene, camera);
-    onSnap(gl.domElement.toDataURL('image/png'));
-  });
-  return null;
-}
-
-function KeyPoseStill({ motion, prop, side, title }: Omit<VideoSlotProps, 'url'>) {
-  const [img, setImg] = useState<string | null>(null);
-  const [near, setNear] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+/** A still of a step's key pose on the chalk hand, drawn once by the shared offscreen renderer. */
+export function KeyPoseStill({ motion, prop, side, title }: Omit<VideoSlotProps, 'url'>) {
   const frame = useMemo(() => synthFrame(motion ?? { preset: 'idle' }, keyPoseTime(motion), side), [motion, side]);
-
-  useEffect(() => {
-    const el = box.current;
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setNear(true);
-      return;
-    }
-    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setNear(true), { rootMargin: '300px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+  // One picture per pose, drawn once by the shared offscreen renderer (see HandStill) and kept for the session.
+  const stillId = `video:${JSON.stringify(motion)}:${keyPoseTime(motion)}:${side}:${prop}:chalk`;
   return (
-    <div ref={box} className="ap-video__still">
-      {img ? (
-        <img src={img} alt={`The key pose of ${title}, shown on a chalk hand`} />
-      ) : (
-        near && (
-          <HandCanvas preset={prop === 'racket' ? 'racket' : prop === 'keyboard' ? 'keyboard' : 'closeup'} label={`The key pose of ${title}`}>
-            {prop === 'keyboard' && <Keyboard />}
-            <Hand side={side} style="chalk" frame={frame} smoothing={false}>
-              {prop === 'racket' && <Racket />}
-            </Hand>
-            <Snapshot onSnap={setImg} />
-          </HandCanvas>
-        )
-      )}
-    </div>
+    <HandStill
+      className="ap-video__still"
+      preset={prop === 'racket' ? 'racket' : prop === 'keyboard' ? 'keyboard' : 'closeup'}
+      stillId={stillId}
+      label={`The key pose of ${title}, shown on a chalk hand`}
+    >
+      {prop === 'keyboard' && <Keyboard />}
+      <Hand side={side} style="chalk" frame={frame} smoothing={false}>
+        {prop === 'racket' && <Racket />}
+      </Hand>
+    </HandStill>
   );
 }
 
 /**
- * The master's video for a lesson: a real video when `url` is set. Until video lessons arrive it shows a still of the
- * lesson's key pose, rendered once from the step's motion, with a play-style mark and a plain line of explanation.
+ * The expert's tutorial video for a lesson when there is one (`url`, a stored /api/media clip or an older link). Without
+ * one it shows a still of the lesson's key pose, rendered once from the step's motion, with a play-style mark and a plain
+ * line saying the tutorial plays the expert's hand instead.
  */
 export function VideoSlot({ url, title, motion, prop, side }: VideoSlotProps) {
-  if (url) {
+  const src = useMediaSrc(url);
+  if (src) {
     return (
       <div className="ap-video">
-        <video className="ap-video__el" src={url} controls preload="metadata" aria-label={`Expert video: ${title}`} />
+        <video className="ap-video__el" src={src} controls preload="metadata" playsInline aria-label={`The expert's tutorial video: ${title}`} />
       </div>
     );
   }
@@ -81,7 +54,7 @@ export function VideoSlot({ url, title, motion, prop, side }: VideoSlotProps) {
           <path d="M8 5.5v13l11-6.5z" />
         </svg>
       </span>
-      <figcaption className="ap-video__cap">Expert&rsquo;s video, recorded with the gloves, arrives with video lessons</figcaption>
+      <figcaption className="ap-video__cap">No video for this lesson yet: its tutorial plays the expert&rsquo;s hand on its own</figcaption>
     </figure>
   );
 }

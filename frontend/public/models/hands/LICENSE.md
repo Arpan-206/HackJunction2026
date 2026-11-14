@@ -1,38 +1,30 @@
 # Hand model
 
-`right.glb` is the `generic-hand` right hand from the WebXR Input Profiles assets package
-(`@webxr-input-profiles/assets` 1.0.19, `dist/profiles/generic-hand/right.glb`), the skinned hand used by WebXR hand
-tracking viewers.
+`right.glb` is built from the right hand of the Godot XR Tools hand models (`hand_r.gltf`), a skinned human hand made
+with MakeHuman Community Edition for VR hand tracking.
 
-- Source: https://github.com/immersive-web/webxr-input-profiles/tree/main/packages/assets
-- Download: https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.19/dist/profiles/generic-hand/right.glb
-- Licence: MIT, reproduced below (https://github.com/immersive-web/webxr-input-profiles/blob/main/packages/assets/LICENSE.md)
+- Source: https://github.com/GodotVR/godot-xr-tools/tree/master/addons/godot-xr-tools/hands/model (`hand_r.gltf`,
+  master branch)
+- Licence: CC0 1.0 Universal (public domain dedication), from
+  https://github.com/GodotVR/godot-xr-tools/blob/master/addons/godot-xr-tools/hands/License.md:
+  "To the extent possible under law, DigitalN8m4r3 aka Miodrag Sejic has waived all copyright and related or
+  neighboring rights to Hand Models for the Godot XR Tools. This work is published from: Austria. Date: 7th November
+  2022." The glTF file's own `asset.copyright` field reads "CC0 Public Domain".
+- `addons/godot-xr-tools/hands/About.md` in the same repository notes that the hands were made with MakeHuman, whose
+  licence places no claim on exported models. The repository's code (not used here) is MIT licensed.
 
-The file is shipped unchanged. At load time `src/three/handModel.ts` modifies the mesh: it welds the UV seams,
-reorients and rescales it into hand space, rebuilds the 25 joints as a bone chain, closes the wrist in a tapered
-rounded end, subdivides and smooths it, raises the knuckles on the back of the hand, and adds per-finger, wrist and
-wood-grain vertex attributes. Left hands are drawn by mirroring the right one.
+No attribution is required; it is given here anyway, with thanks.
 
----
+## Changes
 
-MIT License
+Made offline (Blender 5.2, headless):
 
-Copyright (c) 2019 Amazon
+- the bones renamed to the WebXR hand joint names (`wrist`, `thumb-metacarpal` ... `pinky-finger-tip`), so the rest
+  of the app keeps the 25-joint layout it had with the earlier WebXR generic hand;
+- the material and texture coordinates dropped;
+- the open wrist cuff cut flat at the wrist plane, and the cup it folded into inside the palm removed.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is furnished
-to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice (including the next
-paragraph) shall be included in all copies or substantial portions of the
-Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
-OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
-OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Made at load time by `src/three/handModel.ts`: the mesh is welded, reoriented and rescaled into hand space, the wrist
+opening is capped and rounded into a short tapered end, it is subdivided once, the knuckles are raised on the back of
+the hand, and per-finger, wrist, crease and wood-grain vertex attributes are added. Left hands are drawn by mirroring
+the right one.

@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGloveStream, type GloveDeviceStatus, type GloveIssue, type GloveRigStatus } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
-import { Hand, HandPreview } from '../../../three';
+import { Hand, HandCanvas, type StageProps } from '../../../three';
 import { useDemoMode } from '../settings';
+import { CalibrationInUse } from './CalibrationInUse';
 import { DemoCheck } from './DemoCheck';
 import { FixText } from './FixText';
 import { canStartGloves, gloveFacts, nextPath, splitIssues } from './logic';
@@ -26,6 +27,9 @@ function SensorList({ g }: { g: GloveDeviceStatus }) {
   );
 }
 
+/** A live hand sits in a canvas of its own inside its box (so it scrolls with the page): plain stage, drag to turn it round. */
+const LIVE_STAGE: StageProps = { decor: false, showGrid: false, controls: 'orbit', target: [0, 0, 0] };
+
 function GloveColumn({ g, live }: { g: GloveDeviceStatus; live: ReturnType<typeof useGloveStream>['latest'] }) {
   const facts = gloveFacts(g);
   const name = g.side === 'left' ? 'Left glove' : 'Right glove';
@@ -34,9 +38,11 @@ function GloveColumn({ g, live }: { g: GloveDeviceStatus; live: ReturnType<typeo
       <h2 id={`gl-${g.side}`} className="gl-glove__title">
         {name}
       </h2>
-      <HandPreview className="gl-glove__view" label={g.connected ? `${name}, moving with your hand` : `${name}, not connected`}>
-        {g.connected ? <Hand side={g.side} style="wood" live={live} /> : <Hand side={g.side} style="ghost" motion={{ preset: 'idle' }} />}
-      </HandPreview>
+      <div className="gl-glove__view">
+        <HandCanvas preset="closeup" stage={LIVE_STAGE} label={g.connected ? `${name}, moving with your hand` : `${name}, not connected`}>
+          {g.connected ? <Hand side={g.side} style="wood" live={live} /> : <Hand side={g.side} style="ghost" motion={{ preset: 'idle' }} />}
+        </HandCanvas>
+      </div>
       <dl className="gl-facts">
         <div>
           <dt>Link</dt>
@@ -135,6 +141,7 @@ export default function GlovesScreen() {
       {status && (
         <>
           {now ? <FixFirst issue={now} /> : <Summary status={status} />}
+          <CalibrationInUse calibrateHref={`/gloves/calibrate?next=${encodeURIComponent(next)}`} />
           {demo && <DemoCheck ready={status.ready} onPass={() => navigate(next, { replace: true })} />}
 
           <div className="gl-pair">

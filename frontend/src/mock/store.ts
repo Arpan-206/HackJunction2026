@@ -138,6 +138,18 @@ class MockStore {
     return rec;
   }
 
+  /** Stored recordings, oldest first. */
+  listRecordings(): Recording[] {
+    return [...this.recordings.values()].sort((a, b) => a.started_at.localeCompare(b.started_at));
+  }
+
+  /** Deletes a stored recording; false when there was none. */
+  deleteRecording(id: string): boolean {
+    if (!this.recordings.delete(id)) return false;
+    this.persistRecordings();
+    return true;
+  }
+
   private persistRecordings(): void {
     let kept = [...this.recordings.values()].slice(-MAX_RECORDINGS_KEPT).map(compact);
     while (kept.length && !write('recordings', kept)) kept = kept.slice(1);

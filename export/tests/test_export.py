@@ -1,11 +1,11 @@
 """Export the two fake lessons under repo lessons/ and load the result back
 with LeRobot's own LeRobotDataset loader (not a hand-rolled parquet read).
 """
+
 import os
 from pathlib import Path
 
 import pytest
-
 from geppetto_export.convert import REPO_ROOT
 from geppetto_export.export import export
 
@@ -13,7 +13,11 @@ from geppetto_export.export import export
 # export/ sits directly under the repo root. GEPPETTO_LESSONS_DIR overrides
 # it for a session where export/ is nested one level deeper (e.g. a worktree
 # at .claude/worktrees/<lane>/export/).
-REPO_LESSONS = Path(os.environ["GEPPETTO_LESSONS_DIR"]) if "GEPPETTO_LESSONS_DIR" in os.environ else REPO_ROOT / "lessons"
+REPO_LESSONS = (
+    Path(os.environ["GEPPETTO_LESSONS_DIR"])
+    if "GEPPETTO_LESSONS_DIR" in os.environ
+    else REPO_ROOT / "lessons"
+)
 
 
 @pytest.fixture
@@ -37,7 +41,8 @@ def test_frame_count_matches_trace_length(dataset_dir):
 
     ds = LeRobotDataset("geppetto/robot-demos", root=dataset_dir)
     expected = sum(
-        np.load(p.parent / "trace.npz")["t_us"].shape[0] for p in REPO_LESSONS.glob("*/lesson.json")
+        np.load(p.parent / "trace.npz")["t_us"].shape[0]
+        for p in REPO_LESSONS.glob("*/lesson.json")
     )
     assert ds.num_frames == expected
 
@@ -46,10 +51,24 @@ def test_action_is_within_urdf_limits(dataset_dir):
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     ds = LeRobotDataset("geppetto/robot-demos", root=dataset_dir)
-    lower = {"thumb_0": -1.0472, "thumb_1": -1.0472, "thumb_2": -1.7453,
-              "index_0": 0.0, "index_1": 0.0, "middle_0": 0.0, "middle_1": 0.0}
-    upper = {"thumb_0": 1.0472, "thumb_1": 0.6109, "thumb_2": 0.0,
-              "index_0": 1.5708, "index_1": 1.7453, "middle_0": 1.5708, "middle_1": 1.7453}
+    lower = {
+        "thumb_0": -1.0472,
+        "thumb_1": -1.0472,
+        "thumb_2": -1.7453,
+        "index_0": 0.0,
+        "index_1": 0.0,
+        "middle_0": 0.0,
+        "middle_1": 0.0,
+    }
+    upper = {
+        "thumb_0": 1.0472,
+        "thumb_1": 0.6109,
+        "thumb_2": 0.0,
+        "index_0": 1.5708,
+        "index_1": 1.7453,
+        "middle_0": 1.5708,
+        "middle_1": 1.7453,
+    }
     names = ds.features["action"]["names"]
     for i in range(0, ds.num_frames, 37):
         action = ds[i]["action"].numpy()

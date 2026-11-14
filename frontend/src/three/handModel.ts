@@ -3,9 +3,11 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildLayout, CHAINS, palmFrame, WRIST, type HandLayout } from './handPose';
 
 /**
- * The skinned hand mesh: the WebXR Input Profiles generic-hand (MIT, see public/models/hands/LICENSE.md), loaded once
- * and turned into a template every <Hand> instance shares. Loading is the only browser-bound part; buildHandTemplate
- * is pure and runs in tests against the same file.
+ * The skinned hand mesh: the Godot XR Tools right hand (CC0, made with MakeHuman; see public/models/hands/LICENSE.md),
+ * its joints renamed to the WebXR hand joint names and its wrist cut flat. Loaded once and turned into a template every
+ * <Hand> instance shares: welded, its wrist capped and rounded off, subdivided once, knuckles raised, and given the
+ * attributes the materials read. Loading is the only browser-bound part; buildHandTemplate is pure and runs in tests
+ * against the same file.
  */
 
 export const HAND_MODEL_URL = '/models/hands/right.glb';
@@ -15,20 +17,57 @@ export const HAND_SCALE = 12;
 /** Hand-space z of the knuckle line; the old rig's knuckles sat at about -1. */
 const KNUCKLE_Z = -1.0;
 /**
- * Where the wrist starts to close, past the wrist joint, and how long the closing dome is (scene units, 12 per metre):
- * the hand closes from just before the wrist joint and ends about 2 cm past it.
+ * Where the wrist starts to close, relative to the wrist joint, and how long the closing dome is (scene units, 12 per
+ * metre): the hand closes from about 3.5 cm before the wrist joint and ends about 2 cm past that crease, so the back of
+ * the hand does not run on into a long, broad wrist.
  */
-const WRIST_CREASE = -0.06;
-const WRIST_END = 0.32;
-/** One Loop subdivision pass: 2.3k triangles become 9.3k, enough for smooth close-up silhouettes. */
+const WRIST_CREASE = -0.42;
+const WRIST_END = 0.22;
+/** Concavity (offset to the neighbours along the normal per edge length) over which a crease fades into aCavity. */
+const CREASE_FROM = 0.04;
+const CREASE_TO = 0.2;
+/** One Loop subdivision pass: about 3k triangles become 12k, enough for smooth close-up silhouettes. */
 const SUBDIVIDE = true;
 
 export interface HandTemplate {
-  /** Welded, subdivided skinned geometry in hand space with position, normal, uv, skin, aFingerA, aFingerB, aForearm. */
+  /** Welded, subdivided skinned geometry in hand space: position, normal, uv, skin, aFingerA, aFingerB, aForearm, aCavity. */
   geometry: BufferGeometry;
   layout: HandLayout;
   /** A point on the back of the wrist (hand space), for leader lines. */
   wristBack: Vector3;
+  /** The hand's visual centre on the table (hand space x, z, right hand; a left hand mirrors x): between the palm centre and the open footprint. */
+  centre: readonly [number, number];
+}
+
+/**
+ * The open hand's footprint centre: the area-weighted centroid of the skin's triangles seen from above (hand space x and z,
+ * right hand; a left hand mirrors x). The hand's origin is the wrist, which is not where the eye puts the middle of the
+ * hand: the palm, fingers and thumb lie mostly towards -z and the thumb pulls it towards -x. Placing a hand by this
+ * point (see <Hand>) centres it on the stage's ring.
+ */
+export function handCentre(geo: BufferGeometry): readonly [number, number] {
+  const pos = geo.attributes.position;
+  const idx = geo.index;
+  const n = idx ? idx.count : pos.count;
+  let area = 0;
+  let cx = 0;
+  let cz = 0;
+  for (let i = 0; i < n; i += 3) {
+    const a = idx ? idx.getX(i) : i;
+    const b = idx ? idx.getX(i + 1) : i + 1;
+    const c = idx ? idx.getX(i + 2) : i + 2;
+    const ax = pos.getX(a);
+    const az = pos.getZ(a);
+    const bx = pos.getX(b);
+    const bz = pos.getZ(b);
+    const ccx = pos.getX(c);
+    const ccz = pos.getZ(c);
+    const w = Math.abs((bx - ax) * (ccz - az) - (ccx - ax) * (bz - az)) / 2;
+    area += w;
+    cx += (w * (ax + bx + ccx)) / 3;
+    cz += (w * (az + bz + ccz)) / 3;
+  }
+  return area > 0 ? [cx / area, cz / area] : [0, -1];
 }
 
 /** Converts the loaded glTF scene into a hand-space template. */
@@ -71,7 +110,13 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
     .multiply(new Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
 
   const world = new Map<string, { position: Vector3; quaternion: Quaternion }>();
-  bindPos.forEach((p, n) => world.set(n, { position: p.clone().applyMatrix4(toHand), quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) }));
+  bindPos.forEach((p, n) => {
+    const at = p.clone().applyMatrix4(toHand);
+    at.z = shortenPalm(at.z);
+    world.set(n, { position: at, quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) });
+  });
+  // Joints where the glove core puts them: the bones move to the core skeleton's proportions, the skin follows below.
+  const refit = CORE_SKELETON_FIT ? fitToCoreSkeleton(world) : new Map<string, Matrix4>();
   const layout = buildLayout((n) => world.get(n) as { position: Vector3; quaternion: Quaternion });
 
   // Geometry: drop the UV split so the surface is one welded shell, then bring it into hand space.
@@ -80,15 +125,22 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   for (const k of Object.keys(src.attributes)) if (k !== 'position' && k !== 'skinIndex' && k !== 'skinWeight') src.deleteAttribute(k);
   src.applyMatrix4(toHand);
   let geo = mergeVertices(src, 1e-4);
+  const gp = geo.attributes.position;
+  for (let i = 0; i < gp.count; i++) gp.setZ(i, shortenPalm(gp.getZ(i)));
   src.dispose();
 
   // Remap skin indices from the glTF joint order to the layout's bone order.
   const remap = skeleton.bones.map((b) => layout.bones.findIndex((d) => d.name === b.name));
   const si = geo.attributes.skinIndex;
   for (let i = 0; i < si.count; i++) for (let c = 0; c < 4; c++) si.setComponent(i, c, Math.max(0, remap[si.getComponent(i, c)]));
+  if (refit.size) deformToFit(geo, layout.bones.map((b) => refit.get(b.name) ?? null));
 
   const wrist = layout.bones[0].worldPosition;
+  const capped = closeHoles(geo);
+  geo.dispose();
+  geo = capped;
   taperWrist(geo, wrist);
+  slenderise(geo, layout);
   if (SUBDIVIDE) {
     const sub = loopSubdivide(geo);
     geo.dispose();
@@ -103,8 +155,294 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
 
   const bb = geo.boundingBox as NonNullable<BufferGeometry['boundingBox']>;
   const wristBack = new Vector3(wrist.x, bb.max.y * 0.8, wrist.z);
-  return { geometry: geo, layout, wristBack };
+  const fp = handCentre(geo);
+  const pc = layout.palm.centre;
+  // Midway between the open hand's footprint centroid and the palm centre: the palm holds still as the fingers curl,
+  // the footprint does not, so an open hand and a fist both sit within about 0.15 of the ring centre.
+  const centre = [(fp[0] + pc.x) / 2, (fp[1] + pc.z) / 2] as const;
+  return { geometry: geo, layout, wristBack, centre };
 }
+
+/**
+ * The glove core's skeleton (core/hand.py, from the Rokoko hand solver): fixed for every wearer and both hands (measured
+ * on a full recorded session: every length and every palm joint has zero spread). Metres, in the wrist frame of a right
+ * hand: fingers along -z, back of the hand +y, thumb towards -x. Knuckles in finger order index to little; phalanx
+ * lengths per chain, thumb first (metacarpal, proximal, distal), then each finger's proximal, middle and distal.
+ */
+export const CORE_SKELETON = {
+  thumbCmc: [-0.0232, -0.0024, -0.0258],
+  knuckles: [
+    [-0.0097, 0.0011, -0.0841],
+    [0.0101, 0.0029, -0.0809],
+    [0.0292, 0.0019, -0.0738],
+    [0.0445, -0.0001, -0.0627],
+  ],
+  lengths: [
+    [0.0396, 0.0301, 0.0344],
+    [0.0458, 0.0282, 0.0276],
+    [0.047, 0.031, 0.03],
+    [0.0439, 0.0283, 0.0276],
+    [0.0355, 0.0223, 0.0228],
+  ],
+} as const;
+
+/** Off until the stage presets and puppet poses are retuned for the longer fingers (see fitToCoreSkeleton). */
+const CORE_SKELETON_FIT = false;
+
+/**
+ * How much of the thumb CMC's depth below the palm the fit takes from the core (0 keeps the model's): the core puts the
+ * joint level with the palm, but the model's thumb flesh sits below it, and pulling the joint up would drag the ball of
+ * the thumb into the back of the hand.
+ */
+const THUMB_CMC_DEPTH_FIT = 0;
+
+/**
+ * Moves the bind skeleton (hand space, in place) onto the core skeleton's proportions, so every joint the core draws has
+ * its counterpart where the core puts it: the knuckle line, each phalanx's length, the thumb's CMC. The core skeleton is
+ * read in its palm frame and laid into the model's, scaled so the wrist to middle fingertip length is the model's own
+ * (the hand keeps its size on stage). Bones keep their bind directions; metacarpal bases and the wrist stay. Returns, per
+ * moved bone, the affine map from its old bind frame to its new one, for the skin (deformToFit).
+ */
+function fitToCoreSkeleton(world: Map<string, { position: Vector3; quaternion: Quaternion }>): Map<string, Matrix4> {
+  const P = (n: string) => (world.get(n) as { position: Vector3 }).position;
+  const wrist = P(WRIST).clone();
+  // Model palm frame, fixed handedness (palmar = radial x distal), as applyJointPose reads the core's.
+  const mD = P(CHAINS[2][1]).clone().sub(wrist).normalize();
+  const mR = P(CHAINS[1][1]).clone().sub(P(CHAINS[4][1]));
+  mR.addScaledVector(mD, -mR.dot(mD)).normalize();
+  const mN = new Vector3().crossVectors(mR, mD).normalize();
+  const k0 = (i: number) => new Vector3(...CORE_SKELETON.knuckles[i]);
+  const cD = k0(1).normalize();
+  const cR = k0(0).sub(k0(3));
+  cR.addScaledVector(cD, -cR.dot(cD)).normalize();
+  const cN = new Vector3().crossVectors(cR, cD).normalize();
+  // Scale: the model's wrist to middle fingertip chain over the core's.
+  const mid = CHAINS[2];
+  let mLen = P(mid[1]).distanceTo(wrist);
+  for (let k = 1; k < 4; k++) mLen += P(mid[k + 1]).distanceTo(P(mid[k]));
+  const cLen = k0(1).length() + CORE_SKELETON.lengths[2].reduce((a, b) => a + b, 0);
+  const scale = mLen / cLen;
+  const map = (c: readonly number[]) => {
+    const v = new Vector3(c[0], c[1], c[2]);
+    return wrist.clone().addScaledVector(mR, v.dot(cR) * scale).addScaledVector(mN, v.dot(cN) * scale).addScaledVector(mD, v.dot(cD) * scale);
+  };
+
+  const old = new Map<string, Vector3>();
+  for (const c of CHAINS) for (const n of c) old.set(n, P(n).clone());
+  const at = (m: Map<string, Vector3>, n: string) => m.get(n) as Vector3;
+  const next = new Map<string, Vector3>();
+  CHAINS.forEach((chain, f) => {
+    let start: number;
+    if (f === 0) {
+      const cmc = map(CORE_SKELETON.thumbCmc);
+      const keep = at(old, chain[0]).clone().sub(wrist).dot(mN);
+      const got = cmc.clone().sub(wrist).dot(mN);
+      cmc.addScaledVector(mN, (keep - got) * (1 - THUMB_CMC_DEPTH_FIT));
+      next.set(chain[0], cmc);
+      start = 0;
+    } else {
+      next.set(chain[0], at(old, chain[0]).clone());
+      next.set(chain[1], map(CORE_SKELETON.knuckles[f - 1]));
+      start = 1;
+    }
+    for (let k = start; k < chain.length - 1; k++) {
+      const dir = at(old, chain[k + 1]).clone().sub(at(old, chain[k])).normalize();
+      next.set(chain[k + 1], at(next, chain[k]).clone().addScaledVector(dir, CORE_SKELETON.lengths[f][k - start] * scale));
+    }
+  });
+
+  // Per bone: old frame to new, v' = o' + R S (v - o), S stretching along the bone, R turning it onto its new direction.
+  // A bone with no child (the fingertip) moves with the bone before it.
+  const maps = new Map<string, Matrix4>();
+  for (const chain of CHAINS)
+    chain.forEach((n, k) => {
+      const last = k === chain.length - 1;
+      const base = last ? chain[k - 1] : n;
+      const child = last ? n : chain[k + 1];
+      const o = at(old, base);
+      const e = at(old, child).clone().sub(o);
+      const o2 = at(next, base);
+      const e2 = at(next, child).clone().sub(o2);
+      const r = e2.length() / Math.max(1e-9, e.length()) - 1;
+      const u = e.clone().normalize();
+      const S = new Matrix4().set(
+        1 + r * u.x * u.x, r * u.x * u.y, r * u.x * u.z, 0,
+        r * u.y * u.x, 1 + r * u.y * u.y, r * u.y * u.z, 0,
+        r * u.z * u.x, r * u.z * u.y, 1 + r * u.z * u.z, 0,
+        0, 0, 0, 1,
+      );
+      const R = new Quaternion().setFromUnitVectors(u, e2.clone().normalize());
+      const m = new Matrix4()
+        .makeTranslation(o2.x, o2.y, o2.z)
+        .multiply(new Matrix4().makeRotationFromQuaternion(R))
+        .multiply(S)
+        .multiply(new Matrix4().makeTranslation(-o.x, -o.y, -o.z));
+      maps.set(n, m);
+      const w = world.get(n) as { position: Vector3; quaternion: Quaternion };
+      w.position.copy(at(next, n));
+      w.quaternion.premultiply(R);
+    });
+  return maps;
+}
+
+/** Moves every vertex by the skin-weighted blend of its bones' refit maps (a bone without one stays). */
+function deformToFit(geo: BufferGeometry, maps: (Matrix4 | null)[]): void {
+  const pos = geo.attributes.position;
+  const si = geo.attributes.skinIndex;
+  const sw = geo.attributes.skinWeight;
+  const v = new Vector3();
+  const t = new Vector3();
+  const acc = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    acc.set(0, 0, 0);
+    let wsum = 0;
+    for (let c = 0; c < 4; c++) {
+      const w = sw.getComponent(i, c);
+      if (w <= 0) continue;
+      const m = maps[si.getComponent(i, c)];
+      t.copy(v);
+      if (m) t.applyMatrix4(m);
+      acc.addScaledVector(t, w);
+      wsum += w;
+    }
+    if (wsum > 0) pos.setXYZ(i, acc.x / wsum, acc.y / wsum, acc.z / wsum);
+  }
+  pos.needsUpdate = true;
+}
+
+/** Concentric rings laid across each hole when it is capped, so the wrist dome has rows to bend. */
+const CAP_RINGS = 4;
+
+/**
+ * Closes every hole in a welded triangle mesh (the model's wrist is cut open) with a cap of concentric rings
+ * shrinking to the hole's centroid, wound to match the surface. Cap vertices follow the wrist bone alone.
+ */
+export function closeHoles(geo: BufferGeometry): BufferGeometry {
+  const P = geo.attributes.position;
+  const SI = geo.attributes.skinIndex;
+  const SW = geo.attributes.skinWeight;
+  const idx = Array.from((geo.index as BufferAttribute).array);
+  const half = new Set<number>();
+  const n = P.count;
+  for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) half.add(idx[t + k] * n + idx[t + ((k + 1) % 3)]);
+  // Boundary half-edges a -> b have no twin b -> a; following them walks each hole's rim.
+  const next = new Map<number, number>();
+  half.forEach((e) => {
+    const a = Math.floor(e / n);
+    const b = e % n;
+    if (!half.has(b * n + a)) next.set(a, b);
+  });
+  const pos = Array.from(P.array as ArrayLike<number>);
+  const sIdx = Array.from(SI.array as ArrayLike<number>);
+  const sW = Array.from(SW.array as ArrayLike<number>);
+  const add = (x: number, y: number, z: number) => {
+    pos.push(x, y, z);
+    sIdx.push(0, 0, 0, 0);
+    sW.push(1, 0, 0, 0);
+    return pos.length / 3 - 1;
+  };
+  const seen = new Set<number>();
+  next.forEach((_, start) => {
+    if (seen.has(start)) return;
+    const loop: number[] = [];
+    for (let v: number | undefined = start; v !== undefined && !seen.has(v); v = next.get(v)) {
+      seen.add(v);
+      loop.push(v);
+    }
+    if (loop.length < 3) return;
+    const c = [0, 0, 0];
+    for (const v of loop) for (let k = 0; k < 3; k++) c[k] += pos[v * 3 + k] / loop.length;
+    let outer = loop;
+    for (let r = 1; r <= CAP_RINGS; r++) {
+      const t = r / (CAP_RINGS + 1);
+      const inner = loop.map((v) => add(...([0, 1, 2].map((k) => pos[v * 3 + k] + (c[k] - pos[v * 3 + k]) * t) as [number, number, number])));
+      for (let i = 0; i < loop.length; i++) {
+        const j = (i + 1) % loop.length;
+        idx.push(outer[j], outer[i], inner[i], outer[j], inner[i], inner[j]);
+      }
+      outer = inner;
+    }
+    const centre = add(c[0], c[1], c[2]);
+    for (let i = 0; i < loop.length; i++) idx.push(outer[(i + 1) % loop.length], outer[i], centre);
+  });
+  const out = new BufferGeometry();
+  out.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  out.setAttribute('skinIndex', new Uint16BufferAttribute(sIdx, 4));
+  out.setAttribute('skinWeight', new Float32BufferAttribute(sW, 4));
+  out.setIndex(idx);
+  return out;
+}
+
+/**
+ * The model's palm is long for its fingers (a broad, fleshy hand), which from behind reads as a mitten. Everything
+ * behind the knuckle line (hand space z > PALM_SHORTEN.from) is drawn closer to it: joints and skin alike, so the bind
+ * pose stays exact. The scale eases in over `ease` scene units, so the surface has no crease where it starts.
+ */
+const PALM_SHORTEN = { from: -0.9, scale: 0.8, ease: 0.2 };
+
+function shortenPalm(z: number): number {
+  const { from, scale, ease } = PALM_SHORTEN;
+  if (z <= from) return z;
+  const d = z - from;
+  return from + d * scale + (1 - scale) * ease * (1 - Math.exp(-d / ease));
+}
+
+/**
+ * How much slimmer the drawn hand is than the model, which is a broad, fleshy hand: phalanges shrink towards their bone
+ * axis (length kept), and the palm narrows across and thins front to back about its own centre line.
+ */
+const SLENDER = { finger: 0.84, thumb: 0.9, palmWidth: 0.82, palmThickness: 0.8 };
+
+/**
+ * Slims the bind-pose skin without moving a joint, so the skinning stays exact: each vertex moves by the skin-weighted
+ * blend of what its bones ask for. A phalanx pulls the skin towards its own axis (projected onto the bone and onwards
+ * past its end, so fingertips keep their length); the wrist and metacarpals pull it towards the palm's centre line.
+ */
+function slenderise(geo: BufferGeometry, layout: HandLayout): void {
+  const { bones, palm } = layout;
+  const phalanx = new Map<number, { from: Vector3; axis: Vector3; scale: number }>();
+  CHAINS.forEach((chain, f) =>
+    chain.forEach((name, k) => {
+      if (k === 0 || k === chain.length - 1) return;
+      const b = bones.findIndex((d) => d.name === name);
+      const next = bones.findIndex((d) => d.name === chain[k + 1]);
+      const from = bones[b].worldPosition;
+      phalanx.set(b, { from, axis: bones[next].worldPosition.clone().sub(from).normalize(), scale: f === 0 ? SLENDER.thumb : SLENDER.finger });
+    }),
+  );
+  const pos = geo.attributes.position;
+  const si = geo.attributes.skinIndex;
+  const sw = geo.attributes.skinWeight;
+  const p = new Vector3();
+  const rel = new Vector3();
+  const move = new Vector3();
+  const off = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    move.set(0, 0, 0);
+    for (let c = 0; c < 4; c++) {
+      const w = sw.getComponent(i, c);
+      if (w <= 0) continue;
+      const ph = phalanx.get(si.getComponent(i, c));
+      if (ph) {
+        rel.copy(p).sub(ph.from);
+        const t = Math.max(0, rel.dot(ph.axis));
+        off.copy(rel).addScaledVector(ph.axis, -t);
+        move.addScaledVector(off, (ph.scale - 1) * w);
+      } else {
+        rel.copy(p).sub(palm.centre);
+        move.addScaledVector(palm.radial, rel.dot(palm.radial) * (SLENDER.palmWidth - 1) * w);
+        move.addScaledVector(palm.palmar, rel.dot(palm.palmar) * (SLENDER.palmThickness - 1) * w);
+      }
+    }
+    pos.setXYZ(i, p.x + move.x, p.y + move.y, p.z + move.z);
+  }
+  pos.needsUpdate = true;
+}
+
+/** How far the wrist draws in from the palm (scale of its width and thickness) and over what length behind the crease. */
+const WRIST_NARROW = { width: 0.74, thickness: 0.86, reach: 0.5 };
 
 /**
  * The model's wrist ends in a short tube with a flat cap, which reads as a blunt stump from behind the hand. Everything
@@ -133,10 +471,20 @@ function taperWrist(geo: BufferGeometry, wrist: Vector3): void {
   if (!Number.isFinite(x0) || zMax <= zs) return;
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
-  const a = (x1 - x0) / 2;
-  const b = (y1 - y0) / 2;
+  const { width, thickness, reach } = WRIST_NARROW;
+  const a = ((x1 - x0) / 2) * width;
+  const b = ((y1 - y0) / 2) * thickness;
   const tube = zMax - zs;
   const total = tube + (a + b) / 2;
+  // A wrist is narrower and thinner than the palm: the last stretch of the palm draws in towards the wrist's centre
+  // line, and the closed end keeps that slimmer section.
+  for (let i = 0; i < p.count; i++) {
+    const z = p.getZ(i);
+    const t = smoothstep(zs - reach, zs, z);
+    if (t <= 0) continue;
+    p.setX(i, cx + (p.getX(i) - cx) * (1 + (width - 1) * t));
+    p.setY(i, cy + (p.getY(i) - cy) * (1 + (thickness - 1) * t));
+  }
   for (let i = 0; i < p.count; i++) {
     const z = p.getZ(i);
     if (z <= zs) continue;
@@ -200,7 +548,11 @@ function smoothstep(a: number, b: number, x: number): number {
  * - aFingerA (thumb, index, middle, ring) and aFingerB (little): how much a vertex belongs to each finger, from its skin
  *   weights on that finger's phalanges (and the thumb metacarpal), sharpened so a tint stops at the knuckle crease.
  * - aForearm: 0 just before the wrist crease to 1 at the closed end, for the translucent styles' wrist fade.
- * - uv: the grain running along the fingers and wrapping down their sides, for the wood maps.
+ * - aCavity: 0..1, how far a vertex sits in a fold: the sides of the fingers that face a neighbouring finger, and the
+ *   concave creases (webbing, palm lines, the valleys between knuckles). The lit styles darken it a little, so fingers
+ *   pressed together in a fist or a grip still read as separate fingers.
+ * - uv: wood grain running along each bone (so it follows every finger, splayed or curled) and wrapping down the
+ *   finger sides, blended by the skin weights so it has no seams.
  */
 function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vector3): void {
   const n = geo.attributes.position.count;
@@ -208,7 +560,6 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
   const si = geo.attributes.skinIndex;
   const sw = geo.attributes.skinWeight;
   const nrm = geo.attributes.normal;
-  const boneY = layout.bones.map((d) => d.worldPosition.y);
   const fingerOf = new Int8Array(layout.bones.length).fill(-1);
   CHAINS.forEach((chain, f) =>
     chain.forEach((name, k) => {
@@ -216,13 +567,19 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
       fingerOf[layout.bones.findIndex((b) => b.name === name)] = f;
     }),
   );
+  const frames = boneFrames(layout);
+  const concave = concavity(geo);
   const a = new Float32Array(n * 4);
   const b = new Float32Array(n);
   const fore = new Float32Array(n);
+  const cav = new Float32Array(n);
   const uv = new Float32Array(n * 2);
   const w = [0, 0, 0, 0, 0];
   const zA = wrist.z + WRIST_CREASE - 0.08;
   const zB = wrist.z + WRIST_CREASE + WRIST_END;
+  const p = new Vector3();
+  const nv = new Vector3();
+  const rel = new Vector3();
   for (let i = 0; i < n; i++) {
     w.fill(0);
     for (let c = 0; c < 4; c++) {
@@ -233,18 +590,115 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
     a.set([w[0], w[1], w[2], w[3]], i * 4);
     b[i] = w[4];
     fore[i] = Math.min(1, Math.max(0, (pos.getZ(i) - zA) / (zB - zA)));
-    // Grain along the fingers (v follows z). Across them, u is x on the back and the palm, and on the sides of a finger
-    // it keeps unrolling down the side (by the height below the bone's centre line, weighted by how sideways the
-    // surface faces), so the sides carry grain too instead of one colour smeared along the finger. No seams.
-    let yc = 0;
-    for (let c = 0; c < 4; c++) yc += sw.getComponent(i, c) * boneY[si.getComponent(i, c)];
-    uv[i * 2] = (pos.getX(i) + nrm.getX(i) * (yc - pos.getY(i))) * 0.55;
-    uv[i * 2 + 1] = pos.getZ(i) * 0.3;
+    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    nv.set(nrm.getX(i), nrm.getY(i), nrm.getZ(i));
+    // Grain: along the bone (v) and across it (u), unrolled down the finger sides by the height below the bone's centre
+    // line, weighted by how sideways the surface faces, so the sides carry grain instead of one smeared colour.
+    let u = 0;
+    let v = 0;
+    let side = 0;
+    for (let c = 0; c < 4; c++) {
+      const wt = sw.getComponent(i, c);
+      if (wt <= 0) continue;
+      const fr = frames[si.getComponent(i, c)];
+      rel.copy(p).sub(fr.origin);
+      const ns = nv.dot(fr.side);
+      u += wt * (p.dot(fr.side) - ns * rel.dot(fr.up));
+      v += wt * (fr.start + rel.dot(fr.along));
+      side += wt * ns;
+    }
+    uv[i * 2] = u * 0.55;
+    uv[i * 2 + 1] = -v * 0.3;
+    // Finger sides that face another finger: the ulnar side of the index, both sides of middle and ring, the radial
+    // side of the little finger.
+    const facing = smoothstep(0.35, 0.9, Math.abs(side));
+    const inner = w[2] + w[3] + w[1] * smoothstep(-0.2, 0.2, -side) + w[4] * smoothstep(-0.2, 0.2, side);
+    cav[i] = Math.min(1, facing * Math.min(1, inner) * 0.8 + concave[i]) * (1 - smoothstep(0, 0.25, fore[i]));
   }
   geo.setAttribute('aFingerA', new BufferAttribute(a, 4));
   geo.setAttribute('aFingerB', new BufferAttribute(b, 1));
   geo.setAttribute('aForearm', new BufferAttribute(fore, 1));
+  geo.setAttribute('aCavity', new BufferAttribute(cav, 1));
   geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+}
+
+interface BoneFrame {
+  origin: Vector3;
+  /** Unit direction from the bone to its child (the finger's long axis). */
+  along: Vector3;
+  /** Unit direction across the bone towards the thumb side, in the plane of the hand. */
+  side: Vector3;
+  /** Unit direction out of the back of the bone. */
+  up: Vector3;
+  /** Distance from the wrist along the chain to this bone, so the grain runs on from bone to bone. */
+  start: number;
+}
+
+/** A frame per bone from the bind pose: long axis, sideways and dorsal directions, and its distance along the chain. */
+function boneFrames(layout: HandLayout): BoneFrame[] {
+  const { bones, palm } = layout;
+  const child = new Map<number, number>();
+  bones.forEach((d, i) => {
+    if (d.parent >= 0 && !child.has(d.parent)) child.set(d.parent, i);
+  });
+  // The wrist's first child is the thumb's metacarpal; the palm runs along the middle finger's instead.
+  const middle = bones.findIndex((d) => d.name === CHAINS[2][0]);
+  if (middle >= 0) child.set(0, middle);
+  const frames: BoneFrame[] = [];
+  bones.forEach((d, i) => {
+    const c = child.get(i);
+    const along = c !== undefined ? bones[c].worldPosition.clone().sub(d.worldPosition) : d.parent >= 0 ? d.worldPosition.clone().sub(bones[d.parent].worldPosition) : palm.distal.clone();
+    if (along.lengthSq() < 1e-10) along.copy(palm.distal);
+    along.normalize();
+    const up = new Vector3().crossVectors(along, palm.radial).normalize();
+    if (up.dot(palm.palmar) > 0) up.negate();
+    const side = new Vector3().crossVectors(up, along).normalize();
+    if (side.dot(palm.radial) < 0) side.negate();
+    const start = d.parent >= 0 ? frames[d.parent].start + d.worldPosition.distanceTo(bones[d.parent].worldPosition) : 0;
+    frames.push({ origin: d.worldPosition.clone(), along, side, up, start });
+  });
+  return frames;
+}
+
+/**
+ * Per-vertex concavity, 0..1: how far a vertex sits below the mean of its neighbours along its normal, relative to the
+ * local edge length. Creases and the webbing between fingers score high, flat and convex skin zero.
+ */
+function concavity(geo: BufferGeometry): Float32Array {
+  const P = geo.attributes.position;
+  const N = geo.attributes.normal;
+  const idx = (geo.index as BufferAttribute).array;
+  const n = P.count;
+  const sum = new Float32Array(n * 3);
+  const len = new Float32Array(n);
+  const cnt = new Uint16Array(n);
+  for (let t = 0; t < idx.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const i = idx[t + k];
+      const j = idx[t + ((k + 1) % 3)];
+      const dx = P.getX(j) - P.getX(i);
+      const dy = P.getY(j) - P.getY(i);
+      const dz = P.getZ(j) - P.getZ(i);
+      const l = Math.hypot(dx, dy, dz);
+      sum[i * 3] += dx;
+      sum[i * 3 + 1] += dy;
+      sum[i * 3 + 2] += dz;
+      sum[j * 3] -= dx;
+      sum[j * 3 + 1] -= dy;
+      sum[j * 3 + 2] -= dz;
+      len[i] += l;
+      len[j] += l;
+      cnt[i] += 1;
+      cnt[j] += 1;
+    }
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!cnt[i]) continue;
+    // Mean offset to the neighbours along the normal, over the mean edge length: positive in a fold.
+    const d = (sum[i * 3] * N.getX(i) + sum[i * 3 + 1] * N.getY(i) + sum[i * 3 + 2] * N.getZ(i)) / len[i];
+    out[i] = smoothstep(CREASE_FROM, CREASE_TO, d);
+  }
+  return out;
 }
 
 /**

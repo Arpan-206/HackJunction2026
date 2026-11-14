@@ -4,6 +4,7 @@ Each function returns the same kind of answer the model path returns, plus the
 name of the rule that fired, so the log says why. Thresholds come from the
 core's config.toml ``[score]`` section (read-only) with safe defaults.
 """
+
 from __future__ import annotations
 
 import re
@@ -22,7 +23,13 @@ FLEXION_SLOTS = {
     "ring": [8, 9, 10],
     "little": [11, 12, 13],
 }
-CURL_FULL_DEG = {"thumb": 60.0, "index": 90.0, "middle": 90.0, "ring": 90.0, "little": 90.0}
+CURL_FULL_DEG = {
+    "thumb": 60.0,
+    "index": 90.0,
+    "middle": 90.0,
+    "ring": 90.0,
+    "little": 90.0,
+}
 
 
 # ---------------------------------------------------------------------- shared helpers
@@ -83,7 +90,11 @@ def rule_pick_action(summary: dict) -> tuple[str, float, str | None, str]:
     worst = worst_finger(fingers)
     if worst is not None:
         f, err = worst
-        others = [float(v.get("err_deg", 0.0)) for k, v in fingers.items() if k != f and isinstance(v, dict)]
+        others = [
+            float(v.get("err_deg", 0.0))
+            for k, v in fingers.items()
+            if k != f and isinstance(v, dict)
+        ]
         second = max(others) if others else 0.0
         if err >= TH["wrong_deg"] / 2.0 and err >= 2.0 * second:
             return "isolate_finger", 0.8, f, "one_finger"
@@ -100,13 +111,33 @@ def rule_pick_action(summary: dict) -> tuple[str, float, str | None, str]:
 
 
 # ---------------------------------------------------------------------- check_outcome
-PINCH_WORDS = ("pinch", "ok sign", "thumb and index", "thumb to index", "fingertips touch", "tips touch")
+PINCH_WORDS = (
+    "pinch",
+    "ok sign",
+    "thumb and index",
+    "thumb to index",
+    "fingertips touch",
+    "tips touch",
+)
 POINT_WORDS = ("point", "index finger out", "index extended", "index straight")
-CLOSED_WORDS = ("closed", "fist", "grip", "grasp", "hold", "around", "wrap", "clench", "squeez", "curl")
+CLOSED_WORDS = (
+    "closed",
+    "fist",
+    "grip",
+    "grasp",
+    "hold",
+    "around",
+    "wrap",
+    "clench",
+    "squeez",
+    "curl",
+)
 OPEN_WORDS = ("open", "flat", "straight", "extended", "relaxed", "spread", "release")
 
 
-def rule_check_outcome(question: str, context: dict | None) -> tuple[bool, float, float, str]:
+def rule_check_outcome(
+    question: str, context: dict | None
+) -> tuple[bool, float, float, str]:
     """(answer, probability_yes, confidence, rule_name).
 
     Without a model the only evidence is the live hand: ``context`` may carry
@@ -124,12 +155,17 @@ def rule_check_outcome(question: str, context: dict | None) -> tuple[bool, float
         p = min(max(p, 0.05), 0.95)
         return p > 0.5, round(p, 3), round(min(1.0, abs(p - 0.5) * 2.0), 3), rule
 
-    four = [curl[f] for f in ("index", "middle", "ring", "little") if f in curl] or list(curl.values())
+    four = [
+        curl[f] for f in ("index", "middle", "ring", "little") if f in curl
+    ] or list(curl.values())
     mean_curl = sum(four) / len(four) if four else 0.5
     if any(w in q for w in PINCH_WORDS):
         if pinch:
             return verdict(0.9 if any(pinch.values()) else 0.1, "pinch")
-        return verdict(0.5 + (0.45 if 0.25 <= curl.get("index", 0.0) <= 0.75 else -0.3), "pinch_from_curl")
+        return verdict(
+            0.5 + (0.45 if 0.25 <= curl.get("index", 0.0) <= 0.75 else -0.3),
+            "pinch_from_curl",
+        )
     if any(w in q for w in POINT_WORDS) and "index" in curl:
         rest = [curl[f] for f in ("middle", "ring", "little") if f in curl]
         if rest:
@@ -160,7 +196,9 @@ SHAPE_WORDS: dict[str, dict[str, float]] = {
 }
 
 
-def rule_finger_rubric(keyframe: dict | None, step: dict | None) -> tuple[dict[str, float], float, str]:
+def rule_finger_rubric(
+    keyframe: dict | None, step: dict | None
+) -> tuple[dict[str, float], float, str]:
     """(weights 0..1 with the largest at 1.0, confidence, rule_name).
 
     Starts from the recorder's per-step weights (static fingers already at 0.5),
@@ -173,7 +211,9 @@ def rule_finger_rubric(keyframe: dict | None, step: dict | None) -> tuple[dict[s
     text = f"{step.get('name') or ''} {step.get('note') or ''}".lower()
     out = dict(base)
     rule = "recorder_weights"
-    shape = next((w for word, w in SHAPE_WORDS.items() if re.search(rf"\b{word}", text)), None)
+    shape = next(
+        (w for word, w in SHAPE_WORDS.items() if re.search(rf"\b{word}", text)), None
+    )
     if shape is not None:
         out = {f: base[f] * shape[f] for f in FINGERS}
         rule = "shape_word"

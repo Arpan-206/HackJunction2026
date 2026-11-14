@@ -41,6 +41,26 @@ export function toonGradient(): DataTexture {
   return gradient;
 }
 
+let handRamp: DataTexture | null = null;
+
+/**
+ * The hands' own light ramp: a few soft steps instead of the props' three hard bands, so the back of a hand keeps the
+ * relief of its knuckles and tendons while still reading as chalk rather than skin.
+ */
+export function handGradient(): DataTexture {
+  if (!handRamp) {
+    const steps = HAND_RAMP;
+    const data = new Uint8Array(steps.length * 4);
+    steps.forEach((v, i) => data.set([v, v, v, 255], i * 4));
+    handRamp = new DataTexture(data, steps.length, 1, RGBAFormat);
+    handRamp.minFilter = LinearFilter;
+    handRamp.magFilter = LinearFilter;
+    handRamp.needsUpdate = true;
+  }
+  return handRamp;
+}
+const HAND_RAMP = [80, 112, 158, 198, 224, 238];
+
 export interface WoodTextures {
   color: Texture;
   normal: Texture;
@@ -87,9 +107,11 @@ function patchShader<M extends Material>(mat: M, key: string, patch: (shader: We
 const TINT_VERT_HEAD = /* glsl */ `
 attribute vec4 aFingerA;
 attribute float aFingerB;
+attribute float aCavity;
 uniform vec3 uFingerTint[5];
 uniform float uFingerOn[5];
 varying vec4 vFingerTint;
+varying float vCavity;
 `;
 
 const TINT_VERT_BODY = /* glsl */ `
@@ -102,7 +124,21 @@ const TINT_VERT_BODY = /* glsl */ `
   float s = w0 + w1 + w2 + w3 + w4;
   vec3 c = uFingerTint[0] * w0 + uFingerTint[1] * w1 + uFingerTint[2] * w2 + uFingerTint[3] * w3 + uFingerTint[4] * w4;
   vFingerTint = vec4(s > 0.0001 ? c / s : vec3(0.0), clamp(s, 0.0, 1.0));
+  vCavity = aCavity;
 }
+`;
+
+/**
+ * Rounds every finger off at its own edge: the surface darkens a little as it turns away from the eye, so a finger
+ * lying in front of another keeps a soft dark rim against it and a curled hand still shows each finger.
+ */
+const EDGE_FRAG = /* glsl */ `
+#ifndef FLAT_SHADED
+{
+  float facing = abs( dot( normalize( normal ), normalize( vViewPosition ) ) );
+  gl_FragColor.rgb *= 1.0 - uEdge * pow( 1.0 - facing, 1.6 );
+}
+#endif
 `;
 
 /** Per-finger tint state shared by a hand's fill material: linear RGB per finger and an on/off weight. */
@@ -115,16 +151,17 @@ export interface FingerTints {
  * Lets one material tint single fingers: the mesh's aFingerA/aFingerB weights pick the finger, so a wrong finger turns
  * vermilion up to its knuckle crease while the rest of the hand keeps the base colour (multiplied by any map, as wood).
  */
-function withFingerTints<M extends Material>(mat: M, tints: FingerTints): M {
-  const uniforms = { uFingerTint: { value: tints.colors }, uFingerOn: { value: tints.on } };
-  return patchShader(mat, 'finger-tint-v1', (shader) => {
+function withFingerTints<M extends Material>(mat: M, tints: FingerTints, cavity: number, edge: number): M {
+  const uniforms = { uFingerTint: { value: tints.colors }, uFingerOn: { value: tints.on }, uCavity: { value: cavity }, uEdge: { value: edge } };
+  return patchShader(mat, edge > 0 ? 'finger-tint-v2-edge' : 'finger-tint-v2', (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${TINT_VERT_HEAD}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>\n${TINT_VERT_BODY}`);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec4 vFingerTint;')
-      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( mix( diffuse, vFingerTint.rgb, vFingerTint.a ), opacity );');
+      .replace('#include <common>', '#include <common>\nvarying vec4 vFingerTint;\nvarying float vCavity;\nuniform float uCavity;\nuniform float uEdge;')
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( mix( diffuse, vFingerTint.rgb, vFingerTint.a ) * ( 1.0 - uCavity * vCavity ), opacity );')
+      .replace('#include <dithering_fragment>', edge > 0 ? `#include <dithering_fragment>\n${EDGE_FRAG}` : '#include <dithering_fragment>');
   });
 }
 
@@ -136,7 +173,7 @@ function withFingerTints<M extends Material>(mat: M, tints: FingerTints): M {
  * background behind it), but inside a fold, such as the palm crease of a curled hand, the hull of the far side no longer
  * pokes through the near skin, so creases stay clean and only the outer contour is inked.
  */
-const OUTLINE_DEPTH_BIAS = 8;
+const OUTLINE_DEPTH_BIAS = 3;
 
 function outlineMaterial(color: string, width: number): MeshBasicMaterial {
   const uniforms = { uOutline: { value: width }, uOutlineBias: { value: width * OUTLINE_DEPTH_BIAS } };
@@ -181,6 +218,11 @@ function withRimAndFade<M extends Material>(mat: M, rim: number, rimColor: Color
   });
 }
 
+/** How much each lit style darkens the folds between fingers and the creases (the mesh's aCavity), 0..1. */
+const CAVITY = { chalk: 0.4, sketch: 0.45, wood: 0.55 };
+/** How much each lit style darkens a surface turning away from the eye (EDGE_FRAG), 0..1. */
+const EDGE = { chalk: 0.45, sketch: 0.2, wood: 0.5 };
+
 export interface HandMaterialSet {
   /** The hand's skin material. One per hand, so fingers are tinted through `setTint`, not by swapping materials. */
   fill: Material;
@@ -214,13 +256,13 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
     }
   };
   const dispose = () => owned.forEach((m) => m.dispose());
-  const finish = (fill: Material, line: Material | null, base: Color): HandMaterialSet => ({ fill: track(withFingerTints(fill, tints)), line: line && track(line), base, setTint, dispose });
+  const finish = (fill: Material, line: Material | null, base: Color, cavity = 0, edge = 0): HandMaterialSet => ({ fill: track(withFingerTints(fill, tints, cavity, edge)), line: line && track(line), base, setTint, dispose });
 
   if (style === 'wood') {
     const w = getWoodTextures();
     const base = new Color(tint ?? '#ffffff');
     const fill = new MeshStandardMaterial({ color: base.clone(), map: w.color, normalMap: w.normal, roughnessMap: w.roughness, roughness: 0.78, metalness: 0 });
-    return finish(fill, outlineMaterial('#2a1b10', 0.012), base);
+    return finish(fill, outlineMaterial('#2a1b10', 0.012), base, CAVITY.wood, EDGE.wood);
   }
 
   if (style === 'ghost' || style === 'shadow') {
@@ -236,11 +278,11 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
   }
 
   if (style === 'sketch') {
-    const base = new Color(tint ?? stage.chalk);
-    const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.08 });
-    return finish(fill, outlineMaterial(stage.ink, 0.022), base);
+    const base = new Color(tint ?? stage.hand);
+    const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.0 });
+    return finish(fill, outlineMaterial(stage.ink, 0.022), base, CAVITY.sketch, EDGE.sketch);
   }
 
-  const base = new Color(tint ?? stage.chalk);
-  return finish(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), outlineMaterial(stage.ink, 0.016), base);
+  const base = new Color(tint ?? stage.hand);
+  return finish(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), outlineMaterial(stage.ink, 0.016), base, CAVITY.chalk, EDGE.chalk);
 }

@@ -4,6 +4,7 @@ Usage:
     uv run geppetto-export --lessons-dir ../lessons --out ./out/geppetto_robot_demos
     uv run geppetto-export --lessons-dir ../lessons --out ./out/geppetto_robot_demos --overwrite
 """
+
 from __future__ import annotations
 
 import argparse
@@ -14,7 +15,13 @@ from pathlib import Path
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 from . import convert as _convert
-from .convert import build_retargeter, dataset_features, lesson_to_frames, load_lesson, robot_action_names
+from .convert import (
+    build_retargeter,
+    dataset_features,
+    lesson_to_frames,
+    load_lesson,
+    robot_action_names,
+)
 
 REPO_ID = "geppetto/robot-demos"
 
@@ -54,7 +61,10 @@ def export(lessons_dir: Path, out: Path, overwrite: bool = False) -> LeRobotData
     for lesson_dir in lesson_dirs:
         lesson = load_lesson(lesson_dir)
         if list(robot_action_names(rt, lesson.hand_side)) != action_names:
-            print(f"skip {lesson.id}: action names do not match the dataset's (hand side mismatch?)", file=sys.stderr)
+            print(
+                f"skip {lesson.id}: action names do not match the dataset's (hand side mismatch?)",
+                file=sys.stderr,
+            )
             skipped += 1
             continue
         frames = lesson_to_frames(lesson, rt)
@@ -72,8 +82,16 @@ def export(lessons_dir: Path, out: Path, overwrite: bool = False) -> LeRobotData
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--lessons-dir", type=Path, default=Path(__file__).resolve().parents[3] / "lessons")
-    parser.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[2] / "out" / "geppetto_robot_demos")
+    parser.add_argument(
+        "--lessons-dir",
+        type=Path,
+        default=Path(__file__).resolve().parents[3] / "lessons",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path(__file__).resolve().parents[2] / "out" / "geppetto_robot_demos",
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     export(args.lessons_dir, args.out, overwrite=args.overwrite)

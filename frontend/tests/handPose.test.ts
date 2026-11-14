@@ -67,8 +67,13 @@ describe('hand template', () => {
     for (let i = 0; i < w.count; i += 97) expect(w.getX(i) + w.getY(i) + w.getZ(i) + w.getW(i)).toBeCloseTo(1, 4);
   });
 
-  it('finds the finger flex axis on the bone local x axis, as the WebXR joint convention says', () => {
-    for (const f of tpl.layout.fingers.slice(1)) for (const j of f.joints) expect(Math.abs(j.flexAxis.x)).toBeGreaterThan(0.9);
+  it('flexes every finger joint about an axis across the palm, whatever the bones local axes are', () => {
+    const { bones, palm } = tpl.layout;
+    for (const f of tpl.layout.fingers.slice(1))
+      for (const j of f.joints) {
+        const world = j.flexAxis.clone().applyQuaternion(bones[j.bone].worldQuaternion);
+        expect(Math.abs(world.dot(palm.radial))).toBeGreaterThan(0.85);
+      }
   });
 
   it('reproduces the bind pose when given the bind flexion and no spread', () => {

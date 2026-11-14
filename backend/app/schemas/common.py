@@ -1,6 +1,6 @@
 """Primitive contract types: sides, fingers, glove sources and per-finger value maps."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -12,10 +12,9 @@ GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"]
 Skill = Literal[
     "table_tennis",
     "piano",
-    "shadow_puppets",
-    "surgical_grips",
-    "crochet",
+    "finnish_fingerspelling",
     "fingerspelling",
+    "shadow_puppets",
     "general",
 ]
 Prop = Literal["none", "racket", "keyboard", "ball"]
@@ -23,6 +22,7 @@ Hands = Literal["left", "right", "both"]
 # The learner's margin of error; see MARGINS in app/constants.py.
 Margin = Literal["strict", "standard", "relaxed", "just_trying"]
 Triple = tuple[float, float, float]
+PositiveDeg = Annotated[float, Field(gt=0)]
 
 
 class FingerValues(BaseModel):
@@ -49,8 +49,29 @@ class Tolerance(BaseModel):
 
     angle_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
     timing_ms: float = Field(default=c.DEFAULT_TOLERANCE_TIMING_MS, gt=0)
+    finger_angle_deg: dict[Finger, PositiveDeg] | None = Field(
+        default=None,
+        description="Per-finger angle tolerance (degrees of total flexion), e.g. from POST /recordings/model; "
+        "a finger left out uses angle_deg.",
+        json_schema_extra={c.LLM_SCHEMA_SKIP_KEY: True},
+    )
+
+    def angle_for(self, finger: str) -> float:
+        """Return the angle tolerance for one finger: its own when set, else angle_deg."""
+        if self.finger_angle_deg is not None and finger in self.finger_angle_deg:
+            return self.finger_angle_deg[finger]  # type: ignore[index]
+        return self.angle_deg
 
     def widened(self, margin: Margin) -> "Tolerance":
-        """Return the bands the learner's margin of error asks for: both scaled by its multiplier."""
+        """Return the bands the learner's margin of error asks for: all scaled by its multiplier."""
         k = c.MARGIN_MULTIPLIERS[margin]
-        return Tolerance(angle_deg=self.angle_deg * k, timing_ms=self.timing_ms * k)
+        fingers = (
+            None
+            if self.finger_angle_deg is None
+            else {f: v * k for f, v in self.finger_angle_deg.items()}
+        )
+        return Tolerance(
+            angle_deg=self.angle_deg * k,
+            timing_ms=self.timing_ms * k,
+            finger_angle_deg=fingers,
+        )

@@ -10,6 +10,8 @@ WS_INGEST_PATH = "/ws/ingest"
 DEFAULT_CORS_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SEED_DIR = Path(__file__).resolve().parent / "data" / "seed"
+# Every shipped seed lesson id starts with this; a stored one that no longer ships is removed at start-up.
+SEED_LESSON_PREFIX = "seed-"
 MOVES_FILE = Path(__file__).resolve().parent / "data" / "moves.json"
 # Fingerspelling packs, one alphabet per pack (schemas/fingerspelling.py). The slot kit writes recorded letters here.
 FINGERSPELLING_PACKS_FILE = Path(__file__).resolve().parent / "data" / "fingerspelling_packs.json"
@@ -115,6 +117,27 @@ TAKE_INCONSISTENT_FLOOR = 0.2
 STATIC_REFERENCE_RANGE_DEG = 12.0
 STATIC_PRESETS = ("hold_pose", "idle")
 
+# Expert takes into a model (POST /recordings/model, services/takes.py): "best take + spread". The medoid take (smallest
+# total per-finger DTW distance to the others) becomes the reference, and each finger's tolerance is its robust spread
+# around the medoid (the TAKES_SPREAD_PERCENTILE of that finger's DTW error over the other takes) times
+# TAKES_TOLERANCE_SCALE, clamped to [FLOOR, CEIL]. Scale 2.5 puts a typical take-to-take wobble of about 7 degrees of total
+# flexion at the 18 degree default; the floor keeps a rock-steady finger humane for a learner with a different hand, the
+# ceiling (twice the default) stops a sloppy finger from being ignored. 2 takes are accepted with a warning; 3 to 5 is
+# the recommended range, so one stray take cannot pick the reference.
+TAKES_HARD_MIN = 2
+TAKES_MIN = 3
+TAKES_MAX = 5
+TAKES_SPREAD_PERCENTILE = 75.0
+TAKES_TOLERANCE_SCALE = 2.5
+TAKES_TOLERANCE_FLOOR_DEG = 10.0
+TAKES_TOLERANCE_CEIL_DEG = 36.0
+# A take is an outlier when its mean per-finger distance to the medoid exceeds TAKES_OUTLIER_FACTOR times the median
+# distance between the other takes (pairs not involving it) and is at least TAKES_OUTLIER_MIN_DEG, so a set of very
+# consistent takes never flags a take that is only a few degrees off. Needs 3 or more takes (with 2 nobody can tell
+# which one strayed).
+TAKES_OUTLIER_FACTOR = 2.0
+TAKES_OUTLIER_MIN_DEG = 12.0
+
 # Hint wording thresholds.
 HINT_MIN_DEVIATION_DEG = 4.0
 HINT_TIMING_MS = 120.0
@@ -163,15 +186,15 @@ LLM_GEMINI_TIMEOUT_S = 20.0
 LLM_GEMINI_HINT_TIMEOUT_S = 4.0
 HTTP_SERVICE_UNAVAILABLE = 503
 LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
-OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
-DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
 DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"  # an OpenAI-compatible endpoint, e.g. Gemma on Verda (verda/)
 # The tuned coach (coach_tune/, COACH_MODEL=tuned): Gemma 4 E2B with our LoRA merged, served by vLLM on Verda.
 DEFAULT_TUNED_MODEL = "geppetto-coach-e2b"
 TUNED_TIMEOUT_S = 2.0
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
+# A field whose json_schema_extra holds {LLM_SCHEMA_SKIP_KEY: True} is left out of every schema sent to a model (the
+# expert's take ids and per-finger tolerance, which only POST /recordings/model fills). Such a field needs a default.
+LLM_SCHEMA_SKIP_KEY = "x-llm-skip"
 
 # Gemini free tier (per project and per model; the day resets at midnight Pacific). The figures are not in the public
 # docs, they come from the AI Studio rate-limit screen as reported by third parties (research/06_gemini.md).
@@ -239,6 +262,16 @@ VIDEO_DEFAULT_PROMPT = "Teach the hand skill shown in this video."
 VIDEO_PROCESSING_TIMEOUT_S = 60.0
 VIDEO_POLL_INTERVAL_S = 1.0
 VIDEO_FAKE_NOTE = "The AI Assistant could not watch the video, so this is a generic template based on your text and the file name."
+
+# Expert media (POST /media): tutorial videos and the webcam filmed during a take, stored under <data_dir>/media.
+MEDIA_DIR_NAME = "media"
+MEDIA_MAX_BYTES = 200 * 1024 * 1024
+MEDIA_MIME_TYPES = VIDEO_MIME_TYPES
+MEDIA_SUFFIXES = VIDEO_SUFFIXES
+MEDIA_URL_PREFIX = f"{API_PREFIX}/media/"
+# Longest sync offset accepted (seconds into the video at which a take starts), and a sane cap on a stated duration.
+MEDIA_MAX_OFFSET_S = 3600.0
+MEDIA_MAX_DURATION_S = 4 * 3600.0
 
 # Real gloves through the Rokoko Device SDK (status screen, calibration area, demo mode). The core (repo root `core/`)
 # owns the glove data path; the backend only watches it: process and port checks, the driver's RCSP device list and
@@ -358,3 +391,64 @@ QUALITY_HEADING_GOOD = 0.95
 QUALITY_HEADING_FAIR = 0.6
 # Verification step: how far each finger's total flexion must travel (open to closed) for the hand to count as following.
 VERIFY_MIN_TRAVEL_DEG = 60.0
+
+# Expert training persistence: the scratch draft on disk, file bundles (export and import) and automatic backups.
+# One file per draft under <data_dir>/drafts; the draft itself is the frontend's object, kept as opaque JSON.
+DRAFTS_DIR_NAME = "drafts"
+DRAFT_KINDS = ("scratch",)
+DRAFT_MAX_BYTES = 512 * 1024
+# Oldest drafts beyond this many are pruned when a draft is saved.
+DRAFTS_KEEP = 20
+# Bundle file format (GET /lessons/{id}/export, GET /export/all, POST /lessons/import).
+BUNDLE_FORMAT = "geppetto.bundle"
+BUNDLE_FORMAT_VERSION = 1
+BUNDLE_FILE_SUFFIX = ".geppetto.json"
+# A referenced video is embedded as base64 only when it is this small; larger ones are listed by id.
+BUNDLE_MEDIA_EMBED_MAX_BYTES = 2 * 1024 * 1024
+# After every publish (POST or PUT /lessons) the lesson's bundle is written to <data_dir>/exports; the newest N per
+# lesson name are kept.
+EXPORTS_DIR_NAME = "exports"
+EXPORT_BACKUPS_KEEP = 5
+EXPORT_SLUG_MAX_CHARS = 48
+
+# Dev file reveal (POST /api/dev/reveal, GET /api/dev/locate): finds a stored file under <data_dir> so a developer can
+# open its folder or copy its path, e.g. to send a take to someone. Answers only requests from this machine, and only
+# while the flag is on (env DEV_REVEAL=false turns it off). The kinds and the folder each one lives in under <data_dir>.
+DEV_REVEAL_ENABLED = True
+DEV_LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1")
+# Folder under the data dir where the glove compare page (/dev/glove-compare) saves its guided captures.
+GLOVE_COMPARE_DIR = "glove_compare"
+DEV_REVEAL_DIRS = {
+    "recording": "recordings",
+    "lesson": "lessons",
+    "draft": DRAFTS_DIR_NAME,
+    "export": EXPORTS_DIR_NAME,
+    "calibration": "calibrations",
+    "media": MEDIA_DIR_NAME,
+}
+# An export id is a file name in <data_dir>/exports (with or without .geppetto.json), or a lesson id for its newest backup.
+DEV_EXPORT_NAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,159}$"
+
+# Core lesson export (services/core_export.py): every stored take and lesson is also written, locally, as a core lesson
+# folder (SPEC.md "Lesson files": lesson.json, trace.npz, frames/step_XX.jpg), the format Arpan's local tools read
+# (coach_tune/build_dataset.py, weights/check_lessons.py) and the one verda/gemma_client.py turns into the prompt for the
+# model hosted on Verda. Nothing is uploaded. The folders live under <data_dir>/<CORE_EXPORT_DIR_NAME> unless
+# CORE_EXPORT_DIR names another folder; CORE_EXPORT=false turns the export off.
+CORE_EXPORT_DIR_NAME = "core_lessons"
+CORE_EXPORT_TAKES_DIR = "takes"
+CORE_EXPORT_LESSONS_DIR = "lessons"
+CORE_EXPORT_MANIFEST_FILE = "manifest.json"
+CORE_EXPORT_SCHEMA = "geppetto.core-export/1"
+CORE_LESSON_SCHEMA = "geppetto.lesson/1"
+CORE_LESSON_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_-]*$"
+# The worker re-checks the stored files this often, and at once when a take or lesson is saved or deleted.
+CORE_EXPORT_SYNC_INTERVAL_S = 30.0
+# After a save the worker waits this long, so a burst of saves (several takes, a lesson publish) becomes one sync.
+CORE_EXPORT_DEBOUNCE_S = 0.5
+# The repo root that holds Arpan's core/ and config.toml; the export borrows the core's recorder from it, read only.
+REPO_ROOT = BACKEND_ROOT.parent
+VERDA_LANE_DIR = REPO_ROOT / "verda"
+# Lesson steps recorded as separate takes are joined into one trace with this gap between them, in seconds.
+CORE_EXPORT_STEP_GAP_S = 0.02
+# Who demonstrated, when the take has no lesson to name the expert.
+CORE_EXPORT_DEFAULT_EXPERT = "expert"

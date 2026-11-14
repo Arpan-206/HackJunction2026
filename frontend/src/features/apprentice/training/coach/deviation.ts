@@ -8,8 +8,13 @@ export type FingerStatus = 'good' | 'off';
 
 /** Tunables for comparing a learner hand with the reference. */
 export interface CoachConfig {
-  /** Allowed difference in total finger flexion, in degrees. */
+  /** Allowed difference in total finger flexion, in degrees: the step's single band, for anything that reads one number. */
   toleranceDeg: number;
+  /**
+   * Each finger's own band in degrees, after the margin. From the step's `tolerance.finger_angle_deg` (the takes model:
+   * a finger the expert holds steady is judged strictly, one that varies gets room); a finger left out uses `toleranceDeg`.
+   */
+  fingerToleranceDeg: FingerValues;
   /** Differences below this are treated as tremor and ignored, in degrees. */
   deadZoneDeg: number;
   /** Largest timing slip that is forgiven, in milliseconds. */
@@ -42,22 +47,45 @@ export function lightFingers(weights?: Partial<Record<Finger, number>> | null): 
 /** Dead zone used when the step does not say otherwise: a few degrees of natural tremor. */
 export const DEFAULT_DEAD_ZONE_DEG = 4;
 
+/** A tolerance band in degrees: one number for every finger, or each finger's own. */
+export type ToleranceBand = number | FingerValues;
+
+/** One finger's band from a tolerance band. */
+export function bandFor(band: ToleranceBand, finger: Finger): number {
+  return typeof band === 'number' ? band : band[finger];
+}
+
+/** The step's tolerance as the coach reads it; `finger_angle_deg` is optional and may name only some fingers. */
+export interface ToleranceInput {
+  angle_deg?: number;
+  timing_ms?: number;
+  finger_angle_deg?: Partial<Record<Finger, number>> | null;
+}
+
 /**
  * Builds a coach configuration from a step's tolerance (defaults 18 degrees and 250 ms) widened by the learner's margin of
  * error, the same multiplier the scorer applies. Every live correction (strings, rings, finger tints, tips, the match
- * meter and the local score) reads its band from here, so a relaxed margin stops marking a slightly-off finger.
+ * meter and the local score) reads its band from here, so a relaxed margin stops marking a slightly-off finger. A step
+ * built from several takes carries a band per finger (`finger_angle_deg`); a finger it leaves out falls back to
+ * `angle_deg`, and the margin multiplies every band, as on POST /score.
  */
 export function configFromTolerance(
-  tol: { angle_deg?: number; timing_ms?: number } | undefined,
+  tol: ToleranceInput | undefined,
   margin: Margin = DEFAULT_MARGIN,
   weights?: Partial<Record<Finger, number>> | null,
 ): CoachConfig {
   const k = MARGIN_MULTIPLIERS[margin];
-  const base = { toleranceDeg: (tol?.angle_deg ?? 18) * k, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: (tol?.timing_ms ?? 250) * k };
-  if (!weights) return base;
+  const base = tol?.angle_deg ?? 18;
+  const fingerToleranceDeg = zeroValues();
+  for (const f of FINGERS) {
+    const own = tol?.finger_angle_deg?.[f];
+    fingerToleranceDeg[f] = (typeof own === 'number' && own > 0 ? own : base) * k;
+  }
+  const config: CoachConfig = { toleranceDeg: base * k, fingerToleranceDeg, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: (tol?.timing_ms ?? 250) * k };
+  if (!weights) return config;
   const w = {} as Record<Finger, number>;
   for (const f of FINGERS) w[f] = Math.min(1, Math.max(0, weights[f] ?? 1));
-  return { ...base, weights: w, light: lightFingers(weights) };
+  return { ...config, weights: w, light: lightFingers(weights) };
 }
 
 /** Total flexion of one finger (sum of its three joints) in degrees. */
@@ -130,12 +158,12 @@ export function fingerMatch(deviationDeg: number, toleranceDeg: number): number 
 }
 
 /**
- * The live match meter, 0 to 100: the weakest finger's match. A hand is only as in line as its worst finger, so the meter
- * can never read high while a finger is flagged.
+ * The live match meter, 0 to 100: the weakest finger's match, each finger against its own band. A hand is only as in line
+ * as its worst finger, so the meter can never read high while a finger is flagged.
  */
-export function matchMeter(deviations: FingerValues, toleranceDeg: number, light: readonly Finger[] = []): number {
+export function matchMeter(deviations: FingerValues, tolerance: ToleranceBand, light: readonly Finger[] = []): number {
   let worst = 100;
-  for (const f of FINGERS) if (!light.includes(f)) worst = Math.min(worst, fingerMatch(deviations[f], toleranceDeg));
+  for (const f of FINGERS) if (!light.includes(f)) worst = Math.min(worst, fingerMatch(deviations[f], bandFor(tolerance, f)));
   return worst;
 }
 

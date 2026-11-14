@@ -233,3 +233,14 @@
     height: 12rem;
   }
 }
+
+/* The saved calibration in use, with "Calibrate again" beside it. */
+.gl-calnow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+.gl-calnow .gl-line {
+  margin: 0;
+}

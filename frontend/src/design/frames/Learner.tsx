@@ -18,12 +18,8 @@ interface Skill {
 const SKILLS: Skill[] = [
   { id: 'tableTennis', name: 'Table tennis', level: 'Beginner', hands: 'One hand', live: true, progress: { lesson: 2, of: 4, pct: 35 } },
   { id: 'piano', name: 'Piano', level: 'Intermediate', hands: 'Two hands', live: true, progress: { lesson: 1, of: 5, pct: 22 } },
+  { id: 'spelling', name: 'Finnish fingerspelling', level: 'Intermediate', hands: 'One hand', live: false },
   { id: 'shadow', name: 'Shadow puppets', level: 'Beginner', hands: 'Two hands', live: false },
-  { id: 'spelling', name: 'Fingerspelling', level: 'Intermediate', hands: 'One hand', live: false },
-  { id: 'boxing', name: 'Boxing form', level: 'Intermediate', hands: 'Two hands', live: false },
-  { id: 'guitar', name: 'Guitar chords', level: 'Advanced', hands: 'One hand', live: false },
-  { id: 'rps', name: 'Rock paper scissors', level: 'Beginner', hands: 'One hand', live: false },
-  { id: 'therapy', name: 'Hand therapy', level: 'Beginner', hands: 'One hand', live: false },
 ];
 
 type Cam = StillJob['camera'];
@@ -32,8 +28,6 @@ const CARD_CAMS: Partial<Record<Skill['id'], Cam>> = {
   piano: { position: [0, 3.4, 3.4], target: [0, -0.45, -1.3] },
   tableTennis: { position: [2.2, 2.4, 3.9], target: [-0.3, 0, -0.6] },
   spelling: UPRIGHT,
-  guitar: UPRIGHT,
-  therapy: UPRIGHT,
   shadow: { position: [1.3, 2.0, 4.4], target: [0.1, 0.2, -0.3] },
 };
 
@@ -61,15 +55,8 @@ function sceneFor(id: Skill['id']): StillJob['scene'] {
           <Hand style="chalk" side="left" frame={pose([0.1, 0.9, 0.95, 0.95, 0.95], [0, 0.2, 0.3], 'left')} position={[0.6, 0.05, 0.4]} scale={0.8} />
         </>
       );
-    case 'boxing':
-      return (
-        <>
-          <Hand style="chalk" side="left" frame={pose([0.8, 1, 1, 1, 1], [0, 0, 1.4], 'left')} position={[-0.7, 0.15, 0]} scale={0.85} />
-          <Hand style="chalk" frame={p} position={[0.75, 0.15, -0.2]} scale={0.85} />
-        </>
-      );
     default:
-      return <Hand style="chalk" frame={p} position={[0, id === 'spelling' || id === 'guitar' || id === 'therapy' ? 0.1 : 0, 0]} />;
+      return <Hand style="chalk" frame={p} position={[0, id === 'spelling' ? 0.1 : 0, 0]} />;
   }
 }
 

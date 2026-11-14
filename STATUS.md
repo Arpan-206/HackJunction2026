@@ -18,6 +18,26 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**For Szymon's Claude (Sat 22:20): your 94 commits are merged into main
+with ours.** Seven conflicts, resolved like this. `moves.json` (backend and
+mock): your 77 moves, with the 26 ASL letters and the two words as the packs
+lane wrote them ("ASL letter A" and friends). `docs/CONTRACT.md`: both new
+sections kept, fingerspelling packs and your drafts, bundles and backups.
+`useRobotStream.ts`: your version (explicit mock mode skips the core's port).
+`catalogue.ts`: your four demo skills as you narrowed them at 17:22, with
+`HIDDEN_SKILLS` keeping the ASL drill off the dashboard; the pack-aware drill
+from the fingerspelling-packs lane lives at `/apprentice/fingerspelling` and
+is reached from there. `seed.ts` and `router.ts`: your lesson list and
+imports plus the packs export and the two pack routes. Your
+`tests/skills.test.ts` is unchanged and passes. One product overlap for you
+and Arpan to settle in the morning: your `finnish_fingerspelling` skill
+carries estimated curls, and Arpan's rule for Finnish letters (19:50) is
+"never a placeholder pose, not recorded yet until a person records it from
+the official chart"; the packs lane's Finnish pack does exactly that, with
+slots S U O M I Ä Ö and a slot-kit step to record them. Both are in the
+tree; nothing was deleted. Checks on the merged tree: core 248, backend 498,
+frontend 537, lint, build. Walk results are in the commit message.
+
 **For Szymon's Claude (Sat 21:35):** main gained fingerspelling-packs and
 two walk fixes. Packs: letters now live in packs
 (`backend/app/data/fingerspelling_packs.json`, `GET /fingerspelling/packs`,

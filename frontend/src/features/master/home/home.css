@@ -1,0 +1,316 @@
+/*
+ * The expert's studio: two doors into the workshop, then the shelf of lesson folios. Semantic tokens only; ink on paper.
+ * Gold is never used here (kept for mastery), nor vermilion (kept for corrections).
+ */
+
+.studio .page-head {
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+}
+
+/* ---------- Doors ---------- */
+.doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  gap: clamp(1rem, 2vw, 1.75rem);
+}
+.door {
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(9.5rem, 13vw, 12.5rem) minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.75rem);
+  align-items: stretch;
+  padding: 1rem clamp(1rem, 2vw, 1.75rem) 1rem 1rem;
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s;
+}
+.door:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+.door__link {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+}
+.door__link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* The arched niche: a round-headed doorway drawn in ink, with a fine inner moulding, the chalk hand standing in it. */
+.door__niche {
+  position: relative;
+  min-height: 15rem;
+  background-color: var(--stage-bg);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50% 50% var(--radius-s) var(--radius-s) / clamp(4.75rem, 6.5vw, 6.25rem) clamp(4.75rem, 6.5vw, 6.25rem) var(--radius-s) var(--radius-s);
+  overflow: hidden;
+}
+.door__niche::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--rule);
+  border-radius: inherit;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.door__still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.door__quill {
+  position: absolute;
+  inset: 8% 10% 6%;
+  width: 80%;
+  height: 86%;
+  color: var(--text);
+}
+.door:hover .door__niche::after {
+  opacity: 0.9;
+}
+
+.door__body {
+  display: grid;
+  align-content: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+}
+.door__title {
+  font-size: var(--step-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+.door__text {
+  margin: 0;
+  max-width: 34ch;
+  font: italic 400 var(--step-1) / 1.35 var(--font-note);
+  color: var(--text-2);
+}
+.door__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.door__cta svg {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.door:hover .door__cta svg {
+  transform: translateX(4px);
+}
+
+/* ---------- The shelf of lesson folios ---------- */
+.shelf {
+  margin-top: clamp(1.75rem, 3.5vw, 2.75rem);
+}
+.shelf__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+.shelf__title {
+  font-size: var(--step-1);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.shelf__count {
+  margin: 0;
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.shelf__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15.5rem), 1fr));
+  gap: clamp(1.25rem, 2vw, 1.75rem) clamp(1rem, 1.6vw, 1.5rem);
+  list-style: none;
+  margin: 0;
+  padding: 0 0 1rem;
+}
+.shelf__list > li {
+  position: relative;
+  display: flex;
+}
+/* Dev mode: the lesson's "Open file location" sits under its folio. */
+.shelf__list > li.skillpage__item--dev {
+  flex-direction: column;
+  gap: 0.4rem;
+}
+/* The second leaf of the folio, peeking out behind it. */
+.shelf__list > li::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  transform: translate(5px, 4px) rotate(1.1deg);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.shelf__list > li:hover::before {
+  transform: translate(7px, 6px) rotate(1.8deg);
+}
+
+/* A folio: a leaf of paper, the first move's picture at the head. */
+.folio {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem 0.9rem;
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s;
+}
+.folio:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+.folio:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.folio__pic {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--stage-bg);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.folio__still {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.folio__text {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  padding: 0 0.4rem;
+}
+.folio__title {
+  margin-bottom: 0.15rem;
+  font: 600 var(--step-0) / 1.2 var(--font-display);
+  letter-spacing: 0.03em;
+  text-wrap: balance;
+}
+.folio__line {
+  font-weight: 700;
+}
+.folio__from {
+  font: italic 400 var(--step-0) / 1.3 var(--font-note);
+  color: var(--text-2);
+}
+.folio__when {
+  font-size: var(--step--1);
+  color: var(--text-2);
+}
+
+@media (max-width: 760px) {
+  .door {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    padding: 0.75rem 1rem 0.75rem 0.75rem;
+  }
+  .door__niche {
+    min-height: 10.5rem;
+    border-radius: 50% 50% var(--radius-s) var(--radius-s) / 3.75rem 3.75rem var(--radius-s) var(--radius-s);
+  }
+  .door__title {
+    font-size: var(--step-1);
+  }
+  .door__text {
+    font-size: var(--step-0);
+  }
+  .door__cta {
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* On a phone a folio lies on its side: the picture on the left, the words beside it. */
+@media (max-width: 560px) {
+  .folio {
+    grid-template-rows: none;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: start;
+    padding: 0.5rem;
+  }
+  .folio__pic {
+    aspect-ratio: 1;
+  }
+  .folio__text {
+    padding: 0.1rem 0.2rem 0.2rem 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .door,
+  .door__cta svg,
+  .folio,
+  .shelf__list > li::before {
+    transition: none;
+  }
+}
+
+/* ---------- One skill's page ---------- */
+.studio__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: var(--target);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+.studio__back:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.studio__back-arrow {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+.skillpage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.skillpage__actions + .shelf {
+  margin-top: clamp(1.25rem, 2.5vw, 2rem);
+}

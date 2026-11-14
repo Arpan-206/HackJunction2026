@@ -2,11 +2,15 @@
 .shell {
   position: relative;
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  /* At least 6.75rem, so the longest rail word ("Apprentice", 16px bold) sits inside its tile with padding on both sides. */
+  grid-template-columns: max(var(--rail-w), 6.75rem) minmax(0, 1fr);
   min-height: 100vh;
 }
 .rail-col {
-  background: linear-gradient(180deg, var(--rail-bg-2), var(--rail-bg));
+  /* The sketchbook's spine: the binding colour with a fine double rule stitched along its edge. */
+  background:
+    linear-gradient(90deg, transparent calc(100% - 7px), color-mix(in srgb, var(--rail-text) 7%, transparent) 0 calc(100% - 6px), transparent 0 calc(100% - 1px), color-mix(in srgb, var(--rail-text) 12%, transparent) 0),
+    linear-gradient(180deg, var(--rail-bg-2), var(--rail-bg));
 }
 .rail {
   position: sticky;
@@ -40,7 +44,7 @@
   display: grid;
   justify-items: center;
   gap: 0.2rem;
-  padding: 0.65rem 0.25rem;
+  padding: 0.65rem 0.5rem;
   min-height: var(--target);
   border-radius: var(--radius-s);
   color: var(--rail-text-2);
@@ -145,8 +149,22 @@
     flex-direction: row;
     justify-content: space-around;
   }
+  /* Tiles grow from their word, never shrink below it. Six tiles (with Robot, Typing and Settings) fit 390px only with
+     slim padding, so the page never scrolls sideways. */
+  .rail {
+    padding-inline: 0.25rem;
+  }
+  .rail__nav {
+    gap: 0;
+  }
+  .rail__foot {
+    max-width: none;
+    flex: 0 1 auto;
+  }
   .rail__link {
-    flex: 1;
+    flex: 1 1 auto;
+    padding-inline: 0.2rem;
+    letter-spacing: 0;
   }
   .main {
     grid-row: 1;
@@ -177,63 +195,11 @@
   margin-top: 0.4rem;
 }
 
-/* ---------- Choice cards (master home) ---------- */
-.choices {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: clamp(1rem, 2vw, 1.75rem);
-}
-.choice {
-  position: relative;
-  display: grid;
-  gap: 0.8rem;
-  align-content: start;
-  padding: clamp(1.4rem, 2.5vw, 2.2rem);
-  text-decoration: none;
-  color: var(--text);
-  min-height: 18rem;
-}
-.choice__icon {
-  color: var(--accent);
-  width: 4.5rem;
-  height: 4.5rem;
-}
-.choice h2 {
-  font-size: var(--step-2);
-  text-transform: uppercase;
-}
-.choice__cta {
-  margin-top: auto;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  display: inline-flex;
-  gap: 0.6rem;
-  align-items: center;
-}
 .section-title {
   margin: clamp(1.75rem, 4vw, 3rem) 0 1rem;
   font-size: var(--step-1);
   text-transform: uppercase;
 }
-.lesson-list {
-  display: grid;
-  gap: 0.75rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.lesson-row {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.9rem 1.25rem;
-  text-decoration: none;
-  color: var(--text);
-  min-height: 64px;
-}
-
 /* ---------- Placeholder ---------- */
 .placeholder {
   display: grid;
@@ -252,18 +218,22 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background-color: var(--bg);
-  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: -1px -1px;
   position: relative;
+  overflow: hidden;
 }
+/* One construction figure behind the cover, as on a notebook's first leaf: a circle in a square, its diagonals and axes. */
 .roles::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 78%);
-  opacity: 0.88;
+  left: 50%;
+  top: 50%;
+  width: min(118vh, 112vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: var(--rule);
+  opacity: 0.06;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' fill='none' stroke='black' stroke-width='1.1'%3E%3Ccircle cx='500' cy='500' r='470'/%3E%3Ccircle cx='500' cy='500' r='332'/%3E%3Crect x='30' y='30' width='940' height='940'/%3E%3Crect x='265' y='265' width='470' height='470' transform='rotate(45 500 500)'/%3E%3Cpath d='M30 30L970 970M970 30L30 970M500 0V1000M0 500H1000' stroke-dasharray='6 10'/%3E%3Cpath d='M500 18v24M500 958v24M18 500h24M958 500h24'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' fill='none' stroke='black' stroke-width='1.1'%3E%3Ccircle cx='500' cy='500' r='470'/%3E%3Ccircle cx='500' cy='500' r='332'/%3E%3Crect x='30' y='30' width='940' height='940'/%3E%3Crect x='265' y='265' width='470' height='470' transform='rotate(45 500 500)'/%3E%3Cpath d='M30 30L970 970M970 30L30 970M500 0V1000M0 500H1000' stroke-dasharray='6 10'/%3E%3Cpath d='M500 18v24M500 958v24M18 500h24M958 500h24'/%3E%3C/svg%3E") center / contain no-repeat;
   pointer-events: none;
 }
 .roles > * {
@@ -287,6 +257,19 @@
   font: italic 400 clamp(1.15rem, 1rem + 0.9vw, 1.9rem) var(--font-note);
   color: var(--text-2);
   max-width: 56rem;
+  margin: 0;
+}
+.roles__quote {
+  display: grid;
+  justify-items: center;
+  margin: 0;
+}
+.roles__cite {
+  margin-top: 0.35rem;
+  font: 400 1rem var(--font-note);
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
 }
 .roles__stage {
   display: grid;
@@ -301,7 +284,7 @@
 .roles__between {
   display: grid;
   place-items: center;
-  color: var(--text-2);
+  color: color-mix(in srgb, var(--text-2) 45%, transparent);
 }
 .roles__between svg {
   width: clamp(3rem, 5vw, 5rem);
@@ -312,9 +295,11 @@
   grid-template-rows: minmax(15rem, 1fr) 15.5rem;
   text-decoration: none;
   color: var(--text);
-  background: var(--surface);
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
   border: 1px solid var(--line-strong);
-  outline: 1px solid var(--line-strong);
+  outline: 1px solid color-mix(in srgb, var(--line-strong) 30%, transparent);
   outline-offset: 5px;
   border-radius: 2px;
   box-shadow: var(--shadow);
@@ -323,7 +308,7 @@
   min-height: min(62vh, 640px);
 }
 .role:hover {
-  transform: translateY(-4px);
+  transform: translateY(-1px);
 }
 .role:focus-visible {
   outline: 4px solid var(--focus);
@@ -426,12 +411,27 @@
   }
 }
 
-/* ---------- Shared preview canvas ---------- */
-.preview-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
+/* ---------- Still hand pictures (three/HandStill.tsx) ---------- */
+/* The box holds its size and the stage colour until the picture is drawn; the picture is an ordinary image. */
+.hand-still {
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--stage-bg);
+}
+.hand-still__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Only a picture that arrives after the first paint fades in; one already cached is simply there. */
+.hand-still__img--in {
+  animation: hand-still-in 0.25s ease-out;
+}
+@keyframes hand-still-in {
+  from {
+    opacity: 0;
+  }
 }
 /* Settings entry in the rail footer: drawn like a nav link (icon over a word), so it reads as a place to go. */
 .rail__settings {

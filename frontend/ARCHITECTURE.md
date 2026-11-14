@@ -7,8 +7,11 @@ src/
   main.tsx                 providers, fonts, global CSS, DevPanel
   app/                     App (route table), AppShell (lapis rail), RoleSelect (/), HandLab (/lab), app.css
   features/
-    master/                MasterHome (/master) + placeholder pages: scratch, generate, lesson studio
+    master/                MasterHome (/expert: two doors and home/ the shelf of skill cards, /expert/skills/:skillKey a skill's lessons), scratch/ (a new skill: Record with take playback, Replay, Publish), components/cameraPresets.ts (EXPERT_STAGE_CAMERA, the expert stages' default views; dev "Copy camera"), generate, lesson studio
     apprentice/            skills/ (dashboard, skill page, catalogue), course, training (score/ = 3D and flat score views), test
+                           (TableTennis, Piano, AirTyping = air typing and Type on your keyboard), typing/ (touch typing, off the catalogue for now but kept:
+                           fingerMap, strikes = strike detector, judge, matcher, WPM; typist = simulated typist; words;
+                           TypingStage = two hands over the keyboard; training/modes/TypingDesk is its lesson room)
     shared/                pieces both sides use: assistant.ts (AI Assistant flag), settings.ts (margin, score view,
                            reduced motion), SettingsDialog (the Settings panel), sessionPrefs, PropSwitch, calibration
   components/
@@ -29,7 +32,7 @@ src/
   state/settings.ts        local UI prefs (guidance mode), useSettings()
   dev/                     DevPanel (delete before the demo)
 public/textures/wood/      CC0 wood maps + SOURCE.md
-public/models/hands/       skinned hand mesh (WebXR generic-hand, MIT) + LICENSE.md
+public/models/hands/       skinned hand mesh (Godot XR Tools hand, CC0) + LICENSE.md
 docs/screens/              reference screenshots
 ```
 
@@ -51,9 +54,10 @@ Routes are defined once in `src/app/App.tsx`. Feature agents replace the page co
 
 ## three/ overview
 
-- `Hand.tsx`: the hand (props below). `handModel.ts` loads the shared skinned mesh (`public/models/hands/right.glb`, MIT), `handPose.ts` holds the bone layout and the flexion-to-bone maths, `handRig.ts` builds one instance, `materials.ts` styles it, `smoothing.ts` smooths input, `motion.ts` previews MotionSpecs locally (the backend owns the canonical synthesiser).
+- `Hand.tsx`: the hand (props below). `handModel.ts` loads the shared skinned mesh (`public/models/hands/right.glb`, CC0), `handPose.ts` holds the bone layout and the flexion-to-bone maths, `handRig.ts` builds one instance, `materials.ts` styles it, `smoothing.ts` smooths input, `motion.ts` previews MotionSpecs locally (the backend owns the canonical synthesiser).
 - `Stage.tsx`: `HandCanvas` (Canvas + theme bridge + `Stage` + presets) and `Stage` (carta azzurra background, lights, drafting grid, construction circle, contact shadow, limited OrbitControls).
 - `props.tsx`: `Racket` (child of Hand), `Keyboard`.
+- `TypingKeyboard.tsx`: the QWERTY keyboard for touch typing, chalk on the bench (props off) or solid keycaps ("Add a prop"), with the next key and a right strike lit. `typingLayout.ts` holds the key positions, sized so the hover fingertips of the hand model sit on the home row (pinned in `tests/typingLayout.test.ts`).
 - `overlays.tsx`: `JointRings`, `FingertipTrails` (also reachable through `Hand showJoints showTrails`).
 - `stageContext.ts`: `useStageColors()`.
 

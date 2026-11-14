@@ -22,7 +22,7 @@ export default function StageSection() {
   const { spec, controls } = useMotionState('grip_and_swing');
   const hand = useRef<HandHandle>(null);
 
-  const stage = { showGrid: grid, showCircle: circle, showShadow: shadow, controls: orbit ? ('limited' as const) : ('none' as const) };
+  const stage = { showGrid: grid, showCircle: circle, showShadow: shadow, controls: orbit ? ('orbit' as const) : ('none' as const) };
   const canvasJsx = toJsx('HandCanvas', { preset: camera, stage, sway: sway || undefined });
   const handJsx = toJsx('Hand', { style: 'wood', motion: spec }, prop === 'racket' ? toJsx('Racket', { rubber }) : undefined);
   const keyJsx = prop === 'keyboard' ? toJsx('Keyboard', { keys, activeKey: activeKey < 0 ? undefined : activeKey, handRef: expr('hand') }) : '';

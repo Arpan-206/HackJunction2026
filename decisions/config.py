@@ -11,6 +11,7 @@ Other knobs: ``DECISIONS_BUDGET_MS`` (default 600), ``DECISIONS_DISABLED=1``
 (rules only, no network), ``DECISIONS_LOG`` (default ``logs/decisions.jsonl``),
 ``DECISIONS_WARMUP=0`` (skip the background connection warm-up).
 """
+
 from __future__ import annotations
 
 import os
@@ -65,7 +66,7 @@ def parse_env_file(path: Path) -> dict[str, str]:
         if not line or line.startswith("#") or "=" not in line:
             continue
         if line.startswith("export "):
-            line = line[len("export "):].strip()
+            line = line[len("export ") :].strip()
         k, _, v = line.partition("=")
         k = k.strip()
         v = v.strip()

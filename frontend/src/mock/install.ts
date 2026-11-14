@@ -15,6 +15,8 @@ const LATENCY_MS = 25;
 declare global {
   interface Window {
     __apprenticeMock?: boolean;
+    /** Set when mock mode was asked for (?mock=1 or VITE_MOCK=1), not just fallen back to: then nothing reaches a real engine. */
+    __apprenticeMockExplicit?: boolean;
   }
 }
 
@@ -60,6 +62,8 @@ function patchFetch(): void {
     await wait(LATENCY_MS);
     const res = await handleMockRequest({ method, path: target.path, query: target.query, ...parsed });
     if (init?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    // A stored video (GET /media/{id}) comes back as its own bytes, as the backend serves it.
+    if (res.body instanceof Blob) return new Response(res.body, { status: res.status, headers: { 'Content-Type': res.body.type, 'X-Apprentice-Mock': '1' } });
     return new Response(res.status === 204 ? null : JSON.stringify(res.body), {
       status: res.status,
       headers: { 'Content-Type': 'application/json', 'X-Apprentice-Mock': '1' },
@@ -208,6 +212,7 @@ export async function maybeInstallMock(): Promise<boolean> {
     return false;
   }
   if (mockRequestedExplicitly()) {
+    window.__apprenticeMockExplicit = true;
     installMock(import.meta.env.VITE_MOCK === '1' ? 'VITE_MOCK=1' : 'requested with ?mock=1');
     return true;
   }

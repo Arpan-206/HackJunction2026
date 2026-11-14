@@ -81,7 +81,7 @@ export interface PlaybackControls {
   rate: number;
   setRate: (rate: number) => void;
   duration: number;
-  /** Current position in seconds, updated at about 10 Hz for scrubbers. */
+  /** Current position in seconds, updated at about 10 Hz for scrubbers (once frames are given, unless tick is false). */
   position: number;
 }
 
@@ -89,8 +89,10 @@ export interface PlaybackControls {
  * Plays a frame list on a wall clock. Loops by default. The 3D layer polls `getFrame` every render frame;
  * React only re-renders for the coarse `position` value.
  */
-export function usePlayback(frames: GloveFrame[] | null, opts: { loop?: boolean; autoPlay?: boolean } = {}): PlaybackControls {
+export function usePlayback(frames: GloveFrame[] | null, opts: { loop?: boolean; autoPlay?: boolean; tick?: boolean } = {}): PlaybackControls {
   const loop = opts.loop ?? true;
+  // A caller that never shows `position` passes tick: false, so the 10 Hz position updates never re-render it.
+  const tick = opts.tick ?? true;
   const [playing, setPlaying] = useState(opts.autoPlay ?? true);
   const [rate, setRate] = useState(1);
   const [position, setPosition] = useState(0);
@@ -109,10 +111,13 @@ export function usePlayback(frames: GloveFrame[] | null, opts: { loop?: boolean;
     setPosition(0);
   }, [frames]);
 
+  // Nothing to play (no frames yet) or nobody reading the position: no ticks, so the caller does not re-render at 10 Hz.
+  const ticking = tick && frames !== null;
   useEffect(() => {
+    if (!ticking) return;
     const id = window.setInterval(() => setPosition(now()), 100);
     return () => window.clearInterval(id);
-  }, [now]);
+  }, [now, ticking]);
 
   const freeze = useCallback(() => {
     clock.current = { base: now(), startedAt: performance.now() };

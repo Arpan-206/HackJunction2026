@@ -13,6 +13,8 @@ export interface LoggedAttempt {
   kind?: LoggedKind;
   /** ISO 8601 time of the rep. */
   at?: string;
+  /** True for seeded demo history, so it can be refreshed or cleared without touching real practice. */
+  demo?: boolean;
 }
 
 /** One finished duel or test, kept per lesson. */
@@ -22,6 +24,8 @@ export interface LoggedTest {
   overall: number;
   /** ISO 8601. */
   at: string;
+  /** True for seeded demo history. */
+  demo?: boolean;
 }
 
 /** A practice plan together with when it was asked for. */
@@ -100,6 +104,20 @@ export function replaceLog(next: { attempts: Record<string, LoggedAttempt[]>; te
   write(ATTEMPTS_KEY, attempts);
   write(TESTS_KEY, tests);
   emit();
+}
+
+/** Replaces the whole attempt and test log on this device (empty objects clear it). Plans are kept. */
+export function setLog(next: { attempts: Record<string, LoggedAttempt[]>; tests: Record<string, LoggedTest[]> }): void {
+  attempts = { ...next.attempts };
+  tests = { ...next.tests };
+  write(ATTEMPTS_KEY, attempts);
+  write(TESTS_KEY, tests);
+  emit();
+}
+
+/** The whole attempt and test log, outside React (for seeding and resets). */
+export function readLog(): { attempts: Record<string, LoggedAttempt[]>; tests: Record<string, LoggedTest[]> } {
+  return { attempts, tests };
 }
 
 /** Remembers a finished duel or test for a lesson. */

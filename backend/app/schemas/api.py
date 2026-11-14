@@ -1,6 +1,6 @@
 """Request and response bodies for the HTTP API that are not core contract types."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -11,6 +11,7 @@ from app.schemas.common import (
     GloveSource,
     Hands,
     Margin,
+    PositiveDeg,
     Side,
     Skill,
 )
@@ -105,6 +106,11 @@ class CoachHintRequest(BaseModel):
     )
     wrist_axis: Literal["pitch", "yaw", "roll"] | None = None
     tolerance_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
+    finger_tolerance_deg: dict[Finger, PositiveDeg] | None = Field(
+        default=None,
+        description="Optional per-finger angle tolerance (the step's tolerance.finger_angle_deg); a finger left out "
+        "uses tolerance_deg.",
+    )
     margin: Margin = Field(
         default=c.DEFAULT_MARGIN,
         description="The learner's margin of error; scales tolerance_deg and the hint thresholds.",
@@ -141,7 +147,7 @@ class HintDraft(BaseModel):
 
 
 class CoachHintResponse(HintDraft):
-    """A short live tip; provider says who wrote it (fake, algorithmic, gemini, ollama or 'fake (rate limited)')."""
+    """A short live tip; provider says who wrote it (fake, algorithmic, gemini, openai or 'fake (rate limited)')."""
 
     provider: str
 
@@ -193,7 +199,7 @@ class DevState(BaseModel):
 
     glove_source: GloveSource
     smoothing: SmoothingState
-    llm_provider: Literal["fake", "gemini", "ollama", "openai"]
+    llm_provider: Literal["fake", "gemini", "openai"]
     simulator_motion: MotionSpec
     gemini_budget: list[GeminiBudget] = Field(default_factory=list)
     llm_chain: list[str] = Field(default_factory=list)
@@ -205,7 +211,7 @@ class DevStatePatch(BaseModel):
 
     glove_source: GloveSource | None = None
     smoothing: SmoothingPatch | None = None
-    llm_provider: Literal["fake", "gemini", "ollama", "openai"] | None = None
+    llm_provider: Literal["fake", "gemini", "openai"] | None = None
     simulator_motion: MotionSpec | None = None
 
 
@@ -303,3 +309,42 @@ class MotionFromTextResponse(BaseModel):
     motion: MotionSpec
     explanation: str
     provider: str
+
+
+FileKind = Literal["recording", "lesson", "draft", "export", "calibration", "media"]
+
+
+class RevealRequest(BaseModel):
+    """POST /dev/reveal: which stored file to show in the file manager."""
+
+    kind: FileKind
+    id: str = Field(min_length=1, max_length=160)
+
+
+class GloveCompareSave(BaseModel):
+    """POST /dev/glove_compare: one guided capture of the glove compare page, saved as JSON (and a PNG snapshot)."""
+
+    session: str = Field(pattern=c.SAFE_ID_PATTERN)
+    index: int = Field(ge=0, le=99)
+    slug: str = Field(pattern=c.SAFE_ID_PATTERN)
+    data: dict[str, Any]
+    png: str | None = Field(
+        default=None,
+        description="Side by side snapshot as a data:image/png;base64 URL.",
+    )
+
+
+class GloveCompareSaved(BaseModel):
+    """Where POST /dev/glove_compare wrote the capture."""
+
+    json_path: str
+    png_path: str | None = None
+
+
+class FileLocation(BaseModel):
+    """POST /dev/reveal and GET /dev/locate: the stored file's absolute path, and whether a file manager was opened."""
+
+    kind: FileKind
+    id: str
+    path: str
+    opened: bool = False

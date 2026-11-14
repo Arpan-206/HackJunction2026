@@ -4,6 +4,7 @@ import { motionLabel, primarySide, STRICTNESS, strictnessOf } from '../lib';
 import { DescribeMotion } from './DescribeMotion';
 import { GuideHand } from './GuideHand';
 import { HandsControl } from './HandsControl';
+import { RevealFile } from '../files/RevealFile';
 import { rememberHands, shownProp, useShowProps } from '../../shared/sessionPrefs';
 
 interface StepEditorProps {
@@ -107,6 +108,7 @@ export function StepEditor({ step, index, count, onChange, onMove, onDelete, onR
             </Button>
           </span>
         </div>
+        {step.reference_recording_id && <RevealFile kind="recording" id={step.reference_recording_id} what={`the reference take of step ${n}`} />}
       </div>
     </li>
   );

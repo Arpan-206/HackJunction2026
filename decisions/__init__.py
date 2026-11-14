@@ -11,6 +11,7 @@ Every call is appended to ``logs/decisions.jsonl`` with its latency.
 ``decisions.coach_adapter.DecisionsCoach`` plugs these into the core's
 ``CoachClient`` interface. Nothing here edits ``core/``.
 """
+
 from .config import ACTIONS, FINGERS, MODEL
 from .judgements import (
     ActionDecision,
@@ -32,7 +33,7 @@ __all__ = [
     "OutcomeDecision",
     "check_outcome",
     "finger_rubric",
-    "pick_action",
     "get_client",
+    "pick_action",
     "set_client",
 ]

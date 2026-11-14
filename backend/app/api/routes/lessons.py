@@ -5,10 +5,10 @@ import os
 import tempfile
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, UploadFile
 
 from app import constants as c
-from app.api.deps import GeneratorDep, LessonsDep
+from app.api.deps import BundlesDep, GeneratorDep, LessonsDep
 from app.core.errors import AppError
 from app.schemas.api import GenerateLessonRequest, GenerateLessonResponse
 from app.schemas.common import Skill
@@ -82,14 +82,27 @@ async def get_lesson(lesson_id: str, lessons: LessonsDep) -> Lesson:
 
 
 @router.post("/lessons", response_model=Lesson, status_code=201)
-async def create_lesson(body: LessonBase, lessons: LessonsDep) -> Lesson:
-    """Store a new lesson."""
-    return lessons.create(body)
+async def create_lesson(
+    body: LessonBase,
+    lessons: LessonsDep,
+    bundles: BundlesDep,
+    background: BackgroundTasks,
+) -> Lesson:
+    """Store a new lesson, then write its backup bundle to data/exports (after the response, off the event loop)."""
+    lesson = lessons.create(body)
+    background.add_task(bundles.write_backup, lesson.id)
+    return lesson
 
 
 @router.put("/lessons/{lesson_id}", response_model=Lesson)
 async def update_lesson(
-    lesson_id: str, body: LessonBase, lessons: LessonsDep
+    lesson_id: str,
+    body: LessonBase,
+    lessons: LessonsDep,
+    bundles: BundlesDep,
+    background: BackgroundTasks,
 ) -> Lesson:
-    """Replace a lesson."""
-    return lessons.update(lesson_id, body)
+    """Replace a lesson, then write its backup bundle to data/exports."""
+    lesson = lessons.update(lesson_id, body)
+    background.add_task(bundles.write_backup, lesson.id)
+    return lesson

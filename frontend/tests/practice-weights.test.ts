@@ -18,7 +18,12 @@ describe('light fingers', () => {
   });
 
   it('configFromTolerance keeps the old config without weights', () => {
-    expect(configFromTolerance({ angle_deg: 18, timing_ms: 250 })).toEqual({ toleranceDeg: 18, deadZoneDeg: 4, timingMs: 250 });
+    expect(configFromTolerance({ angle_deg: 18, timing_ms: 250 })).toEqual({
+      toleranceDeg: 18,
+      fingerToleranceDeg: { thumb: 18, index: 18, middle: 18, ring: 18, little: 18 },
+      deadZoneDeg: 4,
+      timingMs: 250,
+    });
     const c = configFromTolerance({ angle_deg: 18, timing_ms: 250 }, 'standard', W({ ring: 0.2 }));
     expect(c.light).toEqual(['ring']);
     expect(c.weights?.ring).toBe(0.2);

@@ -5,7 +5,7 @@ import { FINGERS, type Finger } from '../../../../api/types';
 import type { HandHandle } from '../../../../three';
 import { useStageColors } from '../../../../three';
 import type { AttemptPolicy } from '../coach/fade';
-import { flaggedFinger } from '../coach/deviation';
+import { flaggedFinger, type ToleranceBand } from '../coach/deviation';
 import { fingerTip } from '../coach/tips';
 import type { Coach } from '../coach/useCoach';
 
@@ -37,7 +37,8 @@ interface FaultMarksProps {
   hand: RefObject<HandHandle>;
   coach: Coach;
   policy: AttemptPolicy;
-  toleranceDeg: number;
+  /** One band for every finger, or each finger's own (after the margin): sets how strongly the label words a correction. */
+  toleranceDeg: ToleranceBand;
 }
 
 interface Label {

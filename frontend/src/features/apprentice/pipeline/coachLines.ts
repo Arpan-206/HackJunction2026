@@ -19,8 +19,8 @@ function weakest(score: ScoreResult): Finger {
 
 /** One goal before a set: the worst finger from last time, or a plain goal for the stage the first time. */
 export function goalLine(last: ScoreResult | null, stage: Stage): string {
-  if (stage === 'watch') return 'Watch the expert first. Notice which fingers move and when.';
-  if (!last) return stage === 'strings' ? 'Follow the strings and keep every finger in line.' : stage === 'ghost' ? 'The strings are cut. Keep the shape without them.' : 'No help this set. Trust your hand.';
+  if (stage === 'watch') return 'Watch the expert work the puppet. Notice which fingers move and when.';
+  if (!last) return stage === 'strings' ? 'Follow the strings and keep every finger in line.' : stage === 'ghost' ? 'Move inside the ghost and keep every finger in it.' : 'No ghost this set. Trust your hand.';
   const w = weakest(last);
   if (last.per_finger[w] >= 80) return stage === 'blind' ? 'No help this set. Trust your hand.' : 'Keep every finger inside the shape this set.';
   return `Focus on the ${FINGER_LABEL[w].toLowerCase()} this set.`;
@@ -54,11 +54,11 @@ export function stageLine(outcome: Pick<RepOutcome, 'event' | 'state'>, wrong: F
     case 'advanced':
       return outcome.state.stage === 'ghost'
         ? `The strings are cut. Now only the ghost${wrong.length ? `, and it will mark the ${names(wrong)}` : ''}.`
-        : 'The ghost fades. Now without any help.';
+        : 'The ghost is off. Now without any help.';
     case 'mastered':
       return 'Mastered. Clean reps with no help. Come back tomorrow for the review.';
     case 'dropped':
-      return outcome.state.stage === 'strings' ? 'Back to the strings for a steadier hand.' : 'Back one stage. The help returns for a while.';
+      return outcome.state.stage === 'strings' ? 'Back to the strings for a steadier hand.' : outcome.state.stage === 'ghost' ? 'The ghost is back on for a while.' : 'Back one stage. The help returns for a while.';
     default:
       return '';
   }

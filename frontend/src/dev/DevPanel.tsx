@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useDevState, useGloveStream, type GloveSource, type LlmProvider, type MotionSpec } from '../api';
 import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
 import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
 import { isDev } from '../features/apprentice/pipeline/flags';
+import { clearPracticeHistory, resetDemoHistory } from '../features/apprentice/pipeline/demoHistory';
 import { isKiosk } from '../features/shared/kiosk';
 import './devPanel.css';
 
@@ -16,6 +17,23 @@ const MOTIONS: Record<string, MotionSpec> = {
   hold_pose: { preset: 'hold_pose', pose: { thumb: 0.5, index: 0.6, middle: 0.6, ring: 0.6, little: 0.6 } },
   idle: { preset: 'idle' },
 };
+
+/** The free camera stage of the role select hand (src/dev/HandCameraView.tsx). */
+const HAND_CAMERA_PATH = '/dev/hand-camera';
+/** The core skeleton beside our hands, with guided captures (src/dev/GloveCompare.tsx). */
+const GLOVE_COMPARE_PATH = '/dev/glove-compare';
+
+/**
+ * The panel sits outside the router, so move in-app through the history API (the router listens for popstate). A
+ * modified click (new tab or window) is left to the browser. True when it navigated here, so the panel can fold away.
+ */
+function openHandCamera(e: MouseEvent<HTMLAnchorElement>, path = HAND_CAMERA_PATH): boolean {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+  e.preventDefault();
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  return true;
+}
 
 /** Shown only once the URL has carried ?dev=1 in this tab (sessionStorage, cleared by ?dev=0 or by closing the tab). */
 function shouldShow(): boolean {
@@ -38,7 +56,7 @@ export function DevPanel() {
   if (!visible) return null;
   return (
     <aside className="dev" aria-label="Developer panel">
-      {open && <Body />}
+      {open && <Body onLeave={() => setOpen(false)} />}
       <button type="button" className="dev__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         {open ? 'Close' : 'Dev'}
       </button>
@@ -46,7 +64,7 @@ export function DevPanel() {
   );
 }
 
-function Body() {
+function Body({ onLeave }: { onLeave: () => void }) {
   const { state, error, online, update } = useDevState();
   const glove = useGloveStream(true);
   const { theme, setTheme } = useTheme();
@@ -75,6 +93,24 @@ function Body() {
 
   return (
     <div className="dev__body">
+      <a
+        className="dev__link"
+        href={HAND_CAMERA_PATH}
+        onClick={(e) => {
+          if (openHandCamera(e)) onLeave();
+        }}
+      >
+        Hand camera view
+      </a>
+      <a
+        className="dev__link"
+        href={GLOVE_COMPARE_PATH}
+        onClick={(e) => {
+          if (openHandCamera(e, GLOVE_COMPARE_PATH)) onLeave();
+        }}
+      >
+        Glove compare
+      </a>
       <p className="dev__status">
         <span className={`dev__dot ${online ? 'dev__dot--ok' : ''}`} />
         Backend {online ? 'online' : error ? 'offline' : 'checking'}
@@ -172,6 +208,16 @@ function Body() {
           ))}
         </select>
       </label>
+
+      <fieldset>
+        <legend>Practice history (this device)</legend>
+        <button type="button" onClick={resetDemoHistory} title="Clears attempts and tests; the learner dashboard seeds a 3-day streak ending today">
+          Fresh demo history
+        </button>
+        <button type="button" onClick={clearPracticeHistory} title="Clears attempts and tests and keeps them empty (no demo seeding)">
+          Empty history
+        </button>
+      </fieldset>
 
       <label>
         Apprentice guidance default

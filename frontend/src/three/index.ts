@@ -1,6 +1,7 @@
 export { Hand, type HandProps, type HandHandle } from './Hand';
-export { HandCanvas, Stage, PRESETS, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
-export { Racket, Keyboard } from './props';
+export { HandCanvas, Stage, PRESETS, PAIR_LIFT, PAIR_SPREAD, PAIR_STAGE, pairPosition, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
+export { ResetViewButton, StageOrbit, useStageOrbit, ORBIT_FLOOR_GAP, type OrbitLink, type OrbitRig, type OrbitView, type ResetCorner } from './StageOrbit';
+export { Racket, Keyboard, RACKET_BLADE } from './props';
 export { BallSketch, KeysSketch, PropCue, RacketSketch } from './sketchProps';
 export { JointRings, FingertipTrails } from './overlays';
 export { useStageColors } from './stageContext';
@@ -9,7 +10,8 @@ export { HandSmoother, DEFAULT_SMOOTHING, type SmoothingConfig } from './smoothi
 export type { HandStyle } from './materials';
 export type { HandRig } from './handRig';
 export { handModelSettled, loadHandTemplate } from './handModel';
-export { PreviewHost, HandPreview } from './Preview';
+export { HandStill, clearStills } from './HandStill';
+export type { StillStage } from './stillRenderer';
 export { createGoldLeafMaterial, createMarbleMaterial, getWalnutTextures, getMarbleTextures, getPlasterTextures } from './surfaces';
 export { GoldSeal, type StageQuality } from './atmosphere';
 export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';
@@ -17,3 +19,6 @@ export { CODEX_STAGE, drawParchment, getParchmentTexture, getParchmentUrl } from
 export { withHatching, createHatchedShadowMaterial } from './sketch';
 export { RobotHand, RobotStrings, loadRobotModel, useRobotModel, parseUrdf, type RobotHandHandle, type RobotHandProps, type RobotPoseLatest, type UrdfModel } from './robot';
 export { STRING_POINTS, writeStringSegments } from './stringMath';
+export { TypingKeyboard } from './TypingKeyboard';
+export { keyCenter, KEY_PITCH, TYPING_HAND_X, TYPING_HAND_Y } from './typingLayout';
+export { PreviewHost, HandPreview } from './Preview';

@@ -1,0 +1,61 @@
+/* The ink "Reset view" button over a corner of an orbiting stage (three/StageOrbit.tsx), drawn like the expert stage's
+   camera buttons. */
+.stage-reset {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--target, 44px);
+  height: var(--target, 44px);
+  padding: 0;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
+}
+.stage-reset--top-right {
+  top: 0.6rem;
+  right: 0.6rem;
+}
+.stage-reset--top-left {
+  top: 0.6rem;
+  left: 0.6rem;
+}
+.stage-reset--bottom-right {
+  bottom: 0.6rem;
+  right: 0.6rem;
+}
+.stage-reset--bottom-left {
+  bottom: 0.6rem;
+  left: 0.6rem;
+}
+.stage-reset svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.stage-reset:hover {
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+.stage-reset:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-reset {
+    transition: none;
+  }
+  .stage-reset:hover {
+    transform: none;
+  }
+}
+:root[data-reduce-motion] .stage-reset {
+  transition: none;
+}
+:root[data-reduce-motion] .stage-reset:hover {
+  transform: none;
+}

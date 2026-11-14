@@ -2,8 +2,9 @@ import { Group, Matrix4, Skeleton, SkinnedMesh, type Bone, type Object3D, type V
 import type { Finger, Side } from '../api/types';
 import type { StageColors } from '../theme/themes';
 import { FINGER_ORDER } from './anatomy';
+import { applyDualQuaternionBoneTransform, installDualQuaternionSkinning, skinWithDualQuaternions } from './dqSkinning';
 import type { HandTemplate } from './handModel';
-import { applyHandPose, createBones } from './handPose';
+import { applyHandPose, applyJointPose, createBones, THUMB_TUNING } from './handPose';
 import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
 import type { HandSmoother } from './smoothing';
 
@@ -36,6 +37,8 @@ export interface HandRig {
 
 const IDENTITY = new Matrix4();
 
+installDualQuaternionSkinning();
+
 /**
  * Builds one hand instance from the shared template: its own bones and skeleton, the skinned mesh and, for inked
  * styles, an outline hull bound to the same skeleton. Geometry is shared; materials and the skeleton are owned.
@@ -55,6 +58,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     m.bind(skeleton, IDENTITY);
     // Bones move the surface far from its bind bounds, and the hand is always on stage anyway.
     m.frustumCulled = false;
+    applyDualQuaternionBoneTransform(m);
     root.add(m);
     return m;
   };
@@ -64,6 +68,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     depth.userData.noCast = true;
   }
   const mesh = skin(mats.fill);
+  skinWithDualQuaternions(skeleton, mesh);
   if (mats.line) {
     const hull = skin(mats.line);
     hull.userData.noCast = true;
@@ -92,7 +97,11 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
   };
 }
 
-/** Writes a smoothed pose onto the rig's bones. Pure mutation, no allocation. */
+/**
+ * Writes a smoothed pose onto the rig's bones: the angles, then, while the core's skeleton is on hand for this hand, every
+ * phalanx from its joint positions (blended in by the smoother's jointWeight). Pure mutation, no allocation.
+ */
 export function applyPose(rig: HandRig, s: HandSmoother): void {
-  applyHandPose(rig.bones, rig.template.layout, s.flex, s.spread);
+  applyHandPose(rig.bones, rig.template.layout, s.flex, s.spread, THUMB_TUNING, s.coreAngles);
+  if (s.jointWeight > 0) applyJointPose(rig.bones, rig.template.layout, s.joints, s.jointWeight);
 }

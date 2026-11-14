@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three';
+import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3, type Material } from 'three';
 import type { HandHandle } from './Hand';
 import { toonGradient } from './materials';
 import { Optional } from './atmosphere';
@@ -29,6 +29,16 @@ function inflate(geo: BufferGeometry, amount: number): BufferGeometry {
 
 const toon = (color: string) => new MeshToonMaterial({ color, gradientMap: toonGradient() });
 
+/** Frees the geometry and material of every mesh under `root` (a prop built by hand in a useMemo). */
+function disposeMeshes(root: Group): void {
+  root.traverse((o) => {
+    if (o instanceof Mesh) {
+      o.geometry.dispose();
+      (o.material as Material).dispose();
+    }
+  });
+}
+
 function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: MeshBasicMaterial, amount: number): Mesh {
   const m = new Mesh(geo, mat);
   parent.add(m);
@@ -40,6 +50,23 @@ function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: 
  * A table-tennis racket in hand space (handle across the palm, blade towards the thumb side). Mount it as a child
  * of <Hand> so it follows the wrist: `<Hand><Racket /></Hand>`.
  */
+/**
+ * Where the racket sits in hand space, measured against the skinned hand in the shakehand grip curls
+ * ([0.62, 0.8, 0.84, 0.86, 0.88]). The handle runs through the tunnel the curled fingers make, about 0.2 from every
+ * finger bone, diagonally from the V between thumb and index finger (the throat, pinched by the thumb tip) to the heel
+ * of the hand, where the butt comes out past the little finger. The blade lies flat, parallel to the palm, and reaches
+ * forward beyond the index finger side, so the thumb rests on one face and the index finger on the other. The scale
+ * brings the racket close to its real size against the hand (12 units per metre: a 12 cm blade, an 11 cm handle).
+ * Shared by <Racket /> and its chalk outline; re-measure if the hand model or the grip curls change.
+ */
+export const RACKET_GRIP = {
+  position: [0.114, -0.326, -0.791] as [number, number, number],
+  rotation: [1.523, 1.244, 1.571, 'YXZ'] as [number, number, number, 'YXZ'],
+  scale: 1.15,
+};
+/** The blade's centre in hand space (the blade is a disc at x = -1.2 along the racket's own axis). */
+export const RACKET_BLADE = new Vector3(-1.2 * RACKET_GRIP.scale, 0, 0).applyEuler(new Euler(...RACKET_GRIP.rotation)).add(new Vector3(...RACKET_GRIP.position));
+
 export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
   const stage = useStageColors();
   const group = useMemo(() => {
@@ -83,23 +110,13 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
     faceB.translate(-1.2, 0, -0.034);
     g.add(new Mesh(faceB, black));
 
-    // The handle lies in the tunnel the curled fingers make in the grip pose: diagonally across the palm, from under the
-    // index knuckle to the base of the little finger, as a shakehand grip holds it.
-    g.position.set(0, -0.4, -0.92);
-    g.rotation.set(0, -0.45, 0.05, 'YXZ');
+    g.position.set(...RACKET_GRIP.position);
+    g.rotation.set(...RACKET_GRIP.rotation);
+    g.scale.setScalar(RACKET_GRIP.scale);
     return g;
   }, [stage.ink, rubber]);
 
-  useEffect(
-    () => () =>
-      group.traverse((o) => {
-        if (o instanceof Mesh) {
-          o.geometry.dispose();
-          (o.material as MeshToonMaterial).dispose();
-        }
-      }),
-    [group],
-  );
+  useEffect(() => () => disposeMeshes(group), [group]);
   return <primitive object={group} />;
 }
 
@@ -141,6 +158,9 @@ export function Keyboard({ keys = 11, y = -0.49, handRef, activeKey = null }: Ke
     });
     return { g, list, whiteBase };
   }, [keys, y, stage.ink]);
+
+  // The keys, their ink hulls and materials belong to this keyboard: free them when it unmounts or is rebuilt.
+  useEffect(() => () => disposeMeshes(built.g), [built]);
 
   const gold = useMemo(() => new Color(stage.gold), [stage.gold]);
   const tmp = useRef(new Vector3());

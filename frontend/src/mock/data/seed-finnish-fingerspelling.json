@@ -1,0 +1,267 @@
+{
+  "id": "seed-finnish-fingerspelling",
+  "title": "Finnish fingerspelling: first letters",
+  "skill": "finnish_fingerspelling",
+  "summary": "Shape five clear letters of the Finnish manual alphabet, then spell VIILI and LAVA with an even hold on each letter.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-14T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-fs-a",
+      "title": "Lesson 1: Letter A",
+      "instruction": "Close your fist and rest the thumb straight up along the side of the index finger.",
+      "move_id": "fi_a",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.15,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-i",
+      "title": "Lesson 2: Letter I",
+      "instruction": "Curl the index, middle and ring finger into the palm, fold the thumb over them and raise the little finger.",
+      "move_id": "fi_i",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.8,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 0.0
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-l",
+      "title": "Lesson 3: Letter L",
+      "instruction": "Raise the index finger and hold the thumb straight out to the side, the other fingers curled.",
+      "move_id": "fi_l",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.0,
+          "index": 0.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-v",
+      "title": "Lesson 4: Letter V",
+      "instruction": "Raise the index and middle finger apart, fold the thumb over the curled ring and little finger.",
+      "move_id": "fi_v",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.75,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.95,
+          "little": 0.95
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-y",
+      "title": "Lesson 5: Letter Y",
+      "instruction": "Hold the thumb and the little finger straight out, the three middle fingers curled.",
+      "move_id": "fi_y",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 0.0
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-word-viili",
+      "title": "Lesson 6: Spell VIILI",
+      "instruction": "Spell VIILI letter by letter, V, I, I, L, I, holding each letter for a moment. Show the double I as two holds.",
+      "move_id": null,
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.75,
+              "index": 0.0,
+              "middle": 0.0,
+              "ring": 0.95,
+              "little": 0.95
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.8,
+              "index": 1.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 0.0
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.8,
+              "index": 1.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 0.0
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.0,
+              "index": 0.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 1.0
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.8,
+              "index": 1.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 0.0
+            },
+            "ms": 800
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-word-lava",
+      "title": "Lesson 7: Spell LAVA",
+      "instruction": "Spell LAVA letter by letter, L, A, V, A, holding each letter for a moment.",
+      "move_id": null,
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.0,
+              "index": 0.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 1.0
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.15,
+              "index": 1.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 1.0
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.75,
+              "index": 0.0,
+              "middle": 0.0,
+              "ring": 0.95,
+              "little": 0.95
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.15,
+              "index": 1.0,
+              "middle": 1.0,
+              "ring": 1.0,
+              "little": 1.0
+            },
+            "ms": 800
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    }
+  ],
+  "test": null
+}

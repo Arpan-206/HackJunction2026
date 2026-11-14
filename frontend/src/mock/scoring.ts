@@ -197,20 +197,6 @@ export function gaussianScore(error: number, tolerance: number): number {
   return 100 * Math.exp(-0.5 * (error / (SCORE_SIGMA_FACTOR * tolerance)) ** 2);
 }
 
-/** Largest absolute deviation. */
-export function worstDeviationFinger(deviations: Partial<Record<Finger, number>>): Finger {
-  let best: Finger = 'thumb';
-  let bestV = -1;
-  for (const f of FINGER_NAMES) {
-    const v = Math.abs(deviations[f] ?? 0);
-    if (v > bestV) {
-      bestV = v;
-      best = f;
-    }
-  }
-  return best;
-}
-
 /** The sizes from which a hint speaks up, and the tolerances severity is measured against, after the margin of error. */
 export interface Thresholds {
   fingerDeg: number;
@@ -244,17 +230,67 @@ export function thresholds(margin: Margin = DEFAULT_MARGIN, angleTolDeg = DEFAUL
 
 export const STANDARD_THRESHOLDS = thresholds();
 
-/** The step's tolerance bands widened (or narrowed) by the margin of error (Tolerance.widened). */
+/** The step's tolerance bands widened (or narrowed) by the margin of error (Tolerance.widened), per-finger bands included. */
 export function widened(tolerance: Tolerance, margin: Margin = DEFAULT_MARGIN): Tolerance {
   const k = MARGIN_MULTIPLIERS[margin];
-  return { angle_deg: tolerance.angle_deg * k, timing_ms: tolerance.timing_ms * k };
+  const out: Tolerance = { angle_deg: tolerance.angle_deg * k, timing_ms: tolerance.timing_ms * k };
+  if (tolerance.finger_angle_deg) {
+    const fingers: Partial<Record<Finger, number>> = {};
+    for (const f of FINGER_NAMES) {
+      const v = tolerance.finger_angle_deg[f];
+      if (v !== undefined) fingers[f] = v * k;
+    }
+    out.finger_angle_deg = fingers;
+  }
+  return out;
 }
 
-/** Plain-language tip. Deviation is signed total-flexion degrees (positive: curled too much); timing is positive when late. */
-export function buildHint(deviations: Partial<Record<Finger, number>>, timingMs: number, limits: Thresholds = STANDARD_THRESHOLDS): string {
-  const finger = worstDeviationFinger(deviations);
-  const deviation = deviations[finger] ?? 0;
-  if (Math.abs(deviation) >= limits.fingerDeg) {
+/** One finger's angle tolerance: its own when the step has per-finger bands, else angle_deg (Tolerance.angle_for). */
+export function angleFor(tolerance: Tolerance, finger: Finger): number {
+  return tolerance.finger_angle_deg?.[finger] ?? tolerance.angle_deg;
+}
+
+/**
+ * The finger to correct, or null: among fingers past their own hint threshold, the one furthest outside its own tolerance
+ * (hints.focus_finger). With the same thresholds for every finger this is the largest absolute deviation.
+ */
+export function focusFinger(deviations: Partial<Record<Finger, number>>, perFinger: Record<Finger, Thresholds>): Finger | null {
+  let best: Finger | null = null;
+  let bestRatio = -1;
+  for (const f of FINGER_NAMES) {
+    const size = Math.abs(deviations[f] ?? 0);
+    if (size < perFinger[f].fingerDeg) continue;
+    const ratio = size / perFinger[f].angleTolDeg;
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      best = f;
+    }
+  }
+  return best;
+}
+
+/** The same thresholds for every finger. */
+const uniform = (limits: Thresholds): Record<Finger, Thresholds> =>
+  Object.fromEntries(FINGER_NAMES.map((f) => [f, limits])) as Record<Finger, Thresholds>;
+
+/** Thresholds per finger for a tolerance with per-finger bands, before the margin is applied (the margin is). */
+export function fingerThresholds(tolerance: Tolerance, margin: Margin = DEFAULT_MARGIN): Record<Finger, Thresholds> {
+  return Object.fromEntries(FINGER_NAMES.map((f) => [f, thresholds(margin, angleFor(tolerance, f), tolerance.timing_ms)])) as Record<Finger, Thresholds>;
+}
+
+/**
+ * Plain-language tip. Deviation is signed total-flexion degrees (positive: curled too much); timing is positive when late.
+ * perFinger gives each finger its own thresholds (a step with per-finger tolerance); without it every finger uses limits.
+ */
+export function buildHint(
+  deviations: Partial<Record<Finger, number>>,
+  timingMs: number,
+  limits: Thresholds = STANDARD_THRESHOLDS,
+  perFinger?: Record<Finger, Thresholds>,
+): string {
+  const finger = focusFinger(deviations, perFinger ?? uniform(limits));
+  if (finger !== null) {
+    const deviation = deviations[finger] ?? 0;
     if (deviation > 0) return `Relax your ${finger} finger, it is curled about ${Math.abs(deviation).toFixed(0)} degrees (in total) too much.`;
     return `Curl your ${finger} finger more, it is about ${Math.abs(deviation).toFixed(0)} degrees (in total) too straight.`;
   }
@@ -283,14 +319,17 @@ export function focusFingers(weights: Record<Finger, number>, minWeight = FOCUS_
 }
 
 /**
- * Turns alignment statistics into the contract's ScoreResult, judged with the learner's margin of error. With step
- * weights, the finger part of `overall` is their weighted mean, a zero-weight finger never breaks `within_tolerance`,
+ * Turns alignment statistics into the contract's ScoreResult, judged with the learner's margin of error. Per-finger bands
+ * (tolerance.finger_angle_deg) give each finger its own Gaussian and limit (the worst finger is the one furthest outside
+ * its own band). With step weights, the finger part of `overall` is their weighted mean, a zero-weight finger never breaks `within_tolerance`,
  * and the worst finger and the hint only name a finger weighted at least FOCUS_MIN_WEIGHT.
  */
 export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Margin = DEFAULT_MARGIN, weights?: Partial<Record<Finger, number>> | null): ScoreResult {
   const limits = thresholds(margin, stepTolerance.angle_deg, stepTolerance.timing_ms);
+  const fingerLimits = fingerThresholds(stepTolerance, margin);
   const tolerance = widened(stepTolerance, margin);
-  const perFinger = FINGER_NAMES.map((f) => gaussianScore(cmp.errorDeg[f], tolerance.angle_deg));
+  const band = (f: Finger) => angleFor(tolerance, f);
+  const perFinger = FINGER_NAMES.map((f) => gaussianScore(cmp.errorDeg[f], band(f)));
   const timing = gaussianScore(cmp.timingAbsMs, tolerance.timing_ms);
   const w = weightMap(weights);
   let fingersPart: number;
@@ -300,11 +339,11 @@ export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Marg
     fingersPart = total > 0 ? FINGER_NAMES.reduce((s, f, i) => s + w[f] * perFinger[i], 0) / total : 100;
   }
   const overall = FINGER_WEIGHT * fingersPart + TIMING_WEIGHT * timing;
-  const within = FINGER_NAMES.every((f) => w[f] <= 0 || cmp.errorDeg[f] <= tolerance.angle_deg) && cmp.timingAbsMs <= tolerance.timing_ms;
+  const within = FINGER_NAMES.every((f) => w[f] <= 0 || cmp.errorDeg[f] <= band(f)) && cmp.timingAbsMs <= tolerance.timing_ms;
   const focusList = focusFingers(w);
   const focus = focusList.length ? focusList : FINGER_NAMES;
   let worst: Finger = focus[0];
-  for (const f of focus) if (cmp.errorDeg[f] > cmp.errorDeg[worst]) worst = f;
+  for (const f of focus) if (cmp.errorDeg[f] / band(f) > cmp.errorDeg[worst] / band(worst)) worst = f;
   const focusDeviation: Partial<Record<Finger, number>> = {};
   for (const f of focus) focusDeviation[f] = cmp.deviationDeg[f];
   const per = {} as Record<Finger, number>;
@@ -315,7 +354,7 @@ export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Marg
     timing: round1(timing),
     within_tolerance: within,
     worst_finger: worst,
-    hint: buildHint(focusDeviation, cmp.timingSignedMs, limits),
+    hint: buildHint(focusDeviation, cmp.timingSignedMs, limits, fingerLimits),
     warnings: [],
     margin,
   };

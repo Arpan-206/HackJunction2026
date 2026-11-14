@@ -32,6 +32,8 @@ export function TestSettings({ skill, test, onChange }: TestSettingsProps) {
             <select id={kindId} className="field__control" value={test.kind} onChange={(e) => onChange({ ...test, kind: e.target.value as TestSpec['kind'] })}>
               <option value="table_tennis_rally">Table tennis rally</option>
               <option value="piano_play_along">Piano play-along</option>
+              {/* Air typing belongs to touch typing, which is off the catalogue: only an older lesson that already has it shows it. */}
+              {test.kind === 'air_typing' && <option value="air_typing">Air typing</option>}
             </select>
           </div>
           <div className="field">

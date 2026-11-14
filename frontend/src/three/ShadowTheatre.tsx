@@ -1,20 +1,20 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import { Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, SpotLight, Vector3, type Material } from 'three';
+import { Color, Euler, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, SpotLight, Vector3, type Material } from 'three';
 import type { Side } from '../api/types';
 import { Optional, Workbench } from './atmosphere';
 import { useStageColors } from './stageContext';
-import { getPlasterTextures } from './surfaces';
+import { getParchmentTexture } from './parchment';
 
 /**
- * The shadow-puppet theatre: a dim room, a lime-plaster wall and the oil lamp on the bench in front of it. A spot light at
+ * The shadow-puppet theatre: a dim room, a parchment screen on the wall and the oil lamp on the bench in front of it. A spot light at
  * the lamp's flame throws every hand that casts shadows onto the wall, big and crisp enough to read from 3 m. Hands are
  * placed between the lamp and the wall by `puppetLayout`; any hand mesh works, since `useCastShadows` only switches
  * `castShadow` on for the meshes under a group.
  */
 
-/** Plane of the plaster wall (z). */
+/** Plane of the theatre wall (z). */
 export const WALL_Z = -2.7;
 /** The lamp's flame, where the light sits. */
 export const LAMP_POS: [number, number, number] = [0, -0.62, 2.45];
@@ -44,6 +44,27 @@ const FLAME = '#ffcf7a';
 export function projectToWall(p: Vector3, out: Vector3): Vector3 {
   const k = (WALL_Z - LAMP_POS[2]) / (p.z - LAMP_POS[2]);
   return out.set(LAMP_POS[0] + (p.x - LAMP_POS[0]) * k, LAMP_POS[1] + (p.y - LAMP_POS[1]) * k, WALL_Z + 0.02);
+}
+
+/**
+ * Where the shadow of a puppet lands on the wall (x, y): the mean over its hands of the middle of the hand's bounding box
+ * (the box centre, hand space, right hand; a left hand mirrors x), carried through its placement, the puppet's tilt and the lamp. A
+ * preview uses it to aim its camera at the middle of the shadow, whatever shape the puppet makes.
+ */
+export function puppetShadowCentre(placements: readonly HandPlacement[], box: readonly [number, number, number], x = 0): [number, number] {
+  let sx = 0;
+  let sy = 0;
+  const q = new Vector3();
+  for (const p of placements) {
+    const b = new Vector3(p.side === 'left' ? -box[0] : box[0], box[1], box[2]).multiplyScalar(p.scale).applyEuler(new Euler(p.rotation[0], p.rotation[1], p.rotation[2]));
+    b.add(new Vector3(p.position[0], p.position[1], p.position[2]));
+    q.set(b.x * Math.cos(p.tilt) - b.y * Math.sin(p.tilt) + x, b.x * Math.sin(p.tilt) + b.y * Math.cos(p.tilt) + PUPPET_Y, b.z + PUPPET_Z);
+    projectToWall(q, q);
+    sx += q.x;
+    sy += q.y;
+  }
+  const n = Math.max(1, placements.length);
+  return [sx / n, sy / n];
 }
 
 /** Shadow magnification for something at depth z. */
@@ -88,7 +109,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
     }
     case 'snail':
       return [
-        { side: 'right', tilt: -0.3, position: [reach, -0.35 * s, 0], rotation: [0, QUARTER, 0], scale: s },
+        { side: 'right', tilt: -0.3, position: [reach + 0.04, -0.35 * s, 0], rotation: [0, QUARTER, 0], scale: s },
         { side: 'left', tilt: -0.7, position: [1.3 * s, 0.35 * s, 0.08], rotation: [0, QUARTER, 0], scale: s * 0.9 },
       ];
     default:
@@ -97,7 +118,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
 }
 
 /** How far each one-handed puppet is raised: the dog's snout stays near level, the swan's neck stands tall. */
-const RAISE_BY_MOVE: Record<string, number> = { sp_rabbit: 1.25, sp_talking_dog: 0.55, sp_swan: 1.5 };
+const RAISE_BY_MOVE: Record<string, number> = { sp_rabbit: 1.25, sp_talking_dog: 0.55, sp_swan: 2.0 };
 
 /** The lift a move's one-handed puppet needs. */
 export const raiseFor = (moveId: string | null | undefined): number => (moveId ? RAISE_BY_MOVE[moveId] : undefined) ?? RAISE;
@@ -160,13 +181,10 @@ function CameraAim({ target }: { target: [number, number, number] }) {
   return null;
 }
 
+/** The screen: a stretched sheet of the sketchbook's parchment, so the lamp lights paper as in a real shadow theatre. */
 function TheatreWall() {
-  const tex = getPlasterTextures([4, 2]);
-  const mat = useMemo(() => {
-    const m = new MeshStandardMaterial({ color: '#efe2c6', normalMap: tex.normalMap, roughnessMap: tex.roughnessMap, roughness: 1, metalness: 0 });
-    m.normalScale.set(0.3, 0.3);
-    return m;
-  }, [tex]);
+  const tex = useMemo(() => getParchmentTexture({ width: 2048, height: 1024, tone: '#f1e4c8', seed: 23, vignette: false }), []);
+  const mat = useMemo(() => new MeshStandardMaterial({ color: '#ffffff', map: tex, roughness: 1, metalness: 0 }), [tex]);
   useEffect(() => () => mat.dispose(), [mat]);
   return (
     <mesh position={[0, 1.2, WALL_Z]} material={mat} receiveShadow>

@@ -4,6 +4,7 @@ Tests never reach the network or the real log: the key lookup is stubbed, the
 log goes to a temporary file, and transports are fakes. The one exception is
 ``test_live.py``, which runs only with ``DECISIONS_LIVE=1`` and a real key.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,14 +21,16 @@ if str(ROOT) not in sys.path:
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
-from decisions import config as C  # noqa: E402
-from decisions import judgements  # noqa: E402
-from decisions.client import DecisionsClient  # noqa: E402
-from decisions.log import JsonlLog  # noqa: E402
+from decisions import config as C
+from decisions import judgements
+from decisions.client import DecisionsClient
+from decisions.log import JsonlLog
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "live: calls the real Decisions API (opt in with DECISIONS_LIVE=1)")
+    config.addinivalue_line(
+        "markers", "live: calls the real Decisions API (opt in with DECISIONS_LIVE=1)"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -98,7 +101,9 @@ def make_client(log_file):
     def _make(transport, **kw) -> DecisionsClient:
         kw.setdefault("budget_ms", 600)
         kw.setdefault("enabled", True)
-        return DecisionsClient(api_key="test-key", transport=transport, log=JsonlLog(log_file), **kw)
+        return DecisionsClient(
+            api_key="test-key", transport=transport, log=JsonlLog(log_file), **kw
+        )
 
     return _make
 
@@ -113,9 +118,14 @@ def choice_body(**answers: tuple[str, dict[str, float], float]) -> dict:
     """{"key": (choice, probabilities, confidence)} to a Decisions API response body."""
     return {
         "answers": {
-            k: {"type": "choice", "choice": c, "probabilities": p, "confidence": conf} for k, (c, p, conf) in answers.items()
+            k: {"type": "choice", "choice": c, "probabilities": p, "confidence": conf}
+            for k, (c, p, conf) in answers.items()
         },
-        "usage": {"total_input_tokens": 100, "total_output_tokens": 0, "total_tokens": 100},
+        "usage": {
+            "total_input_tokens": 100,
+            "total_output_tokens": 0,
+            "total_tokens": 100,
+        },
     }
 
 
@@ -123,10 +133,15 @@ def noul_body(key: str, p: float, confidence: float | None = None) -> dict:
     ans = {"type": "noul", "noul": p}
     if confidence is not None:
         ans["confidence"] = confidence
-    return {"answers": {key: ans}, "usage": {"total_input_tokens": 300, "total_output_tokens": 0}}
+    return {
+        "answers": {key: ans},
+        "usage": {"total_input_tokens": 300, "total_output_tokens": 0},
+    }
 
 
-def score_body(levels: dict[str, float], confidence: float = 0.8, n_levels: int = 4) -> dict:
+def score_body(
+    levels: dict[str, float], confidence: float = 0.8, n_levels: int = 4
+) -> dict:
     answers = {}
     for k, s in levels.items():
         lo = int(s)
@@ -135,9 +150,17 @@ def score_body(levels: dict[str, float], confidence: float = 0.8, n_levels: int 
         probs = {str(i): 0.0 for i in range(n_levels)}
         probs[str(lo)] += 1.0 - frac
         probs[str(hi)] += frac
-        answers[k] = {"type": "score", "score": s, "probabilities": probs, "legend": {str(i): f"level {i}" for i in range(n_levels)},
-                      "confidence": confidence}
-    return {"answers": answers, "usage": {"total_input_tokens": 200, "total_output_tokens": 0}}
+        answers[k] = {
+            "type": "score",
+            "score": s,
+            "probabilities": probs,
+            "legend": {str(i): f"level {i}" for i in range(n_levels)},
+            "confidence": confidence,
+        }
+    return {
+        "answers": answers,
+        "usage": {"total_input_tokens": 200, "total_output_tokens": 0},
+    }
 
 
 def slow_transport(seconds: float, body: dict):

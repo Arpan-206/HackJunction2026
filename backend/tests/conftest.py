@@ -10,11 +10,21 @@ from pathlib import Path
 
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["LLM_PROVIDER"] = "fake"
+# Nor does the model hosted on Verda: its endpoint and key are blanked under both names (OPENAI_ and the Verda lane's),
+# so a VERDA_GEMMA_URL in backend/.env never puts it into a test's fallback chain. Tests that need it set it themselves.
+for _name in (
+    "OPENAI_BASE_URL",
+    "OPENAI_API_KEY",
+    "VERDA_GEMMA_URL",
+    "VERDA_INFERENCE_KEY",
+):
+    os.environ[_name] = ""
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.core.config import Settings
 from app.main import create_app
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)

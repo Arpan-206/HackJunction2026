@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '../../../components/ui';
 import type { Take } from '../hooks/useTakeBook';
 import { formatDuration } from '../lib';
+import { RevealFile } from '../files/RevealFile';
 
 interface TakeListProps {
   takes: Take[];
@@ -90,6 +91,7 @@ export function TakeList({ takes, referenceId, onToggleKept, onDelete, onSetRefe
                   </Button>
                 )}
               </div>
+              <RevealFile kind="recording" id={t.id} what={`take ${t.n}`} className="mst-take__file" />
             </li>
           );
         })}

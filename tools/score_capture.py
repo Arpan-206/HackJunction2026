@@ -31,8 +31,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import hand as H
 from core.calibration import angles_to_triples, load_hand
-from core.compat import thumb_cmc_deg
 from core.clock import FakeClock
+from core.compat import thumb_cmc_deg
 from core.config import load_config
 from core.recorder import Recorder
 from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, GloveSource

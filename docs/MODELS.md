@@ -5,7 +5,7 @@ The backend uses a language model for four roles: live coach hints, practice pla
 Two models are in use:
 
 - **Gemini**: the Gemini API (`gemini` provider).
-- **Gemma on Verda**: Gemma 4 behind an OpenAI-compatible endpoint (`openai` provider). It is used only when `OPENAI_BASE_URL` is set.
+- **Gemma on Verda**: Gemma 4 behind an OpenAI-compatible endpoint (`openai` provider). It is used only when `OPENAI_BASE_URL` (or `VERDA_GEMMA_URL`) is set. Verda hosts the model for inference only: nothing trains there and nothing is stored there.
 
 ## Which .env file the backend reads
 
@@ -112,7 +112,36 @@ Names only. The values are in the root `.env`.
 | `LLM_PROVIDER`, `LLM_FALLBACK`, `LLM_ROUTES` | The chain |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_HINT_MODEL`, `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET` | Gemini |
 | `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL` | Gemma on Verda |
-| `VERDA_INFERENCE_KEY` | The health check uses it when `OPENAI_API_KEY` is empty |
+| `VERDA_GEMMA_URL`, `VERDA_INFERENCE_KEY`, `VERDA_GEMMA_MODEL` | The Verda lane's names for the same three. The backend uses each one when its `OPENAI_` name is absent or empty |
+
+## All inference on Verda
+
+Verda hosts the model only (inference). Training and tuning run locally. To send every role to Gemma on Verda first, with Gemini behind it, put this in `backend/.env` (names only here):
+
+```
+LLM_PROVIDER=openai
+LLM_FALLBACK=gemini
+VERDA_GEMMA_URL=<base_url from verda/out/endpoint.json>
+VERDA_INFERENCE_KEY=<already in backend/.env>
+```
+
+The deployment must be up (`cd verda && uv run python deploy.py`, about 8 minutes of start-up, billed per hour; `uv run python teardown.py` after). While it is down every call falls through to Gemini, then to the offline note.
+
+### Recordings as request context
+
+The model on Verda keeps no files, so a recording travels in the request. `backend/scripts/verda_lesson.py <take or lesson id>` hands the take's local core lesson folder (below) to `verda/gemma_client.py`, which sends the key pose sketches as pictures and a glove trace summary as text in one chat request, and validates the answer as a backend `Lesson`. That request is the only thing that leaves the machine. `--dry-run` prints it and sends nothing.
+
+`verda/gemma_client.py` run on its own reads the key from the repo-root `.env` (or the file named by `GEPPETTO_ENV_FILE`), not `backend/.env`; `verda_lesson.py` uses the backend's settings instead.
+
+## Recordings for local training
+
+Training and tuning run on this machine only. Every take and lesson the expert records in the app is also written locally as a core lesson folder, the format of `SPEC.md` "Lesson files" that Arpan's tools read:
+
+- `backend/data/core_lessons/takes/<take id>-<side>/`: one folder per hand of a take.
+- `backend/data/core_lessons/lessons/<lesson id>/`: a lesson's recorded steps joined, one core step each.
+- `backend/data/core_lessons/manifest.json`: what came from which file, the calibration used, and why anything was skipped.
+
+The backend keeps them in step on its own (start-up, every take stop or delete, every lesson save, every 30 s); `uv run python scripts/core_export_sync.py` in `backend/` syncs by hand. Real glove takes carry the same flat and fist calibration the live core applies; simulator takes are marked `"source": "fake"` in `lesson.json` so nobody trains on them as an expert. Readers and commands: `backend/README.md`, "Core lesson export".
 
 ## Tests
 

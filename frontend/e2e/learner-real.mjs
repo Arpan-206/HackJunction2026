@@ -92,7 +92,7 @@ try {
 
     await page.goto(`${BASE}/apprentice/lessons/${target.lessonId}/steps/${target.index}`, { waitUntil: 'domcontentloaded' });
     // The first stage of a step can be the watch stage; skip it to reach scored reps.
-    const strings = page.getByRole('button', { name: /Start with the strings/ });
+    const strings = page.getByRole('button', { name: /Try it out|Start with the strings/ });
     const begin = page.getByRole('button', { name: /Begin (rep|attempt) \d+/ });
     await strings.or(begin).first().waitFor({ state: 'visible', timeout: 30000 });
     if (await strings.isVisible()) await strings.click();

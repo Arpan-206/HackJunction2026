@@ -17,7 +17,7 @@ export function Marionette({ coach, gloves, side, prop, cue, policy, toleranceDe
     <HandCanvas
       preset="single"
       label="The expert's ghost hand hangs from a marionette cross above your wooden hand, with a string to each fingertip"
-      stage={{ cameraPosition: [2.7, 3.5, 4.9], target: [0, 0.9, -0.85], circleCenter: [0, -0.5], controls: 'limited' }}
+      stage={{ cameraPosition: [2.7, 3.5, 4.9], target: [0, 0.9, -0.85], circleCenter: [0, -0.5], controls: 'orbit' }}
     >
       <FingerTinter hand={master} coach={coach} policy={policy} goodTint={false} />
       {prop === 'keyboard' && <Keyboard handRef={learner} />}

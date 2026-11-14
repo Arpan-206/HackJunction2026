@@ -1,4 +1,7 @@
-"""New skills: shadow puppets, surgical grips and crochet moves load, synthesise and ship as seed lessons; keyframes work."""
+"""Propless skills: shadow puppets and Finnish fingerspelling load, synthesise and ship as seed lessons; keyframes work.
+
+Crochet is off the catalogue; its keyframed stitches stay as test fixtures (tests/retired_moves.py) for the engine.
+"""
 
 import math
 
@@ -9,7 +12,11 @@ from app.services.motion import synthesiser
 from app.services.moves import load_moves
 from fastapi.testclient import TestClient
 
-NEW_SKILLS = {"shadow_puppets", "surgical_grips", "crochet"}
+from tests.retired_moves import load_retired_moves
+
+NEW_SKILLS = {"shadow_puppets", "finnish_fingerspelling"}
+RETIRED = {m.id: m for m in load_retired_moves()}
+FINNISH_LETTERS = [*"ABCDEFGHIJKLMNOPQRSTUVWXYZ", "Å", "Ä", "Ö"]
 
 
 def _curl_of(hand, finger_index: int) -> float:
@@ -27,15 +34,28 @@ def test_new_skill_moves_load_with_no_prop() -> None:
     moves = [m for m in load_moves() if m.skill in NEW_SKILLS]
     by_skill = {s: [m for m in moves if m.skill == s] for s in NEW_SKILLS}
     assert len(by_skill["shadow_puppets"]) == 5
-    assert len(by_skill["surgical_grips"]) == 8
-    assert len(by_skill["crochet"]) == 5
     assert all(m.prop == "none" for m in moves)
     assert {m.id for m in by_skill["shadow_puppets"] if m.hands == "both"} == {
         "sp_flapping_bird",
         "sp_snail",
     }
-    assert all(m.hands == "both" for m in by_skill["crochet"])
     assert all("estimates" in m.description for m in moves)
+
+
+def test_finnish_manual_alphabet_has_29_one_handed_letters() -> None:
+    """A to Z plus Å, Ä and Ö, one held shape each on the right hand, no prop, curls marked as estimates."""
+    letters = [m for m in load_moves() if m.skill == "finnish_fingerspelling"]
+    assert [m.name for m in letters] == [f"Letter {x}" for x in FINNISH_LETTERS]
+    assert len({m.id for m in letters}) == 29
+    assert all(m.hands == "right" and m.prop == "none" for m in letters)
+    assert all(isinstance(m.default_motion, HoldPose) for m in letters)
+    assert all("Finnish manual alphabet" in m.description for m in letters)
+    assert all("ASL" not in m.description for m in letters)
+    by_name = {m.name: m.default_motion.pose for m in letters}
+    # Y: thumb and little finger out; L: thumb and index out; B: four fingers out, thumb folded.
+    assert by_name["Letter Y"].as_list() == [0.0, 1.0, 1.0, 1.0, 0.0]
+    assert by_name["Letter L"].as_list() == [0.0, 0.0, 1.0, 1.0, 1.0]
+    assert by_name["Letter B"].index == 0.0 and by_name["Letter B"].thumb > 0.5
 
 
 @pytest.mark.parametrize(
@@ -100,7 +120,7 @@ def test_keyframes_wrist_angles_and_left_keys() -> None:
         != synthesiser.hand_frame(bird, "right", 0.75).wrist_quat
     )
 
-    chain = next(m for m in load_moves() if m.id == "cr_chain").default_motion
+    chain = RETIRED["cr_chain"].default_motion
     assert isinstance(chain, Keyframes) and chain.left_keys
     hook_yo = synthesiser.pose_at(chain, 0.33, "right")
     yarn_yo = synthesiser.pose_at(chain, 0.33, "left")
@@ -112,7 +132,7 @@ def test_keyframes_wrist_angles_and_left_keys() -> None:
 
 def test_stitches_differ_by_yarn_over_count() -> None:
     """Chain and slip stitch have one yarn-over, single crochet two, double crochet four."""
-    moves = {m.id: m.default_motion for m in load_moves()}
+    moves = {mid: m.default_motion for mid, m in RETIRED.items()}
     counts = {}
     for mid in ("cr_chain", "cr_slip_stitch", "cr_single", "cr_double"):
         spec = moves[mid]
@@ -132,16 +152,15 @@ def test_new_seed_lessons_are_served(client: TestClient) -> None:
     moves = {m.id: m for m in load_moves()}
     expected = {
         "seed-shadow-puppets": 5,
-        "seed-surgical-grips": 5,
-        "seed-surgical-ties": 3,
-        "seed-crochet": 5,
+        "seed-finnish-fingerspelling": 7,
     }
     for lid, n in expected.items():
         lesson = lessons[lid]
         assert len(lesson["steps"]) == n
         for step in lesson["steps"]:
             assert step["prop"] == "none"
-            assert step["hands"] == moves[step["move_id"]].hands
+            if step["move_id"] is not None:
+                assert step["hands"] == moves[step["move_id"]].hands
     titles = [s["title"] for s in lessons["seed-shadow-puppets"]["steps"]]
     assert titles == [
         "Lesson 1: The rabbit",
@@ -150,14 +169,40 @@ def test_new_seed_lessons_are_served(client: TestClient) -> None:
         "Lesson 4: The flapping bird",
         "Lesson 5: The snail",
     ]
-    assert client.get("/api/moves", params={"skill": "crochet"}).status_code == 200
+    fs = lessons["seed-finnish-fingerspelling"]
+    assert fs["skill"] == "finnish_fingerspelling"
+    assert [s["title"] for s in fs["steps"]] == [
+        "Lesson 1: Letter A",
+        "Lesson 2: Letter I",
+        "Lesson 3: Letter L",
+        "Lesson 4: Letter V",
+        "Lesson 5: Letter Y",
+        "Lesson 6: Spell VIILI",
+        "Lesson 7: Spell LAVA",
+    ]
+    viili = fs["steps"][5]["motion"]
+    assert viili["preset"] == "keyframes" and len(viili["keys"]) == 5
+    letters = client.get("/api/moves", params={"skill": "finnish_fingerspelling"})
+    assert letters.status_code == 200 and len(letters.json()) == 29
+
+
+def test_only_the_four_demo_skills_ship(client: TestClient) -> None:
+    """The seed lessons and the move catalogue hold the four demo skills (plus general moves), nothing retired."""
+    lessons = client.get("/api/lessons").json()
+    seeds = {lesson["skill"] for lesson in lessons if lesson["source"] == "seed"}
+    assert seeds == {
+        "table_tennis",
+        "piano",
+        "finnish_fingerspelling",
+        "shadow_puppets",
+        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
+    }
+    assert client.get("/api/moves", params={"skill": "crochet"}).status_code == 422
 
 
 def test_a_keyframed_reference_scores_its_own_motion(client: TestClient) -> None:
     """Scoring a keyframed two-handed move against itself is near perfect for either hand."""
-    chain = next(
-        m for m in load_moves() if m.id == "cr_chain"
-    ).default_motion.model_dump()
+    chain = RETIRED["cr_chain"].default_motion.model_dump()
     for side in ("left", "right"):
         frames = [
             f.model_dump()
@@ -169,3 +214,34 @@ def test_a_keyframed_reference_scores_its_own_motion(client: TestClient) -> None
         res = client.post("/api/score", json=body)
         assert res.status_code == 200, res.text
         assert res.json()["overall"] >= 90
+
+
+def test_a_retired_seed_in_the_store_is_removed_before_it_is_read(tmp_path) -> None:
+    """A store from before the trim (seed-crochet, skill crochet) loads again: the retired seed goes, edits stay."""
+    import json
+
+    from app.schemas.lesson import Lesson
+    from app.services.storage.json_store import JsonStore
+    from app.services.storage.seed import install_seed_lessons
+
+    retired = {
+        "id": "seed-crochet",
+        "title": "Crochet basics",
+        "skill": "crochet",
+        "source": "seed",
+        "created_at": "2026-11-13T00:00:00+00:00",
+        "steps": [{"title": "Lesson 1: Chain"}],
+    }
+    (tmp_path / "seed-crochet.json").write_text(json.dumps(retired), encoding="utf-8")
+    store = JsonStore(tmp_path, Lesson)
+    install_seed_lessons(store)
+    ids = store.ids()
+    assert "seed-crochet" not in ids
+    assert "seed-finnish-fingerspelling" in ids
+    assert {lesson.skill for lesson in store.list()} == {
+        "table_tennis",
+        "piano",
+        "finnish_fingerspelling",
+        "shadow_puppets",
+        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
+    }

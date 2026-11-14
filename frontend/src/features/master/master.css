@@ -111,6 +111,16 @@
   width: 100%;
   height: 100%;
 }
+.mst-guide__box,
+.mst-guide__live {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.mst-guide__live {
+  position: absolute;
+  inset: 0;
+}
 .mst-studio {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(21rem, 1fr);
@@ -373,6 +383,16 @@
 .mst-take__ref {
   font: italic 400 var(--step-0) var(--font-note);
   color: var(--text-2);
+}
+.mst-devfiles {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.3rem 1rem;
+  align-items: baseline;
+  margin-bottom: 1.25rem;
+}
+.mst-take__file {
+  grid-column: 1 / -1;
 }
 .mst-take__actions {
   grid-column: 1 / -1;
@@ -792,4 +812,74 @@
 .mst-setup {
   display: grid;
   gap: 1rem;
+}
+
+/* ---------- Expert stage camera: ink view buttons in the stage's top-right corner ---------- */
+.cam-views {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.35rem;
+}
+.cam-views__btn {
+  display: grid;
+  place-items: center;
+  width: var(--target);
+  height: var(--target);
+  padding: 0;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    transform 0.15s;
+}
+.cam-views__btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.cam-views__btn:hover {
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+.cam-views__btn:focus-visible,
+.cam-dev__btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Dev mode only: copy the current view as JSON. */
+.cam-dev {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cam-dev__btn {
+  min-height: var(--target);
+  padding: 0 0.9rem;
+  font: 600 1rem var(--font-ui);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.cam-dev__note {
+  font: italic 500 1rem var(--font-note);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cam-views__btn {
+    transition: none;
+  }
 }

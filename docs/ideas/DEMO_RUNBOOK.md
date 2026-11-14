@@ -25,7 +25,7 @@ cd backend && uv run uvicorn app.main:app --port 8000
 ```
 Environment (set in `backend/.env`, never commit keys):
 ```
-LLM_PROVIDER=gemini        # or ollama, or fake
+LLM_PROVIDER=gemini        # or openai (Gemma on Verda), or fake
 GEMINI_API_KEY=...
 GLOVE_SOURCE=simulator     # switch to rokoko_udp in the dev panel
 ROKOKO_UDP_PORT=14043
@@ -37,12 +37,12 @@ cd frontend && npm run dev
 Open `http://localhost:5173/?dev=1` for the dev panel. In the panel:
 1. Set glove source: `simulator` or `rokoko_udp`.
 2. Toggle smoothing (One Euro); default is fine.
-3. Switch LLM provider: `gemini` / `ollama` / `fake`.
+3. Switch LLM provider: `gemini` / `openai` / `fake`.
 4. Before going on stage open `/?dev=0` to hide the panel. The dev flag is sticky in localStorage, so merely dropping `?dev=1` does not hide it (a fix is landing; verify the panel is gone anyway). The panel must not be visible to judges.
 
 Rokoko Studio: enable Custom Streaming, JSON v3/v4, target `127.0.0.1`, port `14043`. Pair both gloves. Confirm `GET http://localhost:8000/api/health` shows the expected `glove_source` and `llm_provider`.
 
-Ollama (offline coach): `ollama serve` and `ollama pull gemma4:e4b` beforehand; default URL `http://localhost:11434`.
+Gemma on Verda (backup coach): set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPENAI_MODEL`; the fallback chain tries Gemini first, then Gemma on Verda (docs/MODELS.md).
 
 ## 3. Calibration ritual (do it twice: once backstage, once on stage)
 
@@ -60,7 +60,7 @@ Note: once the learner has calibrated, scoring normalises each joint by their fl
 
 1. `/` Role select. Say the hook. Click **Master**.
 2. `/master`: choose **Generate lesson**. Type: "Teach a table tennis forehand grip in three steps". Show validated lesson with guide hands. Save.
-3. Back to `/master`: **Start from scratch**, pick "Forehand swing" (`tt_forehand_swing`). Calibrate (flat, fist). Record 3 takes. Show the scored takes and replay (screenshot reference: master-09-takes-scored).
+3. Back to `/expert`: **Start from scratch** opens straight on Record for a new skill. Answer the hands question, calibrate from the Gloves control (flat, fist). Record 3 takes. Show the takes model and replay, then name the skill and the move on Publish.
 4. Click role switch, **Apprentice**. Library, then course syllabus (shows video slots).
 5. Open step 1, training room. Cycle guidance modes: marionette, shadow, ghost, side by side.
 6. Learner attempts the step. Make one deliberate error. Show coaching and the AI hint.
@@ -76,9 +76,9 @@ Cuts, in order, when time is short: piano test, scratch recording (use pre-recor
 | One glove drops | 3D hand freezes or jitters | Re-press the hub, check battery. Do not switch hands mid-demo: scoring uses the reference take's hand side, so a left-hand attempt needs a master take for the left hand. Or switch glove source to `simulator` in `?dev=1` and say "demo hand". |
 | Backend silently on simulator | `/api/health` says simulator while gloves are on | Restart backend with `GLOVE_SOURCE=rokoko_udp`, check UDP port 14043 is not busy. |
 | Both gloves drop | No frames in Studio | Dev panel: `GLOVE_SOURCE=simulator`. The simulator drives realistic motion (`set_motion`). Tell the audience honestly it is simulated; show the recorded video next. |
-| Venue Wi-Fi dead | Gemini call times out | The gloves run on our router, so only Gemini is affected. Switch to hotspot, or LLM provider `ollama` (Gemma on laptop), or `fake`. |
+| Venue Wi-Fi dead | Gemini call times out | The gloves run on our router, so only Gemini is affected. Switch to hotspot, or LLM provider `openai` (Gemma on Verda), or `fake`. |
 | Gemini slow or 429 | Spinner over about 4 s | If over 4 s, switch provider by hand in the dev panel. The backend falls back to fake after 8 s anyway; `provider` in the response says which was used. Open the pre-generated lesson instead. |
-| Gemini down and Ollama not warmed | Timeout | Provider `fake`: deterministic template lessons, still valid JSON. Say "offline mode". |
+| Gemini and Verda both down | Timeout | Provider `fake`: deterministic template lessons, still valid JSON. Say "offline mode". |
 | Backend crash | Screens show error toasts | Frontend still renders using `synthFrame` preview motions. Restart the uvicorn command (takes under 10 s). |
 | Frontend crash | White screen | Re-run `npm run dev`; or serve a built bundle `npm run build && npx vite preview` prepared in advance. |
 | Projector will not mirror | No image | Use the laptop screen turned toward the judges; zoom the browser to 125 percent. |

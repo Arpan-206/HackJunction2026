@@ -1,5 +1,6 @@
 import './master.css';
 import { GenerateSteps } from './generate/GenerateSteps';
+import { SkillPage } from './home/SkillPage';
 import { LessonStudio } from './lesson/LessonStudio';
 import { ScratchStudio } from './scratch/ScratchStudio';
 
@@ -9,3 +10,5 @@ export const MasterScratch = () => <ScratchStudio />;
 export const MasterGenerate = () => <GenerateSteps />;
 /** /master/lessons/:lessonId: lesson overview and editor. */
 export const MasterLesson = () => <LessonStudio />;
+/** /expert/skills/:skillKey: one skill's lessons. */
+export const MasterSkill = () => <SkillPage />;

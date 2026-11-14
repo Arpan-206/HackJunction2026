@@ -12,8 +12,10 @@ from app.api.routes import (
     health,
     ingest,
     lessons,
+    media,
     motion,
     moves,
+    persist,
     recordings,
     score,
     vision,
@@ -27,6 +29,7 @@ for module in (
     lessons,
     calibrations,
     recordings,
+    media,
     motion,
     score,
     coach,
@@ -34,5 +37,6 @@ for module in (
     dev,
     ingest,
     gloves,
+    persist,
 ):
     api_router.include_router(module.router)

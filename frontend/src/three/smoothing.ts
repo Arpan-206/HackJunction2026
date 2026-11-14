@@ -1,6 +1,7 @@
 import { Quaternion } from 'three';
 import type { Finger, HandFrame, JointTriple } from '../api/types';
 import { FINGER_ORDER } from './anatomy';
+import { CORE_JOINTS, isCoreAngleSpread } from './handPose';
 
 /** Render-side smoothing. The backend does the heavy jitter filtering; this only hides the 60 Hz stepping. */
 export interface SmoothingConfig {
@@ -14,6 +15,8 @@ export const DEFAULT_SMOOTHING: Required<SmoothingConfig> = { tau: 0.045, quatTa
 
 const N_FLEX = 15;
 const N_SPREAD = 5;
+/** Time constant (s) of the blend between the angle pose and the core's joint pose, so a switch never pops. */
+const JOINT_BLEND_TAU = 0.12;
 
 /** Exponentially smoothed hand pose: 15 flexion angles, 5 spreads and the wrist quaternion. */
 export class HandSmoother {
@@ -21,11 +24,21 @@ export class HandSmoother {
   readonly spread = new Float32Array(N_SPREAD);
   readonly quat = new Quaternion();
   readonly pos: [number, number, number] = [0, 0, 0];
+  /** True while the frames carry the glove core's angle meanings (handPose.ts isCoreAngleSpread). */
+  coreAngles = false;
+  /** The core's joint positions (see api/coreJoints.ts), smoothed like the angles; meaningful while jointWeight > 0. */
+  readonly joints = new Float32Array(CORE_JOINTS * 3);
+  /** 0 draws the angle pose, 1 the joint pose; eases between them as joints arrive or stop. */
+  jointWeight = 0;
+  private jointsPrimed = false;
   private primed = false;
   private readonly target = new Quaternion();
 
-  /** Moves the smoothed state towards `frame` by dt seconds; the first call snaps to the frame. */
-  step(frame: HandFrame, dt: number, cfg: SmoothingConfig | number | false = {}): void {
+  /**
+   * Moves the smoothed state towards `frame` by dt seconds; the first call snaps to the frame. `joints` is the core's
+   * skeleton for the same hand when the frame is known to come from it (null otherwise).
+   */
+  step(frame: HandFrame, dt: number, cfg: SmoothingConfig | number | false = {}, joints: ArrayLike<number> | null = null): void {
     const c = typeof cfg === 'number' ? { tau: cfg, quatTau: cfg * 1.3 } : cfg === false ? { tau: 0, quatTau: 0 } : cfg;
     const tau = c.tau ?? DEFAULT_SMOOTHING.tau;
     const quatTau = c.quatTau ?? (c.tau !== undefined ? c.tau * 1.3 : DEFAULT_SMOOTHING.quatTau);
@@ -48,11 +61,26 @@ export class HandSmoother {
 
     const p = frame.wrist_pos;
     if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed ? a : 1);
+    this.coreAngles = isCoreAngleSpread(frame.spread);
+
+    if (joints && joints.length >= this.joints.length) {
+      const aj = this.jointsPrimed ? a : 1;
+      for (let i = 0; i < this.joints.length; i++) this.joints[i] += (joints[i] - this.joints[i]) * aj;
+      this.jointsPrimed = true;
+    }
+    const want = joints ? 1 : 0;
+    this.jointWeight = !this.primed ? want : this.jointWeight + (want - this.jointWeight) * (1 - Math.exp(-dt / JOINT_BLEND_TAU));
+    if (this.jointWeight < 1e-3) {
+      this.jointWeight = 0;
+      this.jointsPrimed = false;
+    }
     this.primed = true;
   }
 
   /** Forget history so the next step snaps. */
   reset(): void {
     this.primed = false;
+    this.jointsPrimed = false;
+    this.jointWeight = 0;
   }
 }

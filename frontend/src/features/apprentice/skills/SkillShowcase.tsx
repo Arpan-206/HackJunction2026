@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Vector3 } from 'three';
 import type { HandFrame, Lesson, Step } from '../../../api';
+import { useThree } from '@react-three/fiber';
 import { Hand, HandCanvas } from '../../../three';
+import { useHandTemplate } from '../../../three/handModel';
 import { synthFrame } from '../../../three/motion';
-import { layoutFor, Puppet, puppetLayout, raiseFor, ShadowTheatreSet, THEATRE_CAMERA } from '../../../three/ShadowTheatre';
+import { layoutFor, Puppet, puppetLayout, puppetShadowCentre, raiseFor, ShadowTheatreSet, THEATRE_CAMERA, THEATRE_TARGET, type HandPlacement } from '../../../three/ShadowTheatre';
 import { shapeName } from '../training/modes/ShadowPuppets';
 import { lessonTitle } from '../course/LessonCourse';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import type { ReferenceTrack } from '../training/coach/reference';
-import type { KeyPose } from './catalogue';
-import { DISPLAY_POSE } from './SkillParts';
+import type { KeyPose, SkillScene } from './catalogue';
+import { SkillStill } from './SkillParts';
+import { SkillLive } from './SkillScene';
 import { prefersReducedMotion } from '../../shared/settings';
+import { TypingStage } from '../typing/TypingStage';
 
 /** About how long one lesson plays before the showcase moves on: whole cycles of its motion, close to seven seconds. */
 const DWELL_TARGET_S = 7;
@@ -26,7 +31,7 @@ type Choice = 'both' | 0 | 1;
  * then lesson 2's, in a loop (the expert's recording when there is one, otherwise the guide motion). Props stay off. A quiet
  * switch holds one lesson or goes back to playing both in turn.
  */
-export function SkillShowcase({ course }: { course: Lesson }) {
+export function SkillShowcase({ course, scene = 'letter' }: { course: Lesson; scene?: SkillScene }) {
   const steps = course.steps.slice(0, 2);
   const first = useReferenceTrack(steps[0] ?? null);
   const second = useReferenceTrack(steps[1] ?? null);
@@ -57,10 +62,19 @@ export function SkillShowcase({ course }: { course: Lesson }) {
       <div className="sk-show__stage">
         {course.skill === 'shadow_puppets' && step ? (
           <TheatreShowcase key={step.id} step={step} getFrame={getFrame} />
+        ) : (course.skill as string) === 'touch_typing' && step ? (
+          <TypingStage
+            key={step.id}
+            solid={false}
+            style="chalk"
+            hands={{
+              left: side === 'left' ? { getFrame } : { getFrame: guideFrame(step, 'left', startedAt) },
+              right: side === 'right' ? { getFrame } : { getFrame: guideFrame(step, 'right', startedAt) },
+            }}
+            label={`The expert's hands over a keyboard sketched in chalk, playing ${lessonTitle(step, shown)}`}
+          />
         ) : (
-          <HandCanvas preset="single" label={step ? `The expert's hand playing ${lessonTitle(step, shown)}` : 'The expert hand'} stage={{ decor: true }}>
-            <Hand side={side} style="chalk" getFrame={getFrame} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
-          </HandCanvas>
+          <SkillLive key={scene} scene={scene} side={side} getFrame={getFrame} orbit label={step ? `The expert's hand playing ${lessonTitle(step, shown)}` : 'The expert hand'} />
         )}
       </div>
       <figcaption className="sk-show__cap">
@@ -97,7 +111,7 @@ export function SkillShowcase({ course }: { course: Lesson }) {
  * Shadow puppets on the skill page: the expert's hands alone in the lamplit theatre, the shape named above the wall. The
  * step's own hand replays the reference; a second hand (the bird, the snail) plays the step's guide motion.
  */
-function TheatreShowcase({ step, getFrame }: { step: Step; getFrame: () => HandFrame | null }) {
+export function TheatreShowcase({ step, getFrame, named = true }: { step: Step; getFrame: () => HandFrame | null; named?: boolean }) {
   const placements = useMemo(() => puppetLayout(layoutFor(step.move_id, step.hands), undefined, raiseFor(step.move_id)), [step.move_id, step.hands]);
   const own = stepSide(step);
   const name = shapeName(step);
@@ -105,6 +119,7 @@ function TheatreShowcase({ step, getFrame }: { step: Step; getFrame: () => HandF
     <div className="sp-theatre">
       <HandCanvas bare shadows stage={{ cameraPosition: THEATRE_CAMERA }} label={`The expert's shadow on the wall making ${name.toLowerCase()}`}>
         <ShadowTheatreSet />
+        <CentreShadow placements={placements} />
         <Puppet x={0} placements={placements}>
           {(p) =>
             p.side === own ? (
@@ -115,22 +130,48 @@ function TheatreShowcase({ step, getFrame }: { step: Step; getFrame: () => HandF
           }
         </Puppet>
       </HandCanvas>
-      <p className="sp-theatre__name" aria-hidden="true">
-        {name}
-      </p>
+      {named && (
+        <p className="sp-theatre__name" aria-hidden="true">
+          {name}
+        </p>
+      )}
     </div>
   );
 }
 
+/**
+ * Slides the theatre camera sideways so the middle of the puppet's shadow is the middle of the picture, whatever shape the
+ * puppet makes (the layouts are placed for the training wall, where the shadow need not be in the middle). The camera keeps
+ * its aim, only translated, so the wall, the lamp and the hand stay as framed.
+ */
+function CentreShadow({ placements }: { placements: HandPlacement[] }) {
+  const tpl = useHandTemplate();
+  const camera = useThree((st) => st.camera);
+  const dx = useMemo(() => {
+    const box = tpl?.geometry.boundingBox;
+    if (!box) return 0;
+    const c = box.getCenter(new Vector3());
+    return puppetShadowCentre(placements, [c.x, c.y, c.z])[0];
+  }, [tpl, placements]);
+  useLayoutEffect(() => {
+    camera.position.set(THEATRE_CAMERA[0] + dx, THEATRE_CAMERA[1], THEATRE_CAMERA[2]);
+    camera.lookAt(THEATRE_TARGET[0] + dx, THEATRE_TARGET[1], THEATRE_TARGET[2]);
+    camera.updateMatrixWorld();
+  }, [camera, dx]);
+  return null;
+}
+
+/** The other hand of a two-handed lesson: its guide motion on the same clock as the replayed hand, so the two take turns. */
+function guideFrame(step: Step, side: 'left' | 'right', startedAt: { current: number }): () => HandFrame | null {
+  return () => (step.motion ? synthFrame(step.motion, (performance.now() - startedAt.current) / 1000, side) : null);
+}
+
 /** The showcase of a workshop skill: its key pose held still, since no expert has recorded it yet. */
-export function WorkshopShowcase({ pose, name }: { pose: KeyPose; name: string }) {
-  const frame = useMemo(() => synthFrame(pose.motion, pose.t, 'right'), [pose]);
+export function WorkshopShowcase({ pose, name, scene = 'letter' }: { pose: KeyPose; name: string; scene?: SkillScene }) {
   return (
     <figure className="sk-show">
       <div className="sk-show__stage sk-show__stage--still">
-        <HandCanvas preset="single" label={`${name}: the key pose on a chalk hand`} stage={{ decor: true }}>
-          <Hand side="right" style="chalk" frame={frame} smoothing={false} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
-        </HandCanvas>
+        <SkillStill className="sk-show__still" pose={pose} scene={scene} label={`${name}: the key pose on a chalk hand`} />
       </div>
       <figcaption className="sk-show__cap">
         <span className="sk-show__now">The key pose, sketched</span>
