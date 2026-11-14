@@ -1,6 +1,7 @@
-import { FINGERS, type Finger, type Keyframe, type MotionSpec, type Side } from '../../../api/types';
+import { FINGERS, type Finger, type HandFrame, type Keyframe, type MotionSpec, type Side } from '../../../api/types';
+import { FULL, RELAXED } from '../../../three/anatomy';
 import { mulberry32 } from '../test/PianoPlayAlong/piano';
-import { fingerForKey, type KeyFinger } from './fingerMap';
+import { fingerForKey, HOME_KEYS, type KeyFinger } from './fingerMap';
 import { AirTypingJudge, type Strike, type TypedLetter, type TypingScore } from './strikes';
 
 /**
@@ -115,4 +116,39 @@ export function botTyping(letters: TypedLetter[], seed = 7, skill = 0.5): Typing
     judge.flush(t + 1);
   }
   return judge.score();
+}
+
+/** Curl of each finger recovered from a frame's flexion (the inverse of the synthesiser's curl to flexion), thumb first. */
+export function curlsOf(hand: HandFrame): number[] {
+  return FINGERS.map((f, i) => {
+    const sum = hand.flexion[f][0] + hand.flexion[f][1] + hand.flexion[f][2];
+    const scale = i === 0 ? 0.8 : 1;
+    const rest = RELAXED[i][0] + RELAXED[i][1] + RELAXED[i][2];
+    const full = FULL[i][0] + FULL[i][1] + FULL[i][2];
+    return (sum / scale - rest) / full;
+  });
+}
+
+/** Wrist turn (radians) at which an index finger counts as reaching in to G or H. */
+const REACH_YAW = 0.05;
+
+/**
+ * The key a hand is striking in a drill frame: the home key of the finger curled well past its hover, or G or H when an index
+ * finger strikes with the wrist turned in. Null when the hand is at rest. Drawn on the keyboard only; never scored.
+ */
+export function strikingKey(hand: HandFrame | null): string | null {
+  if (!hand) return null;
+  const curls = curlsOf(hand);
+  let best = -1;
+  FINGERS.forEach((f, i) => {
+    if (curls[i] - HOVER[f] > STRIKE_CURL / 2 && (best < 0 || curls[i] - HOVER[FINGERS[best]] > curls[best] - HOVER[FINGERS[best]])) best = i;
+  });
+  if (best < 0) return null;
+  const finger = FINGERS[best];
+  if (finger === 'index') {
+    const [, qy, , qw] = hand.wrist_quat;
+    const yaw = 2 * Math.atan2(qy, qw) * (hand.side === 'left' ? -1 : 1);
+    if (yaw > REACH_YAW) return hand.side === 'left' ? 'g' : 'h';
+  }
+  return HOME_KEYS[hand.side][finger];
 }

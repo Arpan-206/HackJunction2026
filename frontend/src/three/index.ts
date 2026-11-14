@@ -15,3 +15,5 @@ export { GoldSeal, type StageQuality } from './atmosphere';
 export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';
 export { CODEX_STAGE, drawParchment, getParchmentTexture, getParchmentUrl } from './parchment';
 export { withHatching, createHatchedShadowMaterial } from './sketch';
+export { TypingKeyboard } from './TypingKeyboard';
+export { keyCenter, KEY_PITCH, TYPING_HAND_X, TYPING_HAND_Y } from './typingLayout';

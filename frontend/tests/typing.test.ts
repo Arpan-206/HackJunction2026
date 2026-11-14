@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { GloveFrame } from '../src/api/types';
-import { frameAt } from '../src/mock/synth';
+import { frameAt, handFrame } from '../src/mock/synth';
 import { MOVES } from '../src/mock/seed';
 import { fingerForKey, fingerPhrase, HOME_KEYS, keyLabel, sameFinger } from '../src/features/apprentice/typing/fingerMap';
 import {
   AirTypingJudge, correctionLine, isMastery, KeystrokeMatcher, keyWindow, lettersFor, rhythmEvenness, StrikeDetector, wordsPerMinute,
   type Strike,
 } from '../src/features/apprentice/typing/strikes';
-import { alignToLoop, botTyping, SimulatedStriker, strikeCurls, typistMotion, HOVER, TYPIST_BEAT_MS } from '../src/features/apprentice/typing/typist';
+import { alignToLoop, botTyping, SimulatedStriker, strikeCurls, strikingKey, typistMotion, HOVER, TYPIST_BEAT_MS } from '../src/features/apprentice/typing/typist';
 import { ALL_WORDS, HOME_WORDS, isHomeRowWord, pickWords } from '../src/features/apprentice/typing/words';
 
 const at = (side: 'left' | 'right', finger: Strike['finger'], t: number): Strike => ({ side, finger, t });
@@ -249,5 +249,24 @@ describe('KeystrokeMatcher: which key from the keyboard, which finger from the g
     expect(strikeCurls(s, 'left', 0.9)).toEqual([HOVER.thumb, HOVER.index, HOVER.middle, HOVER.ring, HOVER.little]);
     expect(strikeCurls(s, 'left', 1.13)[3]).toBeGreaterThan(HOVER.ring + 0.25);
     expect(strikeCurls(s, 'right', 1.13)[3]).toBe(HOVER.ring);
+  });
+});
+
+describe('the key a drill strikes, for the keyboard in the lesson room', () => {
+  const move = (id: string) => MOVES.find((m) => m.id === id)!.default_motion;
+
+  it('reads F then J from the index drill, nothing at rest, and the space bar from the thumb', () => {
+    const fj = move('ty_index_fj');
+    expect(strikingKey(handFrame(fj, 'left', 0.2))).toBe('f');
+    expect(strikingKey(handFrame(fj, 'right', 0.2))).toBeNull();
+    expect(strikingKey(handFrame(fj, 'right', 0.8))).toBe('j');
+    expect(strikingKey(handFrame(move('ty_home_row'), 'left', 1))).toBeNull();
+    expect(strikingKey(handFrame(move('ty_thumb_space'), 'right', 0.2))).toBe(' ');
+    expect(strikingKey(null)).toBeNull();
+  });
+
+  it('reads the reach to G and H from the turned wrist', () => {
+    const reach = move('ty_index_reach');
+    expect([0.2, 0.8, 1.4, 2.0].map((t) => strikingKey(handFrame(reach, t < 1.2 ? 'left' : 'right', t)))).toEqual(['f', 'g', 'j', 'h']);
   });
 });
