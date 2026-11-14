@@ -41,8 +41,16 @@ RATE_WINDOW_S = 5.0
 def _devices_by_hand(cap: Capture) -> dict[str, int]:
     by_hand = {d["device_info"]["hand"]: dev for dev, d in cap.definitions.items()}
     missing = HANDS - set(by_hand)
-    assert not missing, f"expected gloves {sorted(HANDS)}, no stream for {sorted(missing)}"
+    assert not missing, (
+        f"expected gloves {sorted(HANDS)}, no stream for {sorted(missing)}"
+    )
     return {hand: by_hand[hand] for hand in sorted(HANDS)}
+
+
+SOLVER_DOWN = (
+    f"hand solver not listening on {live.HOST}:{live.SOLVER_PORT}; start it with "
+    f"`rkk-hand-solver.exe --no-driver --emit both --emit-openxr --listen {live.HOST}:{live.SOLVER_PORT}`"
+)
 
 
 @pytest.fixture(scope="module")
@@ -50,8 +58,17 @@ def streams():
     with (
         live.StreamSubscription()
     ):  # the driver sends data only while an RCSP client has subscribed
-        driver, solver = live.record_both(RATE_WINDOW_S)
+        if live.port_open(live.SOLVER_PORT):
+            driver, solver = live.record_both(RATE_WINDOW_S)
+        else:
+            driver, solver = live.record(live.RGMP_PORT, RATE_WINDOW_S), None
     return driver, solver
+
+
+def _solver(streams) -> live.StreamRecording:
+    if streams[1] is None:
+        pytest.fail(SOLVER_DOWN)
+    return streams[1]
 
 
 @pytest.fixture(scope="module")
@@ -80,7 +97,9 @@ def test_rcsp_lists_both_gloves(record_property):
     record_property("ListDevices", reply)
     print("\nRCSP ListDevices reply:", reply)
     devices = reply["Response"]["Devices"]
-    assert len(devices) == len(HANDS), f"expected gloves {sorted(HANDS)}, RCSP lists {len(devices)} devices"
+    assert len(devices) == len(HANDS), (
+        f"expected gloves {sorted(HANDS)}, RCSP lists {len(devices)} devices"
+    )
     for d in devices:
         assert {
             "DeviceId",
@@ -98,7 +117,9 @@ def test_rcsp_lists_both_gloves(record_property):
         ]
         print(f"RCSP GetDeviceInfo {d['DeviceId']} keys:", sorted(info))
         sides[d["DeviceId"]] = "left" if info["Smartgloves"]["IsLeft"] else "right"
-    assert set(sides.values()) == HANDS, f"expected gloves {sorted(HANDS)}, RCSP sides {sorted(sides.values())}"
+    assert set(sides.values()) == HANDS, (
+        f"expected gloves {sorted(HANDS)}, RCSP sides {sorted(sides.values())}"
+    )
     # battery is not part of the RCSP commands of driver 1.9.7; if a future driver adds it, it must be a percentage
     for d in devices:
         info = live.rcsp_command("GetDeviceInfo", {"DeviceId": d["DeviceId"]})[
@@ -127,7 +148,7 @@ def test_rcsp_sides_match_rgmp_definitions(driver_capture):
 
 def test_definitions_arrive_for_both_hands_within_3s(streams):
     """Definitions for the expected gloves (GLOVES_EXPECT) arrive on driver and solver within 3 s."""
-    driver, solver = streams
+    driver, solver = streams[0], _solver(streams)
     for label, rec in (("driver", driver), ("solver", solver)):
         assert len(rec.definition_at) == len(HANDS), (
             f"{label}: definitions for {sorted(rec.definition_at)}, expected gloves {sorted(HANDS)}"
@@ -162,7 +183,7 @@ def test_each_glove_streams_at_least_90_percent_of_expected_rate(
 
 def test_solver_streams_both_hands_at_expected_rate(streams):
     """The solver streams every expected glove (GLOVES_EXPECT) at 90 percent of its expected rate or better."""
-    _, solver = streams
+    solver = _solver(streams)
     cap = solver.capture()
     for dev in _devices_by_hand(cap).values():
         d = cap.definitions[dev]
@@ -205,7 +226,7 @@ def test_no_coil_pro_dependency(driver_capture, streams):
                     assert s.get("reference_frame") != "coil_pro", (
                         f"{s['measure_type']} {s['target_frame']}"
                     )
-    for d in streams[1].capture().definitions.values():
+    for d in _solver(streams).capture().definitions.values():
         assert "coil_pro" not in str(d["groups"])
     app = Path(__file__).resolve().parent.parent / "app"
     offenders = [
