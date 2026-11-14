@@ -7,6 +7,7 @@ import { HANDS_LABEL, type LessonState, type SkillProgress, type SkillView } fro
 import { DifficultyLine } from './SkillParts';
 import { SkillShowcase, WorkshopShowcase } from './SkillShowcase';
 import { useSkills } from './useSkills';
+import { TeachRobot } from '../../shared/robot/TeachRobot';
 import './skills.css';
 
 function lessonStatus(st: LessonState | undefined): { text: string; mastered: boolean } {
@@ -131,7 +132,10 @@ export function SkillPage() {
           {skill.live && <PrimaryActions skill={skill} progress={progress} />}
           <Facts skill={skill} />
           {skill.live ? (
-            <WhatYouLearn skill={skill} progress={progress} />
+            <>
+              <WhatYouLearn skill={skill} progress={progress} />
+              {skill.courses[0] && <TeachRobot lesson={skill.courses[0]} />}
+            </>
           ) : (
             <>
               <p className="sk-page__notyet">
