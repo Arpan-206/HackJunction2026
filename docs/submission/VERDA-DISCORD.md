@@ -66,6 +66,17 @@ Cost (Helsinki time, list price):
 
 The Verda console still showed a 200.00 EUR balance at 12:32. Verda posts charges in 10 minute aggregates, so the balance lags (docs/VERDA.md).
 
+## Expert-priors lane (no Verda spend)
+
+| Item | Value | Source |
+| --- | --- | --- |
+| Planned | One small Verda VM to pull FurElise (47 GB) and convert it to joint angles | docs/PRIORS.md |
+| What happened | The Verda API refused the VM: coupon balance cannot deploy compute until a payment method is added | docs/VERDA.md, "Expert-priors lane" |
+| Spend | 0 USD; nothing created | ~/geppetto-progress/expert-priors.log |
+| Where it ran instead | The Mac, as range reads of the left-hand joint arrays only (335 MB, nothing raw saved) | docs/PRIORS.md |
+
+Do not claim that the piano priors or the letter recogniser ran on Verda. They did not.
+
 ## Do not claim
 
 - That the endpoint is live. It was torn down at 12:32 Helsinki and stays down (verda/STATUS-verda.md, lane brief).

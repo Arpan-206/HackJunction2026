@@ -19,6 +19,7 @@ struct GeppettoDepthApp: App {
             if phase == .active {
                 UIApplication.shared.isIdleTimerDisabled = true
                 streamer.start()
+                streamer.restartServer()
             }
         }
     }
