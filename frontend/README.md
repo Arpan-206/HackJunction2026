@@ -61,14 +61,14 @@ To add a theme:
 
 ## Hand styles
 
-`<Hand style=...>` in `src/three/Hand.tsx`. Every style draws the same single skinned hand: the WebXR Input Profiles `generic-hand` mesh (the hand WebXR hand-tracking viewers use), loaded once from `public/models/hands/right.glb` and shared by every instance. `handModel.ts` welds, reorients, subdivides and smooths it into hand space and lengthens the wrist into a short forearm; `handPose.ts` rebuilds its 25 joints as a bone chain and maps the contract's flexion triples onto bone rotations about flex axes measured from the bind pose (tested in `tests/handPose.test.ts`); `handRig.ts` makes one instance (bones, skinned mesh, skinned outline hull). Left hands mirror the right one. Poses are mutated in `useFrame`; nothing re-renders per frame. The hand appears once the model has loaded (`<Hand>` suspends on its own).
+`<Hand style=...>` in `src/three/Hand.tsx`. Every style draws the same single skinned hand: the WebXR Input Profiles `generic-hand` mesh (the hand WebXR hand-tracking viewers use), loaded once from `public/models/hands/right.glb` and shared by every instance. `handModel.ts` welds, reorients, subdivides and smooths it into hand space, closes the wrist in a tapered rounded end a couple of centimetres past the joint and raises the knuckles; `handPose.ts` rebuilds its 25 joints as a bone chain, maps the contract's flexion triples onto bone rotations about flex axes measured from the bind pose, and closes a pinch so the thumb and index pads meet (tested in `tests/handPose.test.ts`); `handRig.ts` makes one instance (bones, skinned mesh, skinned outline hull). Left hands mirror the right one. Poses are mutated in `useFrame`; nothing re-renders per frame. The hand appears once the model has loaded (`<Hand>` suspends on its own).
 
 | style | use | look |
 |---|---|---|
 | `chalk` | master | toon-shaded chalk, inked skinned outline |
 | `sketch` | expert codex | sepia toon shading with iron-gall hatching and a heavier ink outline |
 | `wood` | apprentice | carved wood: CC0 ambientCG Wood049 colour, normal and roughness maps, grain running along the fingers |
-| `ghost` | overlays | translucent, fresnel rim, fading out along the forearm; a depth pre-pass keeps only the nearest layer |
+| `ghost` | overlays | translucent, fresnel rim, fading out past the wrist; a depth pre-pass keeps only the nearest layer |
 | `shadow` | shadow guidance | dark translucent silhouette (same pre-pass and fade) |
 
 Per-finger tints (vermilion corrections, the gold focus finger) are uniforms read through per-vertex finger weights, so a tint stops at the knuckle crease. The hand lab's Anatomy tab (`/lab`, then Anatomy) holds open, fist, pinch, point, palm-up, two-hand and racket-grip poses for checking the hand; `node e2e/hand-shots.mjs <outDir> [prefix]` screenshots it and the design frames with hands.
