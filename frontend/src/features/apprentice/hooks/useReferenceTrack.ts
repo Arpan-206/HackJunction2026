@@ -9,7 +9,7 @@ export interface ReferenceState {
   notice: string | null;
 }
 
-/** The side of the body a step is practised with; 'both' practises the right hand. */
+/** The side of the body a step is practised with; for a two-handed step this is the default coached hand, the right. */
 export function stepSide(step: Step): Side {
   return step.hands === 'left' ? 'left' : 'right';
 }
@@ -18,9 +18,9 @@ export function stepSide(step: Step): Side {
  * The master reference for a step: its recording from GET /api/recordings/{id}, or the step's mock motion through the
  * local synthesiser when there is no recording or the backend cannot be reached.
  */
-export function useReferenceTrack(step: Step | null): ReferenceState {
+export function useReferenceTrack(step: Step | null, sideOverride?: Side): ReferenceState {
   const recordingId = step?.reference_recording_id ?? null;
-  const side = step ? stepSide(step) : 'right';
+  const side = sideOverride ?? (step ? stepSide(step) : 'right');
   const [recorded, setRecorded] = useState<{ id: string; track: ReferenceTrack } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(recordingId));

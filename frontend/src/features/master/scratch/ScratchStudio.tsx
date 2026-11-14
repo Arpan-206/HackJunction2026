@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, Card, Disclosure, Field, Stepper } from '../../../components/ui';
 import { CalibrationPanel } from '../../shared/CalibrationPanel';
+import { PropSwitch } from '../../shared/PropSwitch';
+import { handsLabel, shownProp, useShowProps } from '../../shared/sessionPrefs';
 import { FingerLanes } from '../components/FingerLanes';
+import { HandsControl } from '../components/HandsControl';
 import { LiveHandStage } from '../components/LiveHandStage';
 import { MovePicker } from '../components/MovePicker';
 import { RecorderPanel } from '../components/RecorderPanel';
@@ -17,11 +20,15 @@ export function ScratchStudio() {
   const s = useScratchStudio();
   const [recPhase, setRecPhase] = useState<RecorderPhase>('idle');
   const [picking, setPicking] = useState(true);
+  const [showProps] = useShowProps();
   const stageTop = useRef<HTMLElement>(null);
   const { choice, glove } = s;
   const takes = choice ? s.book.takesFor(choice.id) : [];
   const replayItems = (s.replay ?? []).map((id) => ({ id, label: `Take ${takes.find((t) => t.id === id)?.n ?? ''}`.trim() }));
   const stage = !choice ? 0 : s.planned.length ? 2 : 1;
+  const prop = shownProp(choice?.prop, showProps);
+  // Once a take exists (or one is recording) the hands are fixed for this move, so every take matches the lesson step.
+  const handsLocked = takes.length > 0 || recPhase !== 'idle' ? "Set for this move's takes. Delete them to change it." : null;
 
   const choose: typeof s.choose = (c) => {
     s.choose(c);
@@ -49,7 +56,7 @@ export function ScratchStudio() {
         {choice && !picking ? (
           <p className="mst-chosen">
             <span className="mst-chosen__name">{choice.name}</span>
-            <span className="note">{choice.hands === 'both' ? 'both hands' : `${choice.hands} hand`}</span>
+            <span className="note">{handsLabel(choice.hands).toLowerCase()}</span>
             <Button variant="secondary" onClick={() => setPicking(true)}>
               Change move
             </Button>
@@ -66,10 +73,10 @@ export function ScratchStudio() {
         <div className="mst-studio">
           <div className="mst-studio__view">
             {s.replay ? (
-              <ReplayPlayer items={replayItems} side={primarySide(choice?.hands ?? 'right')} prop={choice?.prop} onClose={() => s.setReplay(null)} />
+              <ReplayPlayer items={replayItems} side={primarySide(choice?.hands ?? 'right')} hands={choice?.hands} prop={prop} onClose={() => s.setReplay(null)} />
             ) : (
               <>
-                <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={choice?.prop} live={recPhase === 'recording'}>
+                <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={prop} hands={choice?.hands} live={recPhase === 'recording'}>
                   {choice && <span className="mst-stage__tag">{choice.name}</span>}
                 </LiveHandStage>
                 {glove.status !== 'open' && (
@@ -94,13 +101,19 @@ export function ScratchStudio() {
           </div>
 
           <div className="mst-studio__side">
+            {choice && (
+              <Card title="Set up" className="mst-setup">
+                <HandsControl value={choice.hands} onChange={s.setHands} locked={handsLocked} />
+                <PropSwitch prop={choice.prop} />
+              </Card>
+            )}
             {choice ? (
               <RecorderPanel
                 slot={choice.id}
                 title={`Takes: ${choice.name}`}
                 targetReps={choice.repetitions}
                 book={s.book}
-                contextFor={(rep) => ({ stepId: `${choice.id}:rep${rep}` })}
+                contextFor={(rep) => ({ stepId: `${choice.id}:rep${rep}`, hands: choice.hands })}
                 onReplay={s.setReplay}
                 onPhase={setRecPhase}
               />
@@ -109,7 +122,7 @@ export function ScratchStudio() {
                 <p className="note">Choose a move above first. Your takes will be labelled with the move and repetition number.</p>
               </Card>
             )}
-            <CalibrationPanel side={s.side} onSide={s.setSide} cal={s.calibration} />
+            <CalibrationPanel side={s.side} onSide={s.setSide} cal={s.calibration} hideSide={Boolean(choice) && choice?.hands !== 'both'} />
           </div>
         </div>
       </section>

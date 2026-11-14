@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useLessons } from '../../api';
 import { PageHeader } from '../../components/PageHeader';
 import { Button, Card } from '../../components/ui';
+import { ASSISTANT_OFF, useAssistant } from '../shared/assistant';
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
@@ -16,6 +17,7 @@ function Arrow() {
 /** Expert landing: start from scratch or generate steps, then existing lessons. */
 export function MasterHome() {
   const { data: lessons, error, loading, reload } = useLessons();
+  const [assistant] = useAssistant();
   return (
     <>
       <PageHeader title="Expert's studio" context="La bottega: record a skill once, teach it to many hands." />
@@ -42,9 +44,9 @@ export function MasterHome() {
             <path d="M50 38v10M45 43h10M14 14v8M10 18h8" />
           </svg>
           <h2>Generate steps</h2>
-          <p className="note">Describe the skill in your own words and a lesson plan is drafted for you to adjust before recording.</p>
+          <p className="note">{assistant ? 'Describe the skill in your own words and the assistant drafts a lesson plan for you to adjust before recording.' : ASSISTANT_OFF.draft}</p>
           <span className="choice__cta">
-            Describe a lesson <Arrow />
+            {assistant ? 'Describe a lesson' : 'Write the steps'} <Arrow />
           </span>
         </Card>
       </div>
@@ -66,7 +68,7 @@ export function MasterHome() {
             <li key={l.id}>
               <Link to={`/expert/lessons/${l.id}`} className="card card--interactive lesson-row">
                 <span>
-                  <strong>{l.title}</strong> <span className="note">{l.steps.length} steps</span>
+                  <strong>{l.title}</strong> <span className="note">{l.steps.length} {l.steps.length === 1 ? 'step' : 'steps'}</span>
                 </span>
                 <span className="note">{l.source === 'seed' ? 'from the pattern book' : l.source === 'generated' ? 'drafted for you' : 'recorded by hand'}</span>
               </Link>

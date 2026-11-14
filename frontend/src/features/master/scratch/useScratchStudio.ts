@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, ApiError, useGloveStream, type Side, type Skill } from '../../../api';
+import { api, ApiError, useGloveStream, type Hands, type Side, type Skill } from '../../../api';
 import { useToast } from '../../../components/ui';
 import { useCalibration } from '../../shared/useCalibration';
+import { defaultHands, rememberHands } from '../../shared/sessionPrefs';
 import { useMoveCatalogue } from '../hooks/useMoveCatalogue';
 import { useSimulatorMotion } from '../hooks/useSimulatorMotion';
 import { useSteadiness } from '../hooks/useSteadiness';
@@ -36,12 +37,30 @@ export function useScratchStudio() {
 
   useSimulatorMotion(glove, steadiness.gloveSource, choice?.motion ?? null);
 
-  const choose = useCallback((c: MoveChoice) => {
-    setChoice(c);
-    setChoices((m) => ({ ...m, [c.id]: c }));
-    setSide(primarySide(c.hands));
-    setReplay(null);
-  }, []);
+  const choose = useCallback(
+    (picked: MoveChoice) => {
+      // A move already set up this visit keeps its hands; otherwise the session memory, then the catalogue, then right.
+      const c = choices[picked.id] ?? { ...picked, hands: defaultHands(picked.moveId, picked.moveId ? picked.hands : undefined) };
+      setChoice(c);
+      setChoices((m) => ({ ...m, [c.id]: c }));
+      setSide(primarySide(c.hands));
+      setReplay(null);
+    },
+    [choices],
+  );
+
+  /** Changes the hands set-up of the current move (only before its first take) and remembers it for the session. */
+  const setHands = useCallback(
+    (hands: Hands) => {
+      if (!choice) return;
+      const c = { ...choice, hands };
+      rememberHands(choice.moveId, hands);
+      setChoice(c);
+      setChoices((m) => ({ ...m, [c.id]: c }));
+      if (hands !== 'both') setSide(hands);
+    },
+    [choice],
+  );
 
   const planned = useMemo(() => book.slots.filter((id) => choices[id] && book.referenceFor(id)).map((id) => choices[id]), [book, choices]);
 
@@ -81,6 +100,7 @@ export function useScratchStudio() {
     setSkill,
     choice,
     choose,
+    setHands,
     side,
     setSide,
     replay,

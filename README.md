@@ -1,6 +1,6 @@
 # Apprentice
 
-Apprentice is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), a Gemini coach gives hints, and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
+Apprentice is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), an optional assistant (a language model, Gemini by default) drafts lessons and practice plans, and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
 
 The backend is FastAPI (Python 3.12, uv). The frontend is React, Vite and three.js. The frontend can run alone in mock mode, with no backend.
 
@@ -32,6 +32,14 @@ The frontend carries a port of the backend (`frontend/src/mock/`), with data kep
 - `?mock=1` turns it on and remembers it. `?mock=0` turns it off again and beats `VITE_MOCK`.
 - `VITE_MOCK=1` (environment variable at build or dev time) forces it on.
 - It also starts by itself when `/api/health` does not answer. The left rail then shows "Sample data, offline".
+
+## The assistant switch
+
+Every language-model feature is "the assistant": drafting steps from a sentence or a video, reading a movement described in words, the practice plan and written hints. The left rail has a plain "Assistant on/off" switch, remembered in the browser (localStorage `apprentice.assistant`, on by default). While it is off the app sends nothing to `/lessons/generate`, `/lessons/generate_from_video`, `/coach/hint`, `/coach/plan` or `/motion/from_text` (the API client refuses them before any request, mock mode included), those entry points show a one-line note instead, and everything else works: steps can be written by hand or recorded from scratch, and scoring, hints from the score and the live corrections are algorithmic and do not need the assistant.
+
+## Hands and props
+
+The expert chooses one hand (left or right) or two hands for each move or step. Only those gloves are shown and captured (`POST /recordings/start` takes `hands`), and the learner trains with the same set-up; a two-handed step coaches one hand at a time on the stage and scores both, the weaker hand setting the score. Props (racket, keyboard) are off by default because the hands still clip through them; an "Add a prop" switch in the studio and in the training room's Room settings turns them on for the session. The Test your skills games always keep their racket and keyboard.
 
 ## Demo: two windows
 

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { api, ApiError, type Lesson } from '../../../api';
+import { isAssistantOn } from '../../shared/assistant';
 import { storePlan, trimAttempts, useLoggedAttempts, useStoredPlan, type StoredPlan } from '../../shared/practiceLog';
 
 /** The backend accepts at most this many steps per plan request. */
@@ -16,7 +17,7 @@ export interface PracticePlanHandle {
   request: () => Promise<void>;
 }
 
-/** Asks the coach for a practice plan from the attempts this device remembers for a lesson. */
+/** Asks the assistant for a practice plan from the attempts this device remembers for a lesson. */
 export function usePracticePlan(lesson: Lesson): PracticePlanHandle {
   const logged = useLoggedAttempts(lesson.id);
   const stored = useStoredPlan(lesson.id);
@@ -27,13 +28,13 @@ export function usePracticePlan(lesson: Lesson): PracticePlanHandle {
     const steps = lesson.steps.slice(0, MAX_PLAN_STEPS).map((s) => ({ step_id: s.id, title: s.title }));
     const known = new Set(steps.map((s) => s.step_id));
     const attempts = trimAttempts(logged.filter((a) => known.has(a.step_id))).map((a) => ({ step_id: a.step_id, score: a.score }));
-    if (attempts.length === 0) return;
+    if (attempts.length === 0 || !isAssistantOn()) return;
     setBusy(true);
     setError(null);
     try {
       storePlan(lesson.id, await api.coachPlan({ lesson_title: lesson.title, steps, attempts }));
     } catch (e) {
-      setError(e instanceof ApiError && e.isNetwork ? 'The coach could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
+      setError(e instanceof ApiError && e.isNetwork ? 'The assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
     } finally {
       setBusy(false);
     }

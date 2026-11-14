@@ -25,6 +25,7 @@ import type {
   ScoreResult,
   Skill,
 } from './types';
+import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 
 /** Error thrown for any failed request: HTTP error, network failure or unparseable body. */
 export class ApiError extends Error {
@@ -46,6 +47,19 @@ export class ApiError extends Error {
   }
 }
 
+/** Thrown, without any network request, for an assistant endpoint while the assistant is switched off. */
+export class AssistantOffError extends ApiError {
+  constructor(path: string) {
+    super('The assistant is off. Turn it on to use this.', 403, path);
+    this.name = 'AssistantOffError';
+  }
+}
+
+/** Refuses an assistant request while the switch is off, before anything is sent (mock mode included). */
+function guardAssistant(path: string): void {
+  if (isAssistantPath(path) && !isAssistantOn()) throw new AssistantOffError(path);
+}
+
 const BASE = '/api';
 
 function describeDetail(detail: unknown): string | null {
@@ -59,6 +73,7 @@ function describeDetail(detail: unknown): string | null {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  guardAssistant(path);
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
@@ -94,6 +109,7 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
  */
 function upload<T>(path: string, body: FormData, onProgress?: (percent: number) => void, signal?: AbortSignal): Promise<T> {
   return new Promise<T>((resolve, reject) => {
+    guardAssistant(path);
     const xhr = new XMLHttpRequest();
     let last = -1;
     xhr.open('POST', `${BASE}${path}`);

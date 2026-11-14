@@ -101,3 +101,28 @@ export function matchMeter(deviations: FingerValues, toleranceDeg: number): numb
   for (const f of FINGERS) worst = Math.min(worst, fingerMatch(deviations[f], toleranceDeg));
   return worst;
 }
+
+/** What the stage and the meter both show: one coach snapshot, published together about eight times a second. */
+export interface FlagSnapshot {
+  status: Record<Finger, FingerStatus>;
+  deviation: FingerValues;
+}
+
+/**
+ * The single rule that turns a snapshot into a correction: the finger the stage label names is the one with the largest
+ * deviation among fingers whose status is 'off' (and inside the focus, when the attempt has one). Null when every finger
+ * in view is in line. The meter uses the same snapshot (see meterOff), so a label can never sit beside a green meter.
+ */
+export function flaggedFinger(snap: FlagSnapshot, focus?: readonly Finger[] | null): Finger | null {
+  let best: Finger | null = null;
+  for (const f of FINGERS) {
+    if (snap.status[f] !== 'off' || (focus && !focus.includes(f))) continue;
+    if (!best || Math.abs(snap.deviation[f]) > Math.abs(snap.deviation[best])) best = f;
+  }
+  return best;
+}
+
+/** Whether the match meter fill is vermilion: any finger in the snapshot is off. True whenever flaggedFinger names one. */
+export function meterOff(snap: FlagSnapshot): boolean {
+  return FINGERS.some((f) => snap.status[f] === 'off');
+}

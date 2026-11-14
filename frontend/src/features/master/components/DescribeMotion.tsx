@@ -1,18 +1,24 @@
 import type { MotionSpec, Side } from '../../../api';
 import { Button } from '../../../components/ui';
+import { ASSISTANT_OFF, useAssistant } from '../../shared/assistant';
 import { MOTION_TEXT_MAX, motionProviderLine, useMotionFromText } from '../../shared/useMotionFromText';
 
 interface DescribeMotionProps {
   side: Side;
   stepNumber: number;
-  /** Receives the motion the AI chose, to replace the step's mock guide. */
+  /** Receives the motion the assistant chose, to replace the step's mock guide. */
   onMotion: (motion: MotionSpec) => void;
 }
 
-/** A small "Describe the movement" line for one step: say it in words, the mock guide hand changes to match. */
+/**
+ * A small "Describe the movement" line for one step: say it in words, the assistant picks a motion and the mock guide hand
+ * changes to match. While the assistant is off it is one quiet line instead.
+ */
 export function DescribeMotion({ side, stepNumber, onMotion }: DescribeMotionProps) {
   const m = useMotionFromText(side);
+  const [assistant] = useAssistant();
   const id = `describe-${stepNumber}`;
+  if (!assistant) return <p className="note mst-describe">{ASSISTANT_OFF.describe}</p>;
 
   const apply = async () => {
     const r = await m.run();

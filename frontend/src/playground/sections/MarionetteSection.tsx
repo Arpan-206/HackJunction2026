@@ -115,5 +115,5 @@ function makeLive(errors: Record<Finger, number>, toleranceDeg: number): CoachLi
     status[f] = statusOf(errors[f], toleranceDeg);
     t[f] = tension(errors[f], toleranceDeg);
   }
-  return { learner: null, master: null, deviation: { ...errors }, status, tension: t, refTime: 0, hasLearner: true };
+  return { learner: null, master: null, deviation: { ...errors }, status, tension: t, refTime: 0, hasLearner: true, shown: { status, deviation: { ...errors } } };
 }

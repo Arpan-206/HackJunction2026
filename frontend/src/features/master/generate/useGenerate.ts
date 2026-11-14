@@ -11,7 +11,7 @@ const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
 /** Returns a plain-words reason a file cannot be uploaded, or null when it is fine. */
 export function videoProblem(file: { name: string; type: string; size: number }): string | null {
-  if (!VIDEO_EXT.test(file.name) && !VIDEO_TYPES.includes(file.type)) return 'That file is not a video the AI can read. Use an mp4, webm or mov clip.';
+  if (!VIDEO_EXT.test(file.name) && !VIDEO_TYPES.includes(file.type)) return 'That file is not a video the assistant can read. Use an mp4, webm or mov clip.';
   if (file.size > VIDEO_MAX_BYTES) return `That clip is ${(file.size / 1024 / 1024).toFixed(0)} MB. Keep it under ${VIDEO_MAX_MB} MB.`;
   return null;
 }

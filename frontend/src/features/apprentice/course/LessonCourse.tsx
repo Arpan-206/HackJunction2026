@@ -13,6 +13,7 @@ import { useLessonProgress } from '../pipeline/useRank';
 import { RankLine } from './RankLine';
 import { SealCard } from './SealCard';
 import { VideoSlot } from './VideoSlot';
+import { shownProp, useShowProps } from '../../shared/sessionPrefs';
 
 /** Keeps the master's own wording when it already starts "Lesson N", otherwise numbers the step. */
 export function lessonTitle(step: Step, index: number): string {
@@ -31,6 +32,7 @@ export function LessonCourse() {
   const progress = useProgress(lessonId);
   const logged = useLoggedAttempts(lessonId);
   const lp = useLessonProgress(lesson);
+  const [showProps] = useShowProps();
   const today = dayKey(new Date());
 
   if (loading) return <p className="note ap-state">Opening the course...</p>;
@@ -90,7 +92,7 @@ export function LessonCourse() {
             <li key={s.id}>
               <Card as="article" className="ap-lesson">
                 <div className="ap-lesson__media">
-                  <VideoSlot url={s.video_url} title={s.title} motion={s.motion} prop={s.prop} side={stepSide(s)} />
+                  <VideoSlot key={String(showProps)} url={s.video_url} title={s.title} motion={s.motion} prop={shownProp(s.prop, showProps)} side={stepSide(s)} />
                 </div>
                 <div className="ap-lesson__body">
                   <h2>{lessonTitle(s, i)}</h2>

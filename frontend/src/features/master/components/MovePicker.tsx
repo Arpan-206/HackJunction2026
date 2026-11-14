@@ -4,6 +4,7 @@ import { Button, Field, Tabs } from '../../../components/ui';
 import type { MoveCatalogue } from '../hooks/useMoveCatalogue';
 import { SKILLS, choiceFromMove, freeChoice, type MoveChoice, primarySide } from '../lib';
 import { GuideHand } from './GuideHand';
+import { handsLabel, shownProp, useShowProps } from '../../shared/sessionPrefs';
 
 interface MovePickerProps {
   catalogue: MoveCatalogue;
@@ -21,6 +22,7 @@ export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: Move
   const [freeName, setFreeName] = useState('');
   const moves = catalogue.moves.filter((m) => m.skill === skill);
   const freeActive = choice?.moveId === null && choice.skill === skill;
+  const [showProps] = useShowProps();
 
   const grid = (
     <div className="mst-moves">
@@ -29,11 +31,11 @@ export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: Move
         const active = choice?.id === m.id;
         return (
           <button key={m.id} type="button" className={`mst-move ${active ? 'is-active' : ''}`} aria-pressed={active} onClick={() => onChoose(choiceFromMove(m))}>
-            <GuideHand label={`${m.name} preview`} motion={m.default_motion} side={primarySide(m.hands)} prop={m.prop} />
+            <GuideHand label={`${m.name} preview`} motion={m.default_motion} side={primarySide(m.hands)} prop={shownProp(m.prop, showProps)} />
             <span className="mst-move__name">{m.name}</span>
             <span className="mst-move__desc note">{m.description}</span>
             <span className="mst-move__meta note">
-              {numberWord(m.default_repetitions)} takes, {m.hands === 'both' ? 'both hands' : `${m.hands} hand`}
+              {numberWord(m.default_repetitions)} takes, {handsLabel(m.hands).toLowerCase()}
             </span>
           </button>
         );

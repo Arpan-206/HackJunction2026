@@ -1,5 +1,4 @@
-import { FINGERS } from '../../../api/types';
-import { MATCH_IN_LINE } from './coach/deviation';
+import { meterOff } from './coach/deviation';
 import type { AttemptPolicy } from './coach/fade';
 import { useCoachView, type Coach, type PracticeMode } from './coach/useCoach';
 import { Button } from '../../../components/ui';
@@ -22,7 +21,8 @@ export function CoachPanel({ coach, policy, mode, running }: CoachPanelProps) {
   const rehearsal = Boolean(policy.rehearsal);
   // The meter is the weakest finger's match, floored so a finger just past the tolerance never rounds up into the green.
   const match = Math.floor(view.match);
-  const anyOff = view.hasLearner && FINGERS.some((f) => view.status[f] === 'off');
+  // Vermilion exactly when the stage label can show: both read the same snapshot through the same rule.
+  const anyOff = view.hasLearner && meterOff(view);
   const judged = view.hasLearner && !rehearsal;
   return (
     <div className="ap-coach">
@@ -42,7 +42,7 @@ export function CoachPanel({ coach, policy, mode, running }: CoachPanelProps) {
               <strong className={`ap-meter__val ${judged ? '' : 'ap-meter__val--idle'}`}>{judged ? `${match}%` : view.hasLearner ? 'Ready' : 'No glove'}</strong>
             </div>
             <div className="ap-meter__track">
-              {judged && <div className={`ap-meter__fill ${anyOff || match < MATCH_IN_LINE ? 'ap-meter__fill--off' : 'ap-meter__fill--ok'}`} style={{ width: `${match}%` }} />}
+              {judged && <div className={`ap-meter__fill ${anyOff ? 'ap-meter__fill--off' : 'ap-meter__fill--ok'}`} style={{ width: `${match}%` }} />}
             </div>
           </div>
           <p className="ap-tip">

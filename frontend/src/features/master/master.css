@@ -763,3 +763,33 @@
 .mst-gen__master .mst-gen__source {
   margin: 0;
 }
+
+/* Hands set-up (HandsControl) and the studio set-up card. */
+.mst-hands {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.mst-hands__label {
+  padding: 0;
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.mst-hands__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+.mst-hands--summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.7rem;
+}
+.mst-setup {
+  display: grid;
+  gap: 1rem;
+}

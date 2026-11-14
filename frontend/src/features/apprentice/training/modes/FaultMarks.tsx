@@ -5,7 +5,8 @@ import { FINGERS, type Finger } from '../../../../api/types';
 import type { HandHandle } from '../../../../three';
 import { useStageColors } from '../../../../three';
 import type { AttemptPolicy } from '../coach/fade';
-import { fingerTip, worstFinger } from '../coach/tips';
+import { flaggedFinger } from '../coach/deviation';
+import { fingerTip } from '../coach/tips';
 import type { Coach } from '../coach/useCoach';
 
 const RING_RADIUS = 0.14;
@@ -105,12 +106,14 @@ export function FaultMarks({ hand, coach, policy, toleranceDeg }: FaultMarksProp
     const h = hand.current;
     const live = coach.live.current;
     const guiding = Boolean(h) && policy.liveCoach && !policy.rehearsal && live.hasLearner;
-    const worstAny = guiding ? worstFinger(live.deviation, toleranceDeg) : null;
-    const worst = worstAny && (!policy.focus || policy.focus.includes(worstAny.finger)) ? worstAny : null;
+    // The same published snapshot and the same rule as the match meter: only a finger whose status is 'off' is marked.
+    const snap = live.shown;
+    const flagged = guiding ? flaggedFinger(snap, policy.focus) : null;
+    const worst = flagged ? { finger: flagged, deviationDeg: snap.deviation[flagged] } : null;
     FINGERS.forEach((f: Finger, i) => {
       const m = rings.current[i];
       if (!m) return;
-      const want = guiding && live.status[f] === 'off' && (!policy.focus || policy.focus.includes(f)) ? 1 : 0;
+      const want = guiding && snap.status[f] === 'off' && (!policy.focus || policy.focus.includes(f)) ? 1 : 0;
       const s = m.scale.x + (want - m.scale.x) * Math.min(1, dt * SCALE_RATE);
       m.scale.setScalar(Math.max(0.0001, s));
       m.visible = s > 0.02;

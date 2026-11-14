@@ -428,3 +428,11 @@ textarea.field__control {
     transition: none;
   }
 }
+
+/* "Add a prop" switch (features/shared/PropSwitch): a quiet toggle with its one-line caveat beside it. */
+.prop-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+}

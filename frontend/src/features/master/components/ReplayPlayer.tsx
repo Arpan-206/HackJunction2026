@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { GloveFrame, Prop, Side } from '../../../api';
+import type { GloveFrame, Hands, Prop, Side } from '../../../api';
 import { Button } from '../../../components/ui';
 import { Hand, HandCanvas, Racket } from '../../../three';
 import { framesDuration, usePlayback } from '../../shared/playback';
@@ -15,6 +15,9 @@ interface ReplayPlayerProps {
   /** One take, or two to compare side by side. */
   items: ReplayItem[];
   side?: Side;
+  /** A two-handed take ('both') replays both hands side by side; compare mode always shows one hand per take. */
+  hands?: Hands;
+  /** Pass 'none' unless the session's prop switch is on. */
   prop?: Prop;
   onClose?: () => void;
 }
@@ -33,7 +36,7 @@ function padTo(frames: GloveFrame[] | undefined, duration: number): GloveFrame[]
  * Plays one or two recorded takes on chalk hands with play/pause, a scrubber, speed and loop controls.
  * Two takes share one clock so differences are easy to see.
  */
-export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: ReplayPlayerProps) {
+export function ReplayPlayer({ items, side = 'right', hands, prop = 'none', onClose }: ReplayPlayerProps) {
   const a = useRecording(items[0]?.id);
   const b = useRecording(items[1]?.id);
   const [loop, setLoop] = useState(true);
@@ -43,6 +46,7 @@ export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: 
   const pa = usePlayback(framesA, { loop });
   const pb = usePlayback(framesB, { loop });
   const compare = items.length === 2;
+  const both = !compare && hands === 'both';
   const loading = a.loading || b.loading;
   const failed = a.error ?? b.error;
 
@@ -54,10 +58,18 @@ export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: 
   return (
     <section className="mst-replay" aria-label={compare ? 'Compare two takes' : 'Replay take'}>
       <div className="mst-replay__stage">
-        <HandCanvas preset={compare ? 'pair' : prop === 'racket' ? 'racket' : 'single'} label="Replay of your recorded take">
-          <Hand side={side} style="chalk" getFrame={() => pa.getFrame(side)} position={compare ? [-0.85, 0, 0] : [0, 0, 0]}>
-            {prop === 'racket' && <Racket />}
-          </Hand>
+        <HandCanvas preset={compare || both ? 'pair' : prop === 'racket' ? 'racket' : 'single'} label="Replay of your recorded take">
+          {both ? (
+            (['left', 'right'] as const).map((s) => (
+              <Hand key={s} side={s} style="chalk" getFrame={() => pa.getFrame(s)} position={[s === 'left' ? -0.85 : 0.85, 0, 0]}>
+                {prop === 'racket' && s === 'right' && <Racket />}
+              </Hand>
+            ))
+          ) : (
+            <Hand side={side} style="chalk" getFrame={() => pa.getFrame(side)} position={compare ? [-0.85, 0, 0] : [0, 0, 0]}>
+              {prop === 'racket' && <Racket />}
+            </Hand>
+          )}
           {compare && <Hand side={side} style="chalk" getFrame={() => pb.getFrame(side)} position={[0.85, 0, 0]} />}
         </HandCanvas>
         <div className="mst-stage__overlay">

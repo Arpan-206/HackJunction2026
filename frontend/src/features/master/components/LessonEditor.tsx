@@ -3,6 +3,7 @@ import { ApiError, type Lesson } from '../../../api';
 import { Button, Card, Field, TextArea, useToast } from '../../../components/ui';
 import { useLessonDraft } from '../hooks/useLessonDraft';
 import { useTakeBook } from '../hooks/useTakeBook';
+import { shownProp, useShowProps } from '../../shared/sessionPrefs';
 import { primarySide, skillLabel } from '../lib';
 import { Modal } from './Modal';
 import { ReplayPlayer } from './ReplayPlayer';
@@ -27,6 +28,7 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
   const toast = useToast();
   const d = useLessonDraft(lesson);
   const book = useTakeBook();
+  const [showProps] = useShowProps();
   const [recording, setRecording] = useState<string | null>(null);
   const [replay, setReplay] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -119,12 +121,13 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
           lessonId={draft.id}
           book={book}
           onReference={(id) => d.updateStep(recStep.id, { reference_recording_id: id })}
+          onHands={(hands) => hands !== recStep.hands && d.updateStep(recStep.id, { hands, reference_recording_id: null })}
           onClose={() => setRecording(null)}
         />
       )}
       {replayStep?.reference_recording_id && (
         <Modal title={`Replay: ${replayStep.title}`} onClose={() => setReplay(null)} wide>
-          <ReplayPlayer items={[{ id: replayStep.reference_recording_id, label: 'Your take' }]} side={primarySide(replayStep.hands)} prop={replayStep.prop} />
+          <ReplayPlayer items={[{ id: replayStep.reference_recording_id, label: 'Your take' }]} side={primarySide(replayStep.hands)} hands={replayStep.hands} prop={shownProp(replayStep.prop, showProps)} />
         </Modal>
       )}
     </>

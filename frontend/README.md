@@ -19,6 +19,14 @@ Developer panel: renders only when switched on. Open any page with `?dev=1` to s
 
 See `ARCHITECTURE.md` for the folder map and rules.
 
+## The assistant switch
+
+`src/features/shared/assistant.ts` holds one flag for every language-model feature (`useAssistant()` in components, `isAssistantOn()` elsewhere), stored in localStorage as `apprentice.assistant` and on by default. The switch is the "Assistant on/off" text button in the rail footer (`app/AppShell.tsx`). While it is off, `api/client.ts` throws `AssistantOffError` for the paths in `ASSISTANT_PATHS` before any `fetch` or upload, and the mock router answers them with 403 as a second lock. Screens hide those entry points with a one-line note: Generate steps offers "Write the steps yourself" and "Start from scratch instead", "Describe the movement" becomes a note, and the plan card and the expert's note from the plan are hidden. `tests/assistant.test.ts` checks that no gated call reaches the network. In user copy the model is always "the assistant"; provider names appear only in the dev panel.
+
+## Hands and props
+
+`src/features/shared/sessionPrefs.ts` keeps two per-session stage preferences in sessionStorage: whether props are drawn (`useShowProps`, off by default, switched by `PropSwitch`) and the expert's hands choice per move (`defaultHands`, `rememberHands`; the default is the move's catalogue `hands`, else the last choice, else one hand, right). `HandsControl` (expert studio, step editor and the record dialog) sets one hand left or right or two hands, collapses into a summary once a take exists, and the take is recorded with `hands`. The training room coaches one hand of a two-handed step at a time (the learner picks which) and scores both with one `/score` call per side (`training/coach/twoHands.ts`). The Test your skills scenes always draw their racket and keyboard.
+
 ## Themes
 
 Three themes, switched at runtime with `<html data-theme="...">` and persisted in `localStorage` (`apprentice.theme`): `bottega` (default), `notte` (night hall), `affresco` (fresco).
@@ -78,7 +86,7 @@ What it does:
 - Lessons (with the two seed lessons), calibrations, recordings and the dev state persist in localStorage (memory if storage is blocked). Clear the keys starting `apprentice.mock.v1.` to reset.
 - A simulated glove stream at about 60 Hz with two hands, `set_motion` support, and a light 9 to 11 Hz tremor that the steadiness and smoothing settings (One Euro filter, same as the backend) reduce. Recording and calibration capture from this stream.
 - `/score` is a pure TypeScript port of `backend/app/services/scoring.py` (per-finger DTW, total-flexion error, Gaussian mapping, calibration, hints). `tests/mock-scoring.test.ts` pins it to numbers produced by the Python scorer.
-- LLM routes (`lessons/generate`, `generate_from_video`, `motion/from_text`, `coach/plan`) use the deterministic templates of the backend fake provider and report `provider: "mock"`. `/coach/hint` is algorithmic. `/vision/hands` answers 503. `/ingest/frames` feeds frames into the mock stream once the source is `external`.
+- LLM routes (`lessons/generate`, `generate_from_video`, `motion/from_text`, `coach/plan`) use the deterministic templates of the backend fake provider and report `provider: "mock"`. `/coach/hint` is algorithmic. All five answer 403 while the assistant switch is off. `/vision/hands` answers 503. `/ingest/frames` feeds frames into the mock stream once the source is `external`.
 - Errors use the backend's status codes and `{detail}` body; unknown routes give 404.
 
 Walk the whole app in mock mode with `node e2e/mock-walk.mjs` (screenshots go to `docs/screens/mock-*.png`). The move catalogue and seed lessons in `src/mock/data/` are copies of `backend/app/data`; refresh them if the backend ones change.

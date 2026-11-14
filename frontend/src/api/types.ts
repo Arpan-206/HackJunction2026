@@ -8,6 +8,8 @@ export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
 export type Skill = 'table_tennis' | 'piano' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
+/** Which hands a move, step or recording uses: one hand (left or right) or both. */
+export type Hands = Side | 'both';
 
 /** Flexion per joint: [MCP, PIP, DIP] for fingers, [CMC, MCP, IP] for the thumb. 0 straight, positive curled. */
 export type JointTriple = [number, number, number];
@@ -106,6 +108,8 @@ export interface Recording {
   started_at: string;
   duration_s: number;
   fps: number;
+  /** The hands this take captured; a one-handed take stores only that hand's frames. 'both' keeps every hand. */
+  hands: Hands;
   frames: GloveFrame[];
 }
 
@@ -150,6 +154,8 @@ export interface CalibrationRequest {
 export interface RecordingStartRequest {
   lesson_id?: string;
   step_id?: string;
+  /** Keep only this hand ('left' or 'right'), or every hand ('both', the default). */
+  hands?: Hands;
 }
 
 export interface RecordingStartResponse {

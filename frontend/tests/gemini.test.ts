@@ -31,7 +31,9 @@ describe('trimAttempts', () => {
 
 describe('motionProviderLine', () => {
   it('is honest about the offline fallback', () => {
-    expect(motionProviderLine('fake')).toMatch(/no language model/);
-    expect(motionProviderLine('gemini')).toMatch(/Gemini/);
+    expect(motionProviderLine('fake')).toMatch(/keyword rules while the assistant was unavailable/);
+    // Provider names stay in the developer panel: users only ever read "the assistant".
+    expect(motionProviderLine('gemini')).toBe('Read by the assistant.');
+    expect(motionProviderLine('ollama')).not.toMatch(/Gemma|Gemini|ollama/i);
   });
 });

@@ -13,6 +13,7 @@ import {
   zeroValues,
   type CoachConfig,
   type FingerStatus,
+  type FlagSnapshot,
   type FingerValues,
 } from './deviation';
 import { findCheckpoints, startFollow, stepFollow, skipCheckpoint, FOLLOW_HOLD_S, type FollowState } from './follow';
@@ -31,6 +32,11 @@ export interface CoachLive {
   tension: FingerValues;
   refTime: number;
   hasLearner: boolean;
+  /**
+   * The snapshot last published to the coarse view (status and deviation). The correction label, the fault rings and the
+   * finger tints read this, not the per-tick values, so they change in the same frame window as the match meter.
+   */
+  shown: FlagSnapshot;
 }
 
 /** Coarse snapshot (about 8 Hz) for the status row, tip and meter. */
@@ -78,6 +84,11 @@ export interface UseCoachOptions {
   mode: PracticeMode;
   /** Dev aid: perturb live frames before comparison. */
   clumsy: boolean;
+  /**
+   * Other hands to keep in the recorded attempt frames, unperturbed, so a two-handed step can score both hands. The coach
+   * itself still compares only `side`.
+   */
+  alsoRecord?: Side[];
   /** Called when one finger has stayed out of tolerance for 1.5 s (repeats every 1.5 s while it stays out). */
   onSustainedOff?: (info: { finger: Finger; deviation: FingerValues; lagMs: number }) => void;
   /** Playback speed of the reference in Flow practice (1 by default; the Watch stage plays at 0.5 first). */
@@ -119,7 +130,7 @@ function initialView(): CoachView {
  */
 export function useCoach(opts: UseCoachOptions): Coach {
   const { track, gloves, mode, clumsy } = opts;
-  const live = useRef<CoachLive>({ learner: null, master: null, deviation: zeroValues(), status: ALL_GOOD, tension: zeroValues(), refTime: 0, hasLearner: false });
+  const live = useRef<CoachLive>({ learner: null, master: null, deviation: zeroValues(), status: ALL_GOOD, tension: zeroValues(), refTime: 0, hasLearner: false, shown: { status: ALL_GOOD, deviation: zeroValues() } });
   const viewRef = useRef<CoachView>(initialView());
   const listeners = useRef(new Set<() => void>());
   const optsRef = useRef(opts);
@@ -196,7 +207,8 @@ export function useCoach(opts: UseCoachOptions): Coach {
         r.base ??= lock && o.mode === 'flow' && trk.period > 0 ? Math.ceil(refTime / trk.period) * trk.period : 0;
         if (refTime >= r.base - 1e-6) {
           if (r.frames.length === 0) o.onRecordStart?.();
-          r.frames.push({ t: Math.max(0, refTime - r.base), source: frame.source, hands: [learner] });
+          const others = (o.alsoRecord ?? []).flatMap((s) => (s === o.side ? [] : frame.hands.filter((h) => h.side === s)));
+          r.frames.push({ t: Math.max(0, refTime - r.base), source: frame.source, hands: [learner, ...others] });
         }
       }
       L.master = trk.handAt(refTime);
@@ -248,6 +260,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
       if (now - r.lastView >= VIEW_MS) {
         r.lastView = now;
         const cps = cpRef.current.length;
+        L.shown = { status: L.status, deviation: L.deviation };
         viewRef.current = {
           deviation: L.deviation,
           status: L.status,

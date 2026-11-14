@@ -7,6 +7,7 @@ import type {
   MotionSpec,
   Recording,
   ScoreResult,
+  Hands,
   Side,
   Skill,
   Step,
@@ -18,6 +19,7 @@ import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion,
 import { MOVES } from './seed';
 import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS } from './scoring';
 import { getStore } from './store';
+import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
 
 /**
@@ -154,6 +156,7 @@ const pendingPhases = new Map<Side, Partial<Record<'flat' | 'fist', Record<Finge
 interface Take {
   lesson_id: string | null;
   step_id: string | null;
+  hands: Hands;
   started_at: string;
   frames: GloveFrame[];
   stop: () => void;
@@ -179,6 +182,7 @@ function stopTake(id: string): Recording {
     started_at: take.started_at,
     duration_s: duration,
     fps: Math.round(fps * 100) / 100,
+    hands: take.hands,
     frames,
   });
 }
@@ -303,16 +307,20 @@ route('GET', '/calibrations/latest', (req) => ok(latestCalibration(side(req.quer
 
 route('POST', '/recordings/start', (req) => {
   const b = req.json === undefined ? {} : body(req);
+  const hands = b.hands ?? 'both';
+  if (hands !== 'left' && hands !== 'right' && hands !== 'both') invalid("hands must be 'left', 'right' or 'both'");
   const id = newId();
   const take: Take = {
     lesson_id: (b.lesson_id as string | undefined) ?? null,
     step_id: (b.step_id as string | undefined) ?? null,
+    hands: hands as Hands,
     started_at: nowIso(),
     frames: [],
     stop: () => undefined,
   };
+  // A one-handed take keeps only that hand, as the backend recorder does.
   take.stop = getHub().subscribe((f) => {
-    if (take.frames.length < MAX_TAKE_FRAMES) take.frames.push(f);
+    if (take.frames.length < MAX_TAKE_FRAMES) take.frames.push(take.hands === 'both' ? f : { ...f, hands: f.hands.filter((h) => h.side === take.hands) });
   });
   takes.set(id, take);
   return ok({ recording_id: id });
@@ -423,6 +431,8 @@ route('POST', '/dev/state', (req) => {
 /** Runs a request against the mock backend and returns the status and JSON body. */
 export async function handleMockRequest(req: MockRequest): Promise<MockResponse> {
   const path = req.path.replace(/\/+$/, '') || '/';
+  // The client never sends these while the assistant is off; refuse them here too, as a second lock.
+  if (req.method.toUpperCase() === 'POST' && isAssistantPath(path) && !isAssistantOn()) return { status: 403, body: { detail: 'The assistant is off.' } };
   const matches = routes.filter((r) => r.pattern.test(path));
   const hit = matches.find((r) => r.method === req.method.toUpperCase());
   if (!hit) return matches.length ? { status: 405, body: { detail: 'Method Not Allowed' } } : { status: 404, body: { detail: 'Not Found' } };

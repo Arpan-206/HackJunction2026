@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, useGloveStream, type Lesson, type ScoreResult, type Step } from '../../../api';
+import { api, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApHeader } from '../ApHeader';
 import { Button, ButtonLink, Countdown, Disclosure } from '../../../components/ui';
@@ -8,6 +8,9 @@ import { useLessonById } from '../hooks/useLessonData';
 import { recordAttempt } from '../hooks/useProgress';
 import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { useCalibration } from '../../shared/useCalibration';
+import { PropSwitch } from '../../shared/PropSwitch';
+import { shownProp, useShowProps } from '../../shared/sessionPrefs';
+import { combineHandScores } from './coach/twoHands';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import { useGuidance } from '../hooks/useGuidanceMode';
 import { configFromTolerance } from './coach/deviation';
@@ -33,6 +36,11 @@ import { ScoreCard } from './ScoreCard';
 
 type Phase = 'ready' | 'countdown' | 'running' | 'scoring' | 'result';
 
+const HAND_OPTIONS: { id: Side; label: string }[] = [
+  { id: 'left', label: 'Left hand' },
+  { id: 'right', label: 'Right hand' },
+];
+
 const PRACTICE_OPTIONS: { id: PracticeMode; label: string; hint: string }[] = [
   { id: 'follow', label: 'Follow', hint: 'The ghost waits at each checkpoint until you match it for half a second.' },
   { id: 'flow', label: 'Flow', hint: 'The ghost plays continuously, like the real thing.' },
@@ -50,7 +58,7 @@ function attemptLength(period: number): number {
 
 /**
  * The training room, the heart of the apprentice side: the master reference plays while the live glove hand follows it, in one
- * of four guidance modes. Guidance fades attempt by attempt, every attempt ends with a score, and an optional AI coach adds
+ * of four guidance modes. Guidance fades attempt by attempt, every attempt ends with a score, and the assistant (when on) adds
  * a handwritten hint when one finger keeps missing.
  */
 export function TrainingRoom() {
@@ -102,9 +110,13 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const resultRef = useRef<HTMLDivElement>(null);
   const gloves = useGloveStream(true);
   const guidance = useGuidance();
-  const side = stepSide(step);
+  // A two-handed step coaches one hand at a time on the stage (the learner picks which); every rep scores both hands.
+  const twoHanded = step.hands === 'both';
+  const [coached, setCoached] = useState<Side>(stepSide(step));
+  const side = twoHanded ? coached : stepSide(step);
+  const [showProps] = useShowProps();
   const config = useMemo(() => configFromTolerance(step.tolerance), [step.tolerance]);
-  const { track, loading: refLoading, notice } = useReferenceTrack(step);
+  const { track, loading: refLoading, notice } = useReferenceTrack(step, side);
   const calibration = useCalibration(side);
   const calibrated = calibration.latest !== null;
 
@@ -139,6 +151,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     mode: watching ? 'flow' : mode,
     rate: watching ? watchRate : 1,
     clumsy,
+    alsoRecord: twoHanded ? ['left', 'right'] : undefined,
     onFollowDone: () => finishRef.current(),
     onRecordStart: () => recordStartRef.current(),
   });
@@ -179,13 +192,20 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       if (id) await api.stopRecording(id).catch(() => undefined);
       const attempt = frames.length > 2 ? { attempt_frames: frames, ...(id ? { attempt_recording_id: id } : {}) } : id ? { attempt_recording_id: id } : null;
       const sideField = step.hands === 'left' || step.hands === 'right' ? { side: step.hands } : {};
-      const req =
+      const req: ScoreRequest | null =
         attempt && step.reference_recording_id
           ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
           : attempt && step.motion
             ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
             : null;
-      if (req) {
+      if (req && twoHanded) {
+        // The scorer judges one hand per call: score each hand, then keep the weaker hand's result (see combineHandScores).
+        const [l, r] = await Promise.allSettled([api.score({ ...req, side: 'left' }), api.score({ ...req, side: 'right' })]);
+        const both = combineHandScores({ left: l.status === 'fulfilled' ? l.value : undefined, right: r.status === 'fulfilled' ? r.value : undefined });
+        if (!both) throw l.status === 'rejected' ? l.reason : new Error('no hand could be scored');
+        score = both;
+        source = 'backend';
+      } else if (req) {
         score = await api.score(req);
         source = 'backend';
       }
@@ -197,7 +217,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     if (outcome.event === 'mastered') void planRequest.current();
     setResult({ score, source, outcome });
     setPhase('result');
-  }, [coach, config, lessonId, step, calibrated, pipe, mode, track]);
+  }, [coach, config, lessonId, step, calibrated, pipe, mode, track, twoHanded]);
   finishRef.current = () => {
     if (phase === 'running') void finish();
   };
@@ -207,7 +227,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     setResult(null);
     recordingId.current = null;
     try {
-      const rec = await api.startRecording({ lesson_id: lessonId, step_id: step.id });
+      const rec = await api.startRecording({ lesson_id: lessonId, step_id: step.id, hands: step.hands });
       recordingId.current = rec.recording_id;
     } catch {
       setProblem('Recording is unavailable (the backend is not answering). The attempt is still coached and scored on this device.');
@@ -227,7 +247,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     arm(lengthMs + (track ? track.period * 1000 : 0) + START_GRACE_MS);
     coach.begin();
     setPhase('running');
-  }, [coach, lessonId, mode, step.id, track]);
+  }, [coach, lessonId, mode, step.id, step.hands, track]);
 
   useEffect(
     () => () => {
@@ -246,7 +266,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     coach,
     gloves,
     side,
-    prop: step.prop,
+    prop: shownProp(step.prop, showProps),
     policy,
     toleranceDeg: config.toleranceDeg,
     combo: { count: pipe.machine.combo, need: pipe.cfg.cleanReps, snapKey: pipe.snapKey, played: playedSnap },
@@ -324,6 +344,17 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           <div className="card ap-panel">
             <StageLadder machine={pipe.machine} cfg={pipe.cfg} review={pipe.review} goal={goal} />
             <p className="ap-instruction">{step.instruction}</p>
+            {twoHanded && (
+              <div className="ap-field">
+                <span className="ap-field__label">Two hands</span>
+                {busy ? (
+                  <p className="ap-field__hint">Coaching your {coached} hand this rep.</p>
+                ) : (
+                  <Segmented label="Coached hand" value={coached} options={HAND_OPTIONS} onChange={setCoached} />
+                )}
+                <p className="note ap-field__hint">The stage coaches one hand at a time. Every rep scores both, and the weaker hand sets the score.</p>
+              </div>
+            )}
             <p className="ap-tolerance">
               Room for error: <span className="ap-num">{config.toleranceDeg}&deg;</span> per finger, <span className="ap-num">{config.timingMs}</span> ms of timing.
             </p>
@@ -358,6 +389,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           <Disclosure summary="Room settings" className="ap-settings">
             {(calibration.loading || calibrated) && calPanel}
             <GuidanceModeSwitch />
+            <PropSwitch prop={step.prop} />
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>
               <Segmented label="Practice mode" value={mode} options={PRACTICE_OPTIONS} onChange={setMode} />

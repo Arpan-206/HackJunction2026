@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, ApiError, type Recording } from '../../../api';
+import { api, ApiError, type Hands, type Recording } from '../../../api';
 import { cacheRecording } from './useRecording';
 
 export type RecorderPhase = 'idle' | 'countdown' | 'recording' | 'saving';
@@ -8,6 +8,8 @@ export interface RecordContext {
   lessonId?: string;
   /** Label stored with the recording: a step id, or move id plus repetition for scratch takes. */
   stepId?: string;
+  /** Which gloves the take keeps: one hand or both (the default). */
+  hands?: Hands;
 }
 
 export interface RecorderHandle {
@@ -61,7 +63,7 @@ export function useRecorder(onTake: (rec: Recording, ctx: RecordContext) => void
   const countdownDone = useCallback(() => {
     const ctx = ctxRef.current;
     api
-      .startRecording({ lesson_id: ctx.lessonId, step_id: ctx.stepId })
+      .startRecording({ lesson_id: ctx.lessonId, step_id: ctx.stepId, ...(ctx.hands ? { hands: ctx.hands } : {}) })
       .then((r) => {
         idRef.current = r.recording_id;
         startedAt.current = performance.now();

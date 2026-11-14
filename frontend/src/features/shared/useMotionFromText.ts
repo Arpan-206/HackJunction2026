@@ -32,7 +32,7 @@ export function useMotionFromText(side?: Side): MotionFromTextHandle {
       setResult(r);
       return r;
     } catch (e) {
-      setError(e instanceof ApiError && e.isNetwork ? 'The AI could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
+      setError(e instanceof ApiError && e.isNetwork ? 'The assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
       return null;
     } finally {
       setBusy(false);
@@ -42,10 +42,8 @@ export function useMotionFromText(side?: Side): MotionFromTextHandle {
   return { text, setText, busy, error, result, run };
 }
 
-/** One honest line about who answered a text-to-motion request. */
+/** One honest line about who answered a text-to-motion request. Provider names stay in the developer panel. */
 export function motionProviderLine(provider: string): string {
-  if (provider === 'gemini') return 'Read by Gemini.';
-  if (provider === 'ollama') return 'Read by the local Gemma model.';
-  if (provider === 'fake') return 'Matched by keyword rules on the backend; no language model was used.';
-  return `Read by ${provider}.`;
+  if (provider.startsWith('fake')) return 'Matched by simple keyword rules while the assistant was unavailable.';
+  return 'Read by the assistant.';
 }

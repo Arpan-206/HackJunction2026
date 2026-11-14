@@ -424,3 +424,23 @@
   z-index: 3;
   pointer-events: none;
 }
+/* The assistant switch: plain text in the rail footer, no pill. The word on or off carries the state. */
+.rail__assistant {
+  min-height: 44px;
+  padding: 0.2rem 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--rail-text);
+  font: 700 1rem var(--font-ui);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+.rail__assistant[aria-checked='false'] {
+  color: var(--rail-text-2);
+}
+.rail__assistant:focus-visible {
+  outline: 3px solid var(--rail-text);
+  outline-offset: 2px;
+}
