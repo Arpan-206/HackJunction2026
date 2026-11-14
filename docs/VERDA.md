@@ -73,7 +73,7 @@ Filled in from `verda/out/endpoint.json` and `verda/out/deploy_log.jsonl` after 
 | --- | --- | --- | --- | --- | --- | --- |
 | 14 Nov 11:52 | First deploy, context 32768 | H100 | 0 | 0 | 0 | 200.00 |
 | 14 Nov 12:22 | Teardown: vLLM crash-looped, KV cache too small for 32768 tokens on 80 GB | H100 | 0.50 | 2.86 | 2.86 | 200.00 |
-| 14 Nov 12:25 | Second deploy, context 12288 | H100 | 0 | 0 | 2.86 | 200.00 |
+| 14 Nov 12:25 | Second deploy, context 12288 (an H200 was free this time) | H200 | 0 | 0 | 2.86 | 200.00 |
 
 The balance column is what the Verda console showed at that moment; Verda posts charges in 10 minute
 aggregates, so it lags the list-price estimate.

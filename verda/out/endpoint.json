@@ -2,19 +2,12 @@
   "name": "geppetto-gemma",
   "base_url": "https://containers.datacrunch.io/geppetto-gemma",
   "model": "google/gemma-4-31B-it",
-  "gpu": "H100",
+  "gpu": "H200",
   "image": "docker.io/vllm/vllm-openai:v0.29.0",
   "spot": false,
-  "price_usd_per_h": 5.77,
-  "created_at": "2026-11-14T09:52:21+00:00",
+  "price_usd_per_h": 7.37,
+  "created_at": "2026-11-14T10:23:39+00:00",
   "balance_before": {
-    "amount": 200,
-    "currency": "eur"
-  },
-  "torn_down_at": "2026-11-14T10:22:12+00:00",
-  "hours": 0.496,
-  "estimated_usd": 2.86,
-  "balance_after": {
     "amount": 200,
     "currency": "eur"
   }
