@@ -17,6 +17,7 @@ import {
   type FingerValues,
 } from './deviation';
 import { findCheckpoints, startFollow, stepFollow, skipCheckpoint, FOLLOW_HOLD_S, type FollowState } from './follow';
+import { FrameWatch, lockedToGlove } from './frameClock';
 import type { ReferenceTrack } from './reference';
 import { algorithmicTip } from './tips';
 
@@ -154,6 +155,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
     base: null as number | null,
     lagMs: 0,
     tip: null as string | null,
+    watch: new FrameWatch(),
   });
 
   const checkpoints = useMemo(() => (track ? findCheckpoints((t) => track.flexionAt(t), track.period) : []), [track]);
@@ -186,10 +188,12 @@ export function useCoach(opts: UseCoachOptions): Coach {
       L.learner = learner;
       L.hasLearner = Boolean(learner);
 
-      // Reference clock. A simulated glove is phase-locked so the ghost and the simulator share a beat.
+      // Reference clock. A simulated glove is phase-locked so the ghost and the simulator share a beat, but only while its
+      // frames keep coming: once the stream stalls the wall clock takes over from where the glove's clock stood.
       const rate = o.rate ?? 1;
       r.clock += dt * rate;
-      const lock = frame?.source === 'simulator' && trk.periodic && rate === 1;
+      const lock = lockedToGlove(frame, r.watch.fresh(frame, now), trk.periodic, rate);
+      if (lock && frame) r.clock = frame.t;
       let refTime: number;
       if (o.mode === 'follow') {
         const matched = r.running && FINGERS.every((f) => L.status[f] === 'good') && L.hasLearner;
