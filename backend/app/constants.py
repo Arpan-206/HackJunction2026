@@ -11,6 +11,8 @@ DEFAULT_CORS_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SEED_DIR = Path(__file__).resolve().parent / "data" / "seed"
 MOVES_FILE = Path(__file__).resolve().parent / "data" / "moves.json"
+# Fingerspelling packs, one alphabet per pack (schemas/fingerspelling.py). The slot kit writes recorded letters here.
+FINGERSPELLING_PACKS_FILE = Path(__file__).resolve().parent / "data" / "fingerspelling_packs.json"
 DEFAULT_DATA_DIR = BACKEND_ROOT / "data"
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")
