@@ -1,0 +1,496 @@
+{
+  "schema": "geppetto.core-export/1",
+  "updated_at": "2026-11-14T23:50:02.410619+00:00",
+  "format": "geppetto.lesson/1 lesson folders (SPEC.md 'Lesson files')",
+  "read_by": "core.recorder.Lesson.load, weights/check_lessons.py, export/ (geppetto-export --lessons-dir takes or lessons), coach_tune/build_dataset.py once pointed here, verda/gemma_client.py (request context for the model hosted on Verda); all local, nothing uploaded",
+  "angles": "degrees; a real glove part with a calibration (parts[].calibration) is calibrated as the live core does (core/calibration.py), otherwise raw glove flexion",
+  "joints": "core.hand.synth_joints driven by the measured angles (our glove frames carry no joint positions)",
+  "entries": [
+    {
+      "kind": "take",
+      "id": "arpan-38d8e15a43cf",
+      "source_file": "recordings/arpan-38d8e15a43cf.json",
+      "exported_at": "2026-11-14T21:39:51.372859+00:00",
+      "folders": [
+        "takes/arpan-38d8e15a43cf-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T21:30:21.720138+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-38d8e15a43cf-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.034,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "73cb9a87f8a93a29"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-fe59d44744a4",
+      "source_file": "recordings/arpan-fe59d44744a4.json",
+      "exported_at": "2026-11-14T21:39:51.595524+00:00",
+      "folders": [
+        "takes/arpan-fe59d44744a4-right"
+      ],
+      "title": "Piano: first fingering: Lesson 1: Hand position",
+      "created": "2026-11-14T21:32:58.875162+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-position",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-fe59d44744a4-right",
+          "side": "right",
+          "steps": 3,
+          "kinds": [
+            "move",
+            "move",
+            "move"
+          ],
+          "frames": 3,
+          "duration_s": 6.001,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "c966ec97714b34c0"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-95695d4761a4",
+      "source_file": "recordings/arpan-95695d4761a4.json",
+      "exported_at": "2026-11-14T21:39:51.444491+00:00",
+      "folders": [
+        "takes/arpan-95695d4761a4-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T21:33:18.133205+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-95695d4761a4-right",
+          "side": "right",
+          "steps": 2,
+          "kinds": [
+            "hold",
+            "move"
+          ],
+          "frames": 2,
+          "duration_s": 6.002,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "59407b6f587599a0"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-d34067cfe2a3",
+      "source_file": "recordings/arpan-d34067cfe2a3.json",
+      "exported_at": "2026-11-14T21:39:51.528590+00:00",
+      "folders": [
+        "takes/arpan-d34067cfe2a3-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T21:35:20.198123+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-d34067cfe2a3-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.948,
+          "rate_hz": 16.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "dc05460ac02e9310"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-e6c132f23315",
+      "source_file": "recordings/arpan-e6c132f23315.json",
+      "exported_at": "2026-11-14T21:39:51.554222+00:00",
+      "folders": [
+        "takes/arpan-e6c132f23315-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T21:36:19.263413+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-e6c132f23315-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.051,
+          "rate_hz": 28.92,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "05fd569090342d62"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-c298f22f6609",
+      "source_file": "recordings/arpan-c298f22f6609.json",
+      "exported_at": "2026-11-14T21:39:51.483878+00:00",
+      "folders": [
+        "takes/arpan-c298f22f6609-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T21:37:02.755189+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-c298f22f6609-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 6.001,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "8f791ee7209c834f"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-698ffa18b8c2",
+      "source_file": "recordings/arpan-698ffa18b8c2.json",
+      "exported_at": "2026-11-14T21:39:51.408010+00:00",
+      "folders": [
+        "takes/arpan-698ffa18b8c2-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-14T21:39:44.824165+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-698ffa18b8c2-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 6.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "f884674711e30a42"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-11f0f06a17d9",
+      "source_file": "recordings/arpan-11f0f06a17d9.json",
+      "exported_at": "2026-11-14T21:41:05.425059+00:00",
+      "folders": [
+        "takes/arpan-11f0f06a17d9-right"
+      ],
+      "title": "Finnish fingerspelling: first letters: Lesson 1: Letter A",
+      "created": "2026-11-14T21:40:58.874249+00:00",
+      "lesson_id": "seed-finnish-fingerspelling",
+      "step_id": "seed-fs-a",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-11f0f06a17d9-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.049,
+          "rate_hz": 28.76,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "51934e76b17fa3eb"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-0bbcca28f9f1",
+      "source_file": "recordings/arpan-0bbcca28f9f1.json",
+      "exported_at": "2026-11-14T21:45:31.077569+00:00",
+      "folders": [
+        "takes/arpan-0bbcca28f9f1-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-14T21:45:24.543772+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-forehand",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-0bbcca28f9f1-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 5.966,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "e28f37516fd254c5"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-3ef41b853f96",
+      "source_file": "recordings/arpan-3ef41b853f96.json",
+      "exported_at": "2026-11-14T21:46:48.843013+00:00",
+      "folders": [
+        "takes/arpan-3ef41b853f96-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-14T21:46:41.964289+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-snap",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-3ef41b853f96-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 6.227,
+          "rate_hz": 21.52,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "fa090e3246539ab2"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-26280475dc5e",
+      "source_file": "recordings/arpan-26280475dc5e.json",
+      "exported_at": "2026-11-14T21:49:41.835670+00:00",
+      "folders": [
+        "takes/arpan-26280475dc5e-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-14T21:49:35.012568+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-snap",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-26280475dc5e-right",
+          "side": "right",
+          "steps": 3,
+          "kinds": [
+            "hold",
+            "hold",
+            "move"
+          ],
+          "frames": 3,
+          "duration_s": 6.3,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "b75e5cd1a2c91eb0"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-c4f1e246b68c",
+      "source_file": "recordings/arpan-c4f1e246b68c.json",
+      "exported_at": "2026-11-14T22:07:05.864279+00:00",
+      "folders": [
+        "takes/arpan-c4f1e246b68c-right"
+      ],
+      "title": "Finnish fingerspelling: first letters: Lesson 2: Letter I",
+      "created": "2026-11-14T22:06:59.336296+00:00",
+      "lesson_id": "seed-finnish-fingerspelling",
+      "step_id": "seed-fs-i",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-c4f1e246b68c-right",
+          "side": "right",
+          "steps": 2,
+          "kinds": [
+            "hold",
+            "move"
+          ],
+          "frames": 2,
+          "duration_s": 6.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "368a00a1a870494e"
+    },
+    {
+      "kind": "take",
+      "id": "arpan-1526ba3d6a75",
+      "source_file": "recordings/arpan-1526ba3d6a75.json",
+      "exported_at": "2026-11-14T22:09:56.948575+00:00",
+      "folders": [
+        "takes/arpan-1526ba3d6a75-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-14T22:09:50.403855+00:00",
+      "lesson_id": "seed-table-tennis",
+      "step_id": "seed-tt-grip",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/arpan-1526ba3d6a75-right",
+          "side": "right",
+          "steps": 2,
+          "kinds": [
+            "hold",
+            "hold"
+          ],
+          "frames": 2,
+          "duration_s": 6.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "arpan-62b28705d803",
+            "created_at": "2026-11-14T21:39:29.224297+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "7898868de3b19d44"
+    }
+  ]
+}
