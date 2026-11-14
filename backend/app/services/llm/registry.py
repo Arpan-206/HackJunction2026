@@ -9,6 +9,7 @@ from app.services.llm.gemini import GeminiLLM
 from app.services.llm.ollama import OllamaLLM
 from app.services.llm.openai_compat import OpenAICompatLLM
 from app.services.llm.rate_limit import RateLimiter
+from app.services.llm.tuned import TunedCoachLLM
 
 FALLBACKS = ("gemini", "openai")  # providers LLM_FALLBACK and LLM_ROUTES may name
 UNSET_OPENAI_URL = "http://localhost:8000"  # the Settings default: this backend, not a model server
@@ -55,7 +56,14 @@ class LLMState:
             return OpenAICompatLLM(
                 self._settings.openai_base_url, self._settings.openai_api_key, self._settings.openai_model
             )
+        if name == "tuned":
+            s = self._settings
+            return TunedCoachLLM(s.tuned_base_url, s.tuned_api_key, s.tuned_model, s.tuned_lang)
         return FakeLLM()
+
+    def tuned_on(self) -> bool:
+        """True when COACH_MODEL=tuned and TUNED_BASE_URL is set: live hints try the tuned coach first."""
+        return self._settings.coach_model == "tuned" and bool(self._settings.tuned_base_url.strip())
 
     def openai_configured(self) -> bool:
         """True when OPENAI_BASE_URL was set, in the environment or a .env file (the default is this backend itself)."""
@@ -99,7 +107,10 @@ class LLMState:
     def chain_for(self, role: str | None) -> list[str]:
         """The provider names a role tries, in order, after the fallback rules."""
         primary = self.primary_for(role)
-        return [primary] if primary == "fake" else [primary, *self.fallback_names(primary)]
+        names = [primary] if primary == "fake" else [primary, *self.fallback_names(primary)]
+        if role == "hint" and self.tuned_on():
+            names = ["tuned", *names]
+        return names
 
     def client_for(self, role: str | None) -> LLMClient:
         """The client for one role (hint, plan, lesson, motion). Every real model runs inside a chain."""
