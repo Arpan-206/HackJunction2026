@@ -9,6 +9,7 @@ import { useBotSkill, useDuelOutcome } from '../useDuelOutcome';
 import { RallyGame, type PlayerId, type RallyPhase } from './rally';
 import { RallyScene } from './RallyScene';
 import { SwingTracker, type SwingReading } from './swing';
+import { RecentreHandButton } from '../../../../three';
 
 const SIM_BEAT_S = 1.5;
 /** Fraction of the simulator beat at which the wrist snap is under way. */
@@ -200,8 +201,24 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
             </ul>
             <div className="ap-intro__foot">
               <PropSwitch prop="racket" className="ap-intro__prop" />
-              <Button large onClick={start}>
+              <Button large onClick={begin}>
                 Start the rally
+              </Button>
+            </div>
+          </Card>
+        )}
+        {stage === 'calibrate' && (
+          <Card as="section" className="ap-intro ap-calib" aria-label="Line up your hand">
+            <h2>Line up your hand</h2>
+            <p>
+              {twoPlayer ? 'Both players: hold your hand' : 'Hold your racket hand'} flat, palm down, fingers pointing at the screen, and keep still.
+            </p>
+            <p className="ap-calib__count" aria-live="polite">
+              {count > 0 ? count : 'Hold still...'}
+            </p>
+            <div className="ap-intro__foot">
+              <Button variant="secondary" onClick={start}>
+                Skip
               </Button>
             </div>
           </Card>

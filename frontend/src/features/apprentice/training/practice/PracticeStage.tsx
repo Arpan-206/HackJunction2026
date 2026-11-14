@@ -5,7 +5,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { FINGERS } from '../../../../api/types';
-import { Hand, HandCanvas, Keyboard, PropCue, Racket, RacketSketch, STRING_POINTS, useStageColors, useStageOrbit, writeStringSegments, type HandHandle, type OrbitView, type StageProps } from '../../../../three';
+import { Hand, HandCanvas, Keyboard, PropCue, Racket, RecentreHandButton, RacketSketch, STRING_POINTS, useStageColors, useStageOrbit, writeStringSegments, type HandHandle, type OrbitView, type StageProps } from '../../../../three';
 import { FaultMarks } from '../modes/FaultMarks';
 import { LearnerHand } from '../modes/LearnerHand';
 import { Crossbar } from '../modes/Strings';
@@ -79,6 +79,7 @@ export function PracticeStage({ coach, gloves, side, prop, cue, policy, toleranc
           <LearnerSide coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} policy={policy} toleranceDeg={toleranceDeg} progress={progress} trying={phase === 'try' || transitionAt !== null} />
         </HandCanvas>
         <figcaption className="ap-practice__cap">You</figcaption>
+        <RecentreHandButton />
       </figure>
     </div>
   );
