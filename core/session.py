@@ -297,6 +297,42 @@ class Session:
         sc = self.cfg.score.camera if camera else self.cfg.score
         return Tolerances(float(sc.perfect_deg), float(sc.wrong_deg))
 
+    def _cal_for(self, side: str):
+        """The calibration applied to this side's hands, or None (fake, camera, none loaded)."""
+        if self.fake or self.sources.get(side) != "glove":
+            return None
+        return self.calibrations.by_side.get(side)
+
+    def _weights_for(
+        self, side: str, weights: dict[str, float]
+    ) -> tuple[dict[str, float], np.ndarray | None]:
+        """Step weights times the learner calibration's finger mask, and its slot mask."""
+        cal = self._cal_for(side)
+        if cal is None:
+            return dict(weights), None
+        mask = cal.finger_weights()
+        return (
+            {f: float(weights.get(f, 1.0)) * mask[f] for f in H.FINGERS},
+            cal.slot_weights(),
+        )
+
+    def _mirror_scorer(self, learner: str) -> MirrorScorer:
+        """Mirror mode: every finger counts, minus joints either hand's calibration cannot read."""
+        w, slots = self._weights_for(learner, {f: 1.0 for f in H.FINGERS})
+        for m in self.sides_with_role("master"):
+            mw, mslots = self._weights_for(m, w)
+            w = mw
+            if mslots is not None:
+                slots = mslots if slots is None else slots * mslots
+        return MirrorScorer(
+            learner,
+            self.cfg.score,
+            self._tol_for(learner),
+            self.cfg.session.mirror_delay_ms,
+            w,
+            slots,
+        )
+
     def _rest(self, side: str) -> tuple[np.ndarray, np.ndarray]:
         rp = self.cfg.rest_pose[side]
         return np.asarray(rp.p, dtype=float), np.asarray(rp.q, dtype=float)
@@ -333,7 +369,10 @@ class Session:
         )
         self.scorers = {}
         for s in sides:
-            sc = StepScorer(s, self.lesson, step, self.cfg.score, self._tol_for(s))
+            w, slots = self._weights_for(s, step.weights)
+            sc = StepScorer(
+                s, self.lesson, step, self.cfg.score, self._tol_for(s), w, slots
+            )
             sc.reset_attempt(t)
             self.scorers[s] = sc
         self.emit_event(
@@ -709,9 +748,7 @@ class Session:
             self.start_step(self.step_index or 0)
         elif mode == "mirror":
             l = self.learner_sides()[0]
-            self.mirror = MirrorScorer(
-                l, self.cfg.score, self._tol_for(l), self.cfg.session.mirror_delay_ms
-            )
+            self.mirror = self._mirror_scorer(l)
         elif mode == "playback":
             self.playback_t0_us = self.now()
             self.step_index = 0
@@ -789,12 +826,7 @@ class Session:
         if self.mode == "mirror":
             if self.sides_with_role("master") and self.learner_sides():
                 l = self.learner_sides()[0]
-                self.mirror = MirrorScorer(
-                    l,
-                    self.cfg.score,
-                    self._tol_for(l),
-                    self.cfg.session.mirror_delay_ms,
-                )
+                self.mirror = self._mirror_scorer(l)
             else:
                 self.mode, self.mirror = "idle", None
         self.emit_session()
@@ -860,7 +892,12 @@ class Session:
         if not self.recorder.active:
             raise CommandError("bad_state", "not recording")
         save = bool(args.get("save", True))
-        lesson = self.recorder.stop(self.now(), save=save)
+        mcal = self._cal_for(self.recorder.master_hand)
+        lesson = self.recorder.stop(
+            self.now(),
+            save=save,
+            usable=None if mcal is None else mcal.finger_weights(),
+        )
         if save and lesson is None:
             self.emit_event("recording_stopped", None, {"lesson_id": None})
             self.emit_session()

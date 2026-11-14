@@ -134,6 +134,10 @@ stuck_s = 5.0
 hold_ms_default = 500
 timing_hint_ms = 150
 spread_weight = 0.5
+# The one to fix (frame `worst`, its hint, the summary's fingers) is only ever
+# a finger whose step weight is at least this (STATUS-weights.md). With no
+# finger that heavy, the heaviest non-zero fingers stand in.
+focus_min_weight = 0.3
 
 [score.camera]
 # Wider tolerances when either hand being scored comes from the camera.
@@ -149,6 +153,19 @@ static_finger_deg = 15
 static_finger_weight = 0.5
 hold_fraction = 0.5
 default_weights = { thumb = 1.0, index = 1.0, middle = 1.0, ring = 1.0, little = 1.0 }
+# Step weight = static x consistency x chart x calibration (core/recorder.py
+# step_weights, STATUS-weights.md). Consistency: steps whose key poses differ by
+# at most take_match_deg (largest per-finger mean flexion difference) are takes
+# of one pose, or task_config `takes = N` says the lesson is N repeats of one
+# sequence. A finger whose flexion varies across takes by a standard deviation
+# of consistent_deg or less keeps weight 1; inconsistent_deg or more drops to
+# inconsistent_floor. Chart: fingers the task's chart names for the step (typing
+# keys, piano notes, task_config `fingers`) keep 1, the rest chart_other_weight.
+take_match_deg = 12
+consistent_deg = 4
+inconsistent_deg = 15
+inconsistent_floor = 0.2
+chart_other_weight = 0.2
 
 [session]
 default_roles = { left = "free", right = "learner" }

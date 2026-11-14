@@ -33,6 +33,7 @@ class Step:
     note: str | None = None
     frame: str | None = None
     named_by: str = "auto"
+    weights_from: dict | None = None  # how `weights` was built (step_weights); None on older lessons
 
     @property
     def duration_us(self) -> int:
@@ -54,6 +55,7 @@ class Step:
             "hold_ms": int(self.hold_ms),
             "frame": self.frame,
             "named_by": self.named_by,
+            **({"weights_from": self.weights_from} if self.weights_from else {}),
         }
 
     @classmethod
@@ -73,6 +75,7 @@ class Step:
             hold_ms=d["hold_ms"],
             frame=d.get("frame"),
             named_by=d.get("named_by", "auto"),
+            weights_from=d.get("weights_from"),
         )
 
 
@@ -376,8 +379,13 @@ class Recorder:
         return len(self._t)
 
     def stop(
-        self, t_us: int, save: bool, lesson_id: str | None = None
+        self,
+        t_us: int,
+        save: bool,
+        lesson_id: str | None = None,
+        usable: dict[str, float] | None = None,
     ) -> Lesson | None:
+        """Cut the take into steps. `usable`: the master's calibration finger mask (0 drops a finger)."""
         self.active = False
         if not save or len(self._t) < 2:
             return None
@@ -405,6 +413,19 @@ class Recorder:
         names = step_names_for_task(self.task, self.task_config, len(steps))
         for s, n in zip(steps, names):
             s.name = n
+        for s, (w, src) in zip(
+            steps,
+            step_weights(
+                steps,
+                self.task,
+                self.task_config,
+                self.master_hand,
+                static,
+                self.cfg,
+                usable,
+            ),
+        ):
+            s.weights, s.weights_from = w, src
         created = datetime.now().astimezone()
         lesson = Lesson(
             id=lesson_id or make_lesson_id(self.title, created),
@@ -497,6 +518,232 @@ def static_finger_weights(
         base = float(defaults.get(f, 1.0)) if isinstance(defaults, dict) else 1.0
         out[f] = base * (float(static_weight) if rng < static_deg else 1.0)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Per-step finger weights (lane "weights", STATUS-weights.md)
+#
+# A step's weight per finger is the product of four factors, each 0..1:
+#   static       the finger barely moves in the whole lesson (static_finger_weights)
+#   consistency  the master holds the finger the same way in every take of the pose
+#   chart        the task's chart names the finger for this step (typing keys, piano notes)
+#   calibration  0 when the master's calibration marks every flexion joint of the finger unusable
+# ---------------------------------------------------------------------------
+
+# Standard QWERTY touch-typing chart (hand, finger) -> keys. A copy of
+# core/tasks/typing.py CHART_ROWS on the unmerged branch `typing`; that table
+# wins when it is importable.
+TYPING_CHART_ROWS: dict[tuple[str, str], str] = {
+    ("left", "little"): "`1qaz",
+    ("left", "ring"): "2wsx",
+    ("left", "middle"): "3edc",
+    ("left", "index"): "45rtfgvb",
+    ("right", "index"): "67yuhjnm",
+    ("right", "middle"): "8ik,",
+    ("right", "ring"): "9ol.",
+    ("right", "little"): "0-=p[]\\;'/",
+}
+
+
+def _typing_chart() -> dict[str, list[tuple[str, str]]]:
+    try:  # the typing task's own chart, once that branch is merged
+        from .tasks.typing import CHART  # type: ignore[attr-defined]
+
+        return dict(CHART)
+    except ImportError:
+        chart: dict[str, list[tuple[str, str]]] = {
+            " ": [("left", "thumb"), ("right", "thumb")]
+        }
+        for who, keys in TYPING_CHART_ROWS.items():
+            for k in keys:
+                chart[k] = [who]
+        return chart
+
+
+def chart_fingers(task: str, task_config: dict, index: int, hand: str) -> list[str] | None:
+    """Fingers the task's chart names for step `index` on `hand`, or None when there is no chart.
+
+    typing: task_config "keys" (a list, one key per step) or "text" (one character per step).
+    piano: task_config "notes", one note per step, each with a "finger".
+    any task: task_config "fingers", one finger name or list of names per step.
+    A key the chart gives only to the other hand returns None (nothing to say about this hand).
+    """
+    cfg = task_config or {}
+    per_step = cfg.get("fingers")
+    if isinstance(per_step, list) and index < len(per_step):
+        v = per_step[index]
+        names = [v] if isinstance(v, str) else list(v or [])
+        names = [f for f in names if f in H.FINGERS]
+        return names or None
+    if task == "typing":
+        keys = cfg.get("keys")
+        if keys is None and isinstance(cfg.get("text"), str):
+            keys = list(cfg["text"])
+        if not isinstance(keys, list) or index >= len(keys):
+            return None
+        key = str(keys[index])
+        key = " " if key.lower() in ("space", "spacebar") else key.lower()
+        who = _typing_chart().get(key)
+        if not who:
+            return None
+        names = [f for side, f in who if side == hand]
+        return names or None
+    if task == "piano":
+        notes = cfg.get("notes")
+        if isinstance(notes, list) and index < len(notes) and isinstance(notes[index], dict):
+            f = notes[index].get("finger")
+            return [f] if f in H.FINGERS else None
+    return None
+
+
+def chart_weights(fingers: list[str] | None, other_weight: float) -> dict[str, float]:
+    if not fingers:
+        return {f: 1.0 for f in H.FINGERS}
+    return {f: (1.0 if f in fingers else float(other_weight)) for f in H.FINGERS}
+
+
+def finger_flexion(angles: np.ndarray) -> dict[str, float]:
+    """Mean flexion of each finger's joints, degrees."""
+    a = np.asarray(angles, dtype=float)
+    return {f: float(np.mean(a[H.FLEXION_SLOTS[f]])) for f in H.FINGERS}
+
+
+def pose_distance(a: np.ndarray, b: np.ndarray) -> float:
+    """Largest per-finger difference of mean flexion, degrees."""
+    fa, fb = finger_flexion(a), finger_flexion(b)
+    return max(abs(fa[f] - fb[f]) for f in H.FINGERS)
+
+
+def take_groups(key_angles: list[np.ndarray], match_deg: float, takes: int = 0) -> list[list[int]]:
+    """Group step indices into takes of one pose.
+
+    takes > 1 and the step count divisible by it: the lesson is the same sequence
+    recorded `takes` times, so step i is a take of step i mod (n / takes).
+    Otherwise steps whose key poses are within `match_deg` of the group's first
+    step are takes of one pose (greedy, in order).
+    """
+    n = len(key_angles)
+    if takes and takes > 1 and n % takes == 0:
+        k = n // takes
+        return [list(range(i, n, k)) for i in range(k)]
+    groups: list[list[int]] = []
+    for i, a in enumerate(key_angles):
+        for g in groups:
+            if pose_distance(key_angles[g[0]], a) <= match_deg:
+                g.append(i)
+                break
+        else:
+            groups.append([i])
+    return groups
+
+
+def consistency_weights(
+    takes: list[np.ndarray], consistent_deg: float, inconsistent_deg: float, floor: float
+) -> tuple[dict[str, float], dict[str, float]]:
+    """(weights, spread in degrees) per finger from the key poses of several takes of one pose.
+
+    The spread is the standard deviation across takes of the finger's mean flexion.
+    At or below `consistent_deg` the weight is 1; at or above `inconsistent_deg`
+    it is `floor`; linear between. One take gives weight 1 and spread 0.
+    """
+    if len(takes) < 2:
+        return {f: 1.0 for f in H.FINGERS}, {f: 0.0 for f in H.FINGERS}
+    flex = np.array([[finger_flexion(t)[f] for f in H.FINGERS] for t in takes])
+    sd = flex.std(axis=0)
+    span = max(1e-6, float(inconsistent_deg) - float(consistent_deg))
+    frac = np.clip((sd - float(consistent_deg)) / span, 0.0, 1.0)
+    w = 1.0 - frac * (1.0 - float(floor))
+    return (
+        {f: float(w[i]) for i, f in enumerate(H.FINGERS)},
+        {f: float(sd[i]) for i, f in enumerate(H.FINGERS)},
+    )
+
+
+def step_weights(
+    steps: list[Step],
+    task: str,
+    task_config: dict,
+    hand: str,
+    static: dict[str, float],
+    cfg,
+    usable: dict[str, float] | None = None,
+    extra_takes: list[list[np.ndarray]] | None = None,
+) -> list[tuple[dict[str, float], dict]]:
+    """(weights, sources) per step: static x consistency x chart x calibration, rounded to 2 places.
+
+    `extra_takes[i]` are key poses of step i from other recordings of the same
+    lesson (tools pass them; the live recorder does not). `usable` is the
+    master's calibration finger mask (calibration.HandCalibration.finger_weights).
+    """
+    get = cfg.get if hasattr(cfg, "get") else (lambda k, d=None: d)
+    match_deg = float(get("take_match_deg", 12.0))
+    groups = take_groups(
+        [s.key_angles for s in steps], match_deg, int((task_config or {}).get("takes", 0) or 0)
+    )
+    group_of = {i: g for g in groups for i in g}
+    out = []
+    for i, s in enumerate(steps):
+        poses = [steps[j].key_angles for j in group_of.get(i, [i])]
+        if extra_takes and i < len(extra_takes):
+            poses += list(extra_takes[i])
+        cons, spread = consistency_weights(
+            poses,
+            float(get("consistent_deg", 4.0)),
+            float(get("inconsistent_deg", 15.0)),
+            float(get("inconsistent_floor", 0.2)),
+        )
+        named = chart_fingers(task, task_config, s.index, hand)
+        chart = chart_weights(named, float(get("chart_other_weight", 0.2)))
+        cal = usable or {f: 1.0 for f in H.FINGERS}
+        w = {
+            f: round(
+                float(static.get(f, 1.0)) * cons[f] * chart[f] * float(cal.get(f, 1.0)), 2
+            )
+            for f in H.FINGERS
+        }
+        sources = {
+            "static": {f: round(float(static.get(f, 1.0)), 2) for f in H.FINGERS},
+            "consistency": {f: round(cons[f], 2) for f in H.FINGERS},
+            "takes": len(poses),
+            "take_spread_deg": {f: round(spread[f], 1) for f in H.FINGERS},
+            "chart": named,
+            "calibration": {f: round(float(cal.get(f, 1.0)), 2) for f in H.FINGERS},
+        }
+        out.append((w, sources))
+    return out
+
+
+def reweight_lesson(
+    lesson: Lesson,
+    cfg,
+    usable: dict[str, float] | None = None,
+    extra_takes: list[list[np.ndarray]] | None = None,
+) -> Lesson:
+    """Recompute every step's weights in place from the lesson's own trace (or its current weights)."""
+    if lesson.trace is not None and len(lesson.trace):
+        static = static_finger_weights(
+            lesson.trace.angles,
+            cfg.get("static_finger_deg", 15),
+            cfg.get("static_finger_weight", 0.5),
+            cfg.get("default_weights", {}),
+        )
+    else:
+        static = {f: 1.0 for f in H.FINGERS}
+    for s, (w, src) in zip(
+        lesson.steps,
+        step_weights(
+            lesson.steps,
+            lesson.task,
+            lesson.task_config,
+            lesson.master_hand,
+            static,
+            cfg,
+            usable,
+            extra_takes,
+        ),
+    ):
+        s.weights, s.weights_from = w, src
+    return lesson
 
 
 def stillest_window(
