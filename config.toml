@@ -280,3 +280,13 @@ weights = { middle_mcp = 1.0 }
 finger = "middle"
 offset_deg = 0.0
 weights = { middle_pip = 0.7, middle_dip = 0.5 }
+
+[camera.record3dstream]
+# iPhone LiDAR over WiFi or USB from the free Record3DStream app (PathOn). The app shows
+# its address on screen; it is NOT a web page, it is a binary TCP stream of REC3D frames.
+# The port is the app's default. Change host to the phone's current address.
+host = "10.0.34.248"
+port = 8888
+timeout_s = 5.0
+# depth pixels with confidence below this count as missing (0 low, 1 medium, 2 high)
+min_confidence = 1

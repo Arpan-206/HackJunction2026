@@ -5,6 +5,15 @@
 Everything below this section is the overnight core report, still valid.
 This section is what changed on Saturday and where things stand.
 
+**Depth camera (Sat 14:30):** `core/camera/depth.py` (`DepthFrame`,
+`DepthSource`) and `core/camera/record3dstream.py` read the free
+Record3DStream app (PathOn) on an iPhone; address in config.toml
+`[camera.record3dstream]`. `python -m tools.r3d_snapshot` saves one frame of
+each stream to `logs/r3d/<time>/` and prints resolution, frame rate and depth
+and confidence statistics. Tested on a 17 frame capture over WiFi (RGB
+1920x1440, depth and confidence 256x192, about 9 fps); not yet wired into the
+hand tracker. The ARKit app lane (ios/) produces the same `DepthFrame`.
+
 **On `main` now, all suites green** (core and decisions 203 tests, backend 255,
 frontend 296, lint and build):
 
