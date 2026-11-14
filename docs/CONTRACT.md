@@ -218,6 +218,8 @@ Routes are thin: validate input, call one service, return a schema. No business 
 |---|---|---|---|
 | GET | `/health` | | `{status: 'ok', glove_source, llm_provider}` |
 | GET | `/moves?skill=table_tennis` | | `MoveKind[]` |
+| GET | `/fingerspelling/packs` | | `FingerspellingPack[]` (see Fingerspelling packs) |
+| GET | `/fingerspelling/packs/{id}` | | `FingerspellingPack` or 404 |
 | GET | `/lessons` | | `Lesson[]` (summaries ok) |
 | GET | `/lessons/{id}` | | `Lesson` |
 | POST | `/lessons` | `Lesson` without id/created_at | `Lesson` |
@@ -391,6 +393,37 @@ interface DriftCheckResult {
 - The driver (1.9.7) sends a glove's RGMP definition to any client but data frames only while some RCSP client holds `SubscribeToData` for it (the core does this when it runs with `--rcsp`). A glove whose definition arrived but no data for `ROKOKO_SUBSCRIBE_GRACE_S` (2 s) has `streaming: false` and gives one `not_streaming` step that says so; it never shows as `no_frames` or `low_frame_rate`. The backend never subscribes itself.
 - Neutral pose: hands flat on the table, thumbs together, still. `offsets` are the mean joint flexion (radians, the `/ws/gloves` joints), `yaw_zero_deg` the circular mean wrist heading (rotation about +y of the fingers' -z), `noise_deg` the mean per-joint standard deviation in degrees. Quality bands are in `backend/app/constants.py` (`QUALITY_*`). Smartgloves have no calibrate command over RCSP; `reinit: true` sends the documented `ReinitAlgo` first and waits `REINIT_SETTLE_S`.
 - Drift check: mean absolute joint flexion change per hand against the saved offsets, and the wrist heading change; `ok` when every streaming hand is within both thresholds.
+
+## Fingerspelling packs
+
+Added by lane fingerspelling-packs (additive). Letters live in packs, one alphabet per pack. The file is `backend/app/data/fingerspelling_packs.json`, copied verbatim to `frontend/src/mock/data/fingerspelling-packs.json`. The slot kit's step 9 (`pack_letters`, `scripts/slot/slot_letters.py`) writes recorded letters into both.
+
+```ts
+type PackLetterStatus = 'recorded' | 'not_recorded';
+interface PackReference { label: string; url: string }
+interface PackLetter {
+  letter: string;              // one upper-case character, e.g. 'A' or 'Ä'
+  status: PackLetterStatus;
+  recorded_by: string | null;  // the name typed at recording time; "seeded from written sources" for the ASL letters
+  reference: string | null;    // the URL or document name the letter was held against
+  recorded_at: string | null;  // ISO date or date-time
+  move_id: string | null;      // a MoveKind id (the ASL letters: fs_a..fs_z)
+  lesson_id: string | null;    // a core lesson id (a letter recorded through the slot kit or the camera)
+  pose: Record<Finger, number> | null;  // held curls, 0 straight to 1 closed
+}
+interface FingerspellingPack {
+  id: string;                  // 'asl', 'fi'
+  name: string;                // 'ASL fingerspelling alphabet', 'Finnish fingerspelling (sormiaakkoset)'
+  language: string;
+  description: string;
+  default_reference: PackReference;
+  sources: PackReference[];
+  letters: PackLetter[];
+}
+```
+
+- A `recorded` letter has `recorded_by`, `reference`, `recorded_at` and at least one of `move_id`, `lesson_id`, `pose`.
+- A `not_recorded` letter has all six of those null. It is shown as "not recorded yet" and is never scored. No placeholder pose exists.
 
 ## Expert training persistence: drafts, bundles, backups
 

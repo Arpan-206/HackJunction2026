@@ -56,6 +56,10 @@ class Options:
     freeze_seconds: float = 2.0
     move_seconds: float = 4.0
     duel_lesson: str = ""
+    pack: str = "fi"
+    pack_letters: list[str] = field(default_factory=list)
+    recorded_by: str = ""
+    reference: str = ""
 
 
 @dataclass
@@ -757,6 +761,58 @@ def step_demo_lessons(ctx: Ctx) -> Result:
     return Result("ok", s, d)
 
 
+# --- step 9: fingerspelling letters into a pack ----------------------------------------
+
+def step_pack_letters(ctx: Ctx) -> Result:
+    """A person holds each letter from the official chart; the core records a hold take; the pack stores it."""
+    import slot_letters as L
+
+    c = ctx.console
+    o = ctx.opts
+    files = L.pack_files(ctx.repo)
+    data = L.load_packs(files[0])
+    pack = L.find_pack(data, o.pack)
+    todo = L.letters_to_record(pack, o.pack_letters or None)
+    if not todo:
+        return Result("ok", f"every slot of {pack['name']} is recorded; nothing to do", {"pack": o.pack})
+    # The dry run never touches the repo's pack: fake hands are not a person holding the chart.
+    target = [ctx.run_dir / "fingerspelling_packs.json"] if ctx.dry else files
+    c.say(f"Record {pack['name']}: {', '.join(todo)}. Right hand, one hold take per letter.")
+    c.say("Hold each letter exactly as the official chart shows it. Nothing is generated or guessed.")
+    by = o.recorded_by or c.text("Your name (stored with each letter as recorded_by)", ctx.wearer)
+    ref = o.reference or c.text("The reference you hold the letters against (URL or document)", pack["default_reference"]["url"])
+    c.say(f"Open the chart now: {ref}")
+    made: list[dict] = []
+    with link(ctx) as core:
+        core.cmd("set_task", {"task": "general"})
+        core.cmd("set_roles", {"left": "free", "right": "master"})
+        core.cmd("set_mode", {"mode": "record"})
+        for letter in todo:
+            c.say(f"--- the letter {letter} ---")
+            c.enter(f"Find {letter} on the chart. Press Enter (with the left hand), then make it with the right hand.")
+            t = L.record_take(core, lambda lid: http("GET", f"{ctx.core_http}/lessons/{lid}", timeout=5, trace=ctx.trace),
+                              letter, L.take_title(pack, letter), o.pose_seconds, o.freeze_seconds * 1.5, c.say)
+            row = {"letter": letter, "lesson_id": t.lesson_id, "pose": t.pose, "error": t.error}
+            if t.error or not t.pose:
+                c.say(f"Not stored: {t.error}. Retry this step for {letter}.")
+            else:
+                L.store_letter(data, o.pack, letter, by, ref, t.lesson_id or "", t.pose)
+                L.write_packs(target, data)
+                c.say(f"Stored {letter}: curls {t.pose}")
+            made.append(row)
+        core.cmd("set_mode", {"mode": "idle"})
+        core.cmd("set_roles", {"left": "free", "right": "free"})
+    stored = [m for m in made if m["pose"] and not m["error"]]
+    d = {"pack": o.pack, "recorded_by": by, "reference": ref, "letters": made, "written": [str(p) for p in target]}
+    where = f"the dry run's copy {target[0]}" if ctx.dry else "the pack file and its frontend copy"
+    s = f"{len(stored)}/{len(todo)} letters stored into {where}"
+    if len(stored) < len(todo):
+        return Result("bad", s, d, fix="Retry the step for the letters that did not save (hold still for the whole take).")
+    if ctx.dry:
+        return Result("look", s + " (fake hands do not make the letters; the repo pack is unchanged)", d)
+    return Result("ok", s + ". Commit backend/app/data/fingerspelling_packs.json and its frontend copy.", d)
+
+
 STEPS = [
     (0, "stack", "Live stack up", step_stack),
     (1, "depth", "Depth clip from the phone, 40 s", step_depth),
@@ -767,4 +823,5 @@ STEPS = [
     (6, "piano", "Piano press", step_piano),
     (7, "robot_flex", "Robot twin flex direction", step_robot_flex),
     (8, "demo_lessons", "Record the demo lessons", step_demo_lessons),
+    (9, "pack_letters", "Fingerspelling letters into a pack, from the official chart", step_pack_letters),
 ]

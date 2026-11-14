@@ -1,0 +1,382 @@
+{
+  "packs": [
+    {
+      "id": "asl",
+      "name": "ASL fingerspelling alphabet",
+      "language": "American Sign Language (ASL)",
+      "description": "The American manual alphabet, A to Z, one hand. Seeded from written handshape descriptions; an expert has not recorded it with the gloves yet.",
+      "default_reference": {
+        "label": "Stokoe notation, handshape (dez) table, Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Stokoe_notation"
+      },
+      "sources": [
+        {
+          "label": "Stokoe notation, handshape (dez) table, Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/Stokoe_notation"
+        },
+        {
+          "label": "American manual alphabet, Wikipedia",
+          "url": "https://en.wikipedia.org/wiki/American_manual_alphabet"
+        },
+        {
+          "label": "American Sign Language alphabet, Start ASL",
+          "url": "https://www.startasl.com/american-sign-language-alphabet/"
+        },
+        {
+          "label": "Fingerspelling 3, Lifeprint (the letter D)",
+          "url": "https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm"
+        }
+      ],
+      "letters": [
+        {
+          "letter": "A",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_a",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "B",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_b",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "C",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_c",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "D",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_d",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "E",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_e",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "F",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_f",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "G",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_g",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "H",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_h",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "I",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_i",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "J",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_j",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "K",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_k",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "L",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_l",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "M",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_m",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "N",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_n",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "O",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_o",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "P",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_p",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "Q",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_q",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "R",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_r",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "S",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_s",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "T",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_t",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "U",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_u",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "V",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_v",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "W",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_w",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "X",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_x",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "Y",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_y",
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "Z",
+          "status": "recorded",
+          "recorded_by": "seeded from written sources",
+          "reference": "https://en.wikipedia.org/wiki/Stokoe_notation; https://en.wikipedia.org/wiki/American_manual_alphabet; https://www.startasl.com/american-sign-language-alphabet/; https://www.lifeprint.com/asl101/fingerspelling/fingerspelling3.htm",
+          "recorded_at": "2026-11-14",
+          "move_id": "fs_z",
+          "lesson_id": null,
+          "pose": null
+        }
+      ]
+    },
+    {
+      "id": "fi",
+      "name": "Finnish fingerspelling (sormiaakkoset)",
+      "language": "Finnish Sign Language (suomalainen viittomakieli)",
+      "description": "The Finnish manual alphabet. Each letter is recorded by a person from the official chart; nothing here is generated or guessed.",
+      "default_reference": {
+        "label": "Aakkoset (sormiaakkoset kuvina), Suvi: the online dictionary of Finnish Sign Language, listed by Kuurojen Liitto",
+        "url": "https://suvi.viittomat.net/alphabet.php"
+      },
+      "sources": [
+        {
+          "label": "Aakkoset (sormiaakkoset kuvina), Suvi: the online dictionary of Finnish Sign Language, listed by Kuurojen Liitto",
+          "url": "https://suvi.viittomat.net/alphabet.php"
+        }
+      ],
+      "letters": [
+        {
+          "letter": "S",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "U",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "O",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "M",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "I",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "Ä",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        },
+        {
+          "letter": "Ö",
+          "status": "not_recorded",
+          "recorded_by": null,
+          "reference": null,
+          "recorded_at": null,
+          "move_id": null,
+          "lesson_id": null,
+          "pose": null
+        }
+      ]
+    }
+  ]
+}

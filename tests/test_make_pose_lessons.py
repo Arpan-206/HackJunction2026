@@ -182,3 +182,52 @@ def test_cli_list_and_write(tmp_path, capsys):
     assert mpl.main(["--out", str(tmp_path), "--skill", "fingerspelling", "--word", "hi"]) == 0
     assert (tmp_path / "pose-spell-hi" / "lesson.json").exists()
     assert not (tmp_path / "pose-shadow-puppets").exists()
+
+
+# --- fingerspelling packs: only recorded letters are emitted (lane fingerspelling-packs) ---
+
+
+def _packs_with(asl_unrecorded=(), fi_recorded=None):
+    packs = json.loads(mpl.PACKS_FILE.read_text(encoding="utf-8"))["packs"]
+    for p in packs:
+        for x in p["letters"]:
+            if p["id"] == "asl" and x["letter"] in asl_unrecorded:
+                x.update(status="not_recorded", recorded_by=None, reference=None, recorded_at=None, move_id=None)
+            if p["id"] == "fi" and fi_recorded and x["letter"] in fi_recorded:
+                x.update(status="recorded", recorded_by="Aino", reference="https://suvi.viittomat.net/alphabet.php",
+                         recorded_at="2026-11-15T10:00:00", lesson_id="take-1", pose=fi_recorded[x["letter"]])
+    return packs
+
+
+def test_the_repo_packs_emit_every_asl_letter_and_no_finnish_lesson(built):
+    _, lessons = built
+    assert not any(lid.startswith("pose-pack-") for lid in lessons)
+    assert lessons["pose-spell-junction"].title == "ASL fingerspelling alphabet: spell JUNCTION"
+
+
+def test_an_unrecorded_letter_is_never_emitted():
+    packs = _packs_with(asl_unrecorded=("B", "J"))
+    recorded = mpl.recorded_letter_moves(packs)
+    course = next(c for c in mpl.load_courses(("fingerspelling",)) if c["id"] == "seed-fingerspelling-a-m")
+    names = [s.name for s in mpl.course_steps(course, recorded)]
+    assert "The letter B" not in names and "The letter J" not in names and len(names) == 11
+    with pytest.raises(ValueError, match="J is not recorded yet"):
+        mpl.word_steps("JUNCTION", mpl.load_moves(), recorded)
+
+
+def test_letters_a_person_recorded_become_a_pack_lesson(tmp_path, cfg, monkeypatch):
+    pose = {"thumb": 0.4, "index": 0.1, "middle": 0.9, "ring": 0.9, "little": 0.9}
+    packs = _packs_with(fi_recorded={"Ä": pose})
+    fi = next(p for p in packs if p["id"] == "fi")
+    steps = mpl.pack_pose_steps(fi)
+    assert [s.name for s in steps] == ["Ä"]  # the six unrecorded slots give no step
+    assert steps[0].motion == {"preset": "hold_pose", "pose": pose}
+    monkeypatch.setattr(mpl, "load_packs", lambda path=mpl.PACKS_FILE: packs)
+    lessons = {l.id: l for l in mpl.build_all(cfg, tmp_path, skills=("fingerspelling",), words=())}
+    lesson = lessons["pose-pack-fi"]
+    assert lesson.title == "Sormiaakkoset: the recorded letters"
+    assert "fingerspell" not in lesson.title.lower()
+    assert [s.name for s in lesson.steps] == ["Ä"] and lesson.steps[0].kind == "hold"
+    assert "Recorded by Aino" in lesson.steps[0].note
+    want = H.synth_hand(side="right", curl=pose)
+    assert np.abs(lesson.steps[0].key_angles - want.angles).max() < 1.0

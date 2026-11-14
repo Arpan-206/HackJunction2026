@@ -77,6 +77,10 @@ export const CATALOGUE: CatalogueEntry[] = [
     keyPose: { motion: { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5], beat_ms: 620 }, t: 1.55 },
     scene: 'keys',
   },
+  // Finnish fingerspelling on the dashboard (curls are estimates until an expert records them). The pack-aware
+  // fingerspelling drill (ASL alphabet, Finnish slots shown as not recorded yet) lives at /apprentice/fingerspelling and
+  // stays off the dashboard through HIDDEN_SKILLS below, as Szymon's 17:22 narrowing intended. Arpan's rule for
+  // Finnish letters is 'never a placeholder pose': which of the two the demo keeps is a human decision, see STATUS.md.
   {
     id: 'finnish_fingerspelling',
     name: 'Finnish fingerspelling',

@@ -7,6 +7,7 @@ from app.api.routes import (
     calibrations,
     coach,
     dev,
+    fingerspelling,
     gloves,
     health,
     ingest,
@@ -24,6 +25,7 @@ api_router = APIRouter(prefix=c.API_PREFIX)
 for module in (
     health,
     moves,
+    fingerspelling,
     lessons,
     calibrations,
     recordings,
