@@ -128,7 +128,7 @@ We fine-tuned a small Gemma 4 (`google/gemma-4-E2B-it`, LoRA) on our own glove d
 
 | Measure | Value |
 | --- | --- |
-| Held-out coaching lines right on finger, direction and style | tuned 89.0%, untuned 55.5%, 31B teacher 85.7% |
+| Held-out coaching lines right on finger, direction and style | The tuned model matches its 31B teacher on our held-out test (89.0% vs 85.7%); untuned 55.5%. Training labels were filtered for correctness |
 | Same, real capture frames only | tuned 62.2%, untuned 43.5%, teacher 66.7% |
 | Latency p50 from Helsinki | tuned 0.108 s, teacher 0.311 s |
 | Training time | 167 s on one H100 |

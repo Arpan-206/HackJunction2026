@@ -36,6 +36,46 @@ Prices read from https://verda.com/pricing on 14 Nov 2026, Serverless Containers
 One hour of leaving the H100 endpoint up for a demo costs 5.77 USD. On the H200 it costs 7.37 USD.
 Billing counts every minute a replica runs, start-up included.
 
+## Which Verda products we used, and why
+
+| Verda product or feature | What we ran on it | Why this one |
+| --- | --- | --- |
+| Serverless Containers | The 31B lesson endpoint (`geppetto-gemma`), the 31B teacher that wrote the labels (`coach-tune-teacher`), and the trainer that trained, merged and served the tuned coach (`coach-tune-trainer`) | One container on one GPU with an HTTPS endpoint, a health check and billing by the minute. It started from the coupon credit with no card on file. |
+| Container gateway and inference key | Every call to those three containers: lesson requests, label requests, the training data upload, the evaluation and the live hints | One key in front of every endpoint. Our clients read only that key (`VERDA_INFERENCE_KEY`). |
+| On-demand GPUs: H200 141 GB and H100 80 GB | H200 for the measured lesson run; H100 for the teacher, the training and the tuned serving | The H200 holds Gemma 4 31B at bf16 with room for long prompts. The H100 was enough for every other job. Spot pricing is wired in `deploy.py` (`--spot`) and was not used. |
+| Scaling settings of a deployment | One replica, scale-down delay 600 s, queue trigger | A fixed single replica for a measured demo. `max_replica_count` is the lever for more load. |
+| Container secrets | The Hugging Face token, as a Verda secret, when `.env` has one | Gemma 4 is ungated, so the token only lifts download limits. It never sits in an env value. |
+| Python SDK (`verda`) and REST API | Create, status, logs, delete, the free-GPU list and the account balance | Every deploy and teardown is a script, so each cost line in this document comes from a log. The teacher and trainer scripts check the balance first and refuse a start that would break our floor of 50. |
+
+Not used: GPU instances (VMs), clusters, volumes and batch jobs.
+
+We trained inside a Serverless Container, and that was not the first plan. The plan was a GPU instance (a VM) for
+the training job. Verda refused to start one on the coupon balance: "Compute cannot be deployed using JUNCTION-2026
+coupon balance until at least one payment method is added" (`coach_tune/RUN.md`). So the trainer is the vLLM image
+with a small control server on the exposed port (`coach_tune/remote/ctl_server.py`). It takes the data over HTTPS,
+trains, merges and serves from the same GPU. It worked, and it has limits: nothing persists when the container
+stops, each env value and command argument is capped at 253 characters, and a training job sits behind a gateway
+made for requests.
+
+In production we would split the two kinds of work. Training and batch labelling would run on a GPU instance, or a
+cluster for larger runs, with a volume for the datasets and checkpoints, because a job needs a disk and a shell and
+no request timeout. Inference would stay on Serverless Containers with autoscaling: the tuned coach as an
+always-warm replica, because it answers during practice, and the 31B lesson writer scaled to zero between
+recordings, because it runs once per recording and can accept a cold start.
+
+## Demo day commands (Sun 15 Nov)
+
+Three commands in `scripts/`. Each takes `--dry-run`, which prints every step and calls nothing.
+
+| When | Command | What it does |
+| --- | --- | --- |
+| 09:45 | `scripts/coach_up.sh` | Starts the tuned coach container on an H100, uploads and merges the saved adapter, waits until `geppetto-coach-e2b` answers a real completion, restarts only the backend with `COACH_MODEL=tuned`, sends one live hint and prints the health table. About 6 to 8 minutes. |
+| After that | `scripts/lesson_gemma_up.sh` | Tries to start Gemma 4 31B for the expert flow. No GPU granted within 10 minutes: it gives up, deletes what it made and leaves lesson writing on the fallback. GPU granted: it waits up to 20 minutes for the weights, then sends lesson writing to Verda first. |
+| By 14:15 | `scripts/coach_down.sh` | Deletes both deployments, checks that Verda lists nothing, and restarts the backend on the plain chain. Safe to run twice. Exit code 1 if anything is still up. |
+
+Peer review ends at 14:00. Everything on Verda must be down by 14:15. If `scripts/live.sh` restarts the stack after
+`coach_up.sh`, run `scripts/coach_up.sh --backend-only` to point the new backend at the coach again.
+
 ## How to run it
 
 ```bash
@@ -133,7 +173,7 @@ direction and the style rules at once):
 | Gemma 4 E2B tuned (ours) | 89.0 | 62.2 | 0.108 |
 | Gemma 4 31B teacher | 85.7 | 66.7 | 0.311 |
 
-The tuned model is 3 times faster than its teacher and better overall. On real capture frames it is still below the
+The tuned model matches its 31B teacher on our held-out test (89.0% vs 85.7%) and is 3 times faster. The training labels were filtered for correctness (a teacher line was kept only when it named the right finger and the right fix), so the tuned model learnt from the teacher's checked lines, not from all of them. On real capture frames it is still below the
 teacher. The training inputs were synthetic mistakes on target poses; real captures were test data only.
 
 The trainer is one container: the vLLM image runs a small control server on the exposed port
@@ -151,6 +191,22 @@ data to a closed API. On Verda, the glove data, the labels and the model stay on
 the pipeline has open weights. We own the coach that comes out: a 95 MB adapter that any Verda GPU can serve again in
 about 5 minutes.
 
+## The second job: feedback after a rep
+
+On 15 Nov the same pipeline, with the same rules, tuned the small Gemma for a second job: the plain feedback the score
+screen shows after a rep (backend `POST /coach/review`). The output is two short sentences, first what went well,
+then the one fix. Dataset, splits, teacher, LoRA settings and seed are the same as for the hint job. Details and the
+reading of the numbers: `docs/COACH_MODEL.md`, "Second job".
+
+| System | Test examples | All three % | On real capture frames % (333) | Latency p50 s |
+| --- | --- | --- | --- | --- |
+| Gemma 4 E2B untuned | 1,150 | 54.8 | 34.2 | 0.131 |
+| Gemma 4 E2B tuned (ours) | 1,150 | 94.8 | 82.6 | 0.129 |
+| Gemma 4 31B teacher | 1,150 | 85.2 | 64.6 | 0.481 |
+
+The training labels were filtered for correctness with the same check that scores the test, so this is not a claim
+that the small model is the better teacher. The adapter is saved; it is not served in the demo.
+
 ## Cost so far
 
 | When (Helsinki) | Event | GPU | Hours | USD at list price | Running total USD | Balance (EUR) |
@@ -162,9 +218,11 @@ about 5 minutes.
 | 14 Nov 19:13 | coach-tune teacher container, labels and teacher evaluation | H100 | 0.133 | 0.77 | 4.71 | |
 | 14 Nov 19:17 | coach-tune trainer, first start | H100 | 0.158 | 0.91 | 5.62 | |
 | 14 Nov 20:02 | coach-tune trainer, second start; all torn down | H100 | 0.70 | 4.04 | 9.66 | 196.70 |
+| 15 Nov 00:25 to 00:33 | Rep feedback job: teacher container, 3,620 label calls and the teacher evaluation | H100 | 0.137 | 0.79 | 10.45 | 195.39 |
+| 15 Nov 00:25 to 01:16 | Rep feedback job: trainer container (untuned evaluation, smoke test, training, tuned evaluation), then the hint model served again and the load test | H100 | 0.855 | 4.93 | 15.38 | 189.39 |
 
 The balance column is what the Verda console showed at that moment. Verda posts charges in 10 minute
-aggregates, so it lags the list-price estimate. Nothing is deployed now, so nothing bills.
+aggregates, so it lags the list-price estimate. The coach-tune containers are deleted. On 15 Nov at 01:20 one container of the robot policy work (`robot-policy`, see `docs/ROBOT_POLICY.md`) still ran; its cost is not in this table.
 
 ## Expert-priors lane: no GPU used
 
@@ -178,6 +236,68 @@ The `expert-priors` lane (branch `expert-priors`, `core/priors/`, docs/PRIORS.md
 | 14 Nov 19:05 | Start 1V100.4V at 0.244 USD/h | Refused by the Verda API: "Compute cannot be deployed using JUNCTION-2026 coupon balance until at least one payment method is added." | 0 |
 
 What this means for other lanes: VMs (the `instances` API) need a payment method on the account, even with coupon credit. Serverless Containers worked from the same credit earlier in the day (the Gemma runs above). The lane did the pull on the Mac instead, as HTTP range reads of only the left-hand joint arrays (335 MB, nothing raw saved). Lane spend: 0 USD. Nothing is running.
+
+Data volume, all processed on the Mac and none of it on Verda (docs/PRIORS.md): 335 MB read from the 47 GB FurElise zip, the left-hand joints and key states of 55 pieces; 158,365 training frames from 47 pieces by 13 pianists, about 4.4 hours at 10 frames a second. Verda GPU hours: 0. Verda CPU hours: 0.
+
+## Path to scale
+
+Measured on Sun 15 Nov 2026, 01:07 to 01:15 Helsinki. The tuned coach (`geppetto-coach-e2b`, merged Gemma 4 E2B, bf16)
+ran on one Verda Serverless Container with 1x H100 80 GB and vLLM v0.29.0. The load came from one laptop in Helsinki,
+through the Verda container gateway. So every number includes the internet round trip.
+
+A "simultaneous learner" in this test is one request in flight at all times. Each of N workers sends a hint request,
+waits for the answer and sends the next one at once. Real use is lighter: the app asks for at most one hint per
+learner every 5 seconds. Prompts are the held-out test examples of the hint job. Each level ran for 30 seconds.
+Tool: `coach_tune/loadtest.py`. Raw results: `coach_tune/out/loadtest/result_run1.json` and `result_run2.json`.
+
+| Simultaneous learners | Run | Hints in the run | Hints per second | Latency p50 s | Latency p95 s | Errors |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 199 | 6.4 | 0.104 | 0.194 | 0 |
+| 10 | 1 | 2,191 | 72.8 | 0.109 | 0.184 | 0 |
+| 50 | 1 | 10,219 | 68.2 (see the note) | 0.140 | 0.208 | 50 |
+| 50 | 2 | 10,495 | 348.6 | 0.141 | 0.197 | 0 |
+| 100 | 2 | 5,500 | 182.2 | 0.247 | 2.260 | 0 |
+| 200 | 1 | 2,595 | 81.0 | 1.447 | 6.138 | 0 |
+
+Note on the first run at 50: all 50 workers hung once for 120 seconds and then failed, so that run lasted 149.8
+seconds. Without the stall its rate equals run 2 (10,219 hints in about 30 seconds of work). The repeat had no error.
+We saw the stall once and do not know its cause.
+
+What the numbers show:
+
+- The runs varied. The same level, 50 requests in flight, gave 68.2 hints per second in run 1 (with the stall) and
+  348.6 in run 2. One run does not fix the capacity of a GPU.
+- Up to 50 simultaneous requests the answer time stayed flat in both runs: 0.10 to 0.14 s median, at most 0.21 s at
+  the 95th percentile.
+- Above 50 the path degraded. At 100 the rate was 182 hints per second and the 95th percentile 2.3 s. At 200 it was
+  81 hints per second and 6.1 s. The backend gives the tuned link 2 seconds before it falls back, so 100 and more in
+  flight on one GPU is past the useful range.
+- The test measures the whole path: laptop, internet, gateway and model. It does not show which part limits the rate.
+  We did not measure GPU use during the test.
+
+Learners per GPU and cost per learner-hour, from the measured rates. One learner at the app's maximum rate asks for
+0.2 hints per second. The GPU price is the 5.77 USD per hour list price for the H100.
+
+| Level and run | Hints per second | Learners served at one hint per 5 s | USD per learner-hour |
+| --- | --- | --- | --- |
+| 10 in flight, run 1 | 72.8 | 363 | 0.0159 |
+| 50 in flight, run 1 (stalled once) | 68.2 | 341 | 0.0169 |
+| 50 in flight, run 2 | 348.6 | 1,742 | 0.0033 |
+| 100 in flight, run 2 | 182.2 | 910 | 0.0063 |
+| 200 in flight, run 1 | 81.0 | 405 | 0.0143 |
+
+Across these runs one H100 served between about 340 and 1,740 learners at the app's rate, which is 0.3 to 1.7 US
+cents per learner-hour. The low end includes the run that stalled. We do not quote the best run as the capacity:
+it was one 30 second run. A whole class of 30 learners needs 6 hints per second, and a single request stream already
+gave 6.4 hints per second at 0.10 s.
+
+The path to more learners follows from this, and it is a plan, not a measurement: keep each GPU at or under 50
+requests in flight, where the answer time stayed flat in both runs, and add a second replica of the same container
+when the count passes that. Serverless Containers
+scale replicas on the request queue (see "Which Verda products we used, and why"). We ran one replica only, so the
+two-replica rate is not measured. The first step before any larger rollout is to repeat this test several times, also
+from inside the Verda network, to get a stable range and to separate the model's limit from the gateway's.
+
 
 ## How this scales to many skills
 

@@ -90,7 +90,7 @@ the internet round trip.
 | E2B tuned | 89.1 | 98.3 | 100.0 | 89.0 | 0.108 | 0.166 |
 | Teacher, Gemma 4 31B bf16 | 88.9 | 95.0 | 100.0 | 85.7 | 0.311 | 0.517 |
 
-The tuned model is better than the untuned one: 89.0% against 55.5% on all three.
+The tuned model is better than the untuned one: 89.0% against 55.5% on all three. It matches its 31B teacher on our held-out test (89.0% vs 85.7%). The training labels were filtered for correctness (a teacher line was kept only when it named the right finger and the right fix), so the tuned model learnt from the teacher's checked lines, not from all of them. So this is not a claim that the small model is the better coach; the split by source below shows where the teacher is still ahead.
 
 Split by source:
 
@@ -122,6 +122,59 @@ while a new TLS connection opened. The tuned model answered the next four in 0.3
 | en: middle too flat (letter L) | Curl your middle finger more to make a better L. | Curl your ring and little fingers more. (wrong) | Curl your middle finger more toward your palm. |
 | en: little too spread (Pinch) | Use your index finger to gently pull that finger closer. (wrong) | Pinky, bring it closer to your ring finger. | Bring your pinky closer to the ring finger. |
 
+## Second job: feedback after a rep (15 Nov)
+
+The score screen needs feedback a visitor can read. The backend endpoint `POST /coach/review` gives it. On 15 Nov we
+tuned the same small model for this job, with the same pipeline and the same rules. `COACH_TUNE_TASK=review` selects
+the job in every `coach_tune` script; its files are in `coach_tune/out/review/`, and the hint model is untouched.
+
+| Item | Value |
+| --- | --- |
+| Job | Two short sentences, at most 30 words: first what went well, then the single most important finger and its fix. No numbers, no degrees, no scoring words. English, German and Finnish. |
+| Dataset and splits | The same 4,513 examples: 3,069 train, 294 val, 1,150 test. Real capture frames (333) are test data only. |
+| Teacher | `google/gemma-4-31B-it`, bf16, our own vLLM on a Verda Serverless Container, 1x H100. No Gemini output is used. |
+| Labels kept | 3,267 of 3,363 (97.1%); 95.6% on the first try; 3,620 calls in 48 s. Spot check before the full run: 50 of 50 kept, 25 read by hand. |
+| Training rows | 2,975 train, 292 val, after `make_sft.py` checked every label source |
+| Training | The hint model's settings: LoRA rank 16, 3 epochs, 558 steps in 217 s, seed 0. Validation loss after epoch 1: 0.2485. |
+| Smoke test | Loss 1.72 at step 10, 0.57 at step 20, finite. 5 of 5 sample lines had the right shape. |
+
+The filter (`coach_tune/prompt.py`, `check_review`): the right finger is named, the last sentence has a word for the
+right fix and none for the opposite fix, there are exactly two sentences of at most 30 words, there is no digit and
+no degree or scoring word, and the finger is named in the fix sentence.
+
+Evaluation on the held-out units, 1,150 test examples, temperature 0:
+
+| System | Right finger % | Right direction % | Style % | All three % | Latency p50 s | Latency p95 s |
+| --- | --- | --- | --- | --- | --- | --- |
+| E2B untuned | 59.0 | 78.3 | 56.2 | 54.8 | 0.131 | 0.167 |
+| E2B tuned | 96.3 | 98.4 | 95.4 | 94.8 | 0.129 | 1.163 |
+| Teacher, Gemma 4 31B bf16 | 87.1 | 95.8 | 86.8 | 85.2 | 0.481 | 0.677 |
+
+| System | Source | Examples | Right finger % | Right direction % | Style % | All three % |
+| --- | --- | --- | --- | --- | --- | --- |
+| E2B untuned | real capture | 333 | 43.8 | 76.3 | 34.5 | 34.2 |
+| E2B untuned | synthetic | 817 | 65.2 | 79.1 | 65.0 | 63.2 |
+| E2B tuned | real capture | 333 | 87.1 | 94.6 | 84.7 | 82.6 |
+| E2B tuned | synthetic | 817 | 100.0 | 100.0 | 99.8 | 99.8 |
+| Teacher | real capture | 333 | 65.8 | 90.7 | 64.9 | 64.6 |
+| Teacher | synthetic | 817 | 95.8 | 97.9 | 95.7 | 93.6 |
+
+Read this table with care:
+
+- The tuned model is far above the untuned one: 94.8% against 54.8% on all three.
+- The tuned number is also above the teacher's. This is not a claim that the small model is the better teacher. The
+  training labels were filtered for correctness, and the test uses the same check. The teacher is measured on one
+  unfiltered try.
+- On synthetic attempts the tuned model is almost perfect. The training data has the same shape, so this number is
+  too kind. The real-capture result, 82.6%, is the honest one for live use.
+- The check reads words, not meaning. It does not prove that the praise in the first sentence is true.
+- The tuned model's 95th percentile latency (1.163 s) had slow outliers in a run of 100 single requests; the median
+  equals the untuned model's.
+
+Side-by-side samples: `coach_tune/out/review/eval/report.md`. The adapter (95 MB) is in
+`coach_tune/out/review/adapter/` (git-ignored). It is not wired into the backend: `POST /coach/review` uses the
+provider chain. To serve it, follow "Serve it again" with `COACH_TUNE_TASK=review` set.
+
 ## Serve it again
 
 The adapter (95 MB) is in `coach_tune/out/adapter/` (git-ignored). From the worktree root, with
@@ -137,6 +190,18 @@ The adapter (95 MB) is in `coach_tune/out/adapter/` (git-ignored). From the work
 | 6. Tear down | `$PY coach_tune/trainer_up.py --down` | 1 to 3 min |
 
 This path was tested on 14 Nov: the re-merged model gave the same lines as the evaluation.
+
+## Demo day commands (Sun 15 Nov)
+
+| When | Command | What it does |
+| --- | --- | --- |
+| 09:45 | `scripts/coach_up.sh` | The "Serve it again" steps above in one command. It checks that `coach_tune/out/adapter/adapter_model.safetensors` exists before anything starts on Verda, waits for the merge, waits until `geppetto-coach-e2b` answers a real completion, restarts only the backend with `COACH_MODEL=tuned`, and prints the health table (it has a `tuned` row now). |
+| After that | `scripts/lesson_gemma_up.sh` | Optional: Gemma 4 31B for lesson writing. It gives up if no GPU is granted within 10 minutes. |
+| By 14:15 | `scripts/coach_down.sh` | Deletes everything of ours on Verda, checks that nothing is listed, and restarts the backend without the tuned coach. |
+
+Each command takes `--dry-run`. `scripts/coach_up.sh --backend-only` only checks the endpoint and restarts the
+backend; use it when `scripts/live.sh` started a new backend after the coach came up. The H100 costs 5.77 USD an hour
+while it is up. Peer review ends at 14:00, so everything must be down by 14:15.
 
 ## Limits
 
