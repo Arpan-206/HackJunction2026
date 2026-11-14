@@ -1,10 +1,11 @@
 import { isGloveSocketUrl, MockGloveSocket } from './glove';
+import { isRobotSocketUrl, MockRobotSocket } from './robot';
 import { handleMockRequest, type MockRequest } from './router';
 
 /**
  * Transport-layer interception for mock mode. fetch, XMLHttpRequest and WebSocket are patched so requests to
- * `/api/*` and the `/ws/gloves` socket are answered in the browser; everything else (fonts, Vite HMR, assets) passes
- * through untouched. No feature code needs to know.
+ * `/api/*` and the `/ws/gloves` and `/ws/robot` sockets are answered in the browser; everything else (fonts, Vite HMR,
+ * assets) passes through untouched. No feature code needs to know.
  */
 
 const STORAGE_KEY = 'apprentice.mock';
@@ -127,6 +128,8 @@ function patchWebSocket(): void {
   const RealWebSocket = window.WebSocket;
   function PatchedWebSocket(url: string | URL, protocols?: string | string[]) {
     if (isGloveSocketUrl(url)) return new MockGloveSocket(url) as unknown as WebSocket;
+    // Only this origin's /ws/robot is mocked; a direct core endpoint on port 8765 still reaches a real engine.
+    if (isRobotSocketUrl(url)) return new MockRobotSocket(url) as unknown as WebSocket;
     return new RealWebSocket(url, protocols);
   }
   PatchedWebSocket.prototype = RealWebSocket.prototype;

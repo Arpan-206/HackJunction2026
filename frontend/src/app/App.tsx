@@ -11,6 +11,7 @@ const Playground = lazy(() => import('../playground/Playground'));
 const DesignRoute = lazy(() => import('../design/DesignRoute'));
 const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen'));
 const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
+const RobotScreen = lazy(() => import('../features/shared/robot/RobotScreen'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -44,6 +45,7 @@ export function App() {
         <Route path="/lab" element={<HandLab />} />
         <Route path="/gloves" element={<Suspense fallback={null}><GlovesScreen /></Suspense>} />
         <Route path="/gloves/calibrate" element={<Suspense fallback={null}><CalibrateScreen /></Suspense>} />
+        <Route path="/robot" element={<Suspense fallback={null}><RobotScreen /></Suspense>} />
         <Route path="*" element={<MasterHome />} />
       </Route>
     </Routes>
