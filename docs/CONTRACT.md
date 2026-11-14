@@ -9,7 +9,7 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 ```ts
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
-type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk';
+type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
 type Skill = 'table_tennis' | 'piano' | 'general';
 type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 
@@ -105,7 +105,7 @@ interface Recording {
 interface ScoreResult {
   overall: number;           // 0..100
   per_finger: Record<Finger, number>;   // 0..100
-  timing: number;            // 0..100
+  timing: number;            // 0..100; always 100 for a held pose (see Scoring metric), never early or late
   within_tolerance: boolean;
   worst_finger: Finger;
   hint: string;              // algorithmic plain-language tip
@@ -158,17 +158,20 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/recordings/{id}/stop` | | `Recording` |
 | GET | `/recordings/{id}` | | `Recording` |
 | POST | `/motion/preview` | `{motion: MotionSpec, side: Side, duration_s: number}` | `{frames: GloveFrame[]}` (synthesised guide hands) |
-| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], tolerance, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string}` (at least one attempt source; calibration fields optional, see notes) | `ScoreResult` |
-| POST | `/coach/hint` | `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms}` | `{hint: string, provider: string}` |
+| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], side?: "left" or "right", tolerance, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string}` (at least one attempt source; calibration fields optional, see notes) | `ScoreResult` |
+| POST | `/coach/hint` | `CoachHintRequest`: `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms, move_name?, joint_deviations?: Record<Finger, [knuckle, middle, tip]>, wrist_error_deg?, wrist_axis?: "pitch"\|"yaw"\|"roll", tolerance_deg?, attempt?: number, last_hint?: string}` (only the first four are needed) | `{hint, focus_finger: Finger\|null, cue_type: "curl"\|"extend"\|"timing"\|"wrist"\|"praise", severity: "low"\|"medium"\|"high", provider}` |
 | POST | `/coach/plan` | `CoachPlanRequest` | `CoachPlanResponse` (Gemini practice plan; fake derives drills from the worst fingers) |
 | POST | `/motion/from_text` | `{text: string (max 200 chars), side?: Side}` | `MotionFromTextResponse` (LLM picks a preset; fake uses keyword rules) |
 | POST | `/vision/hands` | multipart `image` (jpeg) | `{hands: {side, wrist_pos, landmarks: [x,y,z][]}[]}` (MediaPipe) |
-| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion}` |
+| POST | `/ingest/frames` | one `GloveFrame`, one `HandFrame` (`wrist_quat` defaults to identity) or `{frames: GloveFrame[]}` (max 600); optional `?activate=1` switches the source to `external` first | `{accepted: number}`; 409 if the source is not `external` and `activate` is absent, 422 on an invalid frame |
+| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[]}` (`gemini_budget` is read-only, ignored on POST) |
 | POST | `/dev/state` | partial of the above | new state |
 
 ## WebSocket
 
 `/ws/gloves` streams `GloveFrame` JSON at ~60 Hz from the active source after the smoothing stage. The client may send `{"type": "set_motion", "motion": MotionSpec}` to drive the simulator.
+
+`/ws/ingest` (optional `?activate=1`) accepts text messages of the same shapes as `POST /ingest/frames`, for an external pipeline pushing at 60 Hz. Successes are silent; each failure is answered with `{"type": "error", "status": 409 | 422, "detail": string}` and the socket stays open. Ingested frames pass the normal smoothing and leave `/ws/gloves` with `source: "replay"`.
 
 ## LLM providers
 
@@ -182,13 +185,15 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 
 ## Backend notes (clarifications added by the backend implementation)
 
+- `POST /score` scores one hand. `side` (optional) names it; clients should send the step's `hands` when it is `left` or `right`. Without `side` the scorer uses the first side present in the attempt (preferring one the reference also has) and reads the reference for that same side, so a two-handed reference never makes a one-handed attempt fail. A missing side in either recording gives 400.
 - `POST /score` with `attempt_frames` scores those frames instead of the stored recording (frames win if both are sent). The backend records the unmodified glove stream, so any client-side change (for example the clumsy apprentice simulation) only reaches the scorer through `attempt_frames`. Frame `t` is rebased by the scorer; start the frames at the beat the reference motion starts on, because a `reference_motion` is synthesised from `t = 0`.
-- Scoring metric: per finger, the error is the mean absolute difference of the finger's TOTAL flexion (sum of its 3 joints, in degrees) over the DTW-aligned path, the same quantity the frontend live coach compares with `tolerance.angle_deg`. A finger under-curled 25 degrees in total is therefore off at the default 18 degree tolerance, however the 25 is spread over joints. The error maps to 0..100 with `100 * exp(-0.5 * (err / (1.5 * angle_deg))^2)`; `within_tolerance` needs every finger error and the timing error inside tolerance. Hint degrees are the same total-flexion deviation. Calibration normalises per joint before the sum.
-- `POST /coach/hint` `deviations` are signed degrees per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late.
+- Scoring metric: per finger, the error is the mean absolute difference of the finger's TOTAL flexion (sum of its 3 joints, in degrees) over the DTW-aligned path, the same quantity the frontend live coach compares with `tolerance.angle_deg`. A finger under-curled 25 degrees in total is therefore off at the default 18 degree tolerance, however the 25 is spread over joints. The error maps to 0..100 with `100 * exp(-0.5 * (err / (1.5 * angle_deg))^2)`; `within_tolerance` needs every finger error and the timing error inside tolerance. Hint degrees are the same total-flexion deviation. Calibration normalises per joint before the sum. Held poses: when the reference is a `hold_pose` or `idle` motion, or its total flexion moves less than 12 degrees peak to peak on every finger (`STATIC_REFERENCE_RANGE_DEG`), there is no beat to be early or late for, so the timing offset is taken as 0: `timing` is 100, `within_tolerance` ignores timing, `overall` keeps the same weights, and the hint never mentions early or late.
+- `POST /coach/hint`: `deviations` are signed degrees of TOTAL finger flexion per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late; `wrist_error_deg` is signed about `wrist_axis` (pitch positive = too high, yaw positive = turned too far right, roll positive = rolled clockwise). `hint` is one imperative sentence of at most 14 words naming one finger or the wrist and one direction, for example "Lift your index finger slightly." `cue_type` is `extend` when the finger is curled too much, `curl` when too straight. `provider` is `fake`, `algorithmic` (the model failed, was rejected or nothing needed fixing), `gemini`, `ollama`, or `fake (rate limited)` when the Gemini budget was spent. Identical requests within 60 s are served from a cache; pass the previous `hint` as `last_hint` so the wording changes.
+- Gemini free tier budget: the backend spends at most about 80 percent of the free RPM and RPD per model (limits in `app/constants.py`), persists the day count in `DATA_DIR/gemini_usage.json`, and when spent answers with the offline fallback and provider `fake (rate limited)` (also on `/lessons/generate`, `/coach/plan`, `/motion/from_text`). Hints use `GEMINI_HINT_MODEL` (default `gemini-3.5-flash-lite`), everything else `GEMINI_MODEL` (`gemini-3.8-flash`).
 - Calibrated scoring: with `attempt_calibration_id` (or `use_latest_calibration: true`, which uses the latest calibration for the attempt's side), each attempt joint is normalised to 0..1 as `(x - flat) / (fist - flat)`, clipped, then mapped into the reference's angle space using `reference_calibration_id` if given, otherwise the nominal range (flat and fist of the guide hand at curl 0 and 1). The reference is never altered. Joints with a calibrated range under 0.05 rad, or a calibration with an uncaptured phase, are left uncalibrated and a message is added to `ScoreResult.warnings`. Without these fields scoring is unchanged. `reference_calibration_id` has no effect on its own. Unknown ids give 404.
 - `POST /lessons/generate_from_video` stores nothing: the upload goes to a temporary file that is deleted after the call. Gemini uploads the file, waits until it is ACTIVE (60 s), then generates with a 120 s budget; on timeout or repeated invalid output it falls back to the fake template. Ollama and fake cannot read video.
 - `POST /lessons/generate` returns an unsaved lesson (it has an `id` and `created_at`). `PUT /lessons/{id}` creates the lesson if the id is unknown, so the generated lesson can be saved after editing. `POST /lessons` returns 201.
 - Step ids are optional in `POST`/`PUT` bodies (the server assigns them); `Step.tolerance`, `repetitions`, `hands` and `prop` have defaults.
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
 - `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros.
-- Errors are `{detail: string}` with 404 (missing), 501 (rokoko_sdk stub), 503 (optional dependency or LLM provider missing), 409 (UDP port busy).
+- Errors are `{detail: string}` with 404 (missing), 501 (rokoko_sdk stub), 503 (optional dependency or LLM provider missing), 409 (UDP port busy, or ingest while the source is not `external`), 422 (invalid ingested frame).

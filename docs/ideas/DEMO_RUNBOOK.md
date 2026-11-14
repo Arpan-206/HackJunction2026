@@ -54,7 +54,7 @@ Ollama (offline coach): `ollama serve` and `ollama pull gemma4:e4b` beforehand; 
 6. Check the 3D hand: open the hand and close it; the model must follow without jitter. If a finger lags, recalibrate.
 7. Calibrate each wearer separately for good practice.
 
-Note: calibration is captured per user but is not currently applied to scoring (`backend/app/services/scoring.py` uses raw flexion), so it does not change the learner score live. Do not tell judges it normalises for hand size. Scoring uses the reference take's hand side.
+Note: once the learner has calibrated, scoring normalises each joint by their flat-to-fist range and maps it into the expert's range (`use_latest_calibration` in `backend/app/services/scoring.py`). Say "it normalises for your range of motion", not "it models hand size". The scored side follows the attempt's hand.
 
 ## 4. Click path (follow exactly)
 

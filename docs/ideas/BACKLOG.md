@@ -5,7 +5,7 @@ Priority: P0 must land for the demo, P1 strongly improves it, P2 nice to have, P
 ## Before demo (hackathon, Sat 14 to Sun 15 Nov)
 
 ### P0
-- Claims fix pass over PITCH and Q&A (no tolerance-from-variance, no calibration-normalises claim, no offline-as-fact): 30 min
+- Claims fix pass over PITCH and Q&A (no tolerance-from-variance, calibration claim limited to range normalisation, no offline-as-fact): 30 min
 - Gemini timeout (8 s then fake fallback, landing): 30 min
 - Full click path rehearsed end to end on real gloves and on the simulator (DEMO_RUNBOOK): 1 h
 - Pre-generated lesson JSON and a screen-recorded fallback video of the full demo: 1 h
@@ -53,7 +53,7 @@ Priority: P0 must land for the demo, P1 strongly improves it, P2 nice to have, P
 - Real storage and auth (Postgres/Supabase, object storage for video): 2 weeks
 - Expert-verified and Learner-proven badges workflow: 2 weeks
 - Skill-module SDK so third parties add a new skill without touching core: 2 weeks
-- Apply calibration normalisation in scoring (currently raw flexion): 1 week
+- Calibration normalisation in scoring: DONE (per-joint flat-to-fist range, mapped to the reference). Next: validate on several wearers: 1 day
 - Rokoko Device SDK source (raw IMU, 83 Hz): 1 week
 - Quality model calibrated against master ratings: 3 weeks
 

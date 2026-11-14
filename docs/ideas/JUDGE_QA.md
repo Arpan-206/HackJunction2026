@@ -62,7 +62,7 @@ Verified, labelled finger-level motion data, per-skill modules, and the creator 
 ## Technical
 
 18. **How do you score a learner fairly across hand sizes?**
-Honestly: calibration (flat and fist) is captured per user but not yet applied in scoring, which uses raw flexion (`scoring.py:35`). Tolerance defaults to 18 degrees and 250 ms and is set per step. Applying calibration is on the backlog. [VERIFIED as a gap; do NOT claim hand-size normalisation]
+Calibration (flat and fist) is captured per user and applied in scoring when the learner has calibrated: each joint is normalised by the learner's own flat-to-fist range and mapped into the expert's range, so a stiffer or smaller hand is not penalised for range alone (`backend/app/services/scoring.py`, tests in `tests/test_scoring.py`). Incomplete calibrations are ignored with a warning. Tolerance defaults to 18 degrees and 250 ms and is set per step. [VERIFIED in code and tests; say "range normalisation", not "hand-size modelling"]
 
 19. **What is the DTW or timing approach?**
 Per-finger Sakoe-Chiba banded DTW, then per-finger score `100*exp(-0.5*(err/(1.5*tol))^2)`; overall weights fingers 0.8 and timing 0.2 (`scoring.py:41-101`, `constants.py:96-102`). [VERIFIED]

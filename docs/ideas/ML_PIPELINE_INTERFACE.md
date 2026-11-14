@@ -27,7 +27,7 @@ Units: seconds, radians, metres. Rate about 60 Hz (simulator 60; Rokoko about 60
 - Disk: `DATA_DIR/recordings/*.json` (default `backend/data/recordings/`; `DATA_DIR` env var overrides, see `app/core/config.py`, store implemented in `app/services/storage/json_store.py`). One JSON file per recording, schema = `Recording`. Calibrations in `DATA_DIR/calibrations/`, lessons in `DATA_DIR/lessons/`.
 - API: `GET /api/recordings/{id}` returns a `Recording`. There is no list endpoint yet (propose below).
 - Live: WebSocket `/ws/gloves` for real-time inference.
-- Per-user normalisation: load the matching `Calibration` (`GET /api/calibrations/latest?side=`) and map flexion from `[flat, fist]` to `[0, 1]` per joint. Both phases are required: an uncaptured phase is returned as zeros, so `fist - flat` can be 0 and you would divide by zero. Check both phases are non-zero and guard the denominator. The production scorer does not apply calibration today (`scoring.py` uses raw flexion).
+- Per-user normalisation: load the matching `Calibration` (`GET /api/calibrations/latest?side=`) and map flexion from `[flat, fist]` to `[0, 1]` per joint. Both phases are required: an uncaptured phase is returned as zeros, so `fist - flat` can be 0 and you would divide by zero. Check both phases are non-zero and guard the denominator. The production scorer applies this normalisation when the request sets `use_latest_calibration` or a calibration id (`scoring.py`), so reuse the same mapping for consistency.
 - Apprentice attempts may be scored with inline `attempt_frames` sent to `POST /score` and never stored as recordings. Do not assume every attempt exists under `DATA_DIR/recordings`; ask the frontend owner to store them if you need them as training data.
 
 Minimal Python loader:
