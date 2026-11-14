@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { useGloveStream, useLessons, useRobotStream, type Finger, type HandFrame, type Lesson, type MotionSpec, type Side } from '../../../api';
+import { useGloveStream, useLessons, type Finger, type HandFrame, type Lesson, type MotionSpec, type Side } from '../../../api';
+import { useRobotStream } from '../../../api/useRobotStream';
 import { PageHeader } from '../../../components/PageHeader';
 import { synthFrame } from '../../../three';
 import { useRobotModels } from '../../../three/robot';

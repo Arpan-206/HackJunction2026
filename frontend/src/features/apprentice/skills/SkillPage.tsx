@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../../../components/PageHeader';
 import { ButtonLink } from '../../../components/ui';
@@ -7,8 +8,11 @@ import { HANDS_LABEL, type LessonState, type SkillProgress, type SkillView } fro
 import { DifficultyLine } from './SkillParts';
 import { SkillShowcase, WorkshopShowcase } from './SkillShowcase';
 import { useSkills } from './useSkills';
-import { TeachRobot } from '../../shared/robot/TeachRobot';
+
 import './skills.css';
+
+// The robot twin is loaded only when a skill page opens, so its 3D code stays out of the first bundle.
+const TeachRobot = lazy(() => import('../../shared/robot/TeachRobot').then((m) => ({ default: m.TeachRobot })));
 
 function lessonStatus(st: LessonState | undefined): { text: string; mastered: boolean } {
   if (!st || st.attempts === 0) return { text: 'Not started', mastered: false };
@@ -134,7 +138,11 @@ export function SkillPage() {
           {skill.live ? (
             <>
               <WhatYouLearn skill={skill} progress={progress} />
-              {skill.courses[0] && <TeachRobot lesson={skill.courses[0]} />}
+              {skill.courses[0] && (
+                <Suspense fallback={null}>
+                  <TeachRobot lesson={skill.courses[0]} />
+                </Suspense>
+              )}
             </>
           ) : (
             <>
