@@ -129,6 +129,16 @@ export function SkillPage() {
         <div className="sk-page__info">
           <p className="sk-page__lede">{skill.description}</p>
           {skill.live && <PrimaryActions skill={skill} progress={progress} />}
+          {skill.live && skill.id === 'fingerspelling' && (
+            <div className="sk-page__extra">
+              <ButtonLink to="/apprentice/fingerspelling" variant="secondary">
+                Spell a word
+              </ButtonLink>
+              <ButtonLink to="/apprentice/fingerspelling?tab=chart" variant="secondary">
+                Open the letter chart
+              </ButtonLink>
+            </div>
+          )}
           <Facts skill={skill} />
           {skill.live ? (
             <WhatYouLearn skill={skill} progress={progress} />

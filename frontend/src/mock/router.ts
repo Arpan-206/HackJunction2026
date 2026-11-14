@@ -58,7 +58,7 @@ export class HttpError extends Error {
 }
 
 const SIDES: Side[] = ['left', 'right'];
-const SKILLS: Skill[] = ['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet', 'general'];
+const SKILLS: Skill[] = ['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet', 'fingerspelling', 'general'];
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 const DEFAULT_TOLERANCE: Tolerance = { angle_deg: 18, timing_ms: 250 };

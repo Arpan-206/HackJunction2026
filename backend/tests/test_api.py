@@ -25,6 +25,7 @@ def test_moves_catalogue_and_filter(client: TestClient) -> None:
         "shadow_puppets",
         "surgical_grips",
         "crochet",
+        "fingerspelling",
         "general",
     }
     piano = client.get("/api/moves", params={"skill": "piano"}).json()

@@ -13,6 +13,7 @@ const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen')
 const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
 const RobotScreen = lazy(() => import('../features/shared/robot/RobotScreen'));
 const TypingScreen = lazy(() => import('../features/typing/TypingScreen'));
+const FingerspellingScreen = lazy(() => import('../features/fingerspelling/FingerspellingScreen'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -36,6 +37,7 @@ export function App() {
         <Route path="/master/*" element={<MasterRedirect />} />
         <Route path="/apprentice" element={<ApprenticeHome />} />
         <Route path="/apprentice/skills/:skillId" element={<ApprenticeSkill />} />
+        <Route path="/apprentice/fingerspelling" element={<Suspense fallback={null}><FingerspellingScreen /></Suspense>} />
         {/* The old lesson list lived at /apprentice; bare list paths land on the dashboard rather than a dead page. */}
         <Route path="/apprentice/skills" element={<Navigate replace to="/apprentice" />} />
         <Route path="/apprentice/lessons" element={<Navigate replace to="/apprentice" />} />

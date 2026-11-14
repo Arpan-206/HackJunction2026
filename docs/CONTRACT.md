@@ -10,7 +10,7 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'general';
+type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'fingerspelling' | 'general';
 type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 type Hands = Side | 'both';   // one hand (left or right) or two
 

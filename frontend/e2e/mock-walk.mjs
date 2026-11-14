@@ -122,7 +122,8 @@ try {
   await page.goto(`${BASE}/apprentice`);
   await expectVisible(page.getByRole('link', { name: /Table tennis/ }), 'table tennis skill card');
   await expectVisible(page.getByRole('link', { name: /Shadow puppets/ }), 'shadow puppets skill card');
-  await expectVisible(page.getByRole('link', { name: /Fingerspelling/ }), 'workshop skill card');
+  await expectVisible(page.getByRole('link', { name: /Fingerspelling/ }), 'fingerspelling skill card');
+  await expectVisible(page.getByRole('link', { name: /Boxing form/ }), 'workshop skill card');
   await settle(3500);
   await shot('10-dashboard');
   await page.keyboard.press('/');
@@ -139,7 +140,7 @@ try {
   await page.getByRole('searchbox').fill('');
 
   step('apprentice: a workshop skill page has no start button');
-  await page.getByRole('link', { name: /Fingerspelling/ }).click();
+  await page.getByRole('link', { name: /Boxing form/ }).click();
   await expectVisible(page.getByText(/Not teachable yet/), 'workshop note');
   if (await page.getByRole('link', { name: /Start lesson/ }).count()) throw new Error('a workshop skill must not offer a start button');
 

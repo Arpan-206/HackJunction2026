@@ -440,3 +440,11 @@
     transform: none;
   }
 }
+
+/* Extra ways into a skill, such as the fingerspelling drill and chart. */
+.sk-page__extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+}

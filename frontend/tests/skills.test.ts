@@ -32,9 +32,9 @@ const byId = (skills: SkillView[], id: string) => skills.find((s) => s.id === id
 describe('buildSkills: catalogue merged with lessons', () => {
   it('makes the seeded skills live from the seed lessons and keeps the rest in the workshop', () => {
     const skills = buildSkills(LOCAL_LESSONS);
-    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet']);
+    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet', 'fingerspelling']);
     expect(skills.filter((s) => !s.live).map((s) => s.id)).toEqual([
-      'fingerspelling', 'boxing', 'guitar_chords', 'rock_paper_scissors', 'hand_therapy',
+      'boxing', 'guitar_chords', 'rock_paper_scissors', 'hand_therapy',
     ]);
     expect(byId(skills, 'table_tennis').lessonCount).toBe(3);
     expect(byId(skills, 'piano').courses.map((c) => c.id)).toEqual(['seed-piano']);
@@ -55,7 +55,7 @@ describe('buildSkills: catalogue merged with lessons', () => {
     const q = byId(skills, 'calligraphy_quill');
     expect(q).toMatchObject({ live: true, name: 'Calligraphy quill', difficulty: 'beginner', hands: 'two', description: 'Quill grip summary', lessonCount: 1 });
     expect(q.timeToLearn).toMatch(/1 day/);
-    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(5);
+    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(6);
   });
 
   it('turns a workshop skill live when an expert records a lesson for it, and ignores empty courses', () => {

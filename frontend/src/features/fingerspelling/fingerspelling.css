@@ -1,0 +1,266 @@
+/* ---------- /apprentice/fingerspelling: the word drill and the letter chart ---------- */
+.fs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.fs-panel {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+.fs-panel__title {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  margin: 0;
+}
+.fs-note {
+  font: italic var(--step-0) / 1.45 var(--font-note);
+  color: var(--text-2);
+  margin: 0;
+  max-width: 60ch;
+}
+.fs-words,
+.fs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.fs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font: var(--step-0) / 1.3 var(--font-ui);
+}
+.fs-input {
+  font: 600 var(--step-1) / 1.2 var(--font-ui);
+  letter-spacing: 0.12em;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 14rem;
+}
+
+/* the word, letter by letter */
+.fs-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fs-strip__l {
+  font: 600 var(--step-2) / 1 var(--font-display);
+  width: 2.6rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  color: var(--text-2);
+  background: var(--surface);
+}
+.fs-strip__l--now {
+  color: var(--text);
+  border: 2px solid var(--lapis);
+}
+.fs-strip__l--ok {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.fs-strip__l--miss {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* the expert, the letter, the learner */
+.fs-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+@media (max-width: 960px) {
+  .fs-stage {
+    grid-template-columns: 1fr;
+  }
+}
+.fs-stage__pane {
+  margin: 0;
+  min-height: 22rem;
+  position: relative;
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--stage-bg);
+  display: flex;
+  flex-direction: column;
+}
+.fs-stage__pane > :last-child {
+  flex: 1;
+}
+.fs-stage__cap {
+  font: 600 var(--step-0) / 1.2 var(--font-ui);
+  padding: 0.5rem 0.8rem;
+  color: var(--text);
+}
+.fs-now {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+.fs-now__letter {
+  --hold: 0deg;
+  font: 700 var(--step-4) / 1 var(--font-display);
+  width: 7rem;
+  height: 7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  /* the hold ring fills as every finger stays in place */
+  background:
+    radial-gradient(closest-side, var(--surface) 86%, transparent 87%),
+    conic-gradient(var(--ok) var(--hold), var(--line) 0);
+}
+.fs-now__shape {
+  font: var(--step-0) / 1.45 var(--font-ui);
+  margin: 0;
+  max-width: 40ch;
+}
+.fs-now__move {
+  font: italic var(--step-0) / 1.4 var(--font-note);
+  color: var(--text-2);
+  margin: 0;
+}
+.fs-now__match {
+  font: 600 var(--step-1) / 1.2 var(--font-ui);
+  margin: 0;
+}
+.fs-now__fix {
+  color: var(--danger);
+  font: var(--step-0) / 1.4 var(--font-ui);
+  margin: 0;
+  min-height: 2.8em;
+}
+.fs-now__ok {
+  color: var(--ok);
+  font: var(--step-0) / 1.4 var(--font-ui);
+  margin: 0;
+  min-height: 2.8em;
+}
+
+/* result */
+.fs-score {
+  font: var(--step-0) / 1.2 var(--font-ui);
+  margin: 0;
+}
+.fs-score__n {
+  font: 700 var(--step-4) / 1 var(--font-display);
+}
+.fs-table {
+  border-collapse: collapse;
+  font: var(--step-0) / 1.4 var(--font-ui);
+}
+.fs-table__cap {
+  text-align: left;
+  caption-side: top;
+  padding-bottom: 0.4rem;
+}
+.fs-table th,
+.fs-table td {
+  padding: 0.3rem 0.9rem 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.fs-table__miss td:last-child {
+  color: var(--danger);
+}
+
+/* chart */
+.fs-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.fs-chart__pick {
+  display: grid;
+  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .fs-chart__pick {
+    grid-template-columns: 1fr;
+  }
+}
+.fs-chart__hand {
+  height: 18rem;
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--stage-bg);
+}
+.fs-chart__big {
+  font: 700 var(--step-4) / 1 var(--font-display);
+  margin: 0 0 0.5rem;
+}
+.fs-twins,
+.fs-groups {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font: var(--step-0) / 1.45 var(--font-ui);
+}
+.fs-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+.fs-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: var(--step-0) / 1.3 var(--font-ui);
+}
+.fs-card--on {
+  border: 2px solid var(--lapis);
+}
+.fs-card:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.fs-card__letter {
+  font: 700 var(--step-3) / 1 var(--font-display);
+}
+.fs-card__note {
+  color: var(--text-2);
+  text-align: center;
+}
+.fs-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 2.6rem;
+}
+.fs-bars__bar {
+  --curl: 0;
+  width: 0.7rem;
+  /* a straight finger is a tall bar, a curled one short: the bar is how far the finger reaches */
+  height: calc((1 - var(--curl)) * 2.2rem + 0.4rem);
+  background: var(--text-2);
+  border-radius: 2px;
+}
