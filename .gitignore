@@ -21,6 +21,8 @@ backend/data/
 genui/test/output/
 playwright-report/
 test-results/
+frontend/docs/screens/*-zz-failure.png
+persisted_settings.json
 
 # Core service (core/): runtime output, captures, models, generated demo lessons
 logs/*.json
