@@ -25,7 +25,8 @@ const LIVE_STAGE = { decor: false, showGrid: false, controls: 'none' } as const;
 function Inner({ motion, recordingId, side, prop, label }: GuideHandProps) {
   const { recording } = useRecording(recordingId);
   const frames = recording?.frames ?? null;
-  const pb = usePlayback(frames);
+  // Only getFrame is read here, so the position tick would only re-render the guide.
+  const pb = usePlayback(frames, { tick: false });
   const s = side ?? 'right';
   const [live, setLive] = useState(false);
   const still = useMemo(() => {
