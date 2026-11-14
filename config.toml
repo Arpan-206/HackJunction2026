@@ -67,6 +67,30 @@ pinky_tip = "little_tip"
 hand_palm = "palm"
 hand_wrist = "wrist"
 
+[calibration]
+# Per-wearer flat and fist calibration (core/calibration.py). Reads the files
+# the backend stores from /gloves/calibrate and POST /calibrations; no second
+# format. Loaded at start and again on every `calibrate` command. Glove hands
+# only; the fake gloves skip it.
+enabled = true
+# The backend's data dir (its DATA_DIR setting), relative to this file.
+data_dir = "backend/data"
+# Wearer name as typed in the calibration screen. Empty: the newest flat and
+# fist calibration saved for that side, whoever wore it. left_wearer and
+# right_wearer override wearer per hand (master and learner on one pair).
+wearer = ""
+left_wearer = ""
+right_wearer = ""
+# Joints with a flat-to-fist range below this stay raw (0.05 rad, as the
+# backend's CALIBRATION_MIN_RANGE_RAD).
+min_range_deg = 2.9
+# Calibrated fraction of the wearer's range is clipped to [clip_low,
+# clip_high], then times [hand] curl_full_deg (thumb curl_full_thumb_deg).
+# 1.0 matches the backend's clip; a tight fist past the captured loose fist
+# reads the same as it.
+clip_low = 0.0
+clip_high = 1.0
+
 [camera]
 device = 0
 video = ""
