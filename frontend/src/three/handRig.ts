@@ -2,7 +2,7 @@ import { Group, Matrix4, Skeleton, SkinnedMesh, type Bone, type Object3D, type V
 import type { Finger, Side } from '../api/types';
 import type { StageColors } from '../theme/themes';
 import { FINGER_ORDER } from './anatomy';
-import { installDualQuaternionSkinning } from './dqSkinning';
+import { applyDualQuaternionBoneTransform, installDualQuaternionSkinning, skinWithDualQuaternions } from './dqSkinning';
 import type { HandTemplate } from './handModel';
 import { applyHandPose, createBones } from './handPose';
 import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
@@ -58,6 +58,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     m.bind(skeleton, IDENTITY);
     // Bones move the surface far from its bind bounds, and the hand is always on stage anyway.
     m.frustumCulled = false;
+    applyDualQuaternionBoneTransform(m);
     root.add(m);
     return m;
   };
@@ -67,6 +68,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     depth.userData.noCast = true;
   }
   const mesh = skin(mats.fill);
+  skinWithDualQuaternions(skeleton, mesh);
   if (mats.line) {
     const hull = skin(mats.line);
     hull.userData.noCast = true;
