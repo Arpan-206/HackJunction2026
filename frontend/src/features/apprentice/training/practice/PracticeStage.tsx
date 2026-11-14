@@ -58,20 +58,16 @@ export interface PracticeStageProps extends ModeProps {
  */
 export function PracticeStage({ coach, gloves, side, prop, cue, policy, toleranceDeg, phase, transitionAt, video }: PracticeStageProps) {
   const progress = () => progressOf(phase, transitionAt);
-  const expertAway = phase === 'try' && !policy.showMaster;
   return (
     <div className="ap-practice">
       <figure className="ap-practice__pane">
-        {expertAway ? (
-          <p className="ap-practice__away">The expert steps back while the ghost is off. Show your own hand.</p>
-        ) : (
-          <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? "The expert's chalk hand works a wooden puppet hand on strings; both make exactly the same move" : "The expert's chalk hand plays the move"}>
-            <FramingCamera progress={progress} far={prop === 'racket' ? 1.3 : prop === 'keyboard' ? 1.25 : 1} />
-            <ExpertSide coach={coach} side={side} prop={prop} cue={cue} progress={progress} watching={phase === 'watch' || transitionAt !== null} />
-          </HandCanvas>
-        )}
+        {/* The expert stays with the ghost off too: only the ghost over your hand goes. */}
+        <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? "The expert's chalk hand works a wooden puppet hand on strings; both make exactly the same move" : "The expert's chalk hand plays the move"}>
+          <FramingCamera progress={progress} far={prop === 'racket' ? 1.3 : prop === 'keyboard' ? 1.25 : 1} />
+          <ExpertSide coach={coach} side={side} prop={prop} cue={cue} progress={progress} watching={phase === 'watch' || transitionAt !== null} />
+        </HandCanvas>
         <figcaption className="ap-practice__cap">The expert</figcaption>
-        {!expertAway && video}
+        {video}
       </figure>
       <figure className="ap-practice__pane">
         <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? 'Your wooden hand, live from the glove' : policy.showMaster ? "Your wooden hand with the expert's ghost over it" : 'Your wooden hand on its own'}>

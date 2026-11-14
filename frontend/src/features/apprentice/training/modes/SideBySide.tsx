@@ -15,13 +15,9 @@ export function SideBySide({ coach, gloves, side, prop, cue, policy, toleranceDe
     <div className="ap-split">
       <figure className="ap-split__pane">
         <figcaption className="ap-split__cap">The expert</figcaption>
-        {policy.showMaster ? (
-          <HandCanvas preset={preset} stage={{ cameraPosition: [-zoom * 1.9, zoom * 2.7, zoom * 2.4], target: [...target] }} label="The expert's chalk hand">
-            <MasterHand coach={coach} side={side} prop={prop} cue={cue} style="chalk" withProp />
-          </HandCanvas>
-        ) : (
-          <p className="ap-split__hidden note">The expert steps back for this attempt. Show your own hand.</p>
-        )}
+        <HandCanvas preset={preset} stage={{ cameraPosition: [-zoom * 1.9, zoom * 2.7, zoom * 2.4], target: [...target] }} label="The expert's chalk hand">
+          <MasterHand coach={coach} side={side} prop={prop} cue={cue} style="chalk" withProp />
+        </HandCanvas>
       </figure>
       <figure className="ap-split__pane">
         <figcaption className="ap-split__cap">You</figcaption>

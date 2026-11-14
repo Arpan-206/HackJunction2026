@@ -106,14 +106,12 @@ export function ShadowPuppets({ coach, gloves, side, policy, toleranceDeg, step 
         bare
         shadows
         stage={{ cameraPosition: THEATRE_CAMERA }}
-        label={`Shadow puppets by lamplight: ${policy.showMaster ? "the expert's shadow on the left, yours on the right" : 'your shadow on the wall'}, making ${name.toLowerCase()}`}
+        label={`Shadow puppets by lamplight: the expert's shadow on the left, yours on the right, making ${name.toLowerCase()}`}
       >
         <ShadowTheatreSet />
-        {policy.showMaster && (
-          <Puppet x={-PUPPET_X} placements={placements}>
-            {(p) => <Hand side={p.side} style="chalk" getFrame={expertFrame(p.side)} position={p.position} rotation={p.rotation} scale={p.scale} />}
-          </Puppet>
-        )}
+        <Puppet x={-PUPPET_X} placements={placements}>
+          {(p) => <Hand side={p.side} style="chalk" getFrame={expertFrame(p.side)} position={p.position} rotation={p.rotation} scale={p.scale} />}
+        </Puppet>
         <Puppet x={PUPPET_X} placements={placements}>
           {(p) =>
             p.side === side ? (
@@ -129,15 +127,9 @@ export function ShadowPuppets({ coach, gloves, side, policy, toleranceDeg, step 
       <p className="sp-theatre__name" aria-hidden="true">
         {name}
       </p>
-      {policy.showMaster ? (
-        <span className="sp-theatre__who sp-theatre__who--expert" aria-hidden="true">
-          The expert
-        </span>
-      ) : (
-        <span className="sp-theatre__who sp-theatre__who--expert sp-theatre__who--away" aria-hidden="true">
-          The expert steps back. Make {name.toLowerCase()} from memory.
-        </span>
-      )}
+      <span className="sp-theatre__who sp-theatre__who--expert" aria-hidden="true">
+        The expert
+      </span>
       <span className="sp-theatre__who sp-theatre__who--you" aria-hidden="true">
         You
       </span>

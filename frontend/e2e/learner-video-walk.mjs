@@ -172,7 +172,9 @@ async function practice(page, lessonId, suffix) {
   const pipTime = await page.locator('.ap-practice__pane .ap-pip video').evaluate((v) => v.currentTime);
   if (!(pipTime > 0)) fail('the take video should play in time with the expert');
   await page.getByRole('checkbox', { name: /Show the expert.s ghost/ }).uncheck();
-  await visible(page.getByText('The expert steps back while the ghost is off.'), 'expert panel with the ghost off');
+  // the ghost goes, the expert stays
+  await visible(page.getByRole('img', { name: "The expert's chalk hand plays the move" }), 'expert hand with the ghost off');
+  await visible(page.getByRole('img', { name: 'Your wooden hand on its own' }), 'your hand without the ghost');
   await page.waitForTimeout(1200);
   await shot(page, `practice-try-ghostoff${suffix}`);
   await page.getByRole('checkbox', { name: /Show the expert.s ghost/ }).check();
