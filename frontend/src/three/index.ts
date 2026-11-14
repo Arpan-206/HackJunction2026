@@ -1,0 +1,16 @@
+export { Hand, type HandProps, type HandHandle } from './Hand';
+export { HandCanvas, Stage, PRESETS, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
+export { Racket, Keyboard } from './props';
+export { BallSketch, KeysSketch, PropCue, RacketSketch } from './sketchProps';
+export { JointRings, FingertipTrails } from './overlays';
+export { useStageColors } from './stageContext';
+export { synthFrame, restFrame, curlsToFlexion } from './motion';
+export { HandSmoother, DEFAULT_SMOOTHING, type SmoothingConfig } from './smoothing';
+export type { HandStyle } from './materials';
+export type { HandRig } from './handRig';
+export { PreviewHost, HandPreview } from './Preview';
+export { createGoldLeafMaterial, createMarbleMaterial, getWalnutTextures, getMarbleTextures, getPlasterTextures } from './surfaces';
+export { GoldSeal, type StageQuality } from './atmosphere';
+export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';
+export { CODEX_STAGE, drawParchment, getParchmentTexture, getParchmentUrl } from './parchment';
+export { withHatching, createHatchedShadowMaterial } from './sketch';

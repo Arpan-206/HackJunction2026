@@ -1,0 +1,221 @@
+{
+  "id": "seed-surgical-ties",
+  "title": "Surgical grips: ties and the needle arc",
+  "skill": "surgical_grips",
+  "summary": "An instrument tie, the wrist arc that drives a curved needle, and a two-handed square knot. The gloves read your finger curls and wrist roll only: they cannot see the instrument, the thread, the knot or the tissue. A practice aid, not a qualification.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-14T00:00:01+00:00",
+  "steps": [
+    {
+      "id": "seed-sg-instrument-tie",
+      "title": "Lesson 1: Instrument tie",
+      "instruction": "Hold the driver in the ring grip. Open the jaws with your thumb to take the tail, close and pull it through, then lay the knot flat with a small turn of the wrist.",
+      "move_id": "sg_instrument_tie",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.4,
+              "ring": 0.55,
+              "little": 0.8
+            },
+            "ms": 1000
+          },
+          {
+            "pose": {
+              "thumb": 0.3,
+              "index": 0.2,
+              "middle": 0.35,
+              "ring": 0.4,
+              "little": 0.8
+            },
+            "ms": 800
+          },
+          {
+            "pose": {
+              "thumb": 0.55,
+              "index": 0.2,
+              "middle": 0.45,
+              "ring": 0.6,
+              "little": 0.8
+            },
+            "ms": 1000,
+            "roll": -0.1745
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.4,
+              "ring": 0.55,
+              "little": 0.8
+            },
+            "ms": 1000,
+            "roll": 0.3491
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sg-needle-arc",
+      "title": "Lesson 2: Driving the needle",
+      "instruction": "Keep the ring grip still and let the wrist do the work: roll it over to drive the needle along its curve, then back to draw it out.",
+      "move_id": "sg_needle_arc",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.4,
+              "ring": 0.55,
+              "little": 0.8
+            },
+            "ms": 500
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.4,
+              "ring": 0.55,
+              "little": 0.8
+            },
+            "ms": 800,
+            "roll": 1.3963
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.4,
+              "ring": 0.55,
+              "little": 0.8
+            },
+            "ms": 500,
+            "roll": -0.3491
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 5,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sg-square-knot",
+      "title": "Lesson 3: Two-handed square knot",
+      "instruction": "Right hand holds one strand. The left hand slips its index finger under the other strand, pinches it with the thumb, turns over and passes it through. The gloves cannot tell a square knot from a granny knot.",
+      "move_id": "sg_square_knot",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.5,
+              "index": 0.5,
+              "middle": 0.7,
+              "ring": 0.7,
+              "little": 0.7
+            },
+            "ms": 4400
+          }
+        ],
+        "left_keys": [
+          {
+            "pose": {
+              "thumb": 0.3,
+              "index": 0.1,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 700
+          },
+          {
+            "pose": {
+              "thumb": 0.3,
+              "index": 0.35,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 700,
+            "roll": -0.5236
+          },
+          {
+            "pose": {
+              "thumb": 0.55,
+              "index": 0.55,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 600,
+            "roll": -0.5236
+          },
+          {
+            "pose": {
+              "thumb": 0.55,
+              "index": 0.55,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 900,
+            "roll": 0.5236
+          },
+          {
+            "pose": {
+              "thumb": 0.35,
+              "index": 0.3,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 700
+          },
+          {
+            "pose": {
+              "thumb": 0.35,
+              "index": 0.25,
+              "middle": 0.85,
+              "ring": 0.85,
+              "little": 0.5
+            },
+            "ms": 800
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    }
+  ],
+  "test": null
+}

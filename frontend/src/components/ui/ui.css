@@ -1,0 +1,438 @@
+/* ---------- Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  min-height: var(--target);
+  min-width: var(--target);
+  padding: 0.55em 1.3em;
+  border-radius: var(--radius-s);
+  border: 2px solid transparent;
+  font: 700 var(--step-0) / 1 var(--font-ui);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.btn--secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.btn--secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.btn--lg {
+  min-height: 56px;
+  padding: 0.7em 1.7em;
+  font-size: var(--step-1);
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.5rem;
+}
+.card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.card--interactive {
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+.card--interactive:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-strong);
+}
+.card__title {
+  font-size: var(--step-1);
+  margin-bottom: 0.35rem;
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.15em 0.75em;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  font: 700 var(--step--1) / 1.5 var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.badge--lapis {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.badge--gold {
+  color: var(--gold-text);
+  background: color-mix(in srgb, var(--gold) 24%, transparent);
+  border-color: var(--gold);
+}
+.badge--ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+}
+.badge--danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ---------- Stepper ---------- */
+.stepper {
+  display: flex;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+}
+.stepper__item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  color: var(--text-2);
+  position: relative;
+}
+.stepper__item:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  margin: 0 0.7rem;
+  min-width: 12px;
+}
+.stepper__item--done:not(:last-child)::after {
+  background: var(--accent);
+}
+.stepper__dot {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font: 700 1.1rem var(--font-ui);
+  background: var(--surface);
+  color: var(--text);
+}
+.stepper__item--current .stepper__dot {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.stepper__item--done .stepper__dot {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.stepper__label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stepper__item--current .stepper__label {
+  color: var(--text);
+}
+@media (max-width: 640px) {
+  .stepper__item:not(.stepper__item--current) .stepper__label {
+    display: none;
+  }
+}
+
+/* ---------- Tabs ---------- */
+.tabs__list {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid var(--line);
+  overflow-x: auto;
+}
+.tabs__tab {
+  min-height: var(--target);
+  padding: 0.5rem 1.2rem;
+  background: none;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  margin-bottom: -2px;
+  font: 700 var(--step-0) var(--font-ui);
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tabs__tab[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tabs__panel {
+  padding-top: 1rem;
+}
+
+/* ---------- Field ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.field__label {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.field__hint {
+  font-family: var(--font-note);
+  font-style: italic;
+  color: var(--text-2);
+  font-size: 1.1em;
+}
+.field__error {
+  color: var(--danger);
+  font-weight: 700;
+}
+.field__control {
+  min-height: var(--target);
+  padding: 0.6em 0.8em;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font: 400 var(--step-0) / 1.4 var(--font-ui);
+  width: 100%;
+}
+textarea.field__control {
+  resize: vertical;
+  min-height: 7.5rem;
+}
+.field__control[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* ---------- Countdown ---------- */
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--scrim) 88%, transparent);
+  color: var(--paper);
+}
+.countdown__num {
+  font: 500 clamp(9rem, 32vw, 24rem) / 1 var(--font-display);
+  color: var(--paper);
+  animation: countdown-pop 1s ease-out;
+}
+.countdown__caption {
+  position: absolute;
+  bottom: 14%;
+  font: italic 400 var(--step-2) var(--font-note);
+  color: var(--paper);
+}
+@keyframes countdown-pop {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+}
+
+/* ---------- RecordButton ---------- */
+.rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 64px;
+  padding: 0.4rem 1.6rem 0.4rem 0.6rem;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  font: 700 var(--step-1) var(--font-ui);
+  cursor: pointer;
+}
+.rec:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.rec:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rec__dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  display: grid;
+  place-items: center;
+  transition: border-radius 0.2s;
+}
+.rec--on {
+  border-color: var(--accent-text);
+}
+.rec--on .rec__dot {
+  border-radius: 12px;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+.rec__time {
+  font: 700 var(--step-1) var(--font-ui);
+  font-variant-numeric: lining-nums tabular-nums;
+  color: inherit;
+}
+@keyframes rec-pulse {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-text) 35%, transparent);
+  }
+}
+
+/* ---------- Toast ---------- */
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(32rem, calc(100vw - 2rem));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: var(--scrim);
+  color: var(--paper);
+  border: 2px solid color-mix(in srgb, var(--paper) 45%, transparent);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow);
+}
+.toast--error {
+  border-color: var(--danger);
+}
+.toast--ok {
+  border-color: var(--rail-ok);
+}
+.toast__msg {
+  flex: 1;
+}
+.toast .btn {
+  color: var(--paper);
+}
+.toast .btn--secondary {
+  border-color: var(--paper);
+}
+
+/* ---------- Toggle (pressed state without a filled primary) ---------- */
+.btn--toggle {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--line);
+}
+.btn--toggle[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  box-shadow: inset 0 -4px 0 var(--accent);
+}
+.btn--toggle:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.reason {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+
+/* ---------- Disclosure: secondary settings behind one plain line ---------- */
+.disclosure {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.disclosure__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--target);
+  padding: 0.4rem 0.2rem;
+  cursor: pointer;
+  list-style: none;
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure__summary::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.disclosure[open] > .disclosure__summary::before {
+  transform: rotate(45deg);
+}
+.disclosure__summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.disclosure__summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.disclosure__body {
+  display: grid;
+  gap: 1rem;
+  padding: 0.5rem 0 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .disclosure__summary::before {
+    transition: none;
+  }
+}
+
+/* "Add a prop" switch (features/shared/PropSwitch): a quiet toggle with its one-line caveat beside it. */
+.prop-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+}

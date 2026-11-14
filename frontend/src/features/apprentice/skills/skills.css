@@ -1,0 +1,442 @@
+/* The learner dashboard (search and skill cards) and the skill page. Semantic tokens only; nothing under 16px; gold only for
+   mastery. The 3D stills are drawn by the shared preview canvas, which sits above the page (z-index 3): anything that must
+   cover a still, such as the workshop veil, needs z-index 4 and no transformed or translucent ancestor. */
+
+/* ---------- Dashboard ---------- */
+.sk-dash {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 2rem;
+}
+.sk-search {
+  display: flex;
+  align-items: center;
+  max-width: 46rem;
+  /* Text-2, not line-strong: line-strong is gold in notte, and gold is kept for mastery. */
+  border: 2px solid var(--text-2);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+}
+.sk-search:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--focus-inner);
+}
+.sk-search__icon {
+  flex: none;
+  margin-left: 0.95rem;
+  color: var(--text-2);
+}
+.sk-search__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 400 var(--step-1) / 1.3 var(--font-ui);
+  appearance: none;
+}
+.sk-search__input:focus,
+.sk-search__input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.sk-search__input::placeholder {
+  color: var(--text-2);
+  opacity: 1;
+}
+.sk-search__input::-webkit-search-cancel-button,
+.sk-search__input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+.sk-search__key {
+  flex: none;
+  margin-right: 0.95rem;
+  min-width: 1.9rem;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  color: var(--text-2);
+  font: 600 1rem / 1.5 var(--font-ui);
+  text-align: center;
+}
+.sk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.25rem;
+}
+.sk-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.1rem;
+}
+.sk-toggles__label {
+  margin-right: 0.35rem;
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.sk-toggle {
+  min-height: var(--target);
+  padding: 0 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: 600 var(--step--1) var(--font-ui);
+  text-underline-offset: 0.35em;
+  cursor: pointer;
+}
+.sk-toggle:hover {
+  color: var(--text);
+}
+.sk-toggle[aria-pressed='true'] {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+.sk-toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -2px;
+}
+.sk-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 1rem;
+  color: var(--text);
+  font-size: var(--step-0);
+}
+.sk-count p {
+  margin: 0;
+}
+.sk-link-btn {
+  min-height: var(--target);
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 600 var(--step--1) var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+.sk-link-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.sk-card__why {
+  font: italic 400 var(--step-0) / 1.35 var(--font-note);
+  color: var(--text-2);
+}
+.sk-card__why strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16.5rem), 1fr));
+  gap: 1.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sk-grid > li {
+  display: flex;
+}
+.sk-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--text-2) 45%, transparent);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.18s, border-color 0.18s;
+}
+.sk-card:hover {
+  border-color: var(--text);
+}
+.sk-card:not(.sk-card--workshop):hover {
+  transform: translateY(-3px);
+}
+.sk-card:focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 4px;
+  border-color: var(--text);
+}
+.sk-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-s);
+  background: var(--stage-bg);
+}
+.sk-card__view {
+  position: absolute;
+  inset: 0;
+}
+.sk-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+}
+.sk-card__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.sk-card__body {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem 0.4rem 0.45rem;
+}
+.sk-card__name {
+  margin: 0;
+  font: 600 var(--step-1) / 1.15 var(--font-display);
+}
+.sk-card__lessons {
+  display: grid;
+  color: var(--text-2);
+  font-size: max(1rem, var(--step--1));
+}
+.sk-card__done {
+  color: var(--gold-text);
+  font-weight: 700;
+}
+.sk-card__workshop {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.sk-card--workshop {
+  background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed color-mix(in srgb, var(--text-2) 70%, transparent);
+}
+.sk-card--workshop .sk-card__name {
+  color: var(--text-2);
+}
+
+.sk-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-2);
+  font: 600 max(1rem, var(--step--1)) var(--font-ui);
+}
+.sk-level__marks {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.sk-level__marks span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.sk-level__marks span.is-on {
+  background: currentColor;
+}
+
+.sk-empty {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+  padding: 2.5rem 0;
+  font: italic 400 var(--step-1) / 1.4 var(--font-note);
+  color: var(--text-2);
+}
+.sk-empty p {
+  margin: 0;
+}
+.sk-empty__try {
+  min-height: var(--target);
+  padding: 0 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.sk-empty__try:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Skill page ---------- */
+.sk-back {
+  margin: -0.5rem 0 0.25rem;
+}
+.sk-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 3vw, 2.75rem);
+  align-items: start;
+}
+.sk-show {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  position: sticky;
+  top: 1rem;
+}
+.sk-show__stage {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+}
+.sk-show__cap {
+  display: grid;
+  gap: 0.2rem;
+}
+.sk-show__now {
+  font: 700 var(--step-1) / 1.25 var(--font-ui);
+}
+.sk-show__src {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.sk-show__switch {
+  margin-top: 0.2rem;
+  margin-left: -0.55rem;
+}
+.sk-page__info {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+}
+.sk-page__lede {
+  margin: 0;
+  font: 400 var(--step-1) / 1.4 var(--font-note);
+}
+.sk-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  justify-content: start;
+  gap: 0.75rem 2.25rem;
+  margin: 0;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.sk-facts dt {
+  color: var(--text-2);
+  font-size: max(1rem, var(--step--1));
+}
+.sk-facts dd {
+  margin: 0.15rem 0 0;
+  font: 600 var(--step-0) var(--font-ui);
+}
+.sk-facts dd .sk-level {
+  color: var(--text);
+  font-size: var(--step-0);
+}
+.sk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.sk-learn h2 {
+  margin: 0;
+  font-size: var(--step-1);
+}
+.sk-learn__sum {
+  margin: 0.25rem 0 0;
+  color: var(--text-2);
+}
+.sk-course {
+  margin-top: 1rem;
+}
+.sk-course__head {
+  display: grid;
+  gap: 0.1rem;
+}
+.sk-course__head h3 {
+  margin: 0;
+  font: 700 var(--step-0) var(--font-ui);
+}
+.sk-course__by {
+  color: var(--text-2);
+}
+.sk-link {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.sk-lessons {
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.sk-lessons__item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.sk-lessons__title {
+  font-weight: 600;
+}
+.sk-lessons__state {
+  color: var(--text-2);
+}
+.sk-lessons__state.is-mastered {
+  color: var(--gold-text);
+  font-weight: 700;
+}
+.sk-page__notyet {
+  margin: 0;
+  font: 600 var(--step-0) / 1.45 var(--font-ui);
+}
+
+@media (max-width: 980px) {
+  .sk-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sk-show {
+    position: static;
+  }
+}
+@media (max-width: 560px) {
+  .sk-search__input {
+    font-size: var(--step-0);
+  }
+  .sk-search__key {
+    display: none;
+  }
+  .sk-show__stage {
+    aspect-ratio: 16 / 11;
+  }
+  .sk-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sk-filters {
+    gap: 0;
+  }
+  .sk-actions > * {
+    flex: 1 1 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-card {
+    transition: none;
+  }
+  .sk-card:not(.sk-card--workshop):hover {
+    transform: none;
+  }
+}

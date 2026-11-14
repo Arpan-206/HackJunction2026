@@ -1,0 +1,795 @@
+/* Master studio. Semantic tokens only; gold is not used here (reserved for verified), vermilion only for corrections (a take that is actually off). */
+
+.mst-section {
+  margin-bottom: clamp(1.75rem, 3.5vw, 3rem);
+}
+.mst-h {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: var(--step-1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+}
+.mst-alert {
+  padding: 0.7rem 1rem;
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  font-weight: 700;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.mst-alert--error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.mst-empty {
+  padding: 0.5rem 0;
+}
+
+/* Segmented button groups */
+.mst-seg {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Move picker */
+.mst-picker {
+  display: grid;
+  gap: 0.75rem;
+}
+.mst-moves {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 1rem;
+}
+.mst-move {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  text-align: left;
+  padding: 0.6rem 0.6rem 0.9rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.mst-move:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.mst-move.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+}
+.mst-move > * {
+  padding-inline: 0.4rem;
+}
+.mst-move > .mst-guide {
+  padding: 0;
+}
+.mst-move__name {
+  font: 500 var(--step-0) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-move__desc {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+.mst-move__meta {
+  margin-top: 0.2rem;
+  font-size: var(--step-0);
+}
+.mst-move--free {
+  cursor: default;
+  align-content: start;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-style: dashed;
+}
+.mst-move--free:hover {
+  transform: none;
+}
+.mst-guide {
+  position: relative;
+  height: 10.5rem;
+  background: var(--stage-bg);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+
+/* Studio layout */
+.mst-guide__view {
+  width: 100%;
+  height: 100%;
+}
+.mst-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(21rem, 1fr);
+  gap: clamp(1rem, 2vw, 1.75rem);
+  align-items: start;
+}
+.mst-studio__view,
+.mst-studio__side {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.mst-studio__view {
+  position: sticky;
+  top: 1rem;
+}
+.mst-studio--dialog {
+  grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 1fr);
+}
+.mst-studio--dialog .mst-studio__view {
+  position: static;
+}
+@media (max-width: 1000px) {
+  .mst-studio,
+  .mst-studio--dialog {
+    grid-template-columns: 1fr;
+  }
+  .mst-studio__view {
+    position: static;
+  }
+}
+
+.mst-stage,
+.mst-replay__stage {
+  position: relative;
+  height: clamp(24rem, 62vh, 40rem);
+  background: var(--stage-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.mst-stage__overlay {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+.mst-stage__tag {
+  color: var(--text);
+  font: italic 500 var(--step-1) var(--font-note);
+}
+/* While a take records, a walnut-ink rule is drawn inside the stage frame; the panel title says "Recording take N". */
+.mst-stage--live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 3px var(--walnut-ink);
+  pointer-events: none;
+}
+.mst-toggles {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.mst-lanes {
+  width: 100%;
+  height: 11rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  display: block;
+}
+
+/* Replay */
+.mst-replay {
+  display: grid;
+  gap: 0.9rem;
+}
+.mst-replay__controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-scrub {
+  flex: 1 1 14rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.mst-scrub input {
+  flex: 1;
+  min-height: var(--target);
+  accent-color: var(--accent);
+}
+.mst-scrub__time {
+  font: 700 var(--step-0) var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* Calibration */
+.mst-cal {
+  display: grid;
+  gap: 0.75rem;
+}
+.mst-cal__status,
+.mst-cal__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-capture {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+  background: color-mix(in srgb, var(--scrim) 92%, transparent);
+  color: var(--paper);
+}
+.mst-capture__step {
+  font: italic 400 var(--step-2) var(--font-note);
+}
+.mst-capture__text {
+  font: 500 var(--step-3) var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mst-progress {
+  width: min(36rem, 80vw);
+  height: 1.1rem;
+  margin: 0 auto;
+  border: 2px solid var(--paper);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mst-progress__bar {
+  height: 100%;
+  width: 100%;
+  background: var(--paper);
+  transform-origin: left;
+  animation: mst-fill linear forwards;
+}
+@keyframes mst-fill {
+  from {
+    transform: scaleX(0.02);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Recorder */
+.mst-rec {
+  display: grid;
+  gap: 0.9rem;
+}
+.mst-rec__goal {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.mst-rec__count {
+  font: 700 var(--step-3) / 1 var(--font-ui);
+}
+.mst-rec__none {
+  font: italic 500 var(--step-1) / 1.2 var(--font-note);
+  color: var(--text-2);
+}
+.mst-rec__count small {
+  font: 700 var(--step-0) var(--font-ui);
+  color: var(--text-2);
+}
+.mst-rec__dots {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.mst-dot {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+.mst-dot.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.mst-takes__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.mst-take {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+}
+.mst-take--aside {
+  opacity: 0.6;
+  background: transparent;
+  border-style: dashed;
+}
+.mst-take__pick {
+  display: grid;
+  place-items: center;
+  width: var(--target);
+  height: var(--target);
+}
+.mst-take__pick input {
+  width: 1.4rem;
+  height: 1.4rem;
+  accent-color: var(--accent);
+}
+.mst-take__main {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-take__name {
+  font: 500 var(--step-0) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-take__score {
+  font: 700 var(--step-1) var(--font-ui);
+  color: var(--text);
+}
+.mst-take__score small {
+  font: 700 var(--step--1) var(--font-ui);
+  color: var(--text-2);
+}
+.mst-take__mark {
+  color: var(--ok);
+  font-weight: 700;
+}
+.mst-take__off {
+  color: var(--danger);
+  font-weight: 700;
+}
+.mst-take__ref {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-take__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+/* Delete sits at the far end of the row, away from Replay and Keep, and asks once inline before removing anything. */
+.mst-take__delete,
+.mst-take__confirm {
+  margin-left: auto;
+}
+.mst-take__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: 600 var(--step-0) var(--font-ui);
+}
+.mst-takes__compare {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+/* Steadiness */
+.mst-steady {
+  display: grid;
+  gap: 0.75rem;
+}
+.mst-steady__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-steady__row input[type='range'] {
+  flex: 1 1 8rem;
+  min-height: var(--target);
+  accent-color: var(--accent);
+}
+.mst-steady__end {
+  font-weight: 700;
+}
+.mst-steady__value {
+  font: 700 var(--step-1) var(--font-ui);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* Save */
+.mst-save {
+  display: grid;
+  gap: 1rem;
+  max-width: 46rem;
+}
+.mst-save__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+.mst-plan {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: var(--step-0);
+}
+
+/* Generate */
+.mst-gen {
+  display: grid;
+  gap: 1rem;
+  max-width: 60rem;
+}
+.mst-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.mst-gen__row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.mst-gen__row .field {
+  min-width: 16rem;
+}
+.mst-busy {
+  font-size: var(--step-1);
+}
+.mst-provider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* Lesson editor */
+.mst-details {
+  display: grid;
+  gap: 1rem;
+  max-width: 60rem;
+}
+.mst-details__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+.mst-details__meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.mst-steps {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.mst-step {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.mst-step__guide {
+  display: grid;
+  gap: 0.6rem;
+}
+.mst-step__guide .mst-guide {
+  height: 14rem;
+}
+.mst-step__form {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+.mst-step__top {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+.mst-step__top .field {
+  flex: 1;
+}
+.mst-step__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  margin-bottom: 0.1rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: 700 1.2rem var(--font-ui);
+}
+.mst-step__nums {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.8rem;
+}
+.mst-step__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mst-step__spacer {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .mst-step {
+    grid-template-columns: 1fr;
+  }
+}
+.mst-test {
+  margin-top: 1.5rem;
+  max-width: 60rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.mst-test__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.mst-savebar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid var(--line);
+}
+
+/* Modal */
+.mst-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--scrim) 70%, transparent);
+}
+.mst-modal__box {
+  width: min(52rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--bg);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  padding: 1.25rem 1.5rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+.mst-modal__box--wide {
+  width: min(78rem, 100%);
+}
+.mst-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.mst-modal__head h2 {
+  font-size: var(--step-1);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mst-move {
+    transition: none;
+  }
+}
+
+/* Chosen-move summary, stepper and plain-voice status lines */
+.mst-steps-bar {
+  margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+  max-width: 44rem;
+}
+.mst-chosen {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: var(--step-1);
+}
+.mst-chosen__name {
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.mst-line {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  font-variant-numeric: oldstyle-nums proportional-nums;
+}
+.mst-line--ok {
+  color: var(--ok);
+  font-style: normal;
+  font: 700 var(--step-0) var(--font-ui);
+}
+.mst-err {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+.mst-gen__provider {
+  margin-top: 1rem;
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  margin-bottom: 1rem;
+}
+.mst-strict {
+  display: grid;
+  gap: 0.4rem;
+}
+.mst-strict__note {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-step__status {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-step__status strong {
+  font: 700 var(--step-0) var(--font-ui);
+  color: var(--ok);
+}
+.mst-step__danger {
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--line);
+}
+.mst-cal--secondary {
+  box-shadow: none;
+  background: transparent;
+}
+.mst-cal--secondary .card__title {
+  font-size: var(--step-0);
+}
+.mst-recbtn-wrap {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+
+/* Describe the movement (text to motion) and video upload */
+.mst-describe {
+  display: grid;
+  gap: 0.4rem;
+}
+.mst-describe__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-describe__row .field__control {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.mst-describe__note {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-video {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.mst-video__title {
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-video__row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-video__file {
+  font: 400 var(--step--1) var(--font-ui);
+  max-width: 100%;
+}
+.mst-video__progress {
+  height: 0.5rem;
+  width: min(30rem, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mst-video__bar {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+}
+.mst-gen__source {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-gen__master {
+  margin-top: 1rem;
+  max-width: 60rem;
+}
+.mst-gen__master {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.5rem;
+}
+.mst-gen__master .mst-gen__source {
+  margin: 0;
+}
+
+/* Hands set-up (HandsControl) and the studio set-up card. */
+.mst-hands {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.mst-hands__label {
+  padding: 0;
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.mst-hands__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+.mst-hands--summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.7rem;
+}
+.mst-setup {
+  display: grid;
+  gap: 1rem;
+}

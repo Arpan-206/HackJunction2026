@@ -1,0 +1,176 @@
+{
+  "id": "seed-shadow-puppets",
+  "title": "Shadow puppets: five animals by candlelight",
+  "skill": "shadow_puppets",
+  "summary": "Make the rabbit, the talking dog, the swan, the flapping bird and the snail, and match the expert's shadow on the wall.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-14T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-sp-rabbit",
+      "title": "Lesson 1: The rabbit",
+      "instruction": "Raise your index and middle finger as the ears. Curl the ring and little finger into the palm and fold the thumb over them.",
+      "move_id": "sp_rabbit",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.9,
+          "little": 0.9
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sp-dog",
+      "title": "Lesson 2: The talking dog",
+      "instruction": "Keep the index, middle and ring finger straight together and curl the little finger away. Drop the thumb to open the mouth, then close it, like the expert's dog.",
+      "move_id": "sp_talking_dog",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.1,
+              "index": 0.05,
+              "middle": 0.05,
+              "ring": 0.1,
+              "little": 0.9
+            },
+            "ms": 600
+          },
+          {
+            "pose": {
+              "thumb": 0.6,
+              "index": 0.05,
+              "middle": 0.05,
+              "ring": 0.1,
+              "little": 0.9
+            },
+            "ms": 600
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 4,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sp-swan",
+      "title": "Lesson 3: The swan",
+      "instruction": "Curl every finger halfway, as if round a ball, and point the thumb straight out as the beak. Hold the head still.",
+      "move_id": "sp_swan",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.15,
+          "index": 0.5,
+          "middle": 0.5,
+          "ring": 0.5,
+          "little": 0.5
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sp-bird",
+      "title": "Lesson 4: The flapping bird",
+      "instruction": "Cross your wrists, hook the thumbs together and keep the fingers flat as wings. Flap from the wrists. The score checks the finger shape; the flap shows on the wall.",
+      "move_id": "sp_flapping_bird",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.3,
+              "index": 0.0,
+              "middle": 0.0,
+              "ring": 0.0,
+              "little": 0.0
+            },
+            "ms": 400,
+            "pitch": 0.5236
+          },
+          {
+            "pose": {
+              "thumb": 0.3,
+              "index": 0.0,
+              "middle": 0.0,
+              "ring": 0.0,
+              "little": 0.0
+            },
+            "ms": 400,
+            "pitch": -0.5236
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 4,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-sp-snail",
+      "title": "Lesson 5: The snail",
+      "instruction": "Make a fist with your left hand for the shell and rest it on the right hand. The right hand's index and middle finger stand up as the feelers.",
+      "move_id": "sp_snail",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.9,
+          "little": 0.9
+        },
+        "left_pose": {
+          "thumb": 0.8,
+          "index": 0.95,
+          "middle": 0.95,
+          "ring": 0.95,
+          "little": 0.95
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    }
+  ],
+  "test": null
+}

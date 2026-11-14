@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "skill": "Table Tennis",
+  "screen": "master_capture",
+  "header": {
+    "title": "Forehand topspin lesson",
+    "subtitle": "Right hand, shakehand grip, Draft",
+    "breadcrumbs": ["Table Tennis", "Forehand topspin"],
+    "stepper": {
+      "steps": ["Capture", "Assay", "Publish"],
+      "current": 0
+    }
+  },
+  "main": [
+    {
+      "type": "hand_stage",
+      "hands": "right",
+      "prop": "racket",
+      "motion": {
+        "kind": "grip_and_swing",
+        "beat_ms": 900
+      },
+      "focus_finger": 2,
+      "show_joints": true,
+      "show_trails": true,
+      "caption": "Shakehand grip, closed face, wrist snaps forward at contact."
+    },
+    {
+      "type": "step_timeline",
+      "title": "Forehand topspin",
+      "steps": [
+        { "label": "Grip", "detail": "Shakehand, index finger on blade", "finger": 2 },
+        { "label": "Stance", "detail": "Feet set, knees bent" },
+        { "label": "Backswing", "detail": "Racket low, face closed" },
+        { "label": "Drive", "detail": "Forward and up, brush the ball" },
+        { "label": "Contact", "detail": "Wrist snap at contact", "finger": 2 },
+        { "label": "Follow-through", "detail": "Finish high, elbow relaxed" }
+      ]
+    },
+    {
+      "type": "action_bar",
+      "primary": { "label": "Record take", "command": "record_take" },
+      "secondary": [
+        { "label": "Send to Assay", "command": "send_to_assay" }
+      ],
+      "hint": "Record 3 to 5 clean forehands per take."
+    }
+  ],
+  "side": [
+    {
+      "type": "take_list",
+      "title": "Takes",
+      "takes": [
+        { "name": "Take 1", "duration": "0:14.2", "score": 71, "status": "set_aside", "note": "Face opened at contact" },
+        { "name": "Take 2", "duration": "0:18.9", "score": 84, "status": "kept", "note": "Wrist snap is crisper" },
+        { "name": "Take 3", "duration": "0:09.6", "status": "recording" }
+      ]
+    },
+    {
+      "type": "note_field",
+      "label": "Coaching note",
+      "hint": "Say what the learner should feel at contact.",
+      "placeholder": "e.g. Close the face before the brush, then snap the wrist."
+    }
+  ]
+}

@@ -1,0 +1,583 @@
+{
+  "id": "seed-crochet",
+  "title": "Crochet basics: hold and four first stitches",
+  "skill": "crochet",
+  "summary": "Hold the hook and yarn, then chain, slip stitch, single and double crochet, told apart by their yarn-over cycles. The gloves follow your hook hand's roll and your yarn finger's lift, so they count the yarn-over cycles; they cannot see the hook, the yarn or which stitch you went into.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-14T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-cr-hold",
+      "title": "Lesson 1: Hook and yarn hold",
+      "instruction": "Right hand: hold the hook like a pencil, thumb and index finger on the flat rest. Left hand: pinch the work between thumb and middle finger, yarn over the index finger.",
+      "move_id": "cr_hold",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.45,
+          "index": 0.4,
+          "middle": 0.5,
+          "ring": 0.8,
+          "little": 0.85
+        },
+        "left_pose": {
+          "thumb": 0.45,
+          "index": 0.2,
+          "middle": 0.5,
+          "ring": 0.7,
+          "little": 0.8
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-cr-chain",
+      "title": "Lesson 2: Chain",
+      "instruction": "Turn the hook to catch the yarn as your left index finger lifts it, then pull through the loop. One yarn-over per chain, at an even pace.",
+      "move_id": "cr_chain",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 400
+          }
+        ],
+        "left_keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 400
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 5,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-cr-slip",
+      "title": "Lesson 3: Slip stitch",
+      "instruction": "Push the hook into the stitch, yarn over and pull straight through both loops. To the gloves it looks almost the same as a chain, so keep the rhythm even.",
+      "move_id": "cr_slip_stitch",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 300,
+            "pitch": -0.1745
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 400
+          }
+        ],
+        "left_keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 300
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 400
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 5,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-cr-single",
+      "title": "Lesson 4: Single crochet",
+      "instruction": "Insert, yarn over and pull up a loop, then yarn over and pull through both: two yarn-overs per stitch.",
+      "move_id": "cr_single",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 300,
+            "pitch": -0.1745
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 400
+          }
+        ],
+        "left_keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 300
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 400
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 4,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-cr-double",
+      "title": "Lesson 5: Double crochet",
+      "instruction": "Yarn over before you insert, then yarn over and pull up, and yarn over and pull through two loops twice: four yarn-overs per stitch.",
+      "move_id": "cr_double",
+      "hands": "both",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 300,
+            "pitch": -0.1745
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350,
+            "roll": 0.6981
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.4,
+              "middle": 0.5,
+              "ring": 0.8,
+              "little": 0.85
+            },
+            "ms": 400
+          }
+        ],
+        "left_keys": [
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 300
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.05,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.3,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 350
+          },
+          {
+            "pose": {
+              "thumb": 0.45,
+              "index": 0.2,
+              "middle": 0.5,
+              "ring": 0.7,
+              "little": 0.8
+            },
+            "ms": 400
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 20,
+        "timing_ms": 300
+      },
+      "video_url": null
+    }
+  ],
+  "test": null
+}

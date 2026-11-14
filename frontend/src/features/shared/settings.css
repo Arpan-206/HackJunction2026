@@ -1,0 +1,212 @@
+/*
+ * Settings and accessibility panel (features/shared/SettingsDialog). A plain bottega sheet over a lapis scrim: ink on
+ * paper, lapis for the chosen state, no gold (that is for mastery), no vermilion (corrections), no malachite (correct).
+ * Every text is at least 16px; targets are at least 44px.
+ */
+.settings-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--scrim) 72%, transparent);
+}
+.settings {
+  width: min(44rem, 100%);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow);
+  font-size: 1.1rem;
+}
+.settings__head,
+.settings__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+}
+.settings__head {
+  border-bottom: 1px solid var(--line);
+}
+.settings__foot {
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.settings__title {
+  font-size: var(--step-2);
+}
+.settings__title:focus {
+  outline: none;
+}
+.settings__title:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+.settings__body {
+  overflow-y: auto;
+  padding: 0.5rem 1.5rem 1.25rem;
+  overscroll-behavior: contain;
+}
+.settings__section {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings__section:last-child {
+  border-bottom: 0;
+}
+.settings__h,
+.settings__legend {
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.settings__note {
+  font: italic 400 1.1rem/1.4 var(--font-note);
+  color: var(--text-2);
+  max-width: 38rem;
+}
+.settings__row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+/* On/off switch: the whole row is the target. */
+.settings-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.5rem 0.9rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-s);
+  font: 700 1.15rem var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.settings-switch:hover {
+  border-color: var(--line-strong);
+}
+.settings-switch__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 6.2rem;
+  justify-content: flex-end;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.settings-switch[aria-checked='true'] .settings-switch__state {
+  color: var(--text);
+}
+.settings-switch__track {
+  position: relative;
+  width: 3.1rem;
+  height: 1.6rem;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+}
+.settings-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.6rem - 8px);
+  height: calc(1.6rem - 8px);
+  border-radius: 2px;
+  background: var(--text-2);
+  transition: transform 0.15s ease;
+}
+.settings-switch[aria-checked='true'] .settings-switch__track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.settings-switch[aria-checked='true'] .settings-switch__knob {
+  background: var(--accent-text);
+  transform: translateX(1.5rem);
+}
+
+/* Radio choices */
+.settings__group {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.settings__legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+}
+.settings__choices {
+  display: grid;
+  gap: 0.5rem;
+}
+.settings-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.8rem;
+  min-height: 52px;
+  padding: 0.65rem 0.9rem;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.settings-choice:hover {
+  border-color: var(--line-strong);
+}
+.settings-choice--on {
+  border-color: var(--line-strong);
+  box-shadow: inset 4px 0 0 var(--accent);
+  background: var(--surface);
+}
+.settings-choice input {
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--accent);
+}
+.settings-choice:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.settings-choice__text {
+  display: grid;
+  gap: 0.1rem;
+}
+.settings-choice__label {
+  font: 700 1.15rem var(--font-ui);
+}
+.settings-choice__blurb {
+  font: italic 400 1.1rem/1.35 var(--font-note);
+  color: var(--text-2);
+}
+
+@media (max-width: 600px) {
+  .settings-scrim {
+    padding: 0.5rem 16px;
+  }
+  .settings__head,
+  .settings__foot {
+    padding: 0.85rem 1rem;
+  }
+  .settings__body {
+    padding: 0.25rem 1rem 1rem;
+  }
+}

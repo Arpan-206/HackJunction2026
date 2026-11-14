@@ -1,0 +1,435 @@
+/* Round 3 learner frames: dashboard, skill page, training room and score, on the playing field. */
+
+.dz-locked {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* learner home */
+.dz-home {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-height: 0;
+  overflow: auto;
+}
+.dz-today {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+.dz-today h2 {
+  font-size: 24px;
+  font-weight: 700;
+}
+.dz-today__what {
+  font-size: 20px;
+  margin-top: 2px;
+}
+.dz-today__streak {
+  font: italic 500 19px var(--font-note);
+  color: var(--text-2);
+}
+.dz-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 28px;
+}
+.dz-search {
+  flex: 1 1 340px;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px 0 14px;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--text-2);
+}
+.dz-search:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.dz-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: 500 20px var(--font-ui);
+  color: var(--text);
+  outline: none;
+}
+.dz-search input::placeholder {
+  color: #5d606b;
+}
+.dz-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  font-size: 18px;
+}
+.dz-filter > span {
+  font-weight: 700;
+  margin-right: 6px;
+}
+.dz-filter button {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: 500 18px var(--font-ui);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.dz-filter button[aria-pressed='true'] {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.dz-count {
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dz-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.dz-card a {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.dz-card__img {
+  display: block;
+  aspect-ratio: 16 / 8.2;
+  background: linear-gradient(#93a2b5 0 45%, #4a3222 45%);
+}
+.dz-card__img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dz-card__body {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 10px 14px 12px;
+}
+.dz-card__name {
+  font: 700 21px/1.15 var(--font-display);
+  letter-spacing: 0.03em;
+}
+.dz-card__meta {
+  font-size: 18px;
+  color: var(--text-2);
+}
+.dz-card__prog {
+  display: grid;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 17px;
+}
+.dz-card__soon {
+  font: italic 500 18px/1.25 var(--font-note);
+  color: var(--text-2);
+}
+.dz-card.is-workshop .dz-card__img img {
+  filter: grayscale(0.85) brightness(0.92);
+  opacity: 0.55;
+}
+.dz-card.is-workshop a {
+  background: color-mix(in srgb, var(--surface) 70%, var(--bg));
+  box-shadow: none;
+  border-style: dashed;
+  border-color: #8d9096;
+}
+.dz-bar {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.dz-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.dz-none {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 28px 30px;
+  background: var(--surface);
+  border: 2px dashed var(--line);
+  border-radius: 6px;
+  max-width: 820px;
+}
+.dz-none h2 {
+  font-size: 28px;
+  font-weight: 700;
+}
+.dz-none p {
+  font-size: 20px;
+  color: var(--text-2);
+}
+.dz-none__try {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* skill page */
+.dz-body--skill {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+.dz-chapters {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: rgba(244, 244, 241, 0.97);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.dz-chapters__play {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.dz-chapters__track {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+.dz-chapters__seg {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding-top: 14px;
+}
+.dz-chapters__seg::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.dz-chapters__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--accent);
+}
+.dz-chapters__seg b {
+  font-size: 18px;
+}
+.dz-chapters__seg.is-done b {
+  color: var(--text-2);
+}
+.dz-chapters__time {
+  font: 700 18px var(--font-ui);
+  color: var(--text-2);
+}
+.dz-facts--row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.dz-facts--row div {
+  display: grid;
+  justify-content: start;
+  gap: 0;
+  border-bottom: 0;
+  border-top: 2px solid var(--line-strong);
+}
+.dz-facts--row dd {
+  font-size: 18px;
+  color: var(--text);
+}
+.dz-lessons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.dz-lessons li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.dz-lessons li > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+.dz-lessons b {
+  font-size: 19px;
+}
+.dz-lessons li > span:last-child > span:not(.dz-bar) {
+  font: italic 500 18px var(--font-note);
+  color: var(--text-2);
+}
+.dz-lessons__n {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  font-weight: 700;
+}
+.dz-lessons .is-done .dz-lessons__n {
+  color: var(--ok);
+}
+.dz-lessons .is-now .dz-lessons__n {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.dz-lessons .is-locked b {
+  color: var(--text-2);
+}
+
+/* training room */
+.dz-roomtop {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 14px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(244, 244, 241, 0.97);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.dz-roomtop__rep {
+  font: 700 19px var(--font-ui);
+}
+.dz-stagehint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 3;
+  max-width: calc(100% - 28px);
+  padding: 10px 18px;
+  background: rgba(244, 244, 241, 0.97);
+  border-radius: 6px;
+  font-size: 19px;
+  text-align: center;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.dz-stagehint b {
+  display: block;
+  font: 700 21px var(--font-display);
+  letter-spacing: 0.03em;
+}
+.dz-story {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.dz-story span {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.dz-story span.is-on {
+  background: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .dz-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .dz-today {
+    grid-template-columns: 1fr;
+    padding: 14px 16px;
+  }
+  .dz-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .dz-card__name {
+    font-size: 18px;
+  }
+  .dz-card__meta,
+  .dz-card__soon,
+  .dz-card__prog {
+    font-size: 16px;
+  }
+  .dz-find {
+    gap: 4px 14px;
+  }
+  .dz-search {
+    flex-basis: 100%;
+  }
+  .dz-home {
+    overflow: visible;
+  }
+  .dz-roomtop {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+  }
+}
