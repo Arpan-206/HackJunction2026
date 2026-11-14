@@ -8,7 +8,8 @@ import type { AttemptPolicy } from '../coach/fade';
 
 /**
  * Tints a hand's fingers from the coach status without React renders: vermilion for a finger out of tolerance and,
- * optionally, malachite for one that is right. Only touches materials when a finger's colour actually changes.
+ * optionally, malachite for one that is right. A finger the step weights too little (coach light fingers) takes the
+ * stage background, so it recedes and never reads as a correction. Only touches materials when a colour changes.
  */
 function useFingerTints(hand: RefObject<HandHandle>, coach: Coach, policy: AttemptPolicy, goodTint: boolean): void {
   const stage = useStageColors();
@@ -20,7 +21,8 @@ function useFingerTints(hand: RefObject<HandHandle>, coach: Coach, policy: Attem
     const live = coach.live.current;
     for (const f of FINGERS) {
       let want: string | null = null;
-      if (policy.showMaster && policy.strings !== 'none' && !policy.rehearsal && live.hasLearner) {
+      if (live.light?.includes(f) && live.hasLearner) want = stage.background;
+      else if (policy.showMaster && policy.strings !== 'none' && !policy.rehearsal && live.hasLearner) {
         if (live.shown.status[f] === 'off' && (!policy.focus || policy.focus.includes(f))) want = stage.vermilion;
         else if (goodTint && policy.strings === 'all') want = stage.malachite;
       }
