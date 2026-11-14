@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 07:15, on branch
+Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 10:55, on branch
 `core-overnight` (pushed to origin at 07:15, merged with `main` as of `9810bf5`). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -82,11 +82,36 @@ exception to the tick rate):
 | Frames delivered to the two clients | 9 616 and 10 802 |
 | Frame gap at the 60 Hz client, median and p99 | 33.4 ms and 36.7 ms |
 
+## Verified on real data (Sat 10:50)
+
+Szymon's 07:41 push holds raw TCP captures from the real solver (port 12277)
+and driver (12276), taken with worn Smartgloves II. The core's reader ran on
+the solver capture with no change to code or `config.toml`:
+
+| Fact | Value seen |
+| --- | --- |
+| `device_type` | `solved_hand` |
+| `timestamp_epoch` | `device_boot` (the clock mapper handles it) |
+| Hand field | `device_info.hand` = `left` or `right` |
+| `device_id` | large unsigned values (1572077328, 2811174587); parity fallback not needed |
+| Groups | `joints_local` (428 B), `joints_world` (728 B), `joints_openxr` (728 B), all 83.33 Hz |
+| `joints_openxr` streams | 26 x `FLOAT[7] TRANSFORM`, `target_frame` = `xr_palm`, `xr_wrist`, `xr_thumb_metacarpal` ... `xr_little_tip`, `reference_frame` = `xr_base` |
+| Mapping | 26/26 by name (the `xr_` prefix is stripped), no enum-order fallback |
+| Static data | 52 `TRANSFORM` entries (rest pose) |
+| Parse result | 2 definitions, 268 data frames, 0 bad frames; wrist at the origin as SPEC says |
+| `python -m core --replay worn_solver.rgmp` | both hands tracked, curl and pinch values live in the debug view |
+
+Still unverified on real gloves: the wrist orientation convention used for
+the local frame (fingers along -Z, back of the hand +Y), yaw calibration,
+RCSP button and LED, and the scoring thresholds on real fingers. His
+`backend/app/services/rig/core_link.py` imports `core.rgmp` and `core.rcsp`
+read-only for his glove status screen.
+
 ## Written but untested, and why
 
 | Part | Why it is untested | What would test it |
 | --- | --- | --- |
-| Real RGMP stream names, the `hand` field, `timestamp_epoch` | Rokoko's docs do not list them; both guesses are implemented and configurable in `[rgmp]` | Connect once; the definition is written to `logs/rgmp_definition_<id>.json`; compare with the `[rgmp]` keys |
+| ~~Real RGMP stream names, the `hand` field, `timestamp_epoch`~~ | **Verified offline at 10:50 on Szymon's real Smartgloves II solver capture** (`backend/tests/fixtures/rgmp/worn_solver.rgmp.gz`): see "Verified on real data" below | Nothing left to check here |
 | Real RCSP driver: `IsLeft`, `ButtonPushed`, `SetColorLed` over USB | Only a fake server tonight | `python -m core --solver ... --rcsp ...`, press the button, watch `/health` and the event log in `/debug` |
 | Live webcam with MediaPipe | No camera was opened overnight; the thread, model load and `detect_for_video` path ran on a video file only, with no hand in it | `python -m core --camera`, hold a bare hand up, watch `/health` `camera.detections` and the debug view |
 | Camera hand orientation and mirroring on a real image | Derived from the MediaPipe docs' convention (handedness assumes a mirrored image). Angles are unaffected either way; only the drawn hand side and wrist position could be flipped | If the drawn hand is the wrong side, set `camera.mirror = false` |
@@ -232,6 +257,18 @@ Effect on the core: none on SPEC.md. `core/compat.py` ignores the new
 `hands` field on `/api/recordings/start` (the core records the master hand
 it finds); add it if route A is chosen. Both stream shapes are unchanged, so
 routes A and B still hold.
+
+Checked at 10:44: twenty-six more commits by Szymon Arciszewski (authored
+05:58 to 08:41), `eb59fd5..3674034`: a skinned WebXR hand model and hand
+styles; real Smartgloves II captures as fixtures with an offline replay test
+and a guided `backend/scripts/glove_check.py`; opt-in live glove tests
+(expect the driver on 12276, RCSP 45451 and the solver on 12277, the same
+ports the core uses); a `rig` service with `/api/gloves/*` (status, driver
+start and stop, `ReinitAlgo`, per-wearer neutral calibration, drift check)
+that imports `core.rgmp` and `core.rcsp`; a gloves screen, calibration area
+and demo mode in the frontend; research on an iPhone LiDAR source and a
+robot teleoperation pivot. `docs/CONTRACT.md` gained the gloves section.
+Nothing of the core's was edited (his rule 9 forbids it).
 
 Checked at 07:05: twelve more commits by Szymon Arciszewski (authored 05:11
 to 05:57), `ad9822d..9810bf5`: shadow puppet theatre, learner margin of
