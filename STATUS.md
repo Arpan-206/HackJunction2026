@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 02:40 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, 03:48 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -127,7 +127,7 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Sixteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+Seventeen commits on `core-overnight` (`git log --oneline main..core-overnight`),
 nothing pushed, nothing of the teammate's touched. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
@@ -197,6 +197,26 @@ Route A gives their frontend only the glove stream and lessons; route B
 gives their backend everything it already does (its scoring, LLM, storage)
 with real-glove input. SPEC.md's `/ws` (ghost, score, coach, session) is
 served in both cases on this core's port.
+
+Checked at 03:44: ten more commits by Szymon Arciszewski (authored 00:49 to
+01:26), `cfbe9c2..9376632`:
+
+| Area | What landed |
+| --- | --- |
+| `frontend/src` (128 files) | Rework: shared WebGL preview, learner pipeline (stages, progress, rank), "expert" wording (routes are now `/expert`, `/apprentice`, `/playground`, `/lab`), Gemini UI, playground, design critique fixes |
+| `frontend/src/mock` | A mock backend in the browser: `?mock=1`, or automatic when `/api/health` does not answer |
+| `frontend/tests`, `frontend/e2e` | vitest suite and Playwright scripts |
+| `frontend/src/api/types.ts`, `docs/CONTRACT.md` | `GloveSource` gains `external`; `/score` takes `attempt_frames`, calibration ids, `side`; `ScoreResult.warnings`; video upload client. `/ws/gloves` shape unchanged |
+| `backend/app` (5 files) | Gemini 3.5 Flash-Lite for every assistant task; move catalogue and seed lessons tracked |
+| root `README.md`, `CLAUDE.md`, `.claude/agent-memory` | Their repo rules: `docs/CONTRACT.md` is the API source of truth; uv only; no em dashes anywhere; commit only when asked, then push; Renaissance theme |
+
+Effect on the core: none on SPEC.md; `core/compat.py` still matches their
+`/ws/gloves` and `/api/health` shapes, so route A keeps their mock mode off
+(it only switches on when `/api/health` fails). Their `GloveSource` now has
+the `external` value route B uses. Their root `CLAUDE.md` says "no em
+dashes anywhere" and "uv only": this branch was checked for em dashes and
+its virtualenv was made with `uv venv`, so it conforms; its commits were not
+pushed because the overnight brief said not to.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
