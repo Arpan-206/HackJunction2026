@@ -85,9 +85,9 @@ final class DepthStreamer: NSObject, ObservableObject, ARSessionDelegate {
             }
         }
 
-        if t - lastPreview >= 0.1, let depth = frame.sceneDepth {
+        if t - lastPreview >= 0.05, let depth = frame.sceneDepth {
             lastPreview = t
-            let img = DepthPreview.image(depth.depthMap)
+            let img = DepthPreview.image(depth.depthMap, confidence: depth.confidenceMap)
             DispatchQueue.main.async { self.preview = img }
         }
 

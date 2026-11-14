@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Depth preview (near is bright), frame rates and connection state.
+/// Depth preview (blue near, red far, dim where confidence is low), frame rates and connection state.
 struct ContentView: View {
     @ObservedObject var streamer: DepthStreamer
 
@@ -10,7 +10,7 @@ struct ContentView: View {
             if let img = streamer.preview {
                 Image(uiImage: img)
                     .resizable()
-                    .interpolation(.none)
+                    .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -28,6 +28,7 @@ struct ContentView: View {
                 Text("tracking \(streamer.tracking)")
                 Text("table \(streamer.planeText)")
                 Text("phone port \(String(DepthProtocol.port))")
+                Text(String(format: "depth colours %.1f m blue to %.1f m red", DepthPreview.near, DepthPreview.far))
             }
             .font(.system(size: 17, design: .monospaced))
             .foregroundColor(.white)

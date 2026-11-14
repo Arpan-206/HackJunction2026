@@ -173,29 +173,60 @@ final class PacketEncoder {
     }
 }
 
-/// Grey depth preview: near is bright, 0.2 m to 2 m, no reading is black.
+/// Colour depth preview: 0.2 m (blue) to 1.5 m (red) through a Turbo-like ramp, no reading is black.
+/// Pixels whose confidence is low are drawn at 40 % brightness, so black fabric and far walls look dim.
 enum DepthPreview {
-    static func image(_ pb: CVPixelBuffer) -> UIImage? {
+    static let near: Float = 0.2
+    static let far: Float = 1.5
+    /// 256-entry RGB ramp: dark blue, cyan, green, yellow, red (a cheap Turbo).
+    static let lut: [(UInt8, UInt8, UInt8)] = (0..<256).map { i in
+        let t = Float(i) / 255
+        let stops: [(Float, Float, Float, Float)] = [
+            (0.00, 0.19, 0.07, 0.23), (0.13, 0.27, 0.32, 0.81), (0.25, 0.08, 0.59, 0.93),
+            (0.38, 0.16, 0.83, 0.65), (0.50, 0.60, 0.98, 0.27), (0.63, 0.92, 0.88, 0.17),
+            (0.75, 0.99, 0.64, 0.16), (0.88, 0.92, 0.31, 0.08), (1.00, 0.48, 0.02, 0.01)]
+        var k = 0
+        while k + 1 < stops.count - 1 && t > stops[k + 1].0 { k += 1 }
+        let a = stops[k], b = stops[k + 1]
+        let f = max(0, min(1, (t - a.0) / max(b.0 - a.0, 1e-6)))
+        return (UInt8((a.1 + (b.1 - a.1) * f) * 255), UInt8((a.2 + (b.2 - a.2) * f) * 255), UInt8((a.3 + (b.3 - a.3) * f) * 255))
+    }
+
+    static func image(_ pb: CVPixelBuffer, confidence: CVPixelBuffer? = nil) -> UIImage? {
         CVPixelBufferLockBaseAddress(pb, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(pb, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(pb) else { return nil }
         let w = CVPixelBufferGetWidth(pb), h = CVPixelBufferGetHeight(pb), bpr = CVPixelBufferGetBytesPerRow(pb)
-        var px = [UInt8](repeating: 0, count: w * h)
+        var confBase: UnsafeMutableRawPointer?
+        var confBpr = 0
+        if let c = confidence, CVPixelBufferGetWidth(c) == w, CVPixelBufferGetHeight(c) == h {
+            CVPixelBufferLockBaseAddress(c, .readOnly)
+            confBase = CVPixelBufferGetBaseAddress(c)
+            confBpr = CVPixelBufferGetBytesPerRow(c)
+        }
+        defer { if let c = confidence, confBase != nil { CVPixelBufferUnlockBaseAddress(c, .readOnly) } }
+        var px = [UInt8](repeating: 0, count: w * h * 4)
         for y in 0..<h {
             let row = base.advanced(by: y * bpr).assumingMemoryBound(to: Float32.self)
+            let crow = confBase?.advanced(by: y * confBpr).assumingMemoryBound(to: UInt8.self)
             for x in 0..<w {
                 let d = row[x]
-                if d.isFinite && d > 0 {
-                    let n = 1 - min(max((d - 0.2) / 1.8, 0), 1)
-                    px[y * w + x] = UInt8(40 + n * 215)
+                let o = (y * w + x) * 4
+                px[o + 3] = 255
+                guard d.isFinite && d > 0 else { continue }
+                let n = min(max((d - near) / (far - near), 0), 1)
+                var (r, g, b) = lut[Int(n * 255)]
+                if let crow = crow, crow[x] == 0 {
+                    r = UInt8(Float(r) * 0.4); g = UInt8(Float(g) * 0.4); b = UInt8(Float(b) * 0.4)
                 }
+                px[o] = r; px[o + 1] = g; px[o + 2] = b
             }
         }
         guard let provider = CGDataProvider(data: Data(px) as CFData),
-              let cg = CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: w,
-                               space: CGColorSpaceCreateDeviceGray(),
-                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
-                               provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+              let cg = CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: w * 4,
+                               space: CGColorSpaceCreateDeviceRGB(),
+                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                               provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
         else { return nil }
         return UIImage(cgImage: cg)
     }
