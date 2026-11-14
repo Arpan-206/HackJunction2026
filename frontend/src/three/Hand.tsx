@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Group, Mesh, Vector3, type Quaternion, type Material } from 'three';
 import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER } from './anatomy';
-import { loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
+import { HAND_SCALE, loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
 import { applyPose, buildHandRig, type HandRig } from './handRig';
 import { LiveJointsGate } from './liveJoints';
 import type { HandStyle } from './materials';
@@ -11,6 +11,9 @@ import { restFrame, synthFrame } from './motion';
 import { FingertipTrails, JointRings } from './overlays';
 import { HandSmoother, type SmoothingConfig } from './smoothing';
 import { useStageAnchor, useStageColors } from './stageContext';
+
+/** The core's [rest_pose] wrist positions (config.toml), metres: wrist_pos here means "not moved". */
+const CORE_REST: Record<Side, [number, number, number]> = { left: [-0.15, 0.1, -0.2], right: [0.15, 0.1, -0.2] };
 
 export interface HandProps {
   side?: Side;
@@ -46,8 +49,13 @@ export interface HandProps {
   opacity?: number;
   showJoints?: boolean;
   showTrails?: boolean;
-  /** When true, frame.wrist_pos (metres) offsets the hand. Off by default because gloves give no position. */
-  followWristPos?: boolean;
+  /**
+   * How frame.wrist_pos (metres, core world) moves the hand. 'auto' (default): only while the
+   * frame carries a position, which the core sends when its hand root (the phone's colour plus
+   * depth) tracks the wrist; gloves alone send null, so the hand stays put as before. The offset
+   * is from the core's rest pose for that side, in scene units. false: never move.
+   */
+  followWristPos?: boolean | 'auto';
   /** Objects in hand space, e.g. <Racket />. */
   children?: ReactNode;
 }
@@ -153,7 +161,7 @@ function HandBody({
   opacity = 1,
   showJoints = false,
   showTrails = false,
-  followWristPos = false,
+  followWristPos = 'auto',
   children,
 }: HandProps & { template: HandTemplate; handRef: React.ForwardedRef<HandHandle> }) {
   const stage = useStageColors();
@@ -222,7 +230,15 @@ function HandBody({
       g.quaternion.copy(smoother.quat);
       if (pivoting) pivotOffset(smoother.quat, centreLocal, pivot);
       else pivot.set(0, 0, 0);
-      if (followWristPos) pivot.set(pivot.x + smoother.pos[0], pivot.y + smoother.pos[1], pivot.z + smoother.pos[2]);
+      if (followWristPos !== false && target.wrist_pos) {
+        // the core's wrist position in metres, offset from its rest pose and scaled to the stage (hand-root lane)
+        const r = CORE_REST[side];
+        pivot.set(
+          pivot.x + (smoother.pos[0] - r[0]) * HAND_SCALE,
+          pivot.y + (smoother.pos[1] - r[1]) * HAND_SCALE,
+          pivot.z + (smoother.pos[2] - r[2]) * HAND_SCALE,
+        );
+      }
       g.position.copy(pivot);
     }
   });
