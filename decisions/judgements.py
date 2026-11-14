@@ -3,6 +3,7 @@
 Each builds one Decisions API request, waits at most the budget, and falls
 back to ``rules.py`` when the model gives nothing. One log line per call.
 """
+
 from __future__ import annotations
 
 import base64
@@ -13,7 +14,13 @@ from typing import Any
 
 from . import config as C
 from . import rules as R
-from .client import CallResult, DecisionsClient, choice_answer, noul_answer, score_answer
+from .client import (
+    CallResult,
+    DecisionsClient,
+    choice_answer,
+    noul_answer,
+    score_answer,
+)
 
 _client: DecisionsClient | None = None
 _client_lock = threading.Lock()
@@ -24,7 +31,9 @@ def get_client() -> DecisionsClient:
     global _client
     with _client_lock:
         if _client is None:
-            _client = DecisionsClient.from_env(warm_up=C.env_flag("DECISIONS_WARMUP", True))
+            _client = DecisionsClient.from_env(
+                warm_up=C.env_flag("DECISIONS_WARMUP", True)
+            )
         return _client
 
 
@@ -69,7 +78,9 @@ class FingerRubric:
     source: str
     reason: str
     latency_ms: float
-    levels: dict[str, float] = field(default_factory=dict)  # expected rubric level per finger, 0..3
+    levels: dict[str, float] = field(
+        default_factory=dict
+    )  # expected rubric level per finger, 0..3
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -90,7 +101,10 @@ ACTION_CRITERIA = {
     "move_on": "Go to the next step. The step is passed, or the learner has nearly passed several times.",
 }
 FOCUS_INSTRUCTIONS = "Which single finger should the learner focus on next, if any?"
-FOCUS_CRITERIA = {**{f: f"The {f} finger." for f in C.FINGERS}, "none": "No single finger; the whole hand."}
+FOCUS_CRITERIA = {
+    **{f: f"The {f} finger." for f in C.FINGERS},
+    "none": "No single finger; the whole hand.",
+}
 
 
 def summary_text(summary: dict) -> str:
@@ -99,14 +113,16 @@ def summary_text(summary: dict) -> str:
     lines = [
         f"Task: {summary.get('task', 'general')}. Lesson: {summary.get('lesson', '')}. "
         f"Hand: {summary.get('hand') or 'unknown'}.",
-        f"Step {int(step.get('index', 0)) + 1} \"{step.get('name', '')}\" ({step.get('kind', 'hold')} step). "
+        f'Step {int(step.get("index", 0)) + 1} "{step.get("name", "")}" ({step.get("kind", "hold")} step). '
         f"Attempt {summary.get('attempt', 1)}. Passed: {'yes' if summary.get('passed') else 'no'}.",
         f"Score now {float(summary.get('overall', 0.0) or 0.0):.2f} of 1.00, best this step "
         f"{float(summary.get('best', 0.0) or 0.0):.2f}, pass mark {R.TH['pass_score']:.2f}.",
     ]
     hist = summary.get("history") or []
     if hist:
-        lines.append("Earlier attempts: " + ", ".join(f"{float(h):.2f}" for h in hist[-6:]) + ".")
+        lines.append(
+            "Earlier attempts: " + ", ".join(f"{float(h):.2f}" for h in hist[-6:]) + "."
+        )
     fingers = summary.get("fingers") or {}
     if fingers:
         parts = []
@@ -114,7 +130,9 @@ def summary_text(summary: dict) -> str:
             info = fingers.get(f)
             if isinstance(info, dict):
                 hint = info.get("hint") or "off"
-                parts.append(f"{f} score {float(info.get('score', 0)):.2f}, error {float(info.get('err_deg', 0)):.0f} deg, {hint}")
+                parts.append(
+                    f"{f} score {float(info.get('score', 0)):.2f}, error {float(info.get('err_deg', 0)):.0f} deg, {hint}"
+                )
         lines.append("Fingers below the pass mark: " + "; ".join(parts) + ".")
         lines.append("Fingers not listed are fine.")
     else:
@@ -122,21 +140,41 @@ def summary_text(summary: dict) -> str:
     timing = summary.get("timing_ms")
     if timing is not None:
         t = int(timing)
-        lines.append(f"Timing: {abs(t)} ms {'early' if t < 0 else 'late'} (move steps only).")
+        lines.append(
+            f"Timing: {abs(t)} ms {'early' if t < 0 else 'late'} (move steps only)."
+        )
     stuck = summary.get("stuck_s")
     if stuck is not None:
         lines.append(f"Stuck for {float(stuck):.1f} s without passing.")
     return "\n".join(lines)
 
 
-def pick_action(step_summary: dict, *, client: DecisionsClient | None = None, budget_ms: int | None = None) -> ActionDecision:
+def pick_action(
+    step_summary: dict,
+    *,
+    client: DecisionsClient | None = None,
+    budget_ms: int | None = None,
+) -> ActionDecision:
     """Choose the tutor's next action from ``ACTIONS``. Never raises, never exceeds the budget by much."""
     cl = client or get_client()
     questions = {
-        "action": {"type": "choice", "instructions": ACTION_INSTRUCTIONS, "criteria": ACTION_CRITERIA},
-        "focus": {"type": "choice", "instructions": FOCUS_INSTRUCTIONS, "criteria": FOCUS_CRITERIA},
+        "action": {
+            "type": "choice",
+            "instructions": ACTION_INSTRUCTIONS,
+            "criteria": ACTION_CRITERIA,
+        },
+        "focus": {
+            "type": "choice",
+            "instructions": FOCUS_INSTRUCTIONS,
+            "criteria": FOCUS_CRITERIA,
+        },
     }
-    res = cl.decide("pick_action", [{"type": "text", "text": summary_text(step_summary)}], questions, budget_ms)
+    res = cl.decide(
+        "pick_action",
+        [{"type": "text", "text": summary_text(step_summary)}],
+        questions,
+        budget_ms,
+    )
     dec: ActionDecision | None = None
     fail = res.reason
     if res.ok:
@@ -150,24 +188,60 @@ def pick_action(step_summary: dict, *, client: DecisionsClient | None = None, bu
             if action == "isolate_finger" and focus is None:
                 w = R.worst_finger(step_summary.get("fingers") or {})
                 focus = w[0] if w else None
-            dec = ActionDecision(action, conf, focus, probs, "model", "model", res.latency_ms)
+            dec = ActionDecision(
+                action, conf, focus, probs, "model", "model", res.latency_ms
+            )
         else:
             fail = "bad_answer"
     if dec is None:
         action, conf, focus, rule = R.rule_pick_action(step_summary)
-        dec = ActionDecision(action, conf, focus, {action: conf}, "rule", f"{fail}:{rule}", res.latency_ms)
-    _log(cl, res, dec.source, dec.reason, {"action": dec.action, "confidence": round(dec.confidence, 3), "focus": dec.focus},
-         step=(step_summary.get("step") or {}).get("index"), hand=step_summary.get("hand"))
+        dec = ActionDecision(
+            action,
+            conf,
+            focus,
+            {action: conf},
+            "rule",
+            f"{fail}:{rule}",
+            res.latency_ms,
+        )
+    _log(
+        cl,
+        res,
+        dec.source,
+        dec.reason,
+        {
+            "action": dec.action,
+            "confidence": round(dec.confidence, 3),
+            "focus": dec.focus,
+        },
+        step=(step_summary.get("step") or {}).get("index"),
+        hand=step_summary.get("hand"),
+    )
     return dec
 
 
 # ---------------------------------------------------------------------- check_outcome
-_MAGIC = {b"\xff\xd8": "image/jpeg", b"\x89PNG": "image/png", b"RIFF": "image/webp", b"GIF8": "image/gif", b"BM": "image/bmp"}
-_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif", ".bmp": "image/bmp"}
+_MAGIC = {
+    b"\xff\xd8": "image/jpeg",
+    b"\x89PNG": "image/png",
+    b"RIFF": "image/webp",
+    b"GIF8": "image/gif",
+    b"BM": "image/bmp",
+}
+_EXT = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".bmp": "image/bmp",
+}
 MAX_SIDE_PX = 512
 
 
-def image_part(image: Any, resolution: str = "low", mime_type: str | None = None) -> dict | None:
+def image_part(
+    image: Any, resolution: str = "low", mime_type: str | None = None
+) -> dict | None:
     """A Decisions API image part from bytes, a file path, or an array (OpenCV BGR). None if there is no image."""
     if image is None:
         return None
@@ -182,10 +256,19 @@ def image_part(image: Any, resolution: str = "low", mime_type: str | None = None
         data = _encode_array(image)
         mime_type = "image/jpeg"
     else:
-        raise TypeError(f"image must be bytes, a path or an array, not {type(image).__name__}")
+        raise TypeError(
+            f"image must be bytes, a path or an array, not {type(image).__name__}"
+        )
     if mime_type is None:
-        mime_type = next((m for magic, m in _MAGIC.items() if data.startswith(magic)), "image/jpeg")
-    return {"type": "image", "mime_type": mime_type, "data": base64.b64encode(data).decode("ascii"), "resolution": resolution}
+        mime_type = next(
+            (m for magic, m in _MAGIC.items() if data.startswith(magic)), "image/jpeg"
+        )
+    return {
+        "type": "image",
+        "mime_type": mime_type,
+        "data": base64.b64encode(data).decode("ascii"),
+        "resolution": resolution,
+    }
 
 
 def _encode_array(arr: Any) -> bytes:
@@ -196,7 +279,11 @@ def _encode_array(arr: Any) -> bytes:
     h, w = a.shape[:2]
     scale = MAX_SIDE_PX / float(max(h, w))
     if scale < 1.0:
-        a = cv2.resize(a, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)
+        a = cv2.resize(
+            a,
+            (max(1, int(w * scale)), max(1, int(h * scale))),
+            interpolation=cv2.INTER_AREA,
+        )
     ok, buf = cv2.imencode(".jpg", a, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
     if not ok:
         raise ValueError("could not encode the image")
@@ -207,10 +294,16 @@ def context_text(context: dict) -> str:
     bits = []
     curl = context.get("curl")
     if isinstance(curl, dict) and curl:
-        bits.append("Glove reading at the same instant: " + R.curl_words({f: float(v) for f, v in curl.items() if f in C.FINGERS}) + ".")
+        bits.append(
+            "Glove reading at the same instant: "
+            + R.curl_words({f: float(v) for f, v in curl.items() if f in C.FINGERS})
+            + "."
+        )
     pinch = context.get("pinch")
     if isinstance(pinch, dict) and any(pinch.values()):
-        bits.append("Thumb touches: " + ", ".join(f for f, v in pinch.items() if v) + ".")
+        bits.append(
+            "Thumb touches: " + ", ".join(f for f, v in pinch.items() if v) + "."
+        )
     note = context.get("note")
     if note:
         bits.append(str(note))
@@ -242,7 +335,14 @@ def check_outcome(
             parts.append({"type": "text", "text": ctx})
     q: dict[str, Any] = {"type": "noul", "instructions": question}
     if yes_means or no_means:
-        q["criteria"] = {k: v for k, v in (("true_description", yes_means), ("false_description", no_means)) if v}
+        q["criteria"] = {
+            k: v
+            for k, v in (
+                ("true_description", yes_means),
+                ("false_description", no_means),
+            )
+            if v
+        }
     if part is not None:
         res = cl.decide("check_outcome", parts, {"outcome": q}, budget_ms)
     else:  # no picture: nothing for the model to look at, the rules judge from the glove context alone
@@ -254,14 +354,27 @@ def check_outcome(
         parsed = noul_answer(res.answers.get("outcome", {}))
         if parsed is not None:
             p, conf = parsed
-            dec = OutcomeDecision(p >= 0.5, round(p, 3), round(conf, 3), "model", "model", res.latency_ms)
+            dec = OutcomeDecision(
+                p >= 0.5, round(p, 3), round(conf, 3), "model", "model", res.latency_ms
+            )
         else:
             fail = "bad_answer"
     if dec is None:
         answer, p, conf, rule = R.rule_check_outcome(question, context)
         dec = OutcomeDecision(answer, p, conf, "rule", f"{fail}:{rule}", res.latency_ms)
-    _log(cl, res, dec.source, dec.reason, {"answer": dec.answer, "probability": dec.probability, "confidence": dec.confidence},
-         question=question[:120], image_bytes=_decoded_size(part))
+    _log(
+        cl,
+        res,
+        dec.source,
+        dec.reason,
+        {
+            "answer": dec.answer,
+            "probability": dec.probability,
+            "confidence": dec.confidence,
+        },
+        question=question[:120],
+        image_bytes=_decoded_size(part),
+    )
     return dec
 
 
@@ -286,25 +399,38 @@ RUBRIC_INSTRUCTIONS = (
 )
 
 
-def step_text(keyframe: dict | None, step: dict | None, lesson: dict | None = None) -> str:
+def step_text(
+    keyframe: dict | None, step: dict | None, lesson: dict | None = None
+) -> str:
     step = step or {}
     keyframe = keyframe if isinstance(keyframe, dict) else {}
     lines = []
     if lesson:
-        lines.append(f"Lesson: {lesson.get('title', '')}. Task: {lesson.get('task', step.get('task', 'general'))}.")
-    lines.append(f"Step {int(step.get('index', 0)) + 1}: \"{step.get('name', '')}\" ({step.get('kind', 'hold')} step"
-                 + (f", hold {int(step['hold_ms'])} ms" if step.get("hold_ms") else "") + ").")
+        lines.append(
+            f"Lesson: {lesson.get('title', '')}. Task: {lesson.get('task', step.get('task', 'general'))}."
+        )
+    lines.append(
+        f'Step {int(step.get("index", 0)) + 1}: "{step.get("name", "")}" ({step.get("kind", "hold")} step'
+        + (f", hold {int(step['hold_ms'])} ms" if step.get("hold_ms") else "")
+        + ")."
+    )
     if step.get("note"):
         lines.append(f"Expert's note: {step['note']}")
     curl = keyframe.get("curl") if isinstance(keyframe.get("curl"), dict) else None
     if curl is None:
-        curl = R.curl_from_key_angles(keyframe.get("key_angles") or step.get("key_angles"))
+        curl = R.curl_from_key_angles(
+            keyframe.get("key_angles") or step.get("key_angles")
+        )
     if curl:
         lines.append("Key pose: " + R.curl_words(curl) + ".")
     weights = step.get("weights") or {}
     static = [f for f in C.FINGERS if float(weights.get(f, 1.0)) < 1.0]
     if static:
-        lines.append("Fingers that barely moved while the expert recorded: " + ", ".join(static) + ".")
+        lines.append(
+            "Fingers that barely moved while the expert recorded: "
+            + ", ".join(static)
+            + "."
+        )
     return "\n".join(lines)
 
 
@@ -327,7 +453,11 @@ def finger_rubric(
             parts.append(img)
     parts.append({"type": "text", "text": step_text(pose, step, lesson)})
     questions = {
-        f: {"type": "score", "instructions": RUBRIC_INSTRUCTIONS.format(finger=f), "criteria": RUBRIC_LEVELS}
+        f: {
+            "type": "score",
+            "instructions": RUBRIC_INSTRUCTIONS.format(finger=f),
+            "criteria": RUBRIC_LEVELS,
+        }
         for f in C.FINGERS
     }
     res = cl.decide("finger_rubric", parts, questions, budget_ms)
@@ -348,19 +478,46 @@ def finger_rubric(
                 weights = {f: 1.0 for f in C.FINGERS}
             else:
                 weights = {f: round(levels[f] / top, 3) for f in C.FINGERS}
-            rub = FingerRubric(weights, round(sum(confs) / len(confs), 3), "model", "model", res.latency_ms, levels)
+            rub = FingerRubric(
+                weights,
+                round(sum(confs) / len(confs), 3),
+                "model",
+                "model",
+                res.latency_ms,
+                levels,
+            )
         else:
             fail = "bad_answer"
     if rub is None:
         weights, conf, rule = R.rule_finger_rubric(pose, step)
         rub = FingerRubric(weights, conf, "rule", f"{fail}:{rule}", res.latency_ms)
-    _log(cl, res, rub.source, rub.reason, {"weights": rub.weights, "confidence": rub.confidence},
-         step=(step or {}).get("index"))
+    _log(
+        cl,
+        res,
+        rub.source,
+        rub.reason,
+        {"weights": rub.weights, "confidence": rub.confidence},
+        step=(step or {}).get("index"),
+    )
     return rub
 
 
 # ---------------------------------------------------------------------- logging
-def _log(cl: DecisionsClient, res: CallResult, source: str, reason: str, result: dict, **extra: Any) -> None:
-    rec = {**res.record(), "model": cl.model, "budget_ms": cl.budget_ms, "source": source, "why": reason, "result": result}
+def _log(
+    cl: DecisionsClient,
+    res: CallResult,
+    source: str,
+    reason: str,
+    result: dict,
+    **extra: Any,
+) -> None:
+    rec = {
+        **res.record(),
+        "model": cl.model,
+        "budget_ms": cl.budget_ms,
+        "source": source,
+        "why": reason,
+        "result": result,
+    }
     rec.update({k: v for k, v in extra.items() if v is not None})
     cl.log.write(rec)

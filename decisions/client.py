@@ -19,13 +19,15 @@ handshakes count too. A call that misses the budget returns no answers and the
 caller uses its rule fallback. Three failures in a row open a cool-down during
 which no network call is made at all (offline demo, captive portal).
 """
+
 from __future__ import annotations
 
 import concurrent.futures as cf
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from . import config as C
 from .log import JsonlLog
@@ -88,7 +90,9 @@ class DecisionsClient:
             self.enabled = bool(enabled)
         else:
             self.enabled = bool(self.api_key) and not C.disabled()
-        self.disabled_reason = "ok" if self.enabled else ("disabled" if C.disabled() else "no_key")
+        self.disabled_reason = (
+            "ok" if self.enabled else ("disabled" if C.disabled() else "no_key")
+        )
         self.cooldown_s = float(cooldown_s)
         self.failures_to_trip = int(failures_to_trip)
         self.clock = clock
@@ -99,13 +103,15 @@ class DecisionsClient:
         self._failures = 0
         self._cooldown_until = 0.0
         self._lock = threading.Lock()
-        self._pool = cf.ThreadPoolExecutor(max_workers=4, thread_name_prefix="decisions")
+        self._pool = cf.ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="decisions"
+        )
         self._http: Any = None
         if warm_up and self.enabled:
             self.warm_up()
 
     @classmethod
-    def from_env(cls, **kw: Any) -> "DecisionsClient":
+    def from_env(cls, **kw: Any) -> DecisionsClient:
         return cls(**kw)
 
     def describe(self) -> dict:
@@ -139,7 +145,9 @@ class DecisionsClient:
             self._failures = 0
 
     # ------------------------------------------------------------------ request
-    def payload(self, input_parts: list[dict] | str, questions: dict[str, dict]) -> dict:
+    def payload(
+        self, input_parts: list[dict] | str, questions: dict[str, dict]
+    ) -> dict:
         if not questions:
             raise ValueError("at least one question")
         for key, q in questions.items():
@@ -182,7 +190,9 @@ class DecisionsClient:
             return CallResult(fn, None, "timeout", (self.clock() - t0) * 1000.0)
         except Exception as e:  # transport raised: connection refused, DNS, bad JSON
             self._note_failure()
-            return CallResult(fn, None, f"error:{type(e).__name__}", (self.clock() - t0) * 1000.0)
+            return CallResult(
+                fn, None, f"error:{type(e).__name__}", (self.clock() - t0) * 1000.0
+            )
         latency = (self.clock() - t0) * 1000.0
         if status != 200:
             if status in (401, 403):
@@ -201,7 +211,11 @@ class DecisionsClient:
 
     def _late_done(self, fn: str, fut: cf.Future, t0: float) -> None:
         self.late += 1
-        rec = {"fn": fn, "event": "late", "latency_ms": round((self.clock() - t0) * 1000.0, 1)}
+        rec = {
+            "fn": fn,
+            "event": "late",
+            "latency_ms": round((self.clock() - t0) * 1000.0, 1),
+        }
         try:
             status, _ = fut.result()
             rec["http_status"] = status
@@ -225,12 +239,17 @@ class DecisionsClient:
 
         if self._http is None:
             self._http = httpx.Client(
-                timeout=httpx.Timeout(max(timeout_s, 0.1), connect=min(max(timeout_s, 0.1), 0.4)),
+                timeout=httpx.Timeout(
+                    max(timeout_s, 0.1), connect=min(max(timeout_s, 0.1), 0.4)
+                ),
             )
         r = self._http.post(
             self.endpoint,
             json=payload,
-            headers={"x-goog-api-key": self.api_key or "", "Content-Type": "application/json"},
+            headers={
+                "x-goog-api-key": self.api_key or "",
+                "Content-Type": "application/json",
+            },
         )
         try:
             body = r.json() if r.content else {}
@@ -248,7 +267,9 @@ class DecisionsClient:
 
 
 # ---------------------------------------------------------------------- answer parsing
-def choice_answer(ans: dict, options: tuple[str, ...] | list[str]) -> tuple[str, float, dict[str, float]] | None:
+def choice_answer(
+    ans: dict, options: tuple[str, ...] | list[str]
+) -> tuple[str, float, dict[str, float]] | None:
     """(choice, confidence, probabilities) from a choice answer, or None if the shape is wrong."""
     if not isinstance(ans, dict) or ans.get("type") != "choice":
         return None
@@ -266,7 +287,11 @@ def choice_answer(ans: dict, options: tuple[str, ...] | list[str]) -> tuple[str,
 
 def noul_answer(ans: dict) -> tuple[float, float] | None:
     """(probability_yes, confidence) from a noul answer."""
-    if not isinstance(ans, dict) or ans.get("type") != "noul" or ans.get("noul") is None:
+    if (
+        not isinstance(ans, dict)
+        or ans.get("type") != "noul"
+        or ans.get("noul") is None
+    ):
         return None
     p = _unit(float(ans["noul"]))
     conf = ans.get("confidence")

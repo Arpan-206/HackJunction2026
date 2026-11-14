@@ -14,6 +14,7 @@ allows only those two values, and "gemma" there means "a model".
 
 This module imports ``core.coach`` read-only. It never edits the core.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -58,14 +59,22 @@ TASK_DESCRIPTIONS = {
 class DecisionsCoach:
     """Implements core.coach.CoachClient. Every method returns None to let the rules take over."""
 
-    def __init__(self, client: DecisionsClient | None = None, *, timing_hint_ms: float = 150.0, speak: bool = True) -> None:
+    def __init__(
+        self,
+        client: DecisionsClient | None = None,
+        *,
+        timing_hint_ms: float = 150.0,
+        speak: bool = True,
+    ) -> None:
         self.client = client or get_client()
         self.rules = RuleCoach(timing_hint_ms, speak)
         self.speak = bool(speak)
         self.last: dict[str, ActionDecision] = {}
 
     @classmethod
-    def from_env(cls, cfg: Any = None, client: DecisionsClient | None = None) -> "DecisionsCoach":
+    def from_env(
+        cls, cfg: Any = None, client: DecisionsClient | None = None
+    ) -> DecisionsCoach:
         """Build from the core's config Section (timing and speak) and the environment (key, budget)."""
         timing = float(cfg.score.timing_hint_ms) if cfg is not None else 150.0
         speak = bool(cfg.coach.speak) if cfg is not None else True
@@ -82,19 +91,45 @@ class DecisionsCoach:
         self.last[hand or "any"] = d
         source = "gemma" if d.source == "model" else "rule"
         if d.action == "move_on":
-            return CoachLine("praise", ACTION_LINES["move_on"], None, step, self.speak, source, hand=hand)
+            return CoachLine(
+                "praise",
+                ACTION_LINES["move_on"],
+                None,
+                step,
+                self.speak,
+                source,
+                hand=hand,
+            )
         if d.action == "isolate_finger":
             finger = d.focus
             if finger not in C.FINGERS:
                 w = worst_finger(summary.get("fingers") or {})
                 finger = w[0] if w else "index"
-            return CoachLine("tip", ACTION_LINES["isolate_finger"].format(finger=finger), finger, step, self.speak, source, hand=hand)
+            return CoachLine(
+                "tip",
+                ACTION_LINES["isolate_finger"].format(finger=finger),
+                finger,
+                step,
+                self.speak,
+                source,
+                hand=hand,
+            )
         if d.action in ("slow_down", "show_keyframe"):
-            return CoachLine("tip", ACTION_LINES[d.action], None, step, self.speak, source, hand=hand)
+            return CoachLine(
+                "tip", ACTION_LINES[d.action], None, step, self.speak, source, hand=hand
+            )
         # repeat: the concrete finger correction from the rule table when there is one
         line = self.rules.tip(summary)
         if line is None:
-            return CoachLine("tip", ACTION_LINES["repeat"], d.focus if d.focus in C.FINGERS else None, step, self.speak, source, hand=hand)
+            return CoachLine(
+                "tip",
+                ACTION_LINES["repeat"],
+                d.focus if d.focus in C.FINGERS else None,
+                step,
+                self.speak,
+                source,
+                hand=hand,
+            )
         line.source = source
         return line
 
@@ -106,11 +141,15 @@ class DecisionsCoach:
         """
         if not digests:
             return None
-        lines = [f"Lesson \"{lesson_json.get('title', '')}\", task {lesson_json.get('task', 'general')}, "
-                 f"{len(digests)} steps recorded with a motion glove."]
+        lines = [
+            f'Lesson "{lesson_json.get("title", "")}", task {lesson_json.get("task", "general")}, '
+            f"{len(digests)} steps recorded with a motion glove."
+        ]
         for d in digests:
-            lines.append(f"Step {int(d.get('index', 0)) + 1}: {d.get('kind', 'hold')} step, "
-                         f"{int(d.get('duration_ms', 0))} ms, pose: {d.get('pose', '')}.")
+            lines.append(
+                f"Step {int(d.get('index', 0)) + 1}: {d.get('kind', 'hold')} step, "
+                f"{int(d.get('duration_ms', 0))} ms, pose: {d.get('pose', '')}."
+            )
         questions = {
             f"step_{int(d.get('index', 0))}": {
                 "type": "choice",
@@ -119,16 +158,33 @@ class DecisionsCoach:
             }
             for d in digests
         }
-        res = self.client.decide("name_steps", [{"type": "text", "text": "\n".join(lines)}], questions)
+        res = self.client.decide(
+            "name_steps", [{"type": "text", "text": "\n".join(lines)}], questions
+        )
         out: list[dict] = []
         if res.ok:
             names = tuple(SHAPE_NAMES)
             for d in digests:
-                parsed = choice_answer(res.answers.get(f"step_{int(d.get('index', 0))}", {}), names)
+                parsed = choice_answer(
+                    res.answers.get(f"step_{int(d.get('index', 0))}", {}), names
+                )
                 if parsed is not None and parsed[1] >= 0.4:
-                    out.append({"index": int(d.get("index", 0)), "name": parsed[0], "named_by": "gemma"})
-        self.client.log.write({**res.record(), "model": self.client.model, "budget_ms": self.client.budget_ms,
-                               "source": "model" if out else "rule", "result": {"named": len(out), "of": len(digests)}})
+                    out.append(
+                        {
+                            "index": int(d.get("index", 0)),
+                            "name": parsed[0],
+                            "named_by": "gemma",
+                        }
+                    )
+        self.client.log.write(
+            {
+                **res.record(),
+                "model": self.client.model,
+                "budget_ms": self.client.budget_ms,
+                "source": "model" if out else "rule",
+                "result": {"named": len(out), "of": len(digests)},
+            }
+        )
         return out or None
 
     def configure(self, text: str, task_names: list[str]) -> dict | None:
@@ -137,22 +193,46 @@ class DecisionsCoach:
         options["none"] = "None of these tasks."
         res = None
         if len(options) >= 2 and text.strip():
-            q = {"task": {"type": "choice", "instructions": "Which practice task does this request ask for?", "criteria": options}}
+            q = {
+                "task": {
+                    "type": "choice",
+                    "instructions": "Which practice task does this request ask for?",
+                    "criteria": options,
+                }
+            }
             res = self.client.decide("configure", [{"type": "text", "text": text}], q)
             if res.ok:
                 parsed = choice_answer(res.answers.get("task", {}), tuple(options))
                 if parsed is not None and parsed[0] != "none" and parsed[1] >= 0.5:
-                    self.client.log.write({**res.record(), "model": self.client.model, "source": "model", "result": {"task": parsed[0]}})
+                    self.client.log.write(
+                        {
+                            **res.record(),
+                            "model": self.client.model,
+                            "source": "model",
+                            "result": {"task": parsed[0]},
+                        }
+                    )
                     return {"task": parsed[0], "config": {}}
         picked = self.rules.configure(text, task_names)
         if res is not None:
-            self.client.log.write({**res.record(), "model": self.client.model, "source": "rule", "result": {"task": (picked or {}).get("task")}})
+            self.client.log.write(
+                {
+                    **res.record(),
+                    "model": self.client.model,
+                    "source": "rule",
+                    "result": {"task": (picked or {}).get("task")},
+                }
+            )
         return picked
 
     def phrase_question(self, context: dict) -> CoachLine | None:
         return self.rules.phrase_question(context)
 
     # ------------------------------------------------------------------ extra, for the session
-    def rubric(self, step_json: dict, lesson_json: dict | None = None) -> dict[str, float]:
+    def rubric(
+        self, step_json: dict, lesson_json: dict | None = None
+    ) -> dict[str, float]:
         """Per-finger weights for one lesson step (``Step.to_json()``), for the scorer."""
-        return finger_rubric(step_json, step_json, lesson=lesson_json, client=self.client).weights
+        return finger_rubric(
+            step_json, step_json, lesson=lesson_json, client=self.client
+        ).weights

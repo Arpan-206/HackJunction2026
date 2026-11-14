@@ -1,10 +1,11 @@
 """One JSON line per call, appended to logs/decisions.jsonl. Logging never raises into the caller."""
+
 from __future__ import annotations
 
 import json
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,14 +23,20 @@ class JsonlLog:
         if not self.enabled:
             return
         rec = {
-            "t": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+            "t": datetime.now(UTC).isoformat(timespec="milliseconds"),
             "t_us": int(time.time() * 1e6),
             **record,
         }
         try:
             line = json.dumps(rec, default=_json_default)
         except (TypeError, ValueError):
-            line = json.dumps({"t": rec["t"], "fn": record.get("fn"), "error": "unserialisable record"})
+            line = json.dumps(
+                {
+                    "t": rec["t"],
+                    "fn": record.get("fn"),
+                    "error": "unserialisable record",
+                }
+            )
         with self._lock:
             try:
                 self.path.parent.mkdir(parents=True, exist_ok=True)

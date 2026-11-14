@@ -67,8 +67,11 @@ class Core:
         # The decisions lane's Gemini Decisions adapter; with no key it answers from the rules.
         try:
             from decisions.coach_adapter import DecisionsCoach
+
             coach_client = DecisionsCoach.from_env(cfg)
-        except Exception as e:   # the core must start without the decisions package or its key
+        except (
+            Exception
+        ) as e:  # the core must start without the decisions package or its key
             log.warning("decisions coach unavailable, rule lines only: %s", e)
             coach_client = None
         self.coach = Coach(coach_client, cfg.coach, cfg.score.timing_hint_ms)

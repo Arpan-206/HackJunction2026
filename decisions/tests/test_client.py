@@ -1,4 +1,5 @@
 """The client: request shape, the hard budget, fallbacks, cool-down and the log. No network."""
+
 from __future__ import annotations
 
 import json
@@ -6,15 +7,28 @@ import time
 
 import httpx
 import pytest
+from conftest import (
+    canned_transport,
+    choice_body,
+    raising_transport,
+    read_log,
+    slow_transport,
+)
 
 from decisions import config as C
 from decisions.client import DecisionsClient, choice_answer, noul_answer, score_answer
-from decisions.config import find_env_file as real_find_env_file  # bound before the offline fixture patches it
+from decisions.config import (
+    find_env_file as real_find_env_file,  # bound before the offline fixture patches it
+)
 from decisions.log import JsonlLog
 
-from conftest import canned_transport, choice_body, raising_transport, read_log, slow_transport
-
-Q_CHOICE = {"pick": {"type": "choice", "instructions": "Pick one.", "criteria": {"a": "A.", "b": "B."}}}
+Q_CHOICE = {
+    "pick": {
+        "type": "choice",
+        "instructions": "Pick one.",
+        "criteria": {"a": "A.", "b": "B."},
+    }
+}
 
 
 class FakeClock:
@@ -28,7 +42,9 @@ class FakeClock:
 # ---------------------------------------------------------------------- request shape
 def test_payload_matches_the_documented_shape(make_client):
     seen: list = []
-    cl = make_client(canned_transport(choice_body(pick=("a", {"a": 0.9, "b": 0.1}, 0.9)), seen=seen))
+    cl = make_client(
+        canned_transport(choice_body(pick=("a", {"a": 0.9, "b": 0.1}, 0.9)), seen=seen)
+    )
     res = cl.decide("t", [{"type": "text", "text": "hello"}], Q_CHOICE)
     assert res.ok and res.reason == "ok" and res.http_status == 200
     payload, timeout_s = seen[0]
@@ -48,9 +64,21 @@ def test_payload_rejects_bad_questions(make_client):
     with pytest.raises(ValueError):
         cl.payload("x", {"q": {"type": "noul"}})
     with pytest.raises(ValueError):
-        cl.payload("x", {"q": {"type": "choice", "instructions": "one option", "criteria": {"a": "A"}}})
+        cl.payload(
+            "x",
+            {
+                "q": {
+                    "type": "choice",
+                    "instructions": "one option",
+                    "criteria": {"a": "A"},
+                }
+            },
+        )
     with pytest.raises(ValueError):
-        cl.payload("x", {"q": {"type": "score", "instructions": "one level", "criteria": ["only"]}})
+        cl.payload(
+            "x",
+            {"q": {"type": "score", "instructions": "one level", "criteria": ["only"]}},
+        )
     with pytest.raises(ValueError):
         cl.payload("x", {})
     assert cl.decide("t", "x", {}).reason == "error:ValueError"
@@ -62,9 +90,13 @@ def test_http_transport_sends_key_header_and_json(log_file):
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(request)
-        return httpx.Response(200, json=choice_body(pick=("b", {"a": 0.2, "b": 0.8}, 0.8)))
+        return httpx.Response(
+            200, json=choice_body(pick=("b", {"a": 0.2, "b": 0.8}, 0.8))
+        )
 
-    cl = DecisionsClient(api_key="k-test", log=JsonlLog(log_file), enabled=True, budget_ms=600)
+    cl = DecisionsClient(
+        api_key="k-test", log=JsonlLog(log_file), enabled=True, budget_ms=600
+    )
     cl._http = httpx.Client(transport=httpx.MockTransport(handler))
     res = cl.decide("t", "hello", Q_CHOICE)
     assert res.ok
@@ -80,7 +112,10 @@ def test_http_transport_sends_key_header_and_json(log_file):
 
 # ---------------------------------------------------------------------- the budget
 def test_slow_transport_falls_back_within_the_budget(make_client):
-    cl = make_client(slow_transport(0.5, choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0))), budget_ms=150)
+    cl = make_client(
+        slow_transport(0.5, choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0))),
+        budget_ms=150,
+    )
     t0 = time.monotonic()
     res = cl.decide("t", "x", Q_CHOICE)
     elapsed = time.monotonic() - t0
@@ -96,7 +131,10 @@ def test_slow_transport_falls_back_within_the_budget(make_client):
 
 
 def test_per_call_budget_override(make_client):
-    cl = make_client(slow_transport(0.25, choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0))), budget_ms=100)
+    cl = make_client(
+        slow_transport(0.25, choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0))),
+        budget_ms=100,
+    )
     assert cl.decide("t", "x", Q_CHOICE).reason == "timeout"
     assert cl.decide("t", "x", Q_CHOICE, budget_ms=1000).ok
     cl.close()
@@ -119,7 +157,9 @@ def test_bad_status_codes(make_client):
 
 
 def test_missing_answer_is_bad_response(make_client):
-    cl = make_client(canned_transport({"answers": {"other": {"type": "noul", "noul": 0.5}}}))
+    cl = make_client(
+        canned_transport({"answers": {"other": {"type": "noul", "noul": 0.5}}})
+    )
     assert cl.decide("t", "x", Q_CHOICE).reason == "bad_response"
     cl = make_client(canned_transport({"not": "json shape"}))
     assert cl.decide("t", "x", Q_CHOICE).reason == "bad_response"
@@ -128,7 +168,12 @@ def test_missing_answer_is_bad_response(make_client):
 def test_three_failures_open_a_cooldown_then_recover(make_client):
     clock = FakeClock()
     seen: list = []
-    cl = make_client(canned_transport({}, status=503, seen=seen), clock=clock, cooldown_s=10.0, failures_to_trip=3)
+    cl = make_client(
+        canned_transport({}, status=503, seen=seen),
+        clock=clock,
+        cooldown_s=10.0,
+        failures_to_trip=3,
+    )
     for _ in range(3):
         assert cl.decide("t", "x", Q_CHOICE).reason == "http_503"
     assert cl.in_cooldown
@@ -154,7 +199,9 @@ def test_offline_without_a_key(monkeypatch):
 
 def test_env_file_parsing(tmp_path, monkeypatch):
     env = tmp_path / ".env"
-    env.write_text("# comment\nexport GEMINI_API_KEY='abc 123'\nOTHER=\"x\"\nBROKEN LINE\n")
+    env.write_text(
+        "# comment\nexport GEMINI_API_KEY='abc 123'\nOTHER=\"x\"\nBROKEN LINE\n"
+    )
     monkeypatch.setattr(C, "find_env_file", lambda *a, **k: env)
     assert C.parse_env_file(env) == {"GEMINI_API_KEY": "abc 123", "OTHER": "x"}
     assert C.load_api_key() == "abc 123"
@@ -174,10 +221,23 @@ def test_find_env_file_walks_up(tmp_path, monkeypatch):
 
 # ---------------------------------------------------------------------- answer parsing
 def test_choice_answer_parsing():
-    assert choice_answer({"type": "choice", "choice": "a", "probabilities": {"a": 0.7, "b": 0.3}, "confidence": 0.7}, ("a", "b")) == (
-        "a", 0.7, {"a": 0.7, "b": 0.3})
+    assert choice_answer(
+        {
+            "type": "choice",
+            "choice": "a",
+            "probabilities": {"a": 0.7, "b": 0.3},
+            "confidence": 0.7,
+        },
+        ("a", "b"),
+    ) == ("a", 0.7, {"a": 0.7, "b": 0.3})
     # unknown choice id: the best known probability wins
-    assert choice_answer({"type": "choice", "choice": "zzz", "probabilities": {"a": 0.2, "b": 0.8}}, ("a", "b"))[0] == "b"
+    assert (
+        choice_answer(
+            {"type": "choice", "choice": "zzz", "probabilities": {"a": 0.2, "b": 0.8}},
+            ("a", "b"),
+        )[0]
+        == "b"
+    )
     assert choice_answer({"type": "choice", "choice": "zzz"}, ("a", "b")) is None
     assert choice_answer({"type": "noul", "noul": 0.5}, ("a", "b")) is None
 
@@ -186,14 +246,27 @@ def test_noul_and_score_parsing():
     assert noul_answer({"type": "noul", "noul": 0.9, "confidence": 0.8}) == (0.9, 0.8)
     assert noul_answer({"type": "noul", "noul": 0.75}) == (0.75, pytest.approx(0.5))
     assert noul_answer({"type": "noul"}) is None
-    assert score_answer({"type": "score", "score": 2.4, "confidence": 0.6}, 4) == (2.4, 0.6)
-    assert score_answer({"type": "score", "probabilities": {"0": 0.0, "1": 0.5, "2": 0.5}}, 4) == (1.5, 0.5)
+    assert score_answer({"type": "score", "score": 2.4, "confidence": 0.6}, 4) == (
+        2.4,
+        0.6,
+    )
+    assert score_answer(
+        {"type": "score", "probabilities": {"0": 0.0, "1": 0.5, "2": 0.5}}, 4
+    ) == (1.5, 0.5)
     assert score_answer({"type": "score", "score": 9.0}, 4) == (3.0, 0.5)
     assert score_answer({"type": "score"}, 4) is None
 
 
 def test_log_lines_are_json(make_client):
-    cl = make_client(canned_transport(choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0))))
+    cl = make_client(
+        canned_transport(choice_body(pick=("a", {"a": 1.0, "b": 0.0}, 1.0)))
+    )
     cl.log.write({**cl.decide("t", "x", Q_CHOICE).record(), "source": "model"})
     rows = read_log(cl.log.path)
-    assert rows and rows[0]["fn"] == "t" and rows[0]["ok"] is True and "latency_ms" in rows[0] and "t" in rows[0]
+    assert (
+        rows
+        and rows[0]["fn"] == "t"
+        and rows[0]["ok"] is True
+        and "latency_ms" in rows[0]
+        and "t" in rows[0]
+    )
