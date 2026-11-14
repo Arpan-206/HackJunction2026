@@ -1,7 +1,7 @@
 [project]
 name = "apprentice-backend"
 version = "0.1.0"
-description = "FastAPI backend for Apprentice: glove streaming, lessons, scoring and LLM lesson generation."
+description = "FastAPI backend for Geppetto: glove streaming, lessons, scoring and LLM lesson generation."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.115",

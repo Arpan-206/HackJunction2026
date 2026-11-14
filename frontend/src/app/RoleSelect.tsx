@@ -19,7 +19,7 @@ export function RoleSelect() {
   return (
     <div className="roles">
       <header className="roles__head">
-        <h1 className="roles__brand">Apprentice</h1>
+        <h1 className="roles__brand">Geppetto</h1>
         <p className="roles__motto">Bottega della mano: a skill of the hand is learned from a hand.</p>
       </header>
 

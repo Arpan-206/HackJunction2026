@@ -1,4 +1,4 @@
-# Apprentice: frontend and backend contract
+# Geppetto: frontend and backend contract
 
 This is the single source of truth for the data shapes and HTTP/WebSocket API shared by `backend/` (FastAPI) and `frontend/` (React + TypeScript). If you change a shape, change it here, in `backend/app/schemas/`, and in `frontend/src/api/types.ts` in the same commit.
 

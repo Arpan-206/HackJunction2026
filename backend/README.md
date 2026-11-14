@@ -1,6 +1,6 @@
-# Apprentice backend
+# Geppetto backend
 
-FastAPI service for Apprentice: streams smoothed glove frames over WebSocket, stores lessons, recordings and calibrations as JSON files, scores attempts, and generates lessons with Gemini, Gemma (Ollama) or an offline fake provider. The API and data contract is `../docs/CONTRACT.md`.
+FastAPI service for Geppetto: streams smoothed glove frames over WebSocket, stores lessons, recordings and calibrations as JSON files, scores attempts, and generates lessons with Gemini, Gemma (Ollama) or an offline fake provider. The API and data contract is `../docs/CONTRACT.md`.
 
 ## Run
 

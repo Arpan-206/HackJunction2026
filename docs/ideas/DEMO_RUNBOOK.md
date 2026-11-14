@@ -48,7 +48,7 @@ Ollama (offline coach): `ollama serve` and `ollama pull gemma4:e4b` beforehand; 
 
 1. Wearer puts gloves on, hubs on the back of the hand, strap snug.
 2. In Studio, do the Studio calibration pose (arms down, hands flat) with both gloves.
-3. In Apprentice: `/master/scratch`, pick the move, press calibrate.
+3. In Geppetto: `/master/scratch`, pick the move, press calibrate.
 4. **Flat**: hand flat on the table, fingers together, hold still for the 3 s countdown and capture.
 5. **Fist**: loose fist, hold still for capture.
 6. Check the 3D hand: open the hand and close it; the model must follow without jitter. If a finger lags, recalibrate.
