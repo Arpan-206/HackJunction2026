@@ -126,6 +126,19 @@ describe('AirTypingJudge', () => {
     expect(twitch('strict')).toBe(false);
   });
 
+  it('a beat with no strike felt is marked as such, so the letters after it stay in line', () => {
+    const judge = new AirTypingJudge(lettersFor(['dad']));
+    judge.push(at('left', 'middle', 0.05));
+    judge.flush(0.3);
+    const skipped = judge.skipTo(2, 0.85);
+    expect(skipped.map((j) => [j.letter.char, j.used, j.ok])).toEqual([['a', null, false]]);
+    judge.push(at('left', 'middle', 0.85));
+    judge.flush(1.2);
+    expect(judge.judged.map((j) => j.ok)).toEqual([true, false, true]);
+    // The lost beat counts against the fingering but not against the rhythm or the speed.
+    expect(judge.score()).toMatchObject({ fingering: 67, rhythm: 100 });
+  });
+
   it('keeps gold for mastery at standard or strict only', () => {
     const top = { overall: 96, fingering: 100, rhythm: 87, wpm: 30, streak: 20, letters: 20 };
     expect(isMastery(top, 'standard')).toBe(true);
@@ -161,6 +174,21 @@ describe('strike detection on synthetic glove frames', () => {
     const strikes = detect((t) => frameAt(motion, t), (letters.length * TYPIST_BEAT_MS) / 1000 - 0.05);
     expect(strikes.map((s) => `${s.side} ${s.finger}`)).toEqual(used.map((u) => `${u.side} ${u.finger}`));
     for (let i = 1; i < strikes.length; i++) expect(strikes[i].t - strikes[i - 1].t).toBeCloseTo(TYPIST_BEAT_MS / 1000, 1);
+  });
+
+  it('still finds the strikes when frames arrive late and far apart, without inventing any at rest', () => {
+    const letters = lettersFor(['flask', 'jade', 'quick']);
+    const { motion, used } = typistMotion(letters);
+    const sparse = (gap: number) => {
+      const det = new StrikeDetector();
+      const out: Strike[] = [];
+      for (let t = 0.013; t < (letters.length * TYPIST_BEAT_MS) / 1000 - 0.05; t += gap) out.push(...det.push(frameAt(motion, t)));
+      return out;
+    };
+    expect(sparse(0.15).map((s) => `${s.side} ${s.finger}`)).toEqual(used.map((u) => `${u.side} ${u.finger}`));
+    expect(sparse(0.23).length).toBeGreaterThanOrEqual(Math.floor(used.length * 0.8));
+    const rest = MOVES.find((m) => m.id === 'ty_home_row')!.default_motion;
+    expect(detect((t) => frameAt(rest, t * 4), 3)).toEqual([]);
   });
 
   it('the simulated typist slips now and then, seeded, so a run shows a correction', () => {

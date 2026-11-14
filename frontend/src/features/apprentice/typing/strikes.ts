@@ -1,5 +1,5 @@
 import { MARGIN_MULTIPLIERS } from '../../../api/margin';
-import type { GloveFrame, Margin, Side } from '../../../api/types';
+import { FINGERS, type Finger, type GloveFrame, type Margin, type Side } from '../../../api/types';
 import { PressDetector } from '../test/PianoPlayAlong/piano';
 import { flexionDegrees } from '../training/coach/deviation';
 import { fingerForKey, fingerPhrase, keyLabel, sameFinger, type KeyFinger } from './fingerMap';
@@ -29,13 +29,43 @@ const scale = (margin: Margin): number => MARGIN_MULTIPLIERS[margin];
 export const groupWindow = (margin: Margin): number => GROUP_S * scale(margin);
 export const keyWindow = (margin: Margin): number => KEY_WINDOW_S * scale(margin);
 
-/** Turns glove frames into strikes on both hands, reusing the piano game's press detection (a fast curl of one finger). */
+/** Frames further apart than this (seconds) are sparse: the strike may fall between them. */
+const SPARSE_GAP_S = 0.1;
+const SPARSE_MAX_S = 0.45;
+/** Curl in degrees of total flexion that counts as a whole strike between two sparse frames; the thumb moves less. */
+const JUMP_DEG: Record<Finger, number> = { thumb: 14, index: 26, middle: 26, ring: 26, little: 26 };
+
+/**
+ * Turns glove frames into strikes on both hands, reusing the piano game's press detection (a fast curl of one finger), plus a
+ * jump test for frames that arrive late.
+ */
 export class StrikeDetector {
   private readonly detectors: Record<Side, PressDetector> = { left: new PressDetector(), right: new PressDetector() };
+  private readonly last = new Map<string, { t: number; v: number; peak: number; armed: boolean; struck: number }>();
 
   push(frame: GloveFrame): Strike[] {
     const out: Strike[] = [];
-    for (const h of frame.hands) for (const p of this.detectors[h.side].push(frame.t, flexionDegrees(h))) out.push({ side: h.side, finger: p.finger, t: p.t });
+    for (const h of frame.hands) {
+      const deg = flexionDegrees(h);
+      const presses = this.detectors[h.side].push(frame.t, deg);
+      for (const f of FINGERS) {
+        const key = `${h.side}:${f}`;
+        const prev = this.last.get(key) ?? { t: -9, v: deg[f], peak: deg[f], armed: true, struck: -9 };
+        const pressed = presses.some((p) => p.finger === f);
+        const gap = frame.t - prev.t;
+        // Frames that arrive late (a busy page, a stalled stream) can skip the fast part of a strike that the velocity test
+        // needs; a finger that jumped a whole strike's worth between two late frames is a strike too.
+        const jumped = !pressed && prev.armed && gap >= SPARSE_GAP_S && gap <= SPARSE_MAX_S && deg[f] - prev.v >= JUMP_DEG[f] && frame.t - prev.struck > 0.15;
+        const next = { t: frame.t, v: deg[f], peak: Math.max(prev.peak, deg[f]), armed: prev.armed, struck: prev.struck };
+        if (pressed || jumped) {
+          next.armed = false;
+          next.struck = frame.t;
+          next.peak = deg[f];
+          out.push({ side: h.side, finger: f, t: frame.t });
+        } else if (!prev.armed && deg[f] <= prev.peak - JUMP_DEG[f] / 2) next.armed = true;
+        this.last.set(key, next);
+      }
+    }
     return out;
   }
 }
@@ -69,7 +99,8 @@ export interface TypedLetter {
 
 export interface JudgedLetter {
   letter: TypedLetter;
-  used: KeyFinger;
+  /** The finger felt striking, or null when the letter's beat passed with no strike felt (simulated typist only). */
+  used: KeyFinger | null;
   ok: boolean;
   t: number;
 }
@@ -135,6 +166,22 @@ export class AirTypingJudge {
     return settled;
   }
 
+  /**
+   * For a typist on a fixed beat (the simulator): marks every letter before `index` whose beat passed with no strike felt, so
+   * one strike lost between sparse frames never shifts the letters after it. `t` is when the skipped beat ended.
+   */
+  skipTo(index: number, t: number): JudgedLetter[] {
+    const out: JudgedLetter[] = [];
+    while (!this.group.length && this.judged.length < Math.min(index, this.letters.length)) {
+      const letter = this.letters[this.judged.length];
+      this.run = 0;
+      const j: JudgedLetter = { letter, used: null, ok: false, t };
+      this.judged.push(j);
+      out.push(j);
+    }
+    return out;
+  }
+
   /** Settles the open group once its window has passed; call it on a timer with the stream time. */
   flush(now: number): JudgedLetter | null {
     if (!this.group.length || now - this.group[0].t < groupWindow(this.margin)) return null;
@@ -166,10 +213,14 @@ export function scoreLetters(judged: JudgedLetter[], streak: number, margin: Mar
   const n = judged.length;
   if (!n) return { overall: 0, fingering: 0, rhythm: 0, wpm: 0, streak: 0, letters: 0 };
   const fingering = Math.round((judged.filter((j) => j.ok).length / n) * 100);
+  const felt = judged.filter((j) => j.used);
   const gaps: number[] = [];
-  for (let i = 1; i < n; i++) if (judged[i].letter.word === judged[i - 1].letter.word) gaps.push(judged[i].t - judged[i - 1].t);
+  for (let i = 1; i < felt.length; i++) {
+    const [a, b] = [felt[i - 1], felt[i]];
+    if (a.letter.word === b.letter.word && b.letter.index === a.letter.index + 1) gaps.push(b.t - a.t);
+  }
   const rhythm = rhythmEvenness(gaps, margin);
-  const wpm = Math.round(wordsPerMinute(judged.map((j) => j.t)));
+  const wpm = Math.round(wordsPerMinute(felt.map((j) => j.t)));
   return { overall: Math.round(0.7 * fingering + 0.3 * rhythm), fingering, rhythm, wpm, streak, letters: n };
 }
 

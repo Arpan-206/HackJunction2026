@@ -14,8 +14,11 @@ import { AirTypingJudge, type Strike, type TypedLetter, type TypingScore } from 
 export const HOVER: Record<Finger, number> = { thumb: 0.2, index: 0.35, middle: 0.35, ring: 0.35, little: 0.3 };
 /** Extra curl of a striking finger. */
 export const STRIKE_CURL = 0.3;
-/** Share of a beat the strike key takes; the rest is the lift back to the hover. */
-const STRIKE_SHARE = 0.35;
+/**
+ * Share of a beat the strike key takes; the rest is the lift back to the hover. Half the beat keeps the finger down long enough
+ * to be seen between sparse frames when the page is busy drawing.
+ */
+const STRIKE_SHARE = 0.5;
 /** Beat of the simulated typist in milliseconds: 0.4 s per keystroke is 30 words per minute. */
 export const TYPIST_BEAT_MS = 400;
 /** How often the simulated typist uses a neighbouring finger. */

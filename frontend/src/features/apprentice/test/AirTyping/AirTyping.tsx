@@ -27,6 +27,8 @@ interface Run {
   judge: AirTypingJudge;
   /** Stream time from which strikes count (the end of the count-in). */
   start: number;
+  /** The simulated typist's beat in seconds, to line its strikes up with the letters. */
+  beat: number;
   bot: TypingScore;
 }
 
@@ -77,7 +79,13 @@ export function AirTyping({ spec, lesson }: { spec: TestSpec; lesson?: Lesson })
         const strikes = detector.current.push(f);
         const r = run.current;
         if (!r) return;
-        for (const s of strikes) if (s.t >= r.start) settle(r.judge.push(s));
+        for (const s of strikes) {
+          if (s.t < r.start) continue;
+          // The simulator strikes on a fixed beat from the loop start: a strike it made but the page never saw (sparse frames on
+          // a busy page) is marked not felt, so the letters after it still line up.
+          if (f.source === 'simulator') for (const j of r.judge.skipTo(Math.floor((s.t - r.start) / r.beat), s.t)) settle(j);
+          settle(r.judge.push(s));
+        }
       }),
     [gloves, settle],
   );
@@ -87,7 +95,7 @@ export function AirTyping({ spec, lesson }: { spec: TestSpec; lesson?: Lesson })
     const period = (letters.length * TYPIST_BEAT_MS) / 1000;
     // A simulated glove types on a loop from the stream origin: start on a loop boundary so its first strike is the first letter.
     const t0 = clock.simulated() ? alignToLoop(after, period) - 0.15 : after;
-    run.current = { judge: new AirTypingJudge(letters, margin), start: t0, bot: botTyping(letters, 7 + seed, botSkill) };
+    run.current = { judge: new AirTypingJudge(letters, margin), start: t0, beat: TYPIST_BEAT_MS / 1000, bot: botTyping(letters, 7 + seed, botSkill) };
     setView({ judged: 0, last: null, lastAt: 0, counting: true });
     setStage('playing');
   }, [clock, letters, margin, seed, botSkill]);
@@ -156,8 +164,8 @@ export function AirTyping({ spec, lesson }: { spec: TestSpec; lesson?: Lesson })
   const lastAge = (now - view.lastAt) / 1000;
   const marks: Record<Side, Partial<Record<Finger, FingerMark>>> = { left: {}, right: {} };
   if (current) marks[current.expected.side][current.expected.finger] = 'cue';
-  if (last && last.ok && lastAge < OK_FLASH_S) marks[last.used.side][last.used.finger] = 'ok';
-  if (last && !last.ok && lastAge < OFF_FLASH_S) marks[last.used.side][last.used.finger] = 'off';
+  if (last?.ok && last.used && lastAge < OK_FLASH_S) marks[last.used.side][last.used.finger] = 'ok';
+  if (last && !last.ok && last.used && lastAge < OFF_FLASH_S) marks[last.used.side][last.used.finger] = 'off';
   const good = last && last.ok && lastAge < OK_FLASH_S ? last.letter.char : null;
   const wordIndex = current ? current.word : Math.max(0, words.length - 1);
   const shownLetters = r ? r.judge.letters.filter((l) => l.word === wordIndex && l.char !== ' ') : [];
@@ -199,8 +207,10 @@ export function AirTyping({ spec, lesson }: { spec: TestSpec; lesson?: Lesson })
           </div>
         )}
         {stage === 'playing' && last && !last.ok && lastAge < OFF_FLASH_S * 2 && (
-          <p className="ty-callout ty-callout--off" aria-live="polite">
-            {keyLabel(last.letter.char)} is your {fingerPhrase(last.letter.expected)}, not your {fingerPhrase(last.used)}
+          <p className={`ty-callout ${last.used ? 'ty-callout--off' : ''}`} aria-live="polite">
+            {last.used
+              ? `${keyLabel(last.letter.char)} is your ${fingerPhrase(last.letter.expected)}, not your ${fingerPhrase(last.used)}`
+              : `${keyLabel(last.letter.char)}: the gloves felt no strike`}
           </p>
         )}
         {stage === 'intro' && (
@@ -243,7 +253,7 @@ function mostCommonSlip(wrong: JudgedLetter[]): string {
   if (!wrong.length) return '';
   const counts = new Map<string, number>();
   for (const j of wrong) {
-    const k = `the ${fingerPhrase(j.used)} for ${keyLabel(j.letter.char)}`;
+    const k = j.used ? `the ${fingerPhrase(j.used)} for ${keyLabel(j.letter.char)}` : `no strike felt for ${keyLabel(j.letter.char)}`;
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
