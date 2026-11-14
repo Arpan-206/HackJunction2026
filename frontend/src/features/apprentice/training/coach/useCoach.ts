@@ -223,8 +223,9 @@ export function useCoach(opts: UseCoachOptions): Coach {
           const status = { ...ALL_GOOD };
           for (const f of FINGERS) {
             dev[f] = applyDeadZone(aligned.deviation[f], o.config.deadZoneDeg);
-            status[f] = statusOf(dev[f], o.config.toleranceDeg);
-            ten[f] = tension(dev[f], o.config.toleranceDeg);
+            const band = o.config.fingerToleranceDeg[f];
+            status[f] = statusOf(dev[f], band);
+            ten[f] = tension(dev[f], band);
           }
           L.deviation = dev;
           L.status = status;
@@ -253,7 +254,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
               }
             }
           }
-          r.tip = algorithmicTip(dev, o.config.toleranceDeg, r.lagMs, o.config.timingMs);
+          r.tip = algorithmicTip(dev, o.config.fingerToleranceDeg, r.lagMs, o.config.timingMs);
         }
       }
 
@@ -264,7 +265,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
         viewRef.current = {
           deviation: L.deviation,
           status: L.status,
-          match: matchMeter(L.deviation, o.config.toleranceDeg),
+          match: matchMeter(L.deviation, o.config.fingerToleranceDeg),
           tip: r.tip,
           lagMs: r.lagMs,
           hasLearner: L.hasLearner,

@@ -31,7 +31,7 @@ export interface AttemptPolicy {
 export function policyForStage(stage: Stage, wrongFingers: Finger[] = [], attempt = 1): AttemptPolicy {
   switch (stage) {
     case 'watch':
-      return { attempt, stage, label: 'Watch', blurb: 'The expert plays it slowly, then at full speed. Nothing is scored yet.', showMaster: true, strings: 'none', liveCoach: false };
+      return { attempt, stage, label: 'Watch', blurb: "The expert's hand works a puppet on strings, slowly, then at full speed. Nothing is scored yet.", showMaster: true, strings: 'none', liveCoach: false };
     case 'strings':
       return { attempt, stage, label: 'Strings', blurb: 'Every finger is guided.', showMaster: true, strings: 'all', liveCoach: true };
     case 'ghost':
@@ -39,14 +39,14 @@ export function policyForStage(stage: Stage, wrongFingers: Finger[] = [], attemp
         attempt,
         stage,
         label: 'Ghost',
-        blurb: wrongFingers.length ? 'Only the fingers that were wrong last time are marked.' : 'The expert is faint and guides only a finger that drifts.',
+        blurb: wrongFingers.length ? 'Only the fingers that were wrong last time are marked.' : "The expert's ghost lies over your hand. A finger that drifts out of it is marked.",
         showMaster: true,
         strings: 'off-only',
         liveCoach: true,
         focus: wrongFingers.length ? wrongFingers : undefined,
       };
     default:
-      return { attempt, stage, label: 'Blind', blurb: 'No live guidance. Your score appears at the end.', showMaster: false, strings: 'none', liveCoach: false };
+      return { attempt, stage, label: 'Ghost off', blurb: 'The ghost is off. Your score appears at the end.', showMaster: false, strings: 'none', liveCoach: false };
   }
 }
 

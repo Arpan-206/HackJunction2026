@@ -4,13 +4,13 @@ import type { CoachConfig } from './deviation';
 
 /**
  * A score computed from the live comparison alone, used when the backend cannot be reached. It is a fair summary, not the
- * canonical DTW score: each finger blends how long it stayed inside the tolerance with how far it strayed on average.
+ * canonical DTW score: each finger blends how long it stayed inside its own band with how far it strayed on average.
  */
 export function localScore(stats: AttemptStats, config: CoachConfig): ScoreResult {
   const per_finger = {} as ScoreResult['per_finger'];
   let sum = 0;
   for (const f of FINGERS) {
-    const closeness = Math.max(0, 1 - stats.meanAbs[f] / (2 * config.toleranceDeg));
+    const closeness = Math.max(0, 1 - stats.meanAbs[f] / (2 * config.fingerToleranceDeg[f]));
     per_finger[f] = Math.round(100 * (0.6 * stats.inTolerance[f] + 0.4 * closeness));
     sum += per_finger[f];
   }
