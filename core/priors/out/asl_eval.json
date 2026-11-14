@@ -516,6 +516,37 @@
    745
   ]
  ],
+ "temperature": 4.357,
+ "reliability": [
+  {
+   "conf_from": 0.0,
+   "conf_to": 0.5,
+   "share": 0.503,
+   "mean_conf": 0.385,
+   "right": 0.542
+  },
+  {
+   "conf_from": 0.5,
+   "conf_to": 0.7,
+   "share": 0.178,
+   "mean_conf": 0.56,
+   "right": 0.585
+  },
+  {
+   "conf_from": 0.7,
+   "conf_to": 0.9,
+   "share": 0.103,
+   "mean_conf": 0.815,
+   "right": 0.863
+  },
+  {
+   "conf_from": 0.9,
+   "conf_to": 1.0,
+   "share": 0.216,
+   "mean_conf": 0.979,
+   "right": 0.964
+  }
+ ],
  "wearers": [
   "31c58b389cea",
   "45e8d7396714",

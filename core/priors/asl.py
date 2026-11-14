@@ -233,6 +233,7 @@ class LetterModel:
     means: np.ndarray  # (K, 18)
     prec: np.ndarray  # (18, 18) shared precision
     log_prior: np.ndarray  # (K,)
+    temperature: float = 1.0  # log scores are divided by this before the softmax
 
     @classmethod
     def fit(cls, ds: Dataset, ridge: float = 4.0) -> LetterModel:
@@ -250,7 +251,7 @@ class LetterModel:
         return a - b + self.log_prior
 
     def proba(self, X: np.ndarray) -> np.ndarray:
-        s = self.log_scores(X)
+        s = self.log_scores(X) / self.temperature
         s = s - s.max(axis=1, keepdims=True)
         e = np.exp(s)
         return e / e.sum(axis=1, keepdims=True)
@@ -276,13 +277,17 @@ class LetterModel:
             "means": np.round(self.means, 4).tolist(),
             "prec": np.round(self.prec, 8).tolist(),
             "log_prior": np.round(self.log_prior, 6).tolist(),
+            "temperature": round(float(self.temperature), 3),
             "features": H.ANGLE_NAMES,
             "excluded": list(MOTION_LETTERS),
         }
 
     @classmethod
     def from_json(cls, d: dict) -> LetterModel:
-        return cls(d["classes"], np.array(d["means"]), np.array(d["prec"]), np.array(d["log_prior"]))
+        return cls(
+            d["classes"], np.array(d["means"]), np.array(d["prec"]), np.array(d["log_prior"]),
+            float(d.get("temperature", 1.0)),
+        )
 
     def save(self, path: Path = MODEL_FILE, extra: dict | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,3 +318,29 @@ def split_wearers(wearers: list[Wearer]) -> tuple[list[Wearer], list[Wearer]]:
     test = sessions[keys[-1]] if len(keys) > 1 else []
     train = [w for k in keys[:-1] for w in sessions[k]] if len(keys) > 1 else list(wearers)
     return train, test
+
+
+def fit_temperature(scores: np.ndarray, y: np.ndarray) -> float:
+    """The softmax temperature that minimises the negative log likelihood of held-out scores."""
+    best_t, best_nll = 1.0, np.inf
+    for t in np.geomspace(0.5, 200.0, 120):
+        z = scores / t
+        z = z - z.max(axis=1, keepdims=True)
+        logp = z - np.log(np.exp(z).sum(axis=1, keepdims=True))
+        nll = -float(np.mean(logp[np.arange(len(y)), y]))
+        if nll < best_nll:
+            best_t, best_nll = float(t), nll
+    return best_t
+
+
+def calibration_table(p: np.ndarray, y: np.ndarray, bins=(0.0, 0.5, 0.7, 0.9, 1.01)) -> list[dict]:
+    """Top-1 confidence against how often top-1 is right, per confidence bin."""
+    conf = p.max(axis=1)
+    right = p.argmax(axis=1) == y
+    out = []
+    for lo, hi in zip(bins[:-1], bins[1:]):
+        m = (conf >= lo) & (conf < hi)
+        if m.any():
+            out.append({"conf_from": lo, "conf_to": min(hi, 1.0), "share": round(float(m.mean()), 3),
+                        "mean_conf": round(float(conf[m].mean()), 3), "right": round(float(right[m].mean()), 3)})
+    return out

@@ -808,6 +808,7 @@
   -3.178054,
   -3.178054
  ],
+ "temperature": 4.357,
  "features": [
   "thumb_mcp",
   "thumb_ip",
@@ -884,6 +885,36 @@
     "top1": 0.743,
     "top2": 0.927,
     "n": 3600
+   }
+  ],
+  "reliability": [
+   {
+    "conf_from": 0.0,
+    "conf_to": 0.5,
+    "share": 0.503,
+    "mean_conf": 0.385,
+    "right": 0.542
+   },
+   {
+    "conf_from": 0.5,
+    "conf_to": 0.7,
+    "share": 0.178,
+    "mean_conf": 0.56,
+    "right": 0.585
+   },
+   {
+    "conf_from": 0.7,
+    "conf_to": 0.9,
+    "share": 0.103,
+    "mean_conf": 0.815,
+    "right": 0.863
+   },
+   {
+    "conf_from": 0.9,
+    "conf_to": 1.0,
+    "share": 0.216,
+    "mean_conf": 0.979,
+    "right": 0.964
    }
   ]
  },
