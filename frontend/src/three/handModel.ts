@@ -17,10 +17,11 @@ export const HAND_SCALE = 12;
 /** Hand-space z of the knuckle line; the old rig's knuckles sat at about -1. */
 const KNUCKLE_Z = -1.0;
 /**
- * Where the wrist starts to close, past the wrist joint, and how long the closing dome is (scene units, 12 per metre):
- * the hand closes from just before the wrist joint and ends about 2 cm past it.
+ * Where the wrist starts to close, relative to the wrist joint, and how long the closing dome is (scene units, 12 per
+ * metre): the hand closes from about 3.5 cm before the wrist joint and ends about 2 cm past that crease, so the back of
+ * the hand does not run on into a long, broad wrist.
  */
-const WRIST_CREASE = -0.2;
+const WRIST_CREASE = -0.42;
 const WRIST_END = 0.22;
 /** Concavity (offset to the neighbours along the normal per edge length) over which a crease fades into aCavity. */
 const CREASE_FROM = 0.04;
@@ -76,7 +77,11 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
     .multiply(new Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
 
   const world = new Map<string, { position: Vector3; quaternion: Quaternion }>();
-  bindPos.forEach((p, n) => world.set(n, { position: p.clone().applyMatrix4(toHand), quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) }));
+  bindPos.forEach((p, n) => {
+    const at = p.clone().applyMatrix4(toHand);
+    at.z = shortenPalm(at.z);
+    world.set(n, { position: at, quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) });
+  });
   const layout = buildLayout((n) => world.get(n) as { position: Vector3; quaternion: Quaternion });
 
   // Geometry: drop the UV split so the surface is one welded shell, then bring it into hand space.
@@ -85,6 +90,8 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   for (const k of Object.keys(src.attributes)) if (k !== 'position' && k !== 'skinIndex' && k !== 'skinWeight') src.deleteAttribute(k);
   src.applyMatrix4(toHand);
   let geo = mergeVertices(src, 1e-4);
+  const gp = geo.attributes.position;
+  for (let i = 0; i < gp.count; i++) gp.setZ(i, shortenPalm(gp.getZ(i)));
   src.dispose();
 
   // Remap skin indices from the glTF joint order to the layout's bone order.
@@ -97,6 +104,7 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   geo.dispose();
   geo = capped;
   taperWrist(geo, wrist);
+  slenderise(geo, layout);
   if (SUBDIVIDE) {
     const sub = loopSubdivide(geo);
     geo.dispose();
@@ -178,6 +186,76 @@ export function closeHoles(geo: BufferGeometry): BufferGeometry {
 }
 
 /**
+ * The model's palm is long for its fingers (a broad, fleshy hand), which from behind reads as a mitten. Everything
+ * behind the knuckle line (hand space z > PALM_SHORTEN.from) is drawn closer to it: joints and skin alike, so the bind
+ * pose stays exact. The scale eases in over `ease` scene units, so the surface has no crease where it starts.
+ */
+const PALM_SHORTEN = { from: -0.9, scale: 0.8, ease: 0.2 };
+
+function shortenPalm(z: number): number {
+  const { from, scale, ease } = PALM_SHORTEN;
+  if (z <= from) return z;
+  const d = z - from;
+  return from + d * scale + (1 - scale) * ease * (1 - Math.exp(-d / ease));
+}
+
+/**
+ * How much slimmer the drawn hand is than the model, which is a broad, fleshy hand: phalanges shrink towards their bone
+ * axis (length kept), and the palm narrows across and thins front to back about its own centre line.
+ */
+const SLENDER = { finger: 0.84, thumb: 0.9, palmWidth: 0.82, palmThickness: 0.8 };
+
+/**
+ * Slims the bind-pose skin without moving a joint, so the skinning stays exact: each vertex moves by the skin-weighted
+ * blend of what its bones ask for. A phalanx pulls the skin towards its own axis (projected onto the bone and onwards
+ * past its end, so fingertips keep their length); the wrist and metacarpals pull it towards the palm's centre line.
+ */
+function slenderise(geo: BufferGeometry, layout: HandLayout): void {
+  const { bones, palm } = layout;
+  const phalanx = new Map<number, { from: Vector3; axis: Vector3; scale: number }>();
+  CHAINS.forEach((chain, f) =>
+    chain.forEach((name, k) => {
+      if (k === 0 || k === chain.length - 1) return;
+      const b = bones.findIndex((d) => d.name === name);
+      const next = bones.findIndex((d) => d.name === chain[k + 1]);
+      const from = bones[b].worldPosition;
+      phalanx.set(b, { from, axis: bones[next].worldPosition.clone().sub(from).normalize(), scale: f === 0 ? SLENDER.thumb : SLENDER.finger });
+    }),
+  );
+  const pos = geo.attributes.position;
+  const si = geo.attributes.skinIndex;
+  const sw = geo.attributes.skinWeight;
+  const p = new Vector3();
+  const rel = new Vector3();
+  const move = new Vector3();
+  const off = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    move.set(0, 0, 0);
+    for (let c = 0; c < 4; c++) {
+      const w = sw.getComponent(i, c);
+      if (w <= 0) continue;
+      const ph = phalanx.get(si.getComponent(i, c));
+      if (ph) {
+        rel.copy(p).sub(ph.from);
+        const t = Math.max(0, rel.dot(ph.axis));
+        off.copy(rel).addScaledVector(ph.axis, -t);
+        move.addScaledVector(off, (ph.scale - 1) * w);
+      } else {
+        rel.copy(p).sub(palm.centre);
+        move.addScaledVector(palm.radial, rel.dot(palm.radial) * (SLENDER.palmWidth - 1) * w);
+        move.addScaledVector(palm.palmar, rel.dot(palm.palmar) * (SLENDER.palmThickness - 1) * w);
+      }
+    }
+    pos.setXYZ(i, p.x + move.x, p.y + move.y, p.z + move.z);
+  }
+  pos.needsUpdate = true;
+}
+
+/** How far the wrist draws in from the palm (scale of its width and thickness) and over what length behind the crease. */
+const WRIST_NARROW = { width: 0.74, thickness: 0.86, reach: 0.5 };
+
+/**
  * The model's wrist ends in a short tube with a flat cap, which reads as a blunt stump from behind the hand. Everything
  * past the wrist crease is re-laid as a half egg: the tube and its cap are unrolled by surface distance from the crease
  * and wrapped onto an elliptical dome WRIST_END long, so the hand closes in a soft, tapered end a few centimetres past
@@ -204,10 +282,20 @@ function taperWrist(geo: BufferGeometry, wrist: Vector3): void {
   if (!Number.isFinite(x0) || zMax <= zs) return;
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
-  const a = (x1 - x0) / 2;
-  const b = (y1 - y0) / 2;
+  const { width, thickness, reach } = WRIST_NARROW;
+  const a = ((x1 - x0) / 2) * width;
+  const b = ((y1 - y0) / 2) * thickness;
   const tube = zMax - zs;
   const total = tube + (a + b) / 2;
+  // A wrist is narrower and thinner than the palm: the last stretch of the palm draws in towards the wrist's centre
+  // line, and the closed end keeps that slimmer section.
+  for (let i = 0; i < p.count; i++) {
+    const z = p.getZ(i);
+    const t = smoothstep(zs - reach, zs, z);
+    if (t <= 0) continue;
+    p.setX(i, cx + (p.getX(i) - cx) * (1 + (width - 1) * t));
+    p.setY(i, cy + (p.getY(i) - cy) * (1 + (thickness - 1) * t));
+  }
   for (let i = 0; i < p.count; i++) {
     const z = p.getZ(i);
     if (z <= zs) continue;

@@ -289,7 +289,7 @@ export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, fl
 export const PINCH = {
   /** Unaided tip distance (hand-space units) at which the pads close fully, and beyond which the thumb is left alone. */
   near: 0.55,
-  far: 0.75,
+  far: 0.7,
   /** Distance kept between the two tip joints when touching: about one fingertip's thickness. */
   contact: 0.16,
   /** How far in front of its knuckle (along the palm) the index tip must be for a pinch; curled back past it is a fist. */
