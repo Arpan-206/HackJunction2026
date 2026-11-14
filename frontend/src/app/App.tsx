@@ -8,6 +8,7 @@ import { MasterGenerate, MasterLesson, MasterScratch } from '../features/master/
 import { ApprenticeHome, ApprenticeLesson, ApprenticeSkill, ApprenticeStep, ApprenticeTest } from '../features/apprentice/pages';
 
 const Playground = lazy(() => import('../playground/Playground'));
+const DesignRoute = lazy(() => import('../design/DesignRoute'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -21,6 +22,8 @@ export function App() {
     <Routes>
       <Route path="/" element={<RoleSelect />} />
       <Route path="/playground" element={<Suspense fallback={null}><Playground /></Suspense>} />
+      <Route path="/design" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
+      <Route path="/design/:frame" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
       <Route element={<AppShell />}>
         <Route path="/expert" element={<MasterHome />} />
         <Route path="/expert/scratch" element={<MasterScratch />} />
