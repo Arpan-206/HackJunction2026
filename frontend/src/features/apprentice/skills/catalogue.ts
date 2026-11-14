@@ -104,13 +104,12 @@ export const CATALOGUE: CatalogueEntry[] = [
   {
     id: 'fingerspelling',
     name: 'Fingerspelling',
-    description: 'Spell words letter by letter in sign language, with each finger checked. Taught by Deaf teachers.',
+    description: 'The American manual alphabet, A to Z, one handshape per lesson with each finger checked, then whole words spelt letter by letter.',
     difficulty: 'intermediate',
-    keywords: ['sign', 'sign language', 'letters', 'alphabet', 'deaf', 'spelling', 'words', 'accessibility'],
+    keywords: ['sign', 'sign language', 'asl', 'letters', 'alphabet', 'deaf', 'spelling', 'spell', 'words', 'accessibility', 'name'],
     hands: 'one',
     timeToLearn: 'Two weeks at 10 minutes a day',
-    keyPose: hold(-0.2, 1, 1, 1, -0.1),
-    wouldTeach: ['Closed letters: A, E and S', 'Open letters: B, C and O', 'Spelling a short name at an even pace'],
+    keyPose: hold(0, 1, 1, 1, 0),
   },
   {
     id: 'boxing',
