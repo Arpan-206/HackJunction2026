@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { MARGIN_QUIET } from '../../../api/margin';
 import type { Finger, HandFrame, ScoreResult, Side, Tolerance } from '../../../api/types';
 import { Button } from '../../../components/ui';
 import { marginSentence } from '../../shared/settings';
@@ -57,8 +56,8 @@ export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLab
   const overall = Math.round(result.overall);
   const mastery = isMastery(result);
   const margin = result.margin ?? 'standard';
-  // A high rep under a widened margin is good work, but gold stays for the standard or strict margin.
-  const goldKept = !mastery && overall >= MASTERY && result.within_tolerance && MARGIN_QUIET.includes(margin);
+  // A high rep while just trying it is good work, but gold needs a tighter margin (scoreRules.isMastery).
+  const goldKept = !mastery && overall >= MASTERY && result.within_tolerance && margin === 'just_trying';
   const weakest = weakestFinger(result, light);
   const weakScore = Math.round(result.per_finger[weakest]);
   const allGood = weakScore >= OK_FROM;
@@ -87,7 +86,7 @@ export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLab
         </div>
         <p className="ap-score__margin">
           {marginSentence(margin, tolerance)}
-          {goldKept && ' Gold is kept for the standard or strict margin.'}
+          {goldKept && ' Gold is kept for a tighter margin.'}
         </p>
         <p className="ap-score__hint">{lines?.rep ?? `${summary} ${hint ?? ''}`}</p>
         {clean !== undefined && combo && (

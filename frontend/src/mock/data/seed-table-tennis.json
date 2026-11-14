@@ -18,6 +18,7 @@
       "reference_recording_id": null,
       "repetitions": 3,
       "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "weights": {"thumb": 1.0, "index": 1.0, "middle": 0.6, "ring": 0.25, "little": 0.1},
       "video_url": null
     },
     {
@@ -31,6 +32,7 @@
       "reference_recording_id": null,
       "repetitions": 5,
       "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "weights": {"thumb": 1.0, "index": 1.0, "middle": 0.6, "ring": 0.25, "little": 0.1},
       "video_url": null
     },
     {
@@ -44,6 +46,7 @@
       "reference_recording_id": null,
       "repetitions": 5,
       "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "weights": {"thumb": 1.0, "index": 1.0, "middle": 0.6, "ring": 0.25, "little": 0.1},
       "video_url": null
     }
   ],

@@ -19,8 +19,9 @@ export function CoachPanel({ coach, policy, mode, running }: CoachPanelProps) {
   const view = useCoachView(coach);
   const guiding = policy.liveCoach;
   const rehearsal = Boolean(policy.rehearsal);
-  // The meter is the weakest finger's match, floored so a finger just past the tolerance never rounds up into the green.
-  const match = Math.floor(view.match);
+  // The meter shows the scorer's estimate for this instant, so it agrees with the score the rep ends on. Its colour
+  // still follows the flag rule (anyOff), so it is never green beside a correction.
+  const match = Math.floor(view.score);
   // Vermilion exactly when the stage label can show: both read the same snapshot through the same rule.
   const anyOff = view.hasLearner && meterOff(view);
   const judged = view.hasLearner && !rehearsal;

@@ -7,6 +7,7 @@ import {
   applyDeadZone,
   flexionDegrees,
   matchMeter,
+  liveScore,
   MovingAverage,
   statusOf,
   tension,
@@ -47,6 +48,8 @@ export interface CoachView {
   deviation: FingerValues;
   status: Record<Finger, FingerStatus>;
   match: number;
+  /** The scorer's estimate for this instant (deviation.liveScore): the number the meters show. */
+  score: number;
   tip: string | null;
   lagMs: number;
   hasLearner: boolean;
@@ -123,7 +126,7 @@ export interface Coach {
 }
 
 function initialView(): CoachView {
-  return { deviation: zeroValues(), status: ALL_GOOD, match: 0, tip: null, lagMs: 0, hasLearner: false, running: false, waiting: false, checkpoint: 0, checkpoints: 0, holdFraction: 0, cycle: 0 };
+  return { deviation: zeroValues(), status: ALL_GOOD, match: 0, score: 0, tip: null, lagMs: 0, hasLearner: false, running: false, waiting: false, checkpoint: 0, checkpoints: 0, holdFraction: 0, cycle: 0 };
 }
 
 /**
@@ -275,6 +278,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
           deviation: L.deviation,
           status: L.status,
           match: matchMeter(L.deviation, o.config.fingerToleranceDeg, o.config.light),
+          score: liveScore(L.deviation, o.config.fingerToleranceDeg, o.config.weights),
           tip: r.tip,
           lagMs: r.lagMs,
           hasLearner: L.hasLearner,

@@ -317,7 +317,7 @@ function LiveScore({ coach, phase, result, performS }: { coach: Coach; phase: Ph
       return;
     }
     if (phase !== 'perform' || !view.hasLearner) return;
-    sum.current.total += view.match;
+    sum.current.total += view.score;
     sum.current.n += 1;
     setLive(sum.current.total / sum.current.n);
   }, [view, phase]);

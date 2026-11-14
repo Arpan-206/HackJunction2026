@@ -1,5 +1,6 @@
 import { DEFAULT_MARGIN, MARGIN_MULTIPLIERS } from '../../../../api/margin';
 import { FINGERS, type Finger, type HandFrame, type Margin } from '../../../../api/types';
+import { FINGER_WEIGHT, gaussianScore, TIMING_WEIGHT } from '../../../../mock/scoring';
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -165,6 +166,23 @@ export function matchMeter(deviations: FingerValues, tolerance: ToleranceBand, l
   let worst = 100;
   for (const f of FINGERS) if (!light.includes(f)) worst = Math.min(worst, fingerMatch(deviations[f], bandFor(tolerance, f)));
   return worst;
+}
+
+/**
+ * The live score, 0 to 100: what the scorer would give this instant (mock/scoring.ts, the port of the backend scorer).
+ * Each finger scores on the scorer's curve against its own band, the fingers are averaged by the step's weights, and
+ * timing counts as on the beat. So the number during a rep is the number the rep ends on when the hand holds its shape;
+ * the weakest finger's match (matchMeter) reads far lower than the final score and is kept for the flag rule only.
+ */
+export function liveScore(deviations: FingerValues, tolerance: ToleranceBand, weights?: Partial<Record<Finger, number>> | null): number {
+  let sum = 0;
+  let total = 0;
+  for (const f of FINGERS) {
+    const w = Math.min(1, Math.max(0, weights?.[f] ?? 1));
+    sum += w * gaussianScore(Math.abs(deviations[f]), bandFor(tolerance, f));
+    total += w;
+  }
+  return FINGER_WEIGHT * (total > 0 ? sum / total : 100) + TIMING_WEIGHT * 100;
 }
 
 /** What the stage and the meter both show: one coach snapshot, published together about eight times a second. */

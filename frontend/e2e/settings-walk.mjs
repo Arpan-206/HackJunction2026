@@ -131,7 +131,7 @@ try {
 
   step('the room shows the widened room for error; the score names the margin');
   await playRep(page);
-  await visible(page.getByText(/Judged with a relaxed margin of error: 27 degrees per finger and 375 ms of timing/), 'margin line on the score');
+  await visible(page.getByText(/Judged to within 27 degrees per finger and 375 ms of timing/), 'margin line on the score');
   await page.waitForTimeout(2500);
   await noOverlap(page, '.ap-scoreview', '.ap-score__detail', 'score view and detail column');
   await page.screenshot({ path: `${OUT}settings-03-score-3d-relaxed.png` });

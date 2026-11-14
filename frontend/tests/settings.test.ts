@@ -68,7 +68,7 @@ describe('settings store', () => {
 
   it('says the margin in plain words with what it allowed', () => {
     expect(marginSentence('standard', { angle_deg: 18, timing_ms: 250 })).toBe("Judged with the expert's standard margin of error: 18 degrees per finger and 250 ms of timing.");
-    expect(marginSentence('relaxed', { angle_deg: 18, timing_ms: 250 })).toBe('Judged with a relaxed margin of error: 27 degrees per finger and 375 ms of timing.');
+    expect(marginSentence('relaxed', { angle_deg: 18, timing_ms: 250 })).toBe('Judged to within 27 degrees per finger and 375 ms of timing.');
     expect(roomFor({ angle_deg: 18, timing_ms: 250 }, 'strict')).toEqual({ angle: 11, timing: 150 });
     for (const m of MARGINS) expect(MARGIN_INFO[m].label.length).toBeGreaterThan(0);
   });

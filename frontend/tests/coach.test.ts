@@ -255,3 +255,19 @@ describe('ClumsySim', () => {
     expect(flexionDegrees(sim.apply(handWith({ ring: 90 }), 5)).ring).toBeCloseTo(90, 4);
   });
 });
+
+describe('live score agrees with the scorer', () => {
+  it('reads what the scorer would give, not the weakest finger', async () => {
+    const { liveScore } = await import('../src/features/apprentice/training/coach/deviation');
+    const { gaussianScore } = await import('../src/mock/scoring');
+    const zero = { thumb: 0, index: 0, middle: 0, ring: 0, little: 0 };
+    expect(liveScore(zero, 18)).toBe(100);
+    // one finger at the edge of the band: the weakest-finger meter reads 75, the scorer about 96
+    const edge = { ...zero, thumb: 18 };
+    expect(matchMeter(edge, 18)).toBe(75);
+    expect(liveScore(edge, 18)).toBeCloseTo(0.8 * ((400 + gaussianScore(18, 18)) / 5) + 20, 6);
+    expect(liveScore(edge, 18)).toBeGreaterThan(95);
+    // a zero-weight finger costs nothing, as in the scorer
+    expect(liveScore({ ...zero, thumb: 60 }, 18, { thumb: 0 })).toBe(100);
+  });
+});

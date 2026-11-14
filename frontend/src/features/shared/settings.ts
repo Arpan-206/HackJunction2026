@@ -92,8 +92,9 @@ export const getMargin = marginPref.get;
 /** Plain words for each margin, for the Settings panel and the score screen. */
 export const MARGIN_INFO: Record<Margin, { label: string; blurb: string; phrase: string; room: string }> = {
   strict: { label: 'Strict', blurb: 'Tight. Small slips are marked, for polishing a skill you already know.', phrase: 'a strict margin of error', room: ', narrowed by your strict margin of error.' },
-  standard: { label: 'Standard', blurb: "The expert's own margin. The default.", phrase: "the expert's standard margin of error", room: '.' },
-  relaxed: { label: 'Relaxed', blurb: 'Wider. A slightly wrong swing still passes, with no correction.', phrase: 'a relaxed margin of error', room: ', widened by your relaxed margin of error.' },
+  standard: { label: 'Standard', blurb: "The expert's own margin. Tighter than the default.", phrase: "the expert's standard margin of error", room: ', narrowed to the expert\'s own margin of error.' },
+  // The default: its words never tell the learner the judging was easy (Arpan, 14 Nov).
+  relaxed: { label: 'Relaxed', blurb: 'The default. Room for a glove that reads a little off.', phrase: '', room: '.' },
   just_trying: { label: 'Just trying it', blurb: 'Very wide. Only big mistakes are marked, for a first go.', phrase: 'a very wide margin of error, just trying it', room: ', widened a lot because you are just trying it.' },
 };
 
@@ -107,7 +108,10 @@ export function roomFor(tolerance: Tolerance, margin: Margin): { angle: number; 
 export function marginSentence(margin: Margin, tolerance?: Tolerance): string {
   const room = tolerance ? roomFor(tolerance, margin) : null;
   const what = room ? `: ${room.angle} degrees per finger and ${room.timing} ms of timing` : '';
-  return `Judged with ${MARGIN_INFO[margin].phrase}${what}.`;
+  const phrase = MARGIN_INFO[margin].phrase;
+  // the default margin is not named: the sentence only says what the rep was judged within
+  if (!phrase) return room ? `Judged to within ${room.angle} degrees per finger and ${room.timing} ms of timing.` : '';
+  return `Judged with ${phrase}${what}.`;
 }
 
 /* ---- score view ---- */
