@@ -11,6 +11,7 @@ import numpy as np
 from . import hand as H
 from .coach import Coach, CoachLine
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
+from .robot import SOURCES as ROBOT_SOURCES, Retargeter
 from .scorer import FrameScore, MirrorScorer, StepScorer, Tolerances
 from .tasks import TASKS, task_state
 from .tasks.piano import PianoTask
@@ -67,6 +68,15 @@ class Session:
         self.piano: PianoTask | None = None
         self.seq = 0
         root = Path(cfg.get_path("_root", "."))
+        self.robot: Retargeter | None = None
+        self.robot_error: str | None = None
+        self.robot_source = "off"
+        try:
+            self.robot = Retargeter(cfg.robot, root)
+            self.robot_source = str(cfg.robot.source) if cfg.robot.source in ROBOT_SOURCES else "off"
+        except Exception as e:   # a missing URDF must not stop the server; the robot block is then absent
+            self.robot_error = f"{type(e).__name__}: {e}"
+            log.warning("robot output disabled: %s", self.robot_error)
         self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
 
     def log_attempt(self, summary: dict) -> None:
@@ -97,13 +107,14 @@ class Session:
             "roles": dict(self.roles), "recording": bool(self.recorder.active),
             "calibrated": bool(self.calibrated), "anchor": self.anchor,
             "tempo": float(self.tempo), "loop": bool(self.loop), "gemma": "off",
-            "sources": dict(self.sources),
+            "sources": dict(self.sources), "robot_source": self.robot_source,
         }
 
     def hello(self) -> dict:
         return {**self.envelope("hello"), "joint_names": list(H.JOINT_NAMES), "fingers": list(H.FINGERS),
                 "tasks": list(TASKS), "modes": list(MODES), "lessons": list_lessons(self.lessons_dir),
-                "session": self.session_state(), "fake": bool(self.fake)}
+                "session": self.session_state(), "fake": bool(self.fake),
+                "robot": self.robot.describe() if self.robot is not None else None}
 
     def lesson_message(self) -> dict | None:
         if self.lesson is None:
@@ -412,8 +423,52 @@ class Session:
         if self.task == "piano":
             self._piano_tick(t)
         frame["task"] = task_state(self)
+        frame["robot"] = self.robot_block(t)
         self.emit_coach_flush(t)
         return frame
+
+    # ------------------------------------------------------------------ robot
+    def robot_angles(self, t_us: int) -> tuple[np.ndarray, str, str] | None:
+        """(angles, hand side, 'hand'|'lesson') for the robot source, or None."""
+        src = self.robot_source
+        if self.robot is None or src == "off":
+            return None
+        if src in ("master", "learner"):
+            sides = self.sides_with_role(src)
+            for side in sides:
+                h = self.hands.get(side)
+                if h is not None and h.tracked:
+                    return h.angles, side, "hand"
+            return None
+        # lesson: the current step as the demonstrator, in learn, duel and playback modes
+        if self.lesson is None or self.step_index is None or self.mode not in ("learn", "duel", "playback"):
+            return None
+        step = self.lesson.steps[self.step_index]
+        if self.mode == "playback" and self.lesson.trace is not None:
+            dur = max(1, int(self.lesson.duration_us))
+            lt = int(((t_us - self.playback_t0_us) * self.tempo) % dur)
+            return self.lesson.angles_at(lt), self.lesson.master_hand, "lesson"
+        if step.kind == "hold" or self.lesson.trace is None:
+            return step.key_angles, self.lesson.master_hand, "lesson"
+        gt = int(np.clip(self.ghost_t(t_us), step.t0_us, step.t1_us))
+        return self.lesson.angles_at(gt), self.lesson.master_hand, "lesson"
+
+    def robot_block(self, t_us: int) -> dict | None:
+        got = self.robot_angles(t_us)
+        if got is None:
+            return None
+        angles, side, origin = got
+        return self.robot.targets(angles, side).to_message(self.robot_source, origin)
+
+    def cmd_set_robot_source(self, args: dict) -> dict:
+        src = args.get("source")
+        if src not in ROBOT_SOURCES:
+            raise CommandError("bad_args", f"source must be one of {ROBOT_SOURCES}")
+        if self.robot is None and src != "off":
+            raise CommandError("bad_state", f"robot output unavailable: {self.robot_error}")
+        self.robot_source = src
+        self.emit_session()
+        return {"source": src, "model": self.robot.model_name if self.robot else None}
 
     def emit_coach_flush(self, t_us: int) -> None:
         for line in self.coach.flush_pending(t_us):

@@ -78,6 +78,10 @@
     rate <select id="rate"><option>15</option><option selected>30</option><option>60</option></select>
     <button id="subscribe">subscribe</button>
   </div>
+  <div class="controls">
+    robot <select id="robot"><option>off</option><option>learner</option><option>master</option><option>lesson</option></select>
+    <button id="setrobot">set_robot_source</button>
+  </div>
   <h3>Score</h3>
   <div class="row"><span class="big" id="overall">–</span><span id="scoremeta" class="dim"></span></div>
   <div id="fingers"></div>
@@ -146,6 +150,7 @@ $("settempo").onclick = () => send("set_tempo", { factor: Number($("tempo").valu
 $("loop").onclick = () => send("set_loop", { on: !(session && session.loop) });
 $("settask").onclick = () => send("set_task", { task: $("task").value, config: $("task").value === "chords" ? { chords: ["G", "C", "D"] } : {} });
 $("subscribe").onclick = () => send("subscribe", { rate_hz: Number($("rate").value), rots: false });
+$("setrobot").onclick = () => send("set_robot_source", { source: $("robot").value });
 
 const canvas = $("canvas"), ctx = canvas.getContext("2d");
 function project(p, w, h) {
@@ -199,7 +204,7 @@ function render() {
     $("scoremeta").innerHTML = `${s.hand}<br>worst <b>${s.worst}</b> ${s.hint || ""}<br>timing ${s.timing_ms == null ? "–" : s.timing_ms + " ms"}<br>progress ${(s.step_progress * 100) | 0}% hold ${s.hold_ms} ms`;
     $("fingers").innerHTML = FINGERS.map(fn => `<div class="row"><span>${fn}</span><span>${s.fingers[fn].toFixed(2)} · ${s.err_deg[fn].toFixed(0)}°</span></div><div class="bar"><div style="width:${s.fingers[fn] * 100}%;background:${fingerColour(s, fn)}"></div></div>`).join("");
   } else { $("overall").textContent = "–"; $("scoremeta").textContent = ""; $("fingers").textContent = ""; }
-  if (f.hands) $("hands").innerHTML = ["left", "right"].map(side => { const hd = f.hands[side]; if (!hd) return `${side}: null`; return `${side}: dev ${hd.device_id} ${hd.source} ${hd.role} tracked=${hd.tracked} anchor=${hd.anchor} curl ${FINGERS.map(fn => hd.curl[fn].toFixed(2)).join(" ")} pinch ${Object.entries(hd.pinch).filter(([k, v]) => v).map(([k]) => k).join(",") || "–"}`; }).join("<br>") + (f.task && Object.keys(f.task).length ? `<br>task ${JSON.stringify(f.task)}` : "");
+  if (f.hands) $("hands").innerHTML = ["left", "right"].map(side => { const hd = f.hands[side]; if (!hd) return `${side}: null`; return `${side}: dev ${hd.device_id} ${hd.source} ${hd.role} tracked=${hd.tracked} anchor=${hd.anchor} curl ${FINGERS.map(fn => hd.curl[fn].toFixed(2)).join(" ")} pinch ${Object.entries(hd.pinch).filter(([k, v]) => v).map(([k]) => k).join(",") || "–"}`; }).join("<br>") + (f.task && Object.keys(f.task).length ? `<br>task ${JSON.stringify(f.task)}` : "") + (f.robot ? `<br>robot ${f.robot.model} ${f.robot.source} ${f.robot.hand}: ` + Object.entries(f.robot.q).map(([k, v]) => `${k.replace(/^(left|right)_hand_/, "").replace(/_joint$/, "")}=${v.toFixed(2)}`).join(" ") + ` fidelity ${JSON.stringify(f.robot.fidelity)} missing ${f.robot.missing.join(",")}` : "");
   const now = performance.now();
   if (now - fpsT > 1000) { $("fps").textContent = `${(frames * 1000 / (now - fpsT)).toFixed(1)} frames/s · seq ${f.seq || 0}`; frames = 0; fpsT = now; }
   requestAnimationFrame(render);

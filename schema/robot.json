@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/robot.json",
+  "title": "robot: joint targets for a robot hand, on /ws/robot and as frame.robot",
+  "type": "object",
+  "required": ["v", "type", "t", "model", "source", "hand", "q", "fidelity", "missing"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "robot" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "model": { "type": "string" },
+    "source": { "type": "string", "enum": ["master", "learner", "lesson"] },
+    "hand": { "$ref": "common.json#/$defs/side" },
+    "angles_from": { "type": "string", "enum": ["hand", "lesson"] },
+    "q": { "type": "object", "additionalProperties": { "type": "number" } },
+    "q_norm": { "type": "object", "additionalProperties": { "$ref": "common.json#/$defs/unit" } },
+    "fidelity": { "type": "object", "additionalProperties": { "$ref": "common.json#/$defs/unit" } },
+    "missing": { "type": "array", "items": { "$ref": "common.json#/$defs/finger" } }
+  }
+}

@@ -3,20 +3,51 @@
   "$id": "https://geppetto.local/schema/cmd.json",
   "title": "cmd: viewer to core",
   "type": "object",
-  "required": ["v", "type", "id", "name"],
+  "required": [
+    "v",
+    "type",
+    "id",
+    "name"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "type": { "const": "cmd" },
-    "id": { "type": "string" },
+    "v": {
+      "const": 1
+    },
+    "type": {
+      "const": "cmd"
+    },
+    "id": {
+      "type": "string"
+    },
     "name": {
       "type": "string",
       "enum": [
-        "set_mode", "set_task", "set_roles", "set_sources", "calibrate", "calibrate_camera",
-        "record_start", "record_mark", "record_stop",
-        "lesson_load", "lesson_delete", "step_goto", "step_next", "step_prev", "step_restart",
-        "set_tempo", "set_loop", "describe_task", "coach_answer", "subscribe", "ping"
+        "set_mode",
+        "set_task",
+        "set_roles",
+        "set_sources",
+        "calibrate",
+        "calibrate_camera",
+        "record_start",
+        "record_mark",
+        "record_stop",
+        "lesson_load",
+        "lesson_delete",
+        "step_goto",
+        "step_next",
+        "step_prev",
+        "step_restart",
+        "set_tempo",
+        "set_loop",
+        "describe_task",
+        "coach_answer",
+        "subscribe",
+        "ping",
+        "set_robot_source"
       ]
     },
-    "args": { "type": "object" }
+    "args": {
+      "type": "object"
+    }
   }
 }

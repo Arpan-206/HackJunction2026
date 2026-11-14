@@ -3,12 +3,29 @@
   "$id": "https://geppetto.local/schema/message.json",
   "title": "Any core-to-viewer message",
   "oneOf": [
-    { "$ref": "hello.json" },
-    { "$ref": "frame.json" },
-    { "$ref": "session.json" },
-    { "$ref": "lesson_message.json" },
-    { "$ref": "event.json" },
-    { "$ref": "coach.json" },
-    { "$ref": "ack.json" }
+    {
+      "$ref": "hello.json"
+    },
+    {
+      "$ref": "frame.json"
+    },
+    {
+      "$ref": "session.json"
+    },
+    {
+      "$ref": "lesson_message.json"
+    },
+    {
+      "$ref": "event.json"
+    },
+    {
+      "$ref": "coach.json"
+    },
+    {
+      "$ref": "ack.json"
+    },
+    {
+      "$ref": "robot.json"
+    }
   ]
 }

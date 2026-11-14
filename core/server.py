@@ -60,6 +60,7 @@ class Core:
         self.session.attempts_log = self.logs_dir / "attempts.jsonl"
         self.clients: dict[int, ClientState] = {}
         self.compat_clients: dict[int, ClientState] = {}
+        self.robot_clients: dict[int, ClientState] = {}
         self.started = time.time()
         self.frames = 0
         self._tick_times: deque[float] = deque(maxlen=90)
@@ -138,6 +139,12 @@ class Core:
                 if self.compat_clients:
                     text = json.dumps(compat_mod.glove_frame(self, t), separators=(",", ":"))
                     for c in list(self.compat_clients.values()):
+                        self._enqueue(c, text)
+                if self.robot_clients and frame.get("robot"):
+                    msg = {"v": 1, "type": "robot", "t": t, **frame["robot"]}
+                    self._check(msg)
+                    text = json.dumps(msg, separators=(",", ":"))
+                    for c in list(self.robot_clients.values()):
                         self._enqueue(c, text)
                 if self.glove_control is not None:
                     self.glove_control.on_messages(msgs)
@@ -234,6 +241,29 @@ class Core:
             sender.cancel()
             self.clients.pop(key, None)
 
+    async def handle_robot_ws(self, ws: WebSocket) -> None:
+        """/ws/robot: only the robot block, one message per tick while a source is on."""
+        await ws.accept()
+        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz))
+        key = id(ws)
+        self.robot_clients[key] = c
+        sender = asyncio.create_task(self._sender(c))
+        try:
+            hello = {"v": 1, "type": "hello", **{k: v for k, v in self.session.hello().items() if k not in ("v", "type")}}
+            await ws.send_text(json.dumps(hello, separators=(",", ":")))
+            while True:
+                raw = await ws.receive_text()
+                ack = self.handle_cmd(c, raw)      # set_robot_source and friends work here too
+                self._check(ack)
+                await ws.send_text(json.dumps(ack, separators=(",", ":")))
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            log.exception("robot websocket closed with error")
+        finally:
+            sender.cancel()
+            self.robot_clients.pop(key, None)
+
     async def handle_compat_ws(self, ws: WebSocket) -> None:
         """/ws/gloves: the teammate frontend's GloveFrame stream (core/compat.py)."""
         await ws.accept()
@@ -310,7 +340,9 @@ class Core:
             "hands": {s: None if hands.get(s) is None else {"tracked": hands[s].tracked, "source": hands[s].source} for s in SIDES},
             "anchor": self.session.anchor, "gemma": "off", "uptime_s": round(time.time() - self.started, 1),
             "fake": self.fake, "frames": self.frames, "clients": len(self.clients),
-            "compat_clients": len(self.compat_clients), "tick_hz": self.tick_hz(),
+            "compat_clients": len(self.compat_clients), "robot_clients": len(self.robot_clients),
+            "robot": {"model": self.session.robot.model_name, "source": self.session.robot_source} if self.session.robot else {"error": self.session.robot_error},
+            "tick_hz": self.tick_hz(),
             "rgmp": None if self.glove_source is None else {"connected": self.glove_source.connected,
                                                             "frames": self.glove_source.frames,
                                                             "devices": dict(self.glove_source.sides)},
@@ -348,6 +380,10 @@ def create_app(core: Core) -> FastAPI:
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket):
         await core.handle_ws(ws)
+
+    @app.websocket("/ws/robot")
+    async def ws_robot(ws: WebSocket):
+        await core.handle_robot_ws(ws)
 
     @app.get("/health")
     def health():

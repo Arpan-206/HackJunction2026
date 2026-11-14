@@ -146,3 +146,57 @@ rest_tau_ms = 2000
 good_ms = 120
 near_ms = 300
 default_tempo_bpm = 70
+
+[robot]
+# Robot hand output: the 18 angle features retargeted to joint targets.
+# Joint names and limits come from the URDF files, never from code.
+model = "dex3_1"
+urdf_left = "models/robots/dex3_1/dex3_1_l.urdf"
+urdf_right = "models/robots/dex3_1/dex3_1_r.urdf"
+# URDF joint name for a retarget key: {side} is "left" or "right", {key} is the table key below.
+joint_name = "{side}_hand_{key}_joint"
+# Startup source: "master", "learner", "lesson" or "off". Change at runtime with set_robot_source.
+source = "off"
+# Human flexion joints per finger, for the fidelity score (thumb has 2, the others 3).
+human_dofs = { thumb = 2, index = 3, middle = 3, ring = 3, little = 3 }
+
+# Each robot joint = offset_deg + sum(weight * angle_feature_deg), in radians, clamped to the URDF limits.
+# The flexion sign follows the URDF: the side of the limit range with the larger magnitude is the
+# flexion direction (left index 0..-1.57 flexes negative, right 0..+1.57 flexes positive). Set
+# sign_left / sign_right to force it. Unverified against Unitree's renderer: flip here, not in code.
+[robot.retarget.thumb_0]
+finger = "thumb"
+offset_deg = -40.0
+weights = { spread_thumb_index = 1.0 }
+sign_left = 1.0
+sign_right = -1.0
+
+[robot.retarget.thumb_1]
+finger = "thumb"
+offset_deg = 0.0
+weights = { thumb_mcp = 1.0 }
+
+[robot.retarget.thumb_2]
+finger = "thumb"
+offset_deg = 0.0
+weights = { thumb_ip = 1.0 }
+
+[robot.retarget.index_0]
+finger = "index"
+offset_deg = 0.0
+weights = { index_mcp = 1.0 }
+
+[robot.retarget.index_1]
+finger = "index"
+offset_deg = 0.0
+weights = { index_pip = 0.7, index_dip = 0.5 }
+
+[robot.retarget.middle_0]
+finger = "middle"
+offset_deg = 0.0
+weights = { middle_mcp = 1.0 }
+
+[robot.retarget.middle_1]
+finger = "middle"
+offset_deg = 0.0
+weights = { middle_pip = 0.7, middle_dip = 0.5 }

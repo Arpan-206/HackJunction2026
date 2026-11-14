@@ -3,37 +3,133 @@
   "$id": "https://geppetto.local/schema/frame.json",
   "title": "frame: hands, ghost, live score, task state",
   "type": "object",
-  "required": ["v", "type", "t", "seq", "hands", "ghost", "score", "task"],
+  "required": [
+    "v",
+    "type",
+    "t",
+    "seq",
+    "hands",
+    "ghost",
+    "score",
+    "task"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "type": { "const": "frame" },
-    "t": { "$ref": "common.json#/$defs/t_us" },
-    "seq": { "type": "integer", "minimum": 0 },
+    "v": {
+      "const": 1
+    },
+    "type": {
+      "const": "frame"
+    },
+    "t": {
+      "$ref": "common.json#/$defs/t_us"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
     "hands": {
       "type": "object",
-      "required": ["left", "right"],
+      "required": [
+        "left",
+        "right"
+      ],
       "properties": {
-        "left": { "oneOf": [{ "$ref": "common.json#/$defs/hand" }, { "type": "null" }] },
-        "right": { "oneOf": [{ "$ref": "common.json#/$defs/hand" }, { "type": "null" }] }
+        "left": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/hand"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "right": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/hand"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       }
     },
     "ghost": {
       "type": "object",
       "properties": {
-        "left": { "oneOf": [{ "$ref": "common.json#/$defs/ghost" }, { "type": "null" }] },
-        "right": { "oneOf": [{ "$ref": "common.json#/$defs/ghost" }, { "type": "null" }] }
+        "left": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/ghost"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "right": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/ghost"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       },
       "additionalProperties": false
     },
-    "score": { "oneOf": [{ "$ref": "common.json#/$defs/score" }, { "type": "null" }] },
+    "score": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/score"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "scores": {
       "type": "object",
       "description": "Per-hand scores, used in duel mode. score holds the primary learner's.",
       "properties": {
-        "left": { "oneOf": [{ "$ref": "common.json#/$defs/score" }, { "type": "null" }] },
-        "right": { "oneOf": [{ "$ref": "common.json#/$defs/score" }, { "type": "null" }] }
+        "left": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/score"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "right": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/score"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       }
     },
-    "task": { "type": "object" }
+    "task": {
+      "type": "object"
+    },
+    "robot": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/robot_block"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
   }
 }

@@ -180,3 +180,19 @@ forwards this core's hands into it. Route A (core serves their contract,
 D22) and route B (core feeds their backend) are both tested and documented
 in STATUS.md. Neither was chosen; that is the morning's call. The bridge
 drops untracked hands and sends only the five CONTRACT.md keys per hand.
+
+## D25. Robot hand: Dex3-1 from Unitree's own URDF, retarget table in config
+The Aalto starter repo (zupermiez/aaltonomous-humanoid) clones Unitree's
+`xr_teleoperate` for the G1 URDF and holds no hand URDF itself, so the
+Dex3-1 URDFs come from `unitreerobotics/unitree_ros` (BSD-3-Clause), copied
+to `models/robots/dex3_1/`. Joint names and limits are read from those files
+at startup; a missing or broken URDF disables the robot block with a logged
+reason instead of stopping the server. The retarget table lives in
+`config.toml`: one entry per robot joint with its human finger, an offset
+and weights over the 18 angle features. Flexion sign follows the URDF limit
+range (the side with the larger magnitude), with explicit overrides, because
+the left and right Dex3-1 files use mirrored ranges. Fidelity per finger is
+coverage (robot joints over human flexion joints, so index and middle score
+at most 2/3) times one minus the mean clipping loss. CONTRACT.md has no
+robot field, so the block is served on its own socket `/ws/robot` as well as
+inside `frame` on `/ws`.

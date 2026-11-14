@@ -21,6 +21,20 @@ Free win: his backend supports Ollama. Point it at a Gemma model on the
 laptop (`LLM_PROVIDER=ollama`, `OLLAMA_MODEL=gemma...`) and the offline coach
 for the Gemma bounty exists with almost no new work.
 
+**Robot hand output (added Sat 12:00).** The Rokoko track needs the gloves to
+drive a robot hand. The core retargets the 18 angles to Unitree Dex3-1 joint
+targets (`core/robot.py`, table in `config.toml` `[robot]`, limits read from
+the official URDFs in `models/robots/dex3_1/`). The source is chosen with the
+`set_robot_source` command: `master`, `learner`, `lesson` (the current step
+acts as the demonstrator in learn and playback) or `off`. The block carries
+`model`, `source`, `hand`, `q` (joint name to radians), `q_norm` (0 at the
+lower limit, 1 at the upper), `fidelity` per robot finger and `missing`
+(human fingers the robot lacks: ring and little). CONTRACT.md has no place
+for it, so it is served on its own socket, `ws://core:8765/ws/robot`, one
+message per tick while a source is on (`schema/robot.json`), and also as
+`frame.robot` on `/ws`. Szymon's renderer reads `/ws/robot` and needs
+nothing else; `hello.robot` on that socket lists the joint names and limits.
+
 The sections below are the analysis this decision came from.
 
 

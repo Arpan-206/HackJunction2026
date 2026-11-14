@@ -3,141 +3,586 @@
   "$id": "https://geppetto.local/schema/common.json",
   "title": "Shared definitions for Geppetto messages",
   "$defs": {
-    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
-    "quat": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
-    "joints26": { "type": "array", "items": { "$ref": "#/$defs/vec3" }, "minItems": 26, "maxItems": 26 },
-    "rots26": { "type": "array", "items": { "$ref": "#/$defs/quat" }, "minItems": 26, "maxItems": 26 },
-    "angles18": { "type": "array", "items": { "type": "number" }, "minItems": 18, "maxItems": 18 },
-    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
-    "t_us": { "type": "integer", "minimum": 0 },
-    "side": { "type": "string", "enum": ["left", "right"] },
-    "finger": { "type": "string", "enum": ["thumb", "index", "middle", "ring", "little"] },
-    "role": { "type": "string", "enum": ["master", "learner", "free"] },
-    "mode": { "type": "string", "enum": ["idle", "record", "learn", "mirror", "duel", "playback"] },
-    "anchor": { "type": "string", "enum": ["camera", "held", "rest"] },
-    "source": { "type": "string", "enum": ["glove", "camera"] },
-    "hint": { "type": ["string", "null"], "enum": ["too_flat", "too_curled", "too_spread", "too_closed", null] },
+    "vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "quat": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "joints26": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/vec3"
+      },
+      "minItems": 26,
+      "maxItems": 26
+    },
+    "rots26": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/quat"
+      },
+      "minItems": 26,
+      "maxItems": 26
+    },
+    "angles18": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 18,
+      "maxItems": 18
+    },
+    "unit": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "t_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "left",
+        "right"
+      ]
+    },
+    "finger": {
+      "type": "string",
+      "enum": [
+        "thumb",
+        "index",
+        "middle",
+        "ring",
+        "little"
+      ]
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "master",
+        "learner",
+        "free"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "record",
+        "learn",
+        "mirror",
+        "duel",
+        "playback"
+      ]
+    },
+    "anchor": {
+      "type": "string",
+      "enum": [
+        "camera",
+        "held",
+        "rest"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "glove",
+        "camera"
+      ]
+    },
+    "hint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "too_flat",
+        "too_curled",
+        "too_spread",
+        "too_closed",
+        null
+      ]
+    },
     "pose": {
       "type": "object",
-      "required": ["p", "q"],
-      "properties": { "p": { "$ref": "#/$defs/vec3" }, "q": { "$ref": "#/$defs/quat" } }
+      "required": [
+        "p",
+        "q"
+      ],
+      "properties": {
+        "p": {
+          "$ref": "#/$defs/vec3"
+        },
+        "q": {
+          "$ref": "#/$defs/quat"
+        }
+      }
     },
     "per_finger_unit": {
       "type": "object",
-      "required": ["thumb", "index", "middle", "ring", "little"],
+      "required": [
+        "thumb",
+        "index",
+        "middle",
+        "ring",
+        "little"
+      ],
       "properties": {
-        "thumb": { "$ref": "#/$defs/unit" }, "index": { "$ref": "#/$defs/unit" },
-        "middle": { "$ref": "#/$defs/unit" }, "ring": { "$ref": "#/$defs/unit" },
-        "little": { "$ref": "#/$defs/unit" }
+        "thumb": {
+          "$ref": "#/$defs/unit"
+        },
+        "index": {
+          "$ref": "#/$defs/unit"
+        },
+        "middle": {
+          "$ref": "#/$defs/unit"
+        },
+        "ring": {
+          "$ref": "#/$defs/unit"
+        },
+        "little": {
+          "$ref": "#/$defs/unit"
+        }
       }
     },
     "per_finger_number": {
       "type": "object",
-      "required": ["thumb", "index", "middle", "ring", "little"],
+      "required": [
+        "thumb",
+        "index",
+        "middle",
+        "ring",
+        "little"
+      ],
       "properties": {
-        "thumb": { "type": "number" }, "index": { "type": "number" },
-        "middle": { "type": "number" }, "ring": { "type": "number" },
-        "little": { "type": "number" }
+        "thumb": {
+          "type": "number"
+        },
+        "index": {
+          "type": "number"
+        },
+        "middle": {
+          "type": "number"
+        },
+        "ring": {
+          "type": "number"
+        },
+        "little": {
+          "type": "number"
+        }
       }
     },
     "pinch": {
       "type": "object",
-      "required": ["index", "middle", "ring", "little"],
+      "required": [
+        "index",
+        "middle",
+        "ring",
+        "little"
+      ],
       "properties": {
-        "index": { "type": "boolean" }, "middle": { "type": "boolean" },
-        "ring": { "type": "boolean" }, "little": { "type": "boolean" }
+        "index": {
+          "type": "boolean"
+        },
+        "middle": {
+          "type": "boolean"
+        },
+        "ring": {
+          "type": "boolean"
+        },
+        "little": {
+          "type": "boolean"
+        }
       }
     },
     "hand": {
       "type": "object",
       "description": "One tracked hand, 26 OpenXR joints in world metres.",
-      "required": ["device_id", "hand", "role", "tracked", "anchor", "source", "wrist", "joints", "curl", "pinch", "heading_reliable"],
+      "required": [
+        "device_id",
+        "hand",
+        "role",
+        "tracked",
+        "anchor",
+        "source",
+        "wrist",
+        "joints",
+        "curl",
+        "pinch",
+        "heading_reliable"
+      ],
       "properties": {
-        "device_id": { "type": "integer", "minimum": 0 },
-        "hand": { "$ref": "#/$defs/side" },
-        "role": { "$ref": "#/$defs/role" },
-        "tracked": { "type": "boolean" },
-        "anchor": { "$ref": "#/$defs/anchor" },
-        "source": { "$ref": "#/$defs/source" },
-        "wrist": { "$ref": "#/$defs/pose" },
-        "joints": { "$ref": "#/$defs/joints26" },
-        "rots": { "$ref": "#/$defs/rots26" },
-        "angles": { "$ref": "#/$defs/angles18" },
-        "curl": { "$ref": "#/$defs/per_finger_unit" },
-        "pinch": { "$ref": "#/$defs/pinch" },
-        "heading_reliable": { "type": "boolean" }
+        "device_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hand": {
+          "$ref": "#/$defs/side"
+        },
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "tracked": {
+          "type": "boolean"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "wrist": {
+          "$ref": "#/$defs/pose"
+        },
+        "joints": {
+          "$ref": "#/$defs/joints26"
+        },
+        "rots": {
+          "$ref": "#/$defs/rots26"
+        },
+        "angles": {
+          "$ref": "#/$defs/angles18"
+        },
+        "curl": {
+          "$ref": "#/$defs/per_finger_unit"
+        },
+        "pinch": {
+          "$ref": "#/$defs/pinch"
+        },
+        "heading_reliable": {
+          "type": "boolean"
+        }
       }
     },
     "ghost": {
       "type": "object",
       "description": "The master pose to draw for one learner hand, already mirrored and in world metres.",
-      "required": ["joints", "wrist", "placement", "source", "lesson_t"],
+      "required": [
+        "joints",
+        "wrist",
+        "placement",
+        "source",
+        "lesson_t"
+      ],
       "properties": {
-        "joints": { "$ref": "#/$defs/joints26" },
-        "wrist": { "$ref": "#/$defs/pose" },
-        "placement": { "type": "string", "enum": ["on_learner", "recorded"] },
-        "source": { "type": "string", "enum": ["lesson", "live"] },
-        "lesson_t": { "type": ["integer", "null"], "minimum": 0 },
-        "angles": { "$ref": "#/$defs/angles18" }
+        "joints": {
+          "$ref": "#/$defs/joints26"
+        },
+        "wrist": {
+          "$ref": "#/$defs/pose"
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "on_learner",
+            "recorded"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "lesson",
+            "live"
+          ]
+        },
+        "lesson_t": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "angles": {
+          "$ref": "#/$defs/angles18"
+        }
       }
     },
     "score": {
       "type": "object",
-      "required": ["hand", "overall", "fingers", "err_deg", "worst", "hint", "timing_ms", "hold_ms", "step_progress"],
+      "required": [
+        "hand",
+        "overall",
+        "fingers",
+        "err_deg",
+        "worst",
+        "hint",
+        "timing_ms",
+        "hold_ms",
+        "step_progress"
+      ],
       "properties": {
-        "hand": { "$ref": "#/$defs/side" },
-        "overall": { "$ref": "#/$defs/unit" },
-        "fingers": { "$ref": "#/$defs/per_finger_unit" },
-        "err_deg": { "$ref": "#/$defs/per_finger_number" },
-        "worst": { "oneOf": [{ "$ref": "#/$defs/finger" }, { "type": "null" }] },
-        "hint": { "$ref": "#/$defs/hint" },
-        "timing_ms": { "type": ["integer", "null"] },
-        "hold_ms": { "type": "integer", "minimum": 0 },
-        "step_progress": { "$ref": "#/$defs/unit" },
-        "passed": { "type": "boolean" }
+        "hand": {
+          "$ref": "#/$defs/side"
+        },
+        "overall": {
+          "$ref": "#/$defs/unit"
+        },
+        "fingers": {
+          "$ref": "#/$defs/per_finger_unit"
+        },
+        "err_deg": {
+          "$ref": "#/$defs/per_finger_number"
+        },
+        "worst": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/finger"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hint": {
+          "$ref": "#/$defs/hint"
+        },
+        "timing_ms": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "hold_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "step_progress": {
+          "$ref": "#/$defs/unit"
+        },
+        "passed": {
+          "type": "boolean"
+        }
       }
     },
     "roles": {
       "type": "object",
-      "required": ["left", "right"],
-      "properties": { "left": { "$ref": "#/$defs/role" }, "right": { "$ref": "#/$defs/role" } }
+      "required": [
+        "left",
+        "right"
+      ],
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/role"
+        },
+        "right": {
+          "$ref": "#/$defs/role"
+        }
+      }
     },
     "session_state": {
       "type": "object",
-      "required": ["mode", "task", "lesson_id", "step", "steps_total", "roles", "recording", "calibrated", "anchor", "tempo", "loop", "gemma"],
+      "required": [
+        "mode",
+        "task",
+        "lesson_id",
+        "step",
+        "steps_total",
+        "roles",
+        "recording",
+        "calibrated",
+        "anchor",
+        "tempo",
+        "loop",
+        "gemma"
+      ],
       "properties": {
-        "mode": { "$ref": "#/$defs/mode" },
-        "task": { "type": "string" },
-        "lesson_id": { "type": ["string", "null"] },
-        "step": { "type": ["integer", "null"], "minimum": 0 },
-        "steps_total": { "type": "integer", "minimum": 0 },
-        "roles": { "$ref": "#/$defs/roles" },
-        "recording": { "type": "boolean" },
-        "calibrated": { "type": "boolean" },
-        "anchor": { "type": "string", "enum": ["marker", "blob", "rest", "camera", "none"] },
-        "tempo": { "type": "number", "minimum": 0.25, "maximum": 1.5 },
-        "loop": { "type": "boolean" },
-        "gemma": { "type": "string", "enum": ["ok", "off", "slow", "error"] },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "task": {
+          "type": "string"
+        },
+        "lesson_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "step": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "steps_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "roles": {
+          "$ref": "#/$defs/roles"
+        },
+        "recording": {
+          "type": "boolean"
+        },
+        "calibrated": {
+          "type": "boolean"
+        },
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "marker",
+            "blob",
+            "rest",
+            "camera",
+            "none"
+          ]
+        },
+        "tempo": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 1.5
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "gemma": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "off",
+            "slow",
+            "error"
+          ]
+        },
         "sources": {
           "type": "object",
           "properties": {
-            "left": { "type": "string", "enum": ["glove", "camera", "none"] },
-            "right": { "type": "string", "enum": ["glove", "camera", "none"] }
+            "left": {
+              "type": "string",
+              "enum": [
+                "glove",
+                "camera",
+                "none"
+              ]
+            },
+            "right": {
+              "type": "string",
+              "enum": [
+                "glove",
+                "camera",
+                "none"
+              ]
+            }
           }
+        },
+        "robot_source": {
+          "type": "string",
+          "enum": [
+            "master",
+            "learner",
+            "lesson",
+            "off"
+          ]
         }
       }
     },
     "lesson_summary": {
       "type": "object",
-      "required": ["id", "title", "task", "created", "steps_total", "source", "duration_us"],
+      "required": [
+        "id",
+        "title",
+        "task",
+        "created",
+        "steps_total",
+        "source",
+        "duration_us"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "task": { "type": "string" },
-        "created": { "type": "string" },
-        "steps_total": { "type": "integer", "minimum": 0 },
-        "source": { "type": "string" },
-        "duration_us": { "$ref": "#/$defs/t_us" }
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string"
+        },
+        "steps_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "type": "string"
+        },
+        "duration_us": {
+          "$ref": "#/$defs/t_us"
+        }
+      }
+    },
+    "robot_block": {
+      "type": "object",
+      "description": "Joint targets for a robot hand, retargeted from the 18 angle features.",
+      "required": [
+        "model",
+        "source",
+        "hand",
+        "q",
+        "fidelity",
+        "missing"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "master",
+            "learner",
+            "lesson"
+          ]
+        },
+        "hand": {
+          "$ref": "#/$defs/side"
+        },
+        "angles_from": {
+          "type": "string",
+          "enum": [
+            "hand",
+            "lesson"
+          ]
+        },
+        "q": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "q_norm": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "fidelity": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finger"
+          }
+        }
       }
     }
   }

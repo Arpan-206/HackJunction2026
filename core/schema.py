@@ -20,6 +20,7 @@ MESSAGE_SCHEMAS = {
     "coach": "coach",
     "ack": "ack",
     "cmd": "cmd",
+    "robot": "robot",
 }
 
 

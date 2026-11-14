@@ -56,4 +56,4 @@ def test_spec_frame_example_validates(schemas):
 
 
 def test_message_types_are_covered(schemas):
-    assert set(MESSAGE_SCHEMAS) == {"hello", "frame", "session", "lesson", "event", "coach", "ack", "cmd"}
+    assert set(MESSAGE_SCHEMAS) == {"hello", "frame", "session", "lesson", "event", "coach", "ack", "cmd", "robot"}
