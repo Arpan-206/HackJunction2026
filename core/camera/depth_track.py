@@ -62,6 +62,7 @@ class TrackerConfig:
     camera_yaw_deg: float = 180.0    # core yaw of the camera's viewing direction on the table
     cloud_points: int = 2000
     dark_min_px: int = 120           # a conf-0 patch at least this big at the arm's far end means a dark hand
+    cylinder: bool = True            # refine the direction with a 3D cylinder fit (see _cylinder_axis)
 
     @classmethod
     def from_section(cls, sec) -> "TrackerConfig":
@@ -289,7 +290,7 @@ class DepthTracker:
         if blob is not None:
             obs.arm_found = True
             obs.blob_px = int(blob.sum())
-            self._forearm(obs, blob, rel, R, H, W, dist)
+            self._forearm(obs, blob, rel, R, H, W, dist, R @ (cam - table.point))
             dark_img = self._dark_patch(obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W))
         if want_cloud:
             obs.cloud = self._cloud(frame, rel @ R.T, valid & (dist <= cfg.max_range_m * 1.5), h,
@@ -302,7 +303,7 @@ class DepthTracker:
         return obs
 
     def _forearm(self, obs: DepthObs, blob: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int,
-                 dist: np.ndarray) -> None:
+                 dist: np.ndarray, cam_bench: np.ndarray) -> None:
         import cv2
         cfg = self.cfg
         flat = blob.reshape(-1)
@@ -353,6 +354,11 @@ class DepthTracker:
         w, V = np.linalg.eigh(cov)
         axis = V[:, 1]
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
+        if cfg.cylinder:
+            d3 = self._cylinder_axis(q[sel], axis, cam_bench)
+            if d3 is not None and np.hypot(d3[0], d3[2]) > 1e-6:
+                a2 = np.array([d3[0], d3[2]]) / np.hypot(d3[0], d3[2])
+                axis = a2 if a2 @ axis >= 0 else -a2
         if entry is not None:
             if (centre - entry) @ axis < 0:
                 axis = -axis
@@ -374,6 +380,60 @@ class DepthTracker:
         obs.forearm_ok = obs.elongation >= cfg.min_elongation and obs.forearm_points >= cfg.min_forearm_points
         if obs.forearm_ok:
             self.last_dir = d
+
+    def _cylinder_axis(self, P: np.ndarray, axis_xz: np.ndarray, cam: np.ndarray) -> np.ndarray | None:
+        """Fit a cylinder to the forearm's 3D points (bench frame); its axis direction, or None.
+
+        The camera sees only the near half of the arm, and from a different angle along it,
+        so any line through the visible points leans: about 5 degrees at 5 to 15 degrees of
+        yaw on the fake scene, even without noise. A cylinder fit puts the axis behind the
+        visible surface, where it is. Gauss-Newton on (direction, offset, radius), numeric
+        Jacobian, about ten steps on at most 400 points.
+        """
+        if len(P) < 30:
+            return None
+        if len(P) > 400:
+            P = P[np.linspace(0, len(P) - 1, 400).astype(int)]
+        d0 = np.array([axis_xz[0], 0.0, axis_xz[1]])
+        d0 /= np.linalg.norm(d0)
+        c0 = P.mean(axis=0)
+        u = np.cross(d0, [0.0, 1.0, 0.0])
+        u /= np.linalg.norm(u)
+        v = np.cross(u, d0)
+        away = c0 - cam
+        away -= (away @ d0) * d0
+        if np.linalg.norm(away) > 1e-6:
+            away /= np.linalg.norm(away)
+        r0 = 0.035
+        start = c0 + r0 * away
+
+        def unpack(x):
+            d = d0 + x[0] * u + x[1] * v
+            d /= np.linalg.norm(d)
+            c = start + x[2] * u + x[3] * v
+            return d, c, x[4]
+
+        def resid(x):
+            d, c, r = unpack(x)
+            w = P - c
+            return np.linalg.norm(np.cross(w, d), axis=1) - r
+
+        x = np.array([0.0, 0.0, 0.0, 0.0, r0])
+        for _ in range(12):
+            f = resid(x)
+            J = np.empty((len(f), 5))
+            for k in range(5):
+                dx = np.zeros(5)
+                dx[k] = 1e-5
+                J[:, k] = (resid(x + dx) - f) / 1e-5
+            step, *_ = np.linalg.lstsq(J.T @ J + 1e-6 * np.eye(5), -J.T @ f, rcond=None)
+            x = x + step
+            if np.abs(step).max() < 1e-6:
+                break
+        d, c, r = unpack(x)
+        if not (0.01 <= r <= 0.08) or not np.isfinite(d).all():
+            return None
+        return d
 
     def _dark_patch(self, obs: DepthObs, blob: np.ndarray, conf: np.ndarray, valid: np.ndarray,
                     h: np.ndarray) -> np.ndarray:

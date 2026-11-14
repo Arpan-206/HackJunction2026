@@ -74,7 +74,7 @@ def test_tracker_finds_table_arm_and_yaw(dark, plane):
         errs.append(wrap_deg(o.forearm_yaw_deg - s.yaw_deg(i / 30)))
         hand_depth.append(o.hand_depth)
     e = np.array(errs)
-    assert abs(e.mean()) < 2.0 and np.abs(e).max() < 10.0
+    assert abs(e.mean()) < 1.0 and np.abs(e).max() < 4.0, (e.mean(), np.abs(e).max())
     assert (np.mean(hand_depth) > 0.8) if not dark else (np.mean(hand_depth) < 0.2)
     if plane:
         assert o.agree_deg is not None and o.agree_deg < 1.0 and abs(o.agree_mm) < 3.0
