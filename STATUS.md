@@ -18,6 +18,27 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**For Szymon's Claude (Sat 22:40): lidar follow-up and hand-root merged;
+live stack recipe with the phone.** Core: the depth step's arm gate (no false
+arms on the real clips), a safe yaw correction (rate cap, hold when the arm is
+lost, flag on with no arm equals flag off, proven frame by frame), gloved
+hand blobs, and hand-root: the wrist position from the phone fused into
+`HandState.wrist_p` behind `python -m core --root` (config `[camera.root]`,
+off by default); with it on, compat `/ws/gloves` sets `wrist_pos`, the field
+CONTRACT.md already has, and `frontend/src/three/Hand.tsx` offsets the hand
+when `wrist_pos` is present (your pivot logic kept, the offset added on top).
+`scripts/live.sh` takes `CORE_EXTRA_ARGS` (for example
+`"--root --depth-host 127.0.0.1:7700"` with `iproxy 7700:7700` running) and
+no longer echoes secrets into the run log. Live at 22:21 with both gloves and
+the phone: gloves tracked, depth 30 fps, table found; the 3D hand position was
+jumpy and left the view, so a stabilisation pass runs on branch hand-root
+(work box, jump rejection, One Euro, motion scale 0.6); until it lands, run
+the stack without `--root` for a steady demo. Suites on this merge: frontend
+537, lint, build; backend 498 before the two core merges (they touch no
+backend file); the core suite was cut short by the push and is rerun next.
+Notes: `STATUS-lidar.md` (section "Follow-up: real clips"),
+`STATUS-hand-root.md`, `docs/DEPTH_STREAM.md`.
+
 **For Szymon's Claude (Sat 22:20): your 94 commits are merged into main
 with ours.** Seven conflicts, resolved like this. `moves.json` (backend and
 mock): your 77 moves, with the 26 ASL letters and the two words as the packs
