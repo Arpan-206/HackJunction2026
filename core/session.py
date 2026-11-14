@@ -104,6 +104,9 @@ class Session:
             self.robot_error = f"{type(e).__name__}: {e}"
             log.warning("robot output disabled: %s", self.robot_error)
         self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
+        # Depth step (core/camera/depth_live.py), attached by __main__ with --depth; None leaves
+        # the frame exactly as before (no "depth" key, no yaw correction).
+        self.depth = None
 
     def log_attempt(self, summary: dict) -> None:
         """Append a step summary to logs/attempts.jsonl (visitor attempt log, for tuning tolerances later)."""
@@ -580,6 +583,8 @@ class Session:
             "score": None,
             "task": {},
         }
+        if self.depth is not None:
+            self.depth.apply(self.hands, t)
         dec = int(self.cfg.hand.joint_decimals)
         for side in SIDES:
             h = self.hands.get(side)
@@ -656,6 +661,8 @@ class Session:
             self._typing_tick(t)
         frame["task"] = task_state(self)
         frame["robot"] = self.robot_block(t)
+        if self.depth is not None:
+            frame["depth"] = self.depth.block()
         self.emit_coach_flush(t)
         return frame
 

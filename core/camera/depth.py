@@ -1,8 +1,9 @@
 """One depth frame and one source interface, shared by every depth camera path.
 
-Sources today: the free Record3DStream app (PathOn) in record3dstream.py, our own
-ARKit app (ios/, lane arkit-app) and replays of either. Hand tracking reads only
-this type, so it does not care which phone app produced the frame.
+Sources today: our own ARKit app GeppettoDepth (ios/GeppettoDepth, read by
+core/camera/geppetto_depth.py), its recordings (core/camera/gdrec.py) and the fake
+scene (core/camera/fake_depth.py). The free Record3DStream app path was dropped on
+Sat 14 Nov. Hand tracking (core/camera/depth_track.py) reads only this type.
 
 Conventions (do not change without a note in DECISIONS.md):
 - bgr is the colour image, uint8, OpenCV channel order.

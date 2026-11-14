@@ -96,6 +96,9 @@ clip_high = 1.0
 max_gain = 2.0
 
 [camera]
+# Depth step (core/camera/depth_live.py): table, forearm, glove yaw correction, /ws/depth.
+# Off by default; python -m core --depth turns it on. Nothing verified on real depth yet.
+depth_enabled = false
 device = 0
 video = ""
 mirror = true
@@ -281,19 +284,6 @@ finger = "middle"
 offset_deg = 0.0
 weights = { middle_pip = 0.7, middle_dip = 0.5 }
 
-[camera.record3dstream]
-# iPhone LiDAR over WiFi or USB from the free Record3DStream app (PathOn). The app shows
-# its address on screen; it is NOT a web page, it is a binary TCP stream of REC3D frames.
-# The port is the app's default. Change host to the phone's current address.
-host = "10.0.34.248"
-port = 8888
-timeout_s = 5.0
-# true: connect over the USB cable through iproxy (libimobiledevice) instead of WiFi;
-# host is then ignored and the same port is used on both ends
-usb = false
-# depth pixels with confidence below this count as missing (0 low, 1 medium, 2 high)
-min_confidence = 1
-
 [camera.geppetto_depth]
 # Our own iPhone app (ios/GeppettoDepth). WiFi for now: the phone's address from Settings > Wi-Fi.
 # For the cable (30 fps, steady): run ios/mac/forward.sh and set host = "127.0.0.1".
@@ -301,3 +291,51 @@ host = "10.0.34.248"
 port = 7700
 timeout_s = 5.0
 min_confidence = 1
+
+[camera.depth]
+# Depth tracking on the GeppettoDepth stream (core/camera/depth_track.py). Tested on the
+# fake bench scene only (core/camera/fake_depth.py); tune on a real bench recording with
+# python -m tools.depth_check. Metres, degrees, pixels at the 256x192 depth resolution.
+min_confidence = 1
+band_min_m = 0.012
+band_max_m = 0.35
+max_range_m = 1.0
+min_blob_px = 150
+forearm_len_m = 0.15
+min_elongation = 1.8
+min_forearm_points = 40
+ransac_iters = 60
+ransac_tol_m = 0.006
+max_tilt_deg = 25.0
+table_band_m = 0.01
+# Core yaw of the phone's viewing direction on the table: 180 when it faces the person
+# across the bench, 0 when it looks the same way as the person.
+camera_yaw_deg = 180.0
+cloud_points = 2000
+cloud_hz = 10.0
+dark_min_px = 120
+# Arm shape gates (tools/depth_check.py on captures/bench-3: a crisps bag and a laptop
+# sleeve passed as arms until these were added). Real arms are not measured yet.
+cylinder = true
+arm_width_min_m = 0.01
+arm_width_max_m = 0.16
+arm_radius_min_m = 0.015
+arm_radius_max_m = 0.07
+cylinder_max_rms_m = 0.012
+require_entry = true
+arm_max_tilt_deg = 40.0
+# Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
+correct_yaw = true
+side = "right"
+# "lock": learn the depth minus glove offset over lock_s, then remove drift from it.
+# "table": trust camera_yaw_deg and pull the glove to the bench yaw.
+reference = "lock"
+lock_s = 2.0
+lock_min_samples = 20
+# Slow offset: time constant tau_s (SPEC.md asks 2 percent a frame at 30 Hz, about 1.65 s).
+tau_s = 1.5
+outlier_deg = 25.0
+outlier_run = 45
+max_correction_deg = 60.0
+stale_ms = 300.0
+

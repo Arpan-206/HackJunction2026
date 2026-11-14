@@ -13,20 +13,11 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from collections.abc import Iterator
 from pathlib import Path
 
-from .geppetto_depth import DEFAULT_PORT, DepthFrame, parse_packet
-from .recording import read_note, read_recording
-from .serve import PacketServer
-
-
-def frames(path: Path, latency_us: int = 0) -> Iterator[DepthFrame]:
-    """Every decodable packet in the recording as a DepthFrame, t_us from the recorded arrival."""
-    for arrival_us, pkt in read_recording(path):
-        f = parse_packet(pkt, arrival_us, latency_us)
-        if f is not None:
-            yield f
+from core.camera.gdp_server import PacketServer
+from core.camera.gdrec import frames, read_note, read_recording
+from core.camera.geppetto_depth import DEFAULT_PORT, save_frame
 
 
 def info(path: Path) -> dict:
@@ -86,7 +77,6 @@ def main() -> None:
     if a.info:
         print(json.dumps(info(a.recording), indent=2))
     elif a.snapshot:
-        from core.camera.record3dstream import save_frame   # same snapshot files for both phone apps
         f = next(frames(a.recording))
         print(json.dumps(save_frame(f, a.snapshot), indent=2))
     else:
