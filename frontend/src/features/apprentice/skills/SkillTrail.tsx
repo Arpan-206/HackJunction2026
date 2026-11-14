@@ -156,12 +156,17 @@ export function SkillTrail({ skill, progress }: { skill: SkillView; progress: Sk
   const [reduceMotion] = useReducedMotion();
   const stopIds = useMemo(() => stops.map((s) => s.key).join('|'), [stops]);
 
-  // Keep the chosen node in view on a line wider than its column, without scrolling the page itself.
+  // Scroll the chosen node into view (centred) only when it is out of view on a line wider than its column; never scroll the page itself.
   useEffect(() => {
     const btn = selectedKey ? nodes.current.get(selectedKey) : undefined;
     const ol = btn?.closest('ol');
     if (!ol || !btn || ol.scrollWidth <= ol.clientWidth) return;
     const li = btn.parentElement as HTMLElement;
+    const inView = li.offsetLeft >= ol.scrollLeft && li.offsetLeft + li.offsetWidth <= ol.scrollLeft + ol.clientWidth;
+    if (inView) {
+      moved.current = true;
+      return;
+    }
     const smooth = moved.current && !reduceMotion;
     ol.scrollTo({ left: li.offsetLeft - (ol.clientWidth - li.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
     moved.current = true;

@@ -621,7 +621,7 @@
 
 .sk-line {
   --mark: 3rem;
-  --stop: clamp(7.5rem, 11vw, 9.5rem);
+  --stop: clamp(7rem, 10vw, 9rem);
   position: relative;
   display: flex;
   margin: 0;
