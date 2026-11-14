@@ -9,7 +9,7 @@ import { newId } from './ids';
  */
 
 export const MOCK_PROVIDER = 'mock';
-const VIDEO_FAKE_NOTE = 'The assistant could not watch the video, so this is a generic template based on your text and the file name.';
+const VIDEO_FAKE_NOTE = 'The AI Assistant could not watch the video, so this is a generic template based on your text and the file name.';
 const GENERAL_MOVES = ['general_pinch', 'general_power_grip', 'general_point'];
 const SEED_BY_SKILL: Partial<Record<Skill, string>> = { table_tennis: 'seed-table-tennis', piano: 'seed-piano' };
 const KEYWORDS: [Skill, RegExp][] = [

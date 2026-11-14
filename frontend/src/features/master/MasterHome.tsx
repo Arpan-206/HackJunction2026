@@ -44,7 +44,7 @@ export function MasterHome() {
             <path d="M50 38v10M45 43h10M14 14v8M10 18h8" />
           </svg>
           <h2>Generate steps</h2>
-          <p className="note">{assistant ? 'Describe the skill in your own words and the assistant drafts a lesson plan for you to adjust before recording.' : ASSISTANT_OFF.draft}</p>
+          <p className="note">{assistant ? 'Describe the skill in your own words and the AI Assistant drafts a lesson plan for you to adjust before recording.' : ASSISTANT_OFF.draft}</p>
           <span className="choice__cta">
             {assistant ? 'Describe a lesson' : 'Write the steps'} <Arrow />
           </span>

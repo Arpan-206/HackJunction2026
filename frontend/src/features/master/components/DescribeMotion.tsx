@@ -6,13 +6,13 @@ import { MOTION_TEXT_MAX, motionProviderLine, useMotionFromText } from '../../sh
 interface DescribeMotionProps {
   side: Side;
   stepNumber: number;
-  /** Receives the motion the assistant chose, to replace the step's mock guide. */
+  /** Receives the motion the AI Assistant chose, to replace the step's mock guide. */
   onMotion: (motion: MotionSpec) => void;
 }
 
 /**
- * A small "Describe the movement" line for one step: say it in words, the assistant picks a motion and the mock guide hand
- * changes to match. While the assistant is off it is one quiet line instead.
+ * A small "Describe the movement" line for one step: say it in words, the AI Assistant picks a motion and the mock guide hand
+ * changes to match. While the AI Assistant is off it is one quiet line instead.
  */
 export function DescribeMotion({ side, stepNumber, onMotion }: DescribeMotionProps) {
   const m = useMotionFromText(side);

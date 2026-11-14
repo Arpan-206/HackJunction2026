@@ -47,10 +47,10 @@ export class ApiError extends Error {
   }
 }
 
-/** Thrown, without any network request, for an assistant endpoint while the assistant is switched off. */
+/** Thrown, without any network request, for an assistant endpoint while the AI Assistant is switched off. */
 export class AssistantOffError extends ApiError {
   constructor(path: string) {
-    super('The assistant is off. Turn it on to use this.', 403, path);
+    super('The AI Assistant is off. Turn it on in Settings to use this.', 403, path);
     this.name = 'AssistantOffError';
   }
 }

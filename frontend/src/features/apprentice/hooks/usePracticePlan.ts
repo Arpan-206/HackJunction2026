@@ -17,7 +17,7 @@ export interface PracticePlanHandle {
   request: () => Promise<void>;
 }
 
-/** Asks the assistant for a practice plan from the attempts this device remembers for a lesson. */
+/** Asks the AI Assistant for a practice plan from the attempts this device remembers for a lesson. */
 export function usePracticePlan(lesson: Lesson): PracticePlanHandle {
   const logged = useLoggedAttempts(lesson.id);
   const stored = useStoredPlan(lesson.id);
@@ -34,7 +34,7 @@ export function usePracticePlan(lesson: Lesson): PracticePlanHandle {
     try {
       storePlan(lesson.id, await api.coachPlan({ lesson_title: lesson.title, steps, attempts }));
     } catch (e) {
-      setError(e instanceof ApiError && e.isNetwork ? 'The assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
+      setError(e instanceof ApiError && e.isNetwork ? 'The AI Assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
     } finally {
       setBusy(false);
     }

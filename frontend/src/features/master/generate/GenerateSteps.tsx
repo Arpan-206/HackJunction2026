@@ -11,11 +11,11 @@ import { EXAMPLE_PROMPTS, useGenerate, VIDEO_MAX_MB } from './useGenerate';
 /** Who drafted the plan, in plain words. Provider names stay in the developer panel. */
 function draftNote(provider: string, video: boolean): string {
   // 'fake' is the offline template the backend falls back to; 'fake (rate limited)' when the free budget is spent.
-  if (provider.startsWith('fake')) return video ? 'The assistant could not watch the clip, so this is a starting template.' : 'The assistant was unavailable, so this is a starting template.';
-  return video ? 'The assistant watched your clip and drafted these steps.' : 'The assistant drafted these steps.';
+  if (provider.startsWith('fake')) return video ? 'The AI Assistant could not watch the clip, so this is a starting template.' : 'The AI Assistant was unavailable, so this is a starting template.';
+  return video ? 'The AI Assistant watched your clip and drafted these steps.' : 'The AI Assistant drafted these steps.';
 }
 
-/** A lesson with one empty step, for writing the steps by hand while the assistant is off. */
+/** A lesson with one empty step, for writing the steps by hand while the AI Assistant is off. */
 function blankLesson(): Lesson {
   return { id: `l_${newStepId().slice(2)}`, title: '', skill: 'general', summary: '', master_name: 'The expert', source: 'scratch', steps: [blankStep()], test: null, created_at: new Date().toISOString() };
 }
@@ -37,13 +37,13 @@ export function GenerateSteps() {
 
   return (
     <>
-      <PageHeader title="Generate steps" context="Describe the skill; the assistant drafts a plan for you to adjust before recording." />
+      <PageHeader title="Generate steps" context="Describe the skill; the AI Assistant drafts a plan for you to adjust before recording." />
 
       {!assistant && (
         <Card className="mst-gen">
           <p className="mst-line">{ASSISTANT_OFF.draft}</p>
           <div className="mst-gen__row">
-            <Button onClick={() => setAssistant(true)}>Turn the assistant on</Button>
+            <Button onClick={() => setAssistant(true)}>Turn the AI Assistant on</Button>
             <Button variant="secondary" disabled={Boolean(manual)} onClick={() => setManual(blankLesson())}>
               Write the steps yourself
             </Button>
@@ -82,7 +82,7 @@ export function GenerateSteps() {
                 Skill (optional)
               </label>
               <select id={skillId} className="field__control" value={g.skill} onChange={(e) => g.setSkill(e.target.value as typeof g.skill)}>
-                <option value="">Let the assistant decide</option>
+                <option value="">Let the AI Assistant decide</option>
                 {SKILLS.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.label}
@@ -101,7 +101,7 @@ export function GenerateSteps() {
               <label className="field__label" htmlFor={videoId}>
                 A clip of the movement
               </label>
-              <span className="field__hint">mp4, webm or mov, up to {VIDEO_MAX_MB} MB. Any words above guide what the assistant looks for.</span>
+              <span className="field__hint">mp4, webm or mov, up to {VIDEO_MAX_MB} MB. Any words above guide what the AI Assistant looks for.</span>
               <input
                 id={videoId}
                 className="mst-video__file"
@@ -133,7 +133,7 @@ export function GenerateSteps() {
           {g.busy && g.progress !== null && (
             <div className="mst-busy" role="status">
               <p className="note">
-                {g.progress < 100 ? `Handing the clip to the assistant, ${g.progress} per cent.` : 'The assistant is watching your clip and sketching the steps. This can take up to two minutes.'}
+                {g.progress < 100 ? `Handing the clip to the AI Assistant, ${g.progress} per cent.` : 'The AI Assistant is watching your clip and sketching the steps. This can take up to two minutes.'}
               </p>
               <div className="mst-video__progress" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={g.progress}>
                 <div className="mst-video__bar" style={{ transform: `scaleX(${Math.max(g.progress, 2) / 100})` }} />
@@ -142,7 +142,7 @@ export function GenerateSteps() {
           )}
           {g.busy && g.progress === null && (
             <p className="note mst-busy" role="status">
-              The assistant is sketching your lesson on the cartone. This can take a few seconds.
+              The AI Assistant is sketching your lesson on the cartone. This can take a few seconds.
             </p>
           )}
           {g.error && (

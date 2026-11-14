@@ -27,7 +27,7 @@ export function LessonStudio() {
         </div>
       )}
       {assistant && stored && stored.plan.master_note && (
-        <aside className="mst-gen__master" aria-label="Note from the assistant">
+        <aside className="mst-gen__master" aria-label="Note from the AI Assistant">
           <h2 className="section-title">Where this apprentice struggles</h2>
           <p className="mst-gen__source">{stored.plan.master_note}</p>
           <p className="mst-gen__source">From practice on this device, planned {formatWhen(stored.at)}. It is not shared across devices.</p>

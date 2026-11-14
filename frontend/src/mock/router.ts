@@ -441,8 +441,8 @@ route('POST', '/dev/state', (req) => {
 /** Runs a request against the mock backend and returns the status and JSON body. */
 export async function handleMockRequest(req: MockRequest): Promise<MockResponse> {
   const path = req.path.replace(/\/+$/, '') || '/';
-  // The client never sends these while the assistant is off; refuse them here too, as a second lock.
-  if (req.method.toUpperCase() === 'POST' && isAssistantPath(path) && !isAssistantOn()) return { status: 403, body: { detail: 'The assistant is off.' } };
+  // The client never sends these while the AI Assistant is off; refuse them here too, as a second lock.
+  if (req.method.toUpperCase() === 'POST' && isAssistantPath(path) && !isAssistantOn()) return { status: 403, body: { detail: 'The AI Assistant is off.' } };
   const matches = routes.filter((r) => r.pattern.test(path));
   const hit = matches.find((r) => r.method === req.method.toUpperCase());
   if (!hit) return matches.length ? { status: 405, body: { detail: 'Method Not Allowed' } } : { status: 404, body: { detail: 'Not Found' } };

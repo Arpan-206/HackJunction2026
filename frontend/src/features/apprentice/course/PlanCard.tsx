@@ -9,11 +9,11 @@ import { FINGER_LABEL } from '../training/coach/tips';
 
 /** Who wrote the plan, in plain words. Provider names stay in the developer panel. */
 const sourceLine = (provider: string): string =>
-  provider.startsWith('fake') ? 'Worked out from your weakest fingers while the assistant was unavailable.' : 'Written by the assistant.';
+  provider.startsWith('fake') ? 'Worked out from your weakest fingers while the AI Assistant was unavailable.' : 'Written by the AI Assistant.';
 
 /**
- * "Plan for tomorrow": once a learner has finished attempts in this lesson, the assistant turns the scores kept on
- * this device into a short summary and one to four drills. Hidden while the assistant is off.
+ * "Plan for tomorrow": once a learner has finished attempts in this lesson, the AI Assistant turns the scores kept on
+ * this device into a short summary and one to four drills. Hidden while the AI Assistant is off.
  */
 export function PlanCard({ lesson }: { lesson: Lesson }) {
   const p = usePracticePlan(lesson);
@@ -48,7 +48,7 @@ export function PlanCard({ lesson }: { lesson: Lesson }) {
           </>
         ) : (
           <p className="note">
-            You have {p.attempts} {p.attempts === 1 ? 'attempt' : 'attempts'} on this device. The assistant can turn them into a short plan.
+            You have {p.attempts} {p.attempts === 1 ? 'attempt' : 'attempts'} on this device. The AI Assistant can turn them into a short plan.
           </p>
         )}
         {p.error && (
@@ -59,7 +59,7 @@ export function PlanCard({ lesson }: { lesson: Lesson }) {
         {p.attempts > 0 && (
           <div>
             <Button variant={p.stored ? 'secondary' : 'primary'} onClick={() => void p.request()} disabled={p.busy}>
-              {p.busy ? 'The assistant is thinking...' : p.stored ? 'Make a fresh plan' : 'Plan for tomorrow'}
+              {p.busy ? 'The AI Assistant is thinking...' : p.stored ? 'Make a fresh plan' : 'Plan for tomorrow'}
             </Button>
           </div>
         )}

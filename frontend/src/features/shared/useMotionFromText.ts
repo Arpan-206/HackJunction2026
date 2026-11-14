@@ -32,7 +32,7 @@ export function useMotionFromText(side?: Side): MotionFromTextHandle {
       setResult(r);
       return r;
     } catch (e) {
-      setError(e instanceof ApiError && e.isNetwork ? 'The assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
+      setError(e instanceof ApiError && e.isNetwork ? 'The AI Assistant could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
       return null;
     } finally {
       setBusy(false);
@@ -44,6 +44,6 @@ export function useMotionFromText(side?: Side): MotionFromTextHandle {
 
 /** One honest line about who answered a text-to-motion request. Provider names stay in the developer panel. */
 export function motionProviderLine(provider: string): string {
-  if (provider.startsWith('fake')) return 'Matched by simple keyword rules while the assistant was unavailable.';
-  return 'Read by the assistant.';
+  if (provider.startsWith('fake')) return 'Matched by simple keyword rules while the AI Assistant was unavailable.';
+  return 'Read by the AI Assistant.';
 }
