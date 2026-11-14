@@ -18,8 +18,8 @@ Units: seconds, radians, metres. Rate about 60 Hz (simulator 60; Rokoko about 60
 
 **Labels.** Each recording is tagged by the step it was recorded for:
 - `lesson_id`: the lesson.
-- `step_id`: the convention `"<move_id>:rep<n>"` when recorded via "Start from scratch" (for example `tt_forehand_swing:rep2`). Parse with `move_id, rep = step_id.rsplit(":rep", 1)`.
-- `move_id` is a `MoveKind.id` from `GET /api/moves` (catalogue in `backend/app/data/moves.json`). Each rep is one labelled example. Free-text or generated lessons have step ids assigned by the server, so check for the `:rep` pattern before relying on it.
+- `step_id`: the convention `"<move_id>:rep<n>"` when recorded via "Start from scratch" (for example `free_k3x9q2ab:rep2`) or against a catalogue move (`tt_forehand_swing:rep2`). Parse with `move_id, rep = step_id.rsplit(":rep", 1)`.
+- `move_id` is a `MoveKind.id` from `GET /api/moves` (catalogue in `backend/app/data/moves.json`), or, for a new skill recorded from scratch, a free move id `free_<8 letters and digits>` fixed before the first take (the name the expert gives the move on Publish is the step title, not part of the label, so renaming never relabels takes). Each rep is one labelled example. Free-text or generated lessons have step ids assigned by the server, so check for the `:rep` pattern before relying on it.
 - Master takes are the "good" class. Learner attempts are recorded the same way against the learner's lesson; treat them as unlabelled for quality (no ground truth) unless the master rates them.
 
 ## 2. Where to read them

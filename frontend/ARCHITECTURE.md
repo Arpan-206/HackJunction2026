@@ -7,9 +7,9 @@ src/
   main.tsx                 providers, fonts, global CSS, DevPanel
   app/                     App (route table), AppShell (lapis rail), RoleSelect (/), HandLab (/lab), app.css
   features/
-    master/                MasterHome (/master) + placeholder pages: scratch, generate, lesson studio
+    master/                MasterHome (/expert: two doors and home/ the shelf of skill cards, /expert/skills/:skillKey a skill's lessons), scratch/ (a new skill: Record with take playback, Replay, Publish), components/cameraPresets.ts (EXPERT_STAGE_CAMERA, the expert stages' default views; dev "Copy camera"), generate, lesson studio
     apprentice/            skills/ (dashboard, skill page, catalogue), course, training (score/ = 3D and flat score views), test
-                           (TableTennis, Piano, AirTyping = air typing and Type on your keyboard), typing/ (touch typing:
+                           (TableTennis, Piano, AirTyping = air typing and Type on your keyboard), typing/ (touch typing, off the catalogue for now but kept:
                            fingerMap, strikes = strike detector, judge, matcher, WPM; typist = simulated typist; words;
                            TypingStage = two hands over the keyboard; training/modes/TypingDesk is its lesson room)
     shared/                pieces both sides use: assistant.ts (AI Assistant flag), settings.ts (margin, score view,

@@ -48,7 +48,7 @@ Ollama (offline coach): `ollama serve` and `ollama pull gemma4:e4b` beforehand; 
 
 1. Wearer puts gloves on, hubs on the back of the hand, strap snug.
 2. In Studio, do the Studio calibration pose (arms down, hands flat) with both gloves.
-3. In Apprentice: `/master/scratch`, pick the move, press calibrate.
+3. In Geppetto: `/master/scratch`, pick the move, press calibrate.
 4. **Flat**: hand flat on the table, fingers together, hold still for the 3 s countdown and capture.
 5. **Fist**: loose fist, hold still for capture.
 6. Check the 3D hand: open the hand and close it; the model must follow without jitter. If a finger lags, recalibrate.
@@ -60,7 +60,7 @@ Note: once the learner has calibrated, scoring normalises each joint by their fl
 
 1. `/` Role select. Say the hook. Click **Master**.
 2. `/master`: choose **Generate lesson**. Type: "Teach a table tennis forehand grip in three steps". Show validated lesson with guide hands. Save.
-3. Back to `/master`: **Start from scratch**, pick "Forehand swing" (`tt_forehand_swing`). Calibrate (flat, fist). Record 3 takes. Show the scored takes and replay (screenshot reference: master-09-takes-scored).
+3. Back to `/expert`: **Start from scratch** opens straight on Record for a new skill. Answer the hands question, calibrate from the Gloves control (flat, fist). Record 3 takes. Show the takes model and replay, then name the skill and the move on Publish.
 4. Click role switch, **Apprentice**. Library, then course syllabus (shows video slots).
 5. Open step 1, training room. Cycle guidance modes: marionette, shadow, ghost, side by side.
 6. Learner attempts the step. Make one deliberate error. Show coaching and the AI hint.
