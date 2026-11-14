@@ -176,8 +176,10 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
 
   // The robot twin beside the stage: a Dex3-1 that follows whoever the engine's source names, with strings from the
   // human hand it copies (the lesson's expert, or the live glove the coach sees).
+  // Touch typing is a human-only skill: the Dex3-1 has no ring or little finger, so the desk keeps the full stage width.
   const [robotPane, setRobotPane] = useRobotPane();
-  const robot = useRobotStream(robotPane);
+  const twin = robotPane && !desk;
+  const robot = useRobotStream(twin);
   const robotSource = robot.source ?? 'off';
   const robotHuman = {
     side,
@@ -355,7 +357,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       ) : (
       <div className="ap-room__grid">
         <section className="ap-stage" aria-label="Training stage">
-          <div className={`ap-stage__row ${robotPane ? 'ap-stage__row--twin' : ''}`}>
+          <div className={`ap-stage__row ${twin ? 'ap-stage__row--twin' : ''}`}>
             <div className="ap-stage__canvas">
               {refLoading || !track ? (
                 <p className="note ap-state">Loading the expert's recording...</p>
@@ -373,7 +375,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
                 <SideBySide {...stageProps} />
               )}
             </div>
-            {robotPane && (
+            {twin && (
               <div className="ap-stage__canvas ap-stage__canvas--robot">
                 <RobotTwin robot={robot} human={robotHuman} label="The Dex3-1 robot hand beside the hand that drives it, with a string to each fingertip" />
               </div>
@@ -432,7 +434,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running' || phase === 'scoring'} />
           </div>
 
-          {robotPane && (
+          {twin && (
             <div className="card ap-panel" aria-label="Robot hand">
               <RobotPanel robot={robot} compact />
             </div>
@@ -451,11 +453,15 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
               <GuidanceModeSwitch />
             )}
             <PropSwitch prop={step.prop} />
-            <label className="ap-toggle">
-              <input type="checkbox" checked={robotPane} onChange={(e) => setRobotPane(e.target.checked)} />
-              <span>Show the robot hand</span>
-              <span className="note">a Dex3-1 twin follows the glove beside the stage</span>
-            </label>
+            {desk ? (
+              <p className="note ap-field__hint">The robot hand has no ring or little finger, so touch typing is for human hands only.</p>
+            ) : (
+              <label className="ap-toggle">
+                <input type="checkbox" checked={robotPane} onChange={(e) => setRobotPane(e.target.checked)} />
+                <span>Show the robot hand</span>
+                <span className="note">a Dex3-1 twin follows the glove beside the stage</span>
+              </label>
+            )}
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>
               <Segmented label="Practice mode" value={mode} options={PRACTICE_OPTIONS} onChange={setMode} />
