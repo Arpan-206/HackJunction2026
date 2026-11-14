@@ -59,6 +59,9 @@ async function repToScore(url, what) {
   return page.getByLabel(/Overall score/).first().getAttribute('aria-label');
 }
 
+// SKIP_REPS=1 skips the training-room reps (the 3D room needs a quiet machine on the software renderer).
+const SKIP_REPS = process.env.SKIP_REPS === '1';
+
 let exitCode = 0;
 try {
   step('mock on');
@@ -69,7 +72,7 @@ try {
   await page.goto(`${BASE}/apprentice/skills/shadow_puppets`);
   await expectVisible(page.getByRole('link', { name: /Start lesson 1|Continue lesson/ }), 'shadow puppets primary action');
 
-  const puppets = ['The rabbit', 'The talking dog', 'The swan', 'The flapping bird', 'The snail'];
+  const puppets = SKIP_REPS ? [] : ['The rabbit', 'The talking dog', 'The swan', 'The flapping bird', 'The snail'];
   for (let i = 0; i < puppets.length; i++) {
     step(`shadow puppets: ${puppets[i]} on the wall, one rep, a score card`);
     await page.goto(`${BASE}/apprentice/lessons/seed-shadow-puppets/steps/${i}`);
@@ -90,11 +93,13 @@ try {
   await settle(2000);
   await shot('02-fingerspelling-skill');
 
-  step('fingerspelling: the letter A, one rep, a score card');
-  console.log(`  A: ${await repToScore(`${BASE}/apprentice/lessons/seed-fingerspelling-a-m/steps/0`, 'letter A')}`);
+  if (!SKIP_REPS) {
+    step('fingerspelling: the letter A, one rep, a score card');
+    console.log(`  A: ${await repToScore(`${BASE}/apprentice/lessons/seed-fingerspelling-a-m/steps/0`, 'letter A')}`);
 
-  step('fingerspelling: the letter J with its motion, one rep, a score card');
-  console.log(`  J: ${await repToScore(`${BASE}/apprentice/lessons/seed-fingerspelling-a-m/steps/9`, 'letter J')}`);
+    step('fingerspelling: the letter J with its motion, one rep, a score card');
+    console.log(`  J: ${await repToScore(`${BASE}/apprentice/lessons/seed-fingerspelling-a-m/steps/9`, 'letter J')}`);
+  }
 
   step('fingerspelling: the word drill spells HAND letter by letter, then scores it');
   await page.goto(`${BASE}/apprentice/fingerspelling`);
