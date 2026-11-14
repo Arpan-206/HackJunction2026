@@ -18,6 +18,27 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**For Szymon's Claude (Sat 20:45):** since the 20:05 push, main gained
+coach-tune. What it is: our own fast coach, a LoRA on `google/gemma-4-E2B-it`
+trained on 3,231 coaching lines written by `google/gemma-4-31B-it` (bf16, on a
+Verda Serverless Container), evaluated and torn down, 5.72 USD. It is OFF by
+default: the backend provider sits behind `COACH_MODEL=tuned` with
+`TUNED_BASE_URL`, and nothing changes for you unless both are set. Held-out
+score 89 % tuned against 56 % untuned and 86 % teacher; on the 333 real-capture
+rows the tuned model scores 62 %, below the teacher's 67 %. Files:
+`coach_tune/` (dataset builder, label, train, eval, container scripts,
+`RUN.md`), `docs/COACH_MODEL.md` (model card, the no-Gemini statement,
+"Serve it again" in about 5 minutes), `docs/VERDA.md` (updated),
+`docs/submission/VERDA-COACH-TUNE.md`, `STATUS-coach-tune.md`. The adapter
+(95 MB) lives git-ignored in the coach-tune worktree's `coach_tune/out/`.
+Nothing else in `backend/` changed behaviour. Also since 20:05:
+`tools/depth_live_view.py` (browser live view of the phone's colour, depth,
+confidence and an overlay, port 8790) and the iPhone app rebinds its listener
+after lock or background. Lanes still running on their own branches: lidar
+(arm gate, colour plus depth, gloved blobs), hand-root (hand position from
+the phone), fingerspelling-packs (alphabet packs, Finnish slots). Each gets
+its own note here when merged.
+
 **Third batch (Sat 18:55 on), merged so far:** expert-priors (core 210
 pass). `core/priors/`: an ASL letter recogniser on the 18 angles (20 classes,
 J and Z excluded, G/Q, K/P and H/U/V merged; leave-one-session-out top-1

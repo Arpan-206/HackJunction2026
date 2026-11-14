@@ -137,12 +137,18 @@ async def test_stream_mode_feeds_the_glove_source(cfg, tmp_path):
     assert srv.messages == [] and len(srv.definitions) == 2
     src = GloveSource(cfg, Clock(), logs_dir=tmp_path / "logs", replay=srv)
     await src.start()
+    expected = sum(1 for p, _, _ in split_capture(cap.read_bytes()) if p == PREFIX_DATA)
     for _ in range(40):
         await asyncio.sleep(0.05)
         if srv.finished:
             break
+    # the server finishes sending before the source has read the tail of the stream
+    for _ in range(60):
+        if src.frames >= expected:
+            break
+        await asyncio.sleep(0.05)
     await src.stop()
-    assert srv.finished and src.frames == sum(1 for p, _, _ in split_capture(cap.read_bytes()) if p == PREFIX_DATA)
+    assert srv.finished and src.frames == expected
     assert set(src.sides.values()) == {"left", "right"}
 
 
