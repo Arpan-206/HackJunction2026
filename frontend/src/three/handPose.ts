@@ -1,7 +1,7 @@
 import { Bone, Matrix4, Quaternion, Vector3, type Object3D } from 'three';
 
 /**
- * Bone layout and pose maths for the skinned hand (WebXR generic-hand joints). Pure: no WebGL, no loading, so the
+ * Bone layout and pose maths for the skinned hand (joints named as in the WebXR hand). Pure: no WebGL, no loading, so the
  * flexion mapping is unit tested against the real model.
  *
  * Hand space: right hand, palm down, fingers along -z, y up (back of the hand), thumb towards -x. Flexion angles come
@@ -48,7 +48,18 @@ export interface ThumbTuning {
   curl: number;
 }
 
-export const THUMB_TUNING: ThumbTuning = { opposition: 0.8, roll: 0.6, curl: 0.6 };
+export const THUMB_TUNING: ThumbTuning = { opposition: 0.5, roll: 0.15, curl: 0.9 };
+/**
+ * Where a flexing thumb heads, in palm widths from the palm centre along the palm's distal, palmar and radial axes: in
+ * front of the palm, over the middle phalanges of the index and middle fingers, which is where it lies in a fist and
+ * where it meets the index in a pinch.
+ */
+export const THUMB_TARGET = { distal: 0.6, palmar: 0.8, radial: -0.15 };
+/**
+ * Visual limit on a finger's total flexion (MCP + PIP + DIP, radians): beyond `knee` the extra curl is compressed so the
+ * total never passes knee + range, which is where this model's fingertips meet its palm in a fist.
+ */
+export const CURL_LIMIT = { knee: 3.3, range: 0.4 };
 /** Ring and little metacarpals flex a little with their knuckles, which cups the palm in a fist (radian per radian). */
 export const CUP_GAIN: readonly number[] = [0, 0, 0, 0.06, 0.13];
 /**
@@ -180,13 +191,11 @@ export function buildLayout(world: (name: string) => { position: Vector3; quater
 
   const P = (n: string) => bones[index.get(n) as number].worldPosition;
   const palm = palmFrame(P);
-  // Where a flexing thumb heads: in front of the palm, over the middle phalanges of the index and middle fingers, which
-  // is where it lies in a fist and where it meets the index in a pinch. In palm widths from the palm centre.
   const thumbTarget = palm.centre
     .clone()
-    .addScaledVector(palm.distal, palm.width * 0.68)
-    .addScaledVector(palm.palmar, palm.width * 0.82)
-    .addScaledVector(palm.radial, palm.width * 0.27);
+    .addScaledVector(palm.distal, palm.width * THUMB_TARGET.distal)
+    .addScaledVector(palm.palmar, palm.width * THUMB_TARGET.palmar)
+    .addScaledVector(palm.radial, palm.width * THUMB_TARGET.radial);
 
   const fingers: FingerDesc[] = CHAINS.map((chain, f) => {
     const dir = (k: number) => P(chain[k + 1]).clone().sub(P(chain[k])).normalize();
@@ -239,9 +248,21 @@ export function jointQuaternion(bind: Quaternion, j: JointDesc, flex: number, sp
 export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, flex: ArrayLike<number>, spread: ArrayLike<number>, thumb: ThumbTuning = THUMB_TUNING): void {
   for (let f = 0; f < 5; f++) {
     const fd = layout.fingers[f];
+    // Past a tight fist the model's fingertips would sink into its palm, so the PIP and DIP give way softly (the knuckle
+    // keeps its full angle, so the fist still closes). Only the drawing changes; the pose data is untouched.
+    let squeeze = 1;
+    if (f > 0) {
+      const mid = (flex[f * 3 + 1] ?? 0) + (flex[f * 3 + 2] ?? 0);
+      const total = (flex[f * 3] ?? 0) + mid;
+      if (total > CURL_LIMIT.knee && mid > 0) {
+        const capped = CURL_LIMIT.knee + CURL_LIMIT.range * Math.tanh((total - CURL_LIMIT.knee) / CURL_LIMIT.range);
+        squeeze = Math.max(0, (mid - (total - capped)) / mid);
+      }
+    }
     for (let k = 0; k < 3; k++) {
       const j = fd.joints[k];
       let a = flex[f * 3 + k] ?? 0;
+      if (k > 0) a *= squeeze;
       let roll = 0;
       if (f === 0 && k === 0) {
         const swing = (a - j.bindFlex) * thumb.opposition;
@@ -255,24 +276,28 @@ export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, fl
       bones[fd.cup.bone].quaternion.copy(layout.bones[fd.cup.bone].quaternion).multiply(_q.setFromAxisAngle(fd.cup.axis, mcp * fd.cup.gain));
     }
   }
-  closePinch(bones, layout);
+  closePinch(bones, layout, flex[0] ?? 0);
 }
 
 /**
  * Pinch contact. Joint angles alone leave the thumb and index pads a little apart (a glove's thumb reading is coarse and
- * the model's thumb is not the wearer's), so when the posed thumb tip already sits near the index tip, held out in front
- * of the knuckle as in a pinch, the thumb's CMC and MCP turn the rest of the way until the pads touch. Far apart, or
- * with the index curled into a fist, nothing changes; in between the correction fades in, so a pinch closes smoothly.
+ * the model's thumb is not the wearer's), so when the thumb is flexed towards the fingers and its posed tip already sits
+ * near the index tip, held out in front of the knuckle as in a pinch, the thumb's CMC and MCP turn the rest of the way
+ * until the pads touch. Far apart, with the thumb at rest, or with the index curled into a fist, nothing changes; in
+ * between the correction fades in, so a pinch closes smoothly.
  */
 export const PINCH = {
   /** Unaided tip distance (hand-space units) at which the pads close fully, and beyond which the thumb is left alone. */
-  near: 0.3,
-  far: 0.5,
+  near: 0.55,
+  far: 0.75,
   /** Distance kept between the two tip joints when touching: about one fingertip's thickness. */
   contact: 0.16,
   /** How far in front of its knuckle (along the palm) the index tip must be for a pinch; curled back past it is a fist. */
-  reachFrom: -0.05,
-  reachTo: 0.1,
+  reachFrom: -0.4,
+  reachTo: -0.25,
+  /** Thumb CMC flexion (radians) over which the correction fades in: a thumb still near its rest is not pinching. */
+  thumbFrom: 0.3,
+  thumbTo: 0.42,
 };
 
 const _p = new Vector3();
@@ -303,7 +328,9 @@ function boneWorld(bones: readonly Object3D[], layout: HandLayout, i: number, po
   }
 }
 
-function closePinch(bones: readonly Object3D[], layout: HandLayout): void {
+function closePinch(bones: readonly Object3D[], layout: HandLayout, thumbCmc: number): void {
+  const pressing = smoothstep(PINCH.thumbFrom, PINCH.thumbTo, thumbCmc);
+  if (pressing <= 0) return;
   const thumb = layout.fingers[0];
   const index = layout.fingers[1];
   boneWorld(bones, layout, thumb.tip, _thumbTip, _wq);
@@ -311,7 +338,7 @@ function closePinch(bones: readonly Object3D[], layout: HandLayout): void {
   boneWorld(bones, layout, index.joints[0].bone, _indexKnuckle, _wq);
   const d0 = _thumbTip.distanceTo(_indexTip);
   const reach = _a.copy(_indexTip).sub(_indexKnuckle).dot(layout.palm.distal);
-  const w = (1 - smoothstep(PINCH.near, PINCH.far, d0)) * smoothstep(PINCH.reachFrom, PINCH.reachTo, reach);
+  const w = pressing * (1 - smoothstep(PINCH.near, PINCH.far, d0)) * smoothstep(PINCH.reachFrom, PINCH.reachTo, reach);
   if (w <= 0) return;
   // Aim at a point one contact distance short of the index tip, on the thumb's side of it.
   _target.copy(_thumbTip).sub(_indexTip);
