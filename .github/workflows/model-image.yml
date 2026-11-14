@@ -4,6 +4,8 @@ name: model-image
 # through CRACI's proxy, so CRACI records the manifest fetch. Only the
 # manifest is read; no image layers are pulled.
 # tools/agent_bom provenance <digest> then asks the CRACI API about it.
+# Network policy: every built-in preset (the `dockerhub` preset covers
+# Docker Hub pulls), unmatched traffic blocked.
 
 on:
   push:
@@ -15,6 +17,10 @@ jobs:
   digest:
     runs-on: craci
     steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
       - name: Resolve image digest
         run: |
           docker buildx imagetools inspect docker.io/vllm/vllm-openai:v0.29.0

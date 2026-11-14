@@ -5,6 +5,9 @@ name: lane-audit
 # each lane at its tip and runs the same installs and suites as ci.yml.
 # The job name carries the lane, and tools/agent_bom matches on it.
 # Caches stay off, so no lane inherits packages from another lane's cache.
+# Network policy: every built-in preset (presets omitted) and `default: deny`,
+# per docs.craci.com/guides/setup-action-network and cache-sbom-completeness.
+# Unmatched traffic is blocked, so CRACI observes every download.
 
 on:
   push:
@@ -23,6 +26,10 @@ jobs:
     outputs:
       matrix: ${{ steps.list.outputs.matrix }}
     steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -49,6 +56,10 @@ jobs:
       matrix:
         lane: ${{ fromJSON(needs.lanes.outputs.matrix) }}
     steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.lane }}
