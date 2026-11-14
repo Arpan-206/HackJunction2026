@@ -1,0 +1,2 @@
+# Hosts a lane may contact even when main's build does not (fnmatch patterns, one per line).
+# Add a host here only after a person has looked at why the lane contacts it.
