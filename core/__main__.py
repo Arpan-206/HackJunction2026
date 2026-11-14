@@ -74,6 +74,25 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="start in this mode (needs --lesson for learn/playback)",
     )
+    ap.add_argument(
+        "--wearer",
+        default=None,
+        help="calibrate both hands with this wearer's saved flat and fist (config.toml [calibration])",
+    )
+    ap.add_argument("--wearer-left", default=None, help="wearer name for the left hand")
+    ap.add_argument(
+        "--wearer-right", default=None, help="wearer name for the right hand"
+    )
+    ap.add_argument(
+        "--calibration-dir",
+        default=None,
+        help="the backend's data dir holding calibrations/ and glove_calibrations/",
+    )
+    ap.add_argument(
+        "--no-calibration",
+        action="store_true",
+        help="score on raw angles (no per-wearer calibration)",
+    )
     ap.add_argument("--log-level", default="info")
     args = ap.parse_args(argv)
 
@@ -94,6 +113,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.rcsp:
         h, p = args.rcsp.rsplit(":", 1)
         cfg.glove.rcsp_host, cfg.glove.rcsp_port = h, int(p)
+
+    if "calibration" in cfg:
+        cal = cfg.calibration
+        if args.wearer is not None:
+            cal.wearer = args.wearer
+        if args.wearer_left is not None:
+            cal.left_wearer = args.wearer_left
+        if args.wearer_right is not None:
+            cal.right_wearer = args.wearer_right
+        if args.calibration_dir:
+            cal.data_dir = str(Path(args.calibration_dir).resolve())
+        if args.no_calibration:
+            cal.enabled = False
 
     core = Core(cfg, fake=args.fake, validate=not args.no_validate)
 

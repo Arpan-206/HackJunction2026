@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from . import hand as H
+from .calibration import Calibrations
 from .coach import Coach, CoachLine
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
 from .robot import SOURCES as ROBOT_SOURCES
@@ -65,6 +66,11 @@ class Session:
         self.tempo = float(cfg.session.tempo_default)
         self.loop = bool(cfg.session.loop_default)
         self.calibrated = False
+        # Per-wearer flat and fist calibration (core/calibration.py). The fake
+        # gloves are synthetic and already read 0 when flat, so they skip it.
+        self.calibrations = Calibrations(cfg)
+        if not fake:
+            self.calibrations.reload()
         self.anchor = "rest"
         self.recorder = Recorder(cfg.record, cfg.score.hold_ms_default)
         self.hands: dict[str, H.HandState | None] = {"left": None, "right": None}
@@ -196,6 +202,8 @@ class Session:
     ) -> None:
         if hand is not None:
             hand.role = self.roles.get(side, "free")
+            if not self.fake:
+                self.calibrations.apply(hand)
         self.hands[side] = hand
         for finger, name in pinch_events or []:
             self.emit_event(name, side, {"finger": finger})
@@ -806,6 +814,9 @@ class Session:
     def cmd_calibrate(self, args: dict) -> dict:
         if self.on_calibrate is not None:
             self.on_calibrate()
+        if not self.fake:
+            # pick up a flat and fist calibration saved since start
+            self.calibrations.reload()
         self.calibrated = True
         self.emit_event("calibrated", None, {"what": "yaw"})
         self.emit_session()

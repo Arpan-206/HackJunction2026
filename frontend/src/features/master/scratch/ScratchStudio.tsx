@@ -15,6 +15,7 @@ import { SteadinessControl } from '../components/SteadinessControl';
 import type { RecorderPhase } from '../hooks/useRecorder';
 import { primarySide } from '../lib';
 import { useScratchStudio } from './useScratchStudio';
+import { RobotStudioPane } from '../../shared/robot/RobotStudioPane';
 
 /** "Start from scratch": pick a move, calibrate, record takes against a live 3D hand, then save a lesson. */
 export function ScratchStudio() {
@@ -80,6 +81,7 @@ export function ScratchStudio() {
                 <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={prop} hands={choice?.hands} live={recPhase === 'recording'}>
                   {choice && <span className="mst-stage__tag">{choice.name}</span>}
                 </LiveHandStage>
+                <RobotStudioPane glove={glove} side={s.side} />
                 {glove.status !== 'open' && (
                   <p className="mst-alert" role="status">
                     The glove stream is not connected. Is the backend running on port 8000? The hand shows a resting pose until it is.

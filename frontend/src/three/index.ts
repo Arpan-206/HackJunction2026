@@ -15,3 +15,5 @@ export { GoldSeal, type StageQuality } from './atmosphere';
 export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';
 export { CODEX_STAGE, drawParchment, getParchmentTexture, getParchmentUrl } from './parchment';
 export { withHatching, createHatchedShadowMaterial } from './sketch';
+export { RobotHand, RobotStrings, loadRobotModel, useRobotModel, parseUrdf, type RobotHandHandle, type RobotHandProps, type RobotPoseLatest, type UrdfModel } from './robot';
+export { STRING_POINTS, writeStringSegments } from './stringMath';

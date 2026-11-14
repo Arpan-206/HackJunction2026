@@ -12,7 +12,10 @@ from core.schema import SchemaRegistry
 
 @pytest.fixture(scope="session")
 def cfg():
-    return load_config(ROOT / "config.toml")
+    c = load_config(ROOT / "config.toml")
+    # never pick up calibrations a teammate saved in backend/data on this machine
+    c.calibration.data_dir = str(ROOT / "tests" / "no-calibration-data")
+    return c
 
 
 @pytest.fixture(scope="session")

@@ -55,6 +55,22 @@ function IconApprentice() {
   );
 }
 
+function IconRobot() {
+  return (
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      {...stroke}
+    >
+      <path d="M6 20V9h12v11M6 13h12M9 9V5M15 9V5M9 20v-3M12 20v-3M15 20v-3" />
+      <circle cx="9" cy="4" r="1.2" />
+      <circle cx="15" cy="4" r="1.2" />
+    </svg>
+  );
+}
+
 const links = [
   { to: "/", label: "Home", icon: <IconHome />, end: true },
   { to: "/expert", label: "Expert", icon: <IconMaster />, end: false },
@@ -64,6 +80,7 @@ const links = [
     icon: <IconApprentice />,
     end: false,
   },
+  { to: "/robot", label: "Robot", icon: <IconRobot />, end: false },
 ];
 
 /** Lapis rail navigation with Settings, the AI Assistant state and glove status, wrapping every routed screen except the role select. */

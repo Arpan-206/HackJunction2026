@@ -1,0 +1,20 @@
+[
+ {
+  "index": 0,
+  "kind": "hold",
+  "duration_ms": 8362,
+  "pose": "thumb half bent, index half bent, middle half bent, ring half bent, little half bent"
+ },
+ {
+  "index": 1,
+  "kind": "hold",
+  "duration_ms": 8362,
+  "pose": "thumb straight, index straight, middle straight, ring straight, little straight"
+ },
+ {
+  "index": 2,
+  "kind": "hold",
+  "duration_ms": 8362,
+  "pose": "thumb half bent, index straight, middle straight, ring curled, little half bent"
+ }
+]

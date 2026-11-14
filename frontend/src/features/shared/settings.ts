@@ -40,7 +40,7 @@ interface Pref<T> {
 }
 
 /** One persisted preference with a cached value and subscribers, read through useSyncExternalStore. */
-function pref<T>(key: string, parse: (raw: string | null) => T, serialise: (value: T) => string | null, onChange?: (value: T) => void): Pref<T> {
+export function pref<T>(key: string, parse: (raw: string | null) => T, serialise: (value: T) => string | null, onChange?: (value: T) => void): Pref<T> {
   const listeners = new Set<() => void>();
   let cached: { value: T } | null = null;
   const get = () => (cached ??= { value: parse(read(key)) }).value;

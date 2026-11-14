@@ -36,6 +36,12 @@ import { SideBySide } from './modes/SideBySide';
 import { Segmented } from './Segmented';
 import { ScoreCard } from './ScoreCard';
 import { preloadScoreScene } from './score/preload';
+import { useRobotStream } from '../../../api/useRobotStream';
+import type { HandStyle } from '../../../three';
+import { RobotPanel } from '../../shared/robot/RobotPanel';
+import { RobotTwin } from '../../shared/robot/RobotTwin';
+import { useRobotPane } from '../../shared/robot/robotPrefs';
+import '../../shared/robot/robot.css';
 
 type Phase = 'ready' | 'countdown' | 'running' | 'scoring' | 'result';
 
@@ -164,6 +170,19 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     onFollowDone: () => finishRef.current(),
     onRecordStart: () => recordStartRef.current(),
   });
+
+  // The robot twin beside the stage: a Dex3-1 that follows whoever the engine's source names, with strings from the
+  // human hand it copies (the lesson's expert, or the live glove the coach sees).
+  const [robotPane, setRobotPane] = useRobotPane();
+  const robot = useRobotStream(robotPane);
+  const robotSource = robot.source ?? 'off';
+  const robotHuman = {
+    side,
+    style: (robotSource === 'learner' ? 'wood' : 'chalk') as HandStyle,
+    live: gloves.latest,
+    getFrame: () => (robotSource === 'lesson' ? coach.live.current.master : coach.live.current.learner),
+    label: robotSource === 'lesson' ? 'The lesson' : robotSource === 'master' ? 'The expert' : 'You',
+  };
 
   useEffect(() => {
     if (step.motion) gloves.setMotion(step.motion);
@@ -333,19 +352,26 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       ) : (
       <div className="ap-room__grid">
         <section className="ap-stage" aria-label="Training stage">
-          <div className="ap-stage__canvas">
-            {refLoading || !track ? (
-              <p className="note ap-state">Loading the expert's recording...</p>
-            ) : theatre ? (
-              <ShadowPuppets {...stageProps} step={step} />
-            ) : guidance === 'marionette' ? (
-              <Marionette {...stageProps} />
-            ) : guidance === 'shadow' ? (
-              <Shadow {...stageProps} />
-            ) : guidance === 'ghost' ? (
-              <GhostOverlay {...stageProps} />
-            ) : (
-              <SideBySide {...stageProps} />
+          <div className={`ap-stage__row ${robotPane ? 'ap-stage__row--twin' : ''}`}>
+            <div className="ap-stage__canvas">
+              {refLoading || !track ? (
+                <p className="note ap-state">Loading the expert's recording...</p>
+              ) : theatre ? (
+                <ShadowPuppets {...stageProps} step={step} />
+              ) : guidance === 'marionette' ? (
+                <Marionette {...stageProps} />
+              ) : guidance === 'shadow' ? (
+                <Shadow {...stageProps} />
+              ) : guidance === 'ghost' ? (
+                <GhostOverlay {...stageProps} />
+              ) : (
+                <SideBySide {...stageProps} />
+              )}
+            </div>
+            {robotPane && (
+              <div className="ap-stage__canvas ap-stage__canvas--robot">
+                <RobotTwin robot={robot} human={robotHuman} label="The Dex3-1 robot hand beside the hand that drives it, with a string to each fingertip" />
+              </div>
             )}
           </div>
           <FingerSummary coach={coach} policy={policy} />
@@ -401,6 +427,12 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running' || phase === 'scoring'} />
           </div>
 
+          {robotPane && (
+            <div className="card ap-panel" aria-label="Robot hand">
+              <RobotPanel robot={robot} compact />
+            </div>
+          )}
+
           {/* Calibration is prominent only while the glove has never been calibrated; after that it lives in the settings. */}
           {!calibration.loading && !calibrated && calPanel}
 
@@ -408,6 +440,11 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             {(calibration.loading || calibrated) && calPanel}
             {theatre ? <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p> : <GuidanceModeSwitch />}
             <PropSwitch prop={step.prop} />
+            <label className="ap-toggle">
+              <input type="checkbox" checked={robotPane} onChange={(e) => setRobotPane(e.target.checked)} />
+              <span>Show the robot hand</span>
+              <span className="note">a Dex3-1 twin follows the glove beside the stage</span>
+            </label>
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>
               <Segmented label="Practice mode" value={mode} options={PRACTICE_OPTIONS} onChange={setMode} />
