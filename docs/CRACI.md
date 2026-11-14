@@ -289,7 +289,7 @@ CRACI records provenance for artifacts that CRACI jobs create or push. vLLM's im
 | `tools/agent_bom/sources.py` | GitHub job ids per lane (through `gh`), lockfile history and lane attribution (through git), step failures from job logs |
 | `tools/agent_bom/analyse.py` | SBOM and trace parsing, diff against `main`, host first-seen times, the gate rule. No network, no git |
 | `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `provenance` (CRACI API); `history`, `steps` (git and GitHub only) |
-| `tools/agent_bom/tests/test_agent_bom.py` | 6 tests: 5 on spec-shaped fixtures (hand-written, marked as fixtures; no result here comes from them), 1 on real merge subjects from `main` |
+| `tools/agent_bom/tests/test_agent_bom.py` | 7 tests: 5 on spec-shaped fixtures and 1 on a fixture in the real response shape (all hand-written and marked as fixtures; no result here comes from them), 1 on real merge subjects from `main` |
 
 The CRACI API looks a job up by its GitHub job id. Its job list only shows active jobs, so `agent_bom` finds finished jobs through the GitHub Actions API, by the job name `lane <branch>`.
 

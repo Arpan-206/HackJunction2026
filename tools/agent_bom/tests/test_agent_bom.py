@@ -221,3 +221,63 @@ def test_lane_from_merge_subject_reads_our_merge_styles():
         lane_from_merge_subject("Merge lane robot-view: Dex3-1 twin from the URDF")
         == "robot-view"
     )
+
+
+# FIXTURE in the shape of a real CRACI response (Sun 15 Nov): no `version` on components, purl refs with
+# qualifiers in `affects`, the repository itself as a pkg:github component, DNS records with a trailing dot.
+# Package names and ids below are test values.
+FIXTURE_REAL_SHAPE_SBOM = {
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.7",
+    "metadata": {
+        "properties": [{"name": "craci:job:repository", "value": "Owner/Repo"}]
+    },
+    "components": [
+        {
+            "type": "library",
+            "name": "owner/repo",
+            "purl": "pkg:github/Owner/Repo@abc123",
+            "bom-ref": "x",
+        },
+        {
+            "type": "library",
+            "name": "fixture-a",
+            "purl": "pkg:npm/fixture-a@1.0.0",
+            "bom-ref": "a1",
+        },
+        {
+            "type": "library",
+            "name": "fixture-a",
+            "purl": "pkg:npm/fixture-a@2.0.0",
+            "bom-ref": "a2",
+        },
+        {
+            "type": "library",
+            "name": "fixture-b",
+            "purl": "pkg:pypi/fixture-b@3.0?file_name=b.whl",
+            "bom-ref": "y",
+        },
+    ],
+    "vulnerabilities": [
+        {
+            "id": "FIXTURE-0002",
+            "source": {"name": "osv"},
+            "ratings": [{"severity": "unknown"}],
+            "affects": [{"ref": "pkg:pypi/fixture-b@3.0?file_name=b.whl"}],
+        }
+    ],
+}
+
+
+def test_real_shape_sbom_and_dns():
+    pkgs, vulns, _ = parse_sbom(FIXTURE_REAL_SHAPE_SBOM)
+    assert "pkg:github/owner/repo" not in pkgs
+    assert pkgs["pkg:npm/fixture-a"].version == "1.0.0, 2.0.0"
+    assert pkgs["pkg:pypi/fixture-b"].version == "3.0"
+    assert [(v.package_key, v.version, v.severity) for v in vulns] == [
+        ("pkg:pypi/fixture-b", "3.0", "unknown")
+    ]
+    hosts, _ = trace_hosts(
+        {"observations": [{"protocol": "dns", "dns": {"record": "pypi.org."}}]}
+    )
+    assert hosts == {"pypi.org"}
