@@ -25,7 +25,7 @@ export function worstFinger(deviation: FingerValues, toleranceDeg: number): { fi
   return best ? { finger: best, deviationDeg: deviation[best] } : null;
 }
 
-/** Plain-language tip for one finger; a positive deviation means curled more than the master. */
+/** Plain-language tip for one finger; a positive deviation means curled more than the expert. */
 export function fingerTip(finger: Finger, deviationDeg: number, toleranceDeg: number): string {
   const lots = Math.abs(deviationDeg) > toleranceDeg * 2.2;
   const action = deviationDeg > 0 ? (lots ? 'open it out much more' : 'uncurl a little') : lots ? 'curl it much more' : 'curl a little more';
@@ -36,6 +36,6 @@ export function fingerTip(finger: Finger, deviationDeg: number, toleranceDeg: nu
 export function algorithmicTip(deviation: FingerValues, toleranceDeg: number, lagMs: number, timingMs: number): string | null {
   const w = worstFinger(deviation, toleranceDeg);
   if (w) return fingerTip(w.finger, w.deviationDeg, toleranceDeg);
-  if (Math.abs(lagMs) > timingMs) return lagMs > 0 ? 'Good shape. Start a touch sooner to stay with the master.' : 'Good shape. Wait for the master a touch longer.';
+  if (Math.abs(lagMs) > timingMs) return lagMs > 0 ? 'Good shape. Start a touch sooner to stay with the expert.' : 'Good shape. Wait for the expert a touch longer.';
   return null;
 }

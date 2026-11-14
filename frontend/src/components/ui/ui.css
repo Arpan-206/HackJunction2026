@@ -142,7 +142,7 @@
   border: 2px solid var(--line-strong);
   display: grid;
   place-items: center;
-  font: 500 1.05rem var(--font-display);
+  font: 700 1.1rem var(--font-ui);
   background: var(--surface);
   color: var(--text);
 }
@@ -243,19 +243,19 @@ textarea.field__control {
   z-index: 100;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--lapis-deep) 86%, transparent);
-  color: #f4f4f1;
+  background: color-mix(in srgb, var(--scrim) 88%, transparent);
+  color: var(--paper);
 }
 .countdown__num {
   font: 500 clamp(9rem, 32vw, 24rem) / 1 var(--font-display);
-  color: var(--gold);
+  color: var(--paper);
   animation: countdown-pop 1s ease-out;
 }
 .countdown__caption {
   position: absolute;
   bottom: 14%;
   font: italic 400 var(--step-2) var(--font-note);
-  color: #e8e9e6;
+  color: var(--paper);
 }
 @keyframes countdown-pop {
   0% {
@@ -280,11 +280,14 @@ textarea.field__control {
   min-height: 64px;
   padding: 0.4rem 1.6rem 0.4rem 0.6rem;
   border-radius: 999px;
-  border: 2px solid var(--line-strong);
-  background: var(--surface);
-  color: var(--text);
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
   font: 700 var(--step-1) var(--font-ui);
   cursor: pointer;
+}
+.rec:hover:not(:disabled) {
+  background: var(--accent-hover);
 }
 .rec:disabled {
   opacity: 0.5;
@@ -294,26 +297,26 @@ textarea.field__control {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--danger);
+  background: var(--accent-text);
   display: grid;
   place-items: center;
   transition: border-radius 0.2s;
 }
 .rec--on {
-  border-color: var(--danger);
+  border-color: var(--accent-text);
 }
 .rec--on .rec__dot {
   border-radius: 12px;
   animation: rec-pulse 1.2s ease-in-out infinite;
 }
 .rec__time {
-  font: 500 var(--step-1) var(--font-display);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-2);
+  font: 700 var(--step-1) var(--font-ui);
+  font-variant-numeric: lining-nums tabular-nums;
+  color: inherit;
 }
 @keyframes rec-pulse {
   50% {
-    box-shadow: 0 0 0 8px color-mix(in srgb, var(--danger) 25%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-text) 35%, transparent);
   }
 }
 
@@ -334,21 +337,44 @@ textarea.field__control {
   align-items: center;
   gap: 0.8rem;
   padding: 0.8rem 1rem;
-  background: var(--lapis-deep);
-  color: #f4f4f1;
-  border-left: 6px solid var(--gold);
+  background: var(--scrim);
+  color: var(--paper);
+  border: 2px solid color-mix(in srgb, var(--paper) 45%, transparent);
   border-radius: var(--radius-s);
   box-shadow: var(--shadow);
 }
 .toast--error {
-  border-left-color: var(--danger);
+  border-color: var(--danger);
 }
 .toast--ok {
-  border-left-color: var(--ok);
+  border-color: var(--rail-ok);
 }
 .toast__msg {
   flex: 1;
 }
 .toast .btn {
-  color: #f4f4f1;
+  color: var(--paper);
+}
+.toast .btn--secondary {
+  border-color: var(--paper);
+}
+
+/* ---------- Toggle (pressed state without a filled primary) ---------- */
+.btn--toggle {
+  background: transparent;
+  color: var(--text-2);
+  border-color: var(--line);
+}
+.btn--toggle[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  box-shadow: inset 0 -4px 0 var(--accent);
+}
+.btn--toggle:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.reason {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
 }

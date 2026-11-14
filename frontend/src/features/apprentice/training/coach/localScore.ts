@@ -24,5 +24,6 @@ export function localScore(stats: AttemptStats, config: CoachConfig): ScoreResul
     within_tolerance: FINGERS.every((f) => stats.inTolerance[f] >= 0.7),
     worst_finger: stats.worst,
     hint: stats.tip ?? 'A clean attempt. Keep the shape steady and repeat it.',
+    warnings: [],
   };
 }

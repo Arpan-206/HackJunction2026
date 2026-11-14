@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../../components/PageHeader';
-import { Badge, Button, Card, Field } from '../../../components/ui';
-import { CalibrationPanel } from '../components/CalibrationPanel';
+import { Button, Card, Field, Stepper } from '../../../components/ui';
+import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { FingerLanes } from '../components/FingerLanes';
 import { LiveHandStage } from '../components/LiveHandStage';
 import { MovePicker } from '../components/MovePicker';
@@ -16,25 +16,52 @@ import { useScratchStudio } from './useScratchStudio';
 export function ScratchStudio() {
   const s = useScratchStudio();
   const [recPhase, setRecPhase] = useState<RecorderPhase>('idle');
+  const [picking, setPicking] = useState(true);
+  const stageTop = useRef<HTMLElement>(null);
   const { choice, glove } = s;
   const takes = choice ? s.book.takesFor(choice.id) : [];
   const replayItems = (s.replay ?? []).map((id) => ({ id, label: `Take ${takes.find((t) => t.id === id)?.n ?? ''}`.trim() }));
-  const source = s.steadiness.gloveSource;
+  const stage = !choice ? 0 : s.planned.length ? 2 : 1;
+
+  const choose: typeof s.choose = (c) => {
+    s.choose(c);
+    setPicking(false);
+  };
+
+  const choiceId = choice?.id;
+  useEffect(() => {
+    if (!choiceId) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    stageTop.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [choiceId]);
 
   return (
     <>
-      <PageHeader kicker="Il maestro" title="Start from scratch" />
+      <PageHeader title="Start from scratch" context="Choose a move, capture takes with your glove, then publish them as a lesson." />
+      <div className="mst-steps-bar">
+        <Stepper label="Progress" current={stage} steps={[{ label: 'Choose' }, { label: 'Capture' }, { label: 'Publish' }]} />
+      </div>
 
       <section className="mst-section" aria-labelledby="mst-pick">
-        <h2 id="mst-pick" className="mst-h">
-          <span className="mst-h__n">I</span> Choose a move
+        <h2 id="mst-pick" className="sr-only">
+          Choose a move
         </h2>
-        <MovePicker catalogue={s.catalogue} skill={s.skill} onSkill={s.setSkill} choice={choice} onChoose={s.choose} />
+        {choice && !picking ? (
+          <p className="mst-chosen">
+            <span className="mst-chosen__name">{choice.name}</span>
+            <span className="note">{choice.hands === 'both' ? 'both hands' : `${choice.hands} hand`}</span>
+            <Button variant="secondary" onClick={() => setPicking(true)}>
+              Change move
+            </Button>
+          </p>
+        ) : (
+          <MovePicker catalogue={s.catalogue} skill={s.skill} onSkill={s.setSkill} choice={choice} onChoose={choose} />
+        )}
       </section>
 
-      <section className="mst-section" aria-labelledby="mst-rec">
-        <h2 id="mst-rec" className="mst-h">
-          <span className="mst-h__n">II</span> Calibrate and record
+      <section className="mst-section" aria-labelledby="mst-rec" ref={stageTop}>
+        <h2 id="mst-rec" className="sr-only">
+          Calibrate and record
         </h2>
         <div className="mst-studio">
           <div className="mst-studio__view">
@@ -43,17 +70,14 @@ export function ScratchStudio() {
             ) : (
               <>
                 <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={choice?.prop}>
-                  <Badge tone={glove.status === 'open' ? 'ok' : 'neutral'}>
-                    {glove.status === 'open' ? (source === 'simulator' ? 'Simulator hand' : 'Glove live') : glove.status === 'connecting' ? 'Connecting...' : 'No glove stream'}
-                  </Badge>
-                  {choice && <Badge tone="lapis">{choice.name}</Badge>}
+                  {choice && <span className="mst-stage__tag">{choice.name}</span>}
                   {recPhase === 'recording' && <span className="mst-recmark">REC</span>}
                 </LiveHandStage>
                 <div className="mst-toggles" role="group" aria-label="Live view options">
-                  <Button variant={s.showJoints ? 'primary' : 'secondary'} aria-pressed={s.showJoints} onClick={() => s.setShowJoints(!s.showJoints)}>
+                  <Button variant="toggle" aria-pressed={s.showJoints} onClick={() => s.setShowJoints(!s.showJoints)}>
                     Joint rings
                   </Button>
-                  <Button variant={s.showTrails ? 'primary' : 'secondary'} aria-pressed={s.showTrails} onClick={() => s.setShowTrails(!s.showTrails)}>
+                  <Button variant="toggle" aria-pressed={s.showTrails} onClick={() => s.setShowTrails(!s.showTrails)}>
                     Fingertip trails
                   </Button>
                 </div>
@@ -68,11 +92,10 @@ export function ScratchStudio() {
           </div>
 
           <div className="mst-studio__side">
-            <CalibrationPanel side={s.side} onSide={s.setSide} cal={s.calibration} />
             {choice ? (
               <RecorderPanel
                 slot={choice.id}
-                title={`Record: ${choice.name}`}
+                title={`Takes: ${choice.name}`}
                 targetReps={choice.repetitions}
                 book={s.book}
                 contextFor={(rep) => ({ stepId: `${choice.id}:rep${rep}` })}
@@ -84,6 +107,7 @@ export function ScratchStudio() {
                 <p className="note">Choose a move above first. Your takes will be labelled with the move and repetition number.</p>
               </Card>
             )}
+            <CalibrationPanel side={s.side} onSide={s.setSide} cal={s.calibration} />
             <SteadinessControl control={s.steadiness} />
           </div>
         </div>
@@ -91,7 +115,7 @@ export function ScratchStudio() {
 
       <section className="mst-section" aria-labelledby="mst-save">
         <h2 id="mst-save" className="mst-h">
-          <span className="mst-h__n">III</span> Save as lesson
+          Save as lesson
         </h2>
         <Card className="mst-save">
           {s.planned.length === 0 ? (
@@ -107,16 +131,19 @@ export function ScratchStudio() {
           )}
           <div className="mst-save__fields">
             <Field label="Lesson title" value={s.title} onChange={(e) => s.setTitle(e.target.value)} placeholder="Forehand basics" />
-            <Field label="Your name" value={s.masterName} onChange={(e) => s.setMasterName(e.target.value)} placeholder="Master name" />
+            <Field label="Your name" value={s.masterName} onChange={(e) => s.setMasterName(e.target.value)} placeholder="Expert name" />
           </div>
           {s.saveError && (
-            <p className="mst-alert" role="alert">
+            <p className="mst-alert mst-alert--error" role="alert">
               {s.saveError}
             </p>
           )}
-          <Button large onClick={() => void s.save()} disabled={s.planned.length === 0 || s.saving}>
-            {s.saving ? 'Saving...' : 'Save as lesson'}
-          </Button>
+          <div className="mst-recbtn-wrap">
+            <Button large onClick={() => void s.save()} disabled={s.planned.length === 0 || s.saving}>
+              {s.saving ? 'Saving...' : 'Save as lesson'}
+            </Button>
+            {s.planned.length === 0 && <span className="reason">Keep one take to save.</span>}
+          </div>
         </Card>
       </section>
     </>

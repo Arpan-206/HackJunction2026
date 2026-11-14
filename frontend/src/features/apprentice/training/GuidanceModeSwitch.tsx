@@ -8,7 +8,7 @@ export function GuidanceModeSwitch() {
   return (
     <div className="ap-field">
       <span className="ap-field__label" id="ap-guidance-label">
-        How the master is shown
+        How the expert is shown
       </span>
       <Segmented label="Guidance mode" value={mode} options={GUIDANCE_OPTIONS} onChange={setGuidance} grid />
       <p className="note ap-field__hint">{current?.hint}</p>

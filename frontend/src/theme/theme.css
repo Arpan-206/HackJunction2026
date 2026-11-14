@@ -13,10 +13,10 @@
   --target: 44px;
   --rail-w: 92px;
 
-  --step--1: clamp(0.9rem, 0.88rem + 0.1vw, 1rem);
-  --step-0: clamp(1.05rem, 1rem + 0.25vw, 1.2rem);
-  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
-  --step-2: clamp(1.6rem, 1.4rem + 1vw, 2.1rem);
+  --step--1: clamp(1rem, 0.96rem + 0.2vw, 1.1rem);
+  --step-0: clamp(1.15rem, 1.05rem + 0.4vw, 1.3rem);
+  --step-1: clamp(1.4rem, 1.25rem + 0.6vw, 1.7rem);
+  --step-2: clamp(1.7rem, 1.45rem + 1.1vw, 2.2rem);
   --step-3: clamp(2.1rem, 1.7rem + 2vw, 3.2rem);
   --step-4: clamp(2.8rem, 2rem + 4vw, 5rem);
 }
@@ -51,6 +51,11 @@
   --ok-soft: #d6e8df;
   --stage-bg: #8fa0b3;
   --shadow: 0 1px 0 rgba(28, 29, 36, 0.06), 0 10px 28px -12px rgba(23, 34, 89, 0.35);
+  --paper: #f4f4f1;
+  --on-danger: #ffffff;
+  --rail-ok: #5cc496;
+  --scrim: #172259;
+  --ink-sea: #0b1138;
 }
 
 :root[data-theme='notte'] {
@@ -82,6 +87,11 @@
   --ok-soft: #1a3b3a;
   --stage-bg: #1a2554;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px -14px rgba(0, 0, 0, 0.7);
+  --paper: #f1ebdc;
+  --on-danger: #1a0f12;
+  --rail-ok: #5cc496;
+  --scrim: #070b24;
+  --ink-sea: #070b24;
 }
 
 :root[data-theme='affresco'] {
@@ -113,4 +123,39 @@
   --ok-soft: #d9e4cc;
   --stage-bg: #a9b4bc;
   --shadow: 0 1px 0 rgba(42, 43, 34, 0.06), 0 10px 26px -12px rgba(63, 76, 51, 0.4);
+  --paper: #f7f3e6;
+  --on-danger: #ffffff;
+  --rail-ok: #b7d79a;
+  --scrim: #3a4a63;
+  --ink-sea: #2a2b22;
+}
+
+/*
+ * Paper and plaster textures (CC0, see the SOURCE.md in each public/textures folder). Very faint by design: the texture is a veil
+ * of the theme surface colour laid over the image, so text contrast stays that of the plain token (WCAG AA).
+ * Opt in with a class: .tex-plaster on page backgrounds, .tex-parchment on cards and panels.
+ */
+:root {
+  --tex-plaster: url('/textures/worn_plaster_wall/diff.jpg');
+  --tex-parchment: url('/textures/paper005/diff.jpg');
+  --tex-plaster-veil: 96%;
+  --tex-parchment-veil: 92%;
+}
+
+:root[data-theme='notte'] {
+  --tex-plaster-veil: 97.5%;
+  --tex-parchment-veil: 95%;
+}
+
+html body,
+.tex-plaster {
+  background-color: var(--bg);
+  background-image: linear-gradient(color-mix(in srgb, var(--bg) var(--tex-plaster-veil), transparent), color-mix(in srgb, var(--bg) var(--tex-plaster-veil), transparent)), var(--tex-plaster);
+  background-size: auto, 640px 640px;
+}
+
+.tex-parchment {
+  background-color: var(--surface);
+  background-image: linear-gradient(color-mix(in srgb, var(--surface) var(--tex-parchment-veil), transparent), color-mix(in srgb, var(--surface) var(--tex-parchment-veil), transparent)), var(--tex-parchment);
+  background-size: auto, 420px 420px;
 }

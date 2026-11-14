@@ -5,10 +5,10 @@ import { setSettings } from '../../../state/settings';
 export type ApprenticeGuidance = 'marionette' | 'shadow' | 'ghost' | 'side_by_side';
 
 export const GUIDANCE_OPTIONS: { id: ApprenticeGuidance; label: string; hint: string }[] = [
-  { id: 'marionette', label: 'Strings', hint: 'The master hovers above you, strings join each fingertip.' },
-  { id: 'shadow', label: 'Shadow', hint: 'A dark shadow of the master lies under your hand.' },
+  { id: 'marionette', label: 'Strings', hint: 'The expert hovers above you, strings join each fingertip.' },
+  { id: 'shadow', label: 'Shadow', hint: 'A dark shadow of the expert lies under your hand.' },
   { id: 'ghost', label: 'Ghost', hint: 'A chalk ghost overlays your hand.' },
-  { id: 'side_by_side', label: 'Side by side', hint: 'Master on the left, you on the right.' },
+  { id: 'side_by_side', label: 'Side by side', hint: 'Expert on the left, you on the right.' },
 ];
 
 const KEY = 'apprentice.guidance.v2';

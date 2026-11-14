@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useGloveStream, type Side, type TestSpec } from '../../../../api';
-import { Badge, Button, Card } from '../../../../components/ui';
+import { useGloveStream, type Lesson, type Side, type TestSpec } from '../../../../api';
+import { Button, Card } from '../../../../components/ui';
 import { useStreamClock } from '../../hooks/useStreamClock';
 import { flexionDegrees } from '../../training/coach/deviation';
 import { TestResult } from '../TestResult';
+import { DUEL_PASS_SCORE, useBotSkill, useDuelOutcome } from '../useDuelOutcome';
 import { NoteLane } from './NoteLane';
 import { PianoScene } from './PianoScene';
 import {
@@ -33,8 +34,9 @@ const ZERO: PianoScore = { overall: 0, notes: 0, timing: 0, fingering: 0, streak
  * finger curls, then scored on note, timing and fingering ("right note, wrong finger" is called out), against a bot pianist
  * or a second glove in a duel.
  */
-export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
+export function PianoPlayAlong({ spec, lesson }: { spec: TestSpec; lesson?: Lesson }) {
   const twoPlayer = spec.opponent === 'two_player';
+  const botSkill = useBotSkill(lesson);
   const gloves = useGloveStream(true);
   const clock = useStreamClock(gloves);
   const [stage, setStage] = useState<'intro' | 'playing' | 'result'>('intro');
@@ -69,10 +71,10 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
     const judges = { left: new NoteJudge(notes), right: new NoteJudge(notes) };
     detectors.current = { left: new PressDetector(), right: new PressDetector() };
     active.current = judges;
-    setRun({ notes, judges, end: notes[notes.length - 1].time + 0.9, bot: botPerformance(notes) });
+    setRun({ notes, judges, end: notes[notes.length - 1].time + 0.9, bot: botPerformance(notes, 7, botSkill) });
     setRound(1);
     setStage('playing');
-  }, [clock, spec.rounds]);
+  }, [clock, spec.rounds, botSkill]);
 
   useEffect(() => {
     if (stage !== 'playing' || !run) return;
@@ -95,6 +97,8 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
   }, [stage, run, clock, spec.rounds]);
 
   const mine: Side = 'right';
+  const myScore = run && stage === 'result' ? run.judges[mine].score().overall : 0;
+  const seal = useDuelOutcome(lesson, stage === 'result' && !twoPlayer, myScore >= DUEL_PASS_SCORE, myScore);
   const rivals = run && stage === 'result' ? { me: run.judges[mine].score(), left: run.judges.left.score(), bot: run.bot } : null;
 
   if (stage === 'result' && run && rivals) {
@@ -111,6 +115,7 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
         verdict={verdict}
         verdictText={verdict === 'win' ? (twoPlayer ? 'Right glove wins' : 'You beat the bot pianist') : verdict === 'draw' ? 'A draw' : twoPlayer ? 'Left glove wins' : 'The bot pianist wins'}
         bestMoment={you.streak > 1 ? `${you.streak} notes in a row, right finger and right time` : ''}
+        footer={seal}
         details={
           <ul className="ap-result__split" aria-label="Score breakdown">
             <li>
@@ -139,7 +144,7 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
         <PianoScene gloves={gloves} twoPlayer={twoPlayer} />
         {stage === 'playing' && live.next && (
           <div className="ap-next" role="status" aria-live="polite">
-            <span className="ap-kicker">
+            <span className="ap-next__round">
               Round {round} of {spec.rounds}
             </span>
             <span className="ap-next__num">{live.next.finger}</span>
@@ -148,7 +153,6 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
         )}
         {stage === 'intro' && (
           <Card as="section" className="ap-intro" aria-label="How to play">
-            <p className="ap-kicker">Test your skills</p>
             <h2>{twoPlayer ? 'Piano duel' : 'Play along with the phrase'}</h2>
             <ul className="ap-intro__rules">
               <li>Notes fall in five lanes, one for each finger. Press with the finger the note shows: 1 is the thumb, 5 the little finger.</li>
@@ -159,7 +163,6 @@ export function PianoPlayAlong({ spec }: { spec: TestSpec }) {
               </li>
             </ul>
             <div className="ap-intro__foot">
-              <Badge tone={gloves.status === 'open' ? 'ok' : 'neutral'}>{gloves.status === 'open' ? 'Gloves live' : 'Gloves not linked'}</Badge>
               <Button large onClick={start}>
                 Start playing
               </Button>

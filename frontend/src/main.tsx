@@ -16,7 +16,10 @@ import { ThemeProvider } from './theme';
 import { ToastProvider } from './components/ui';
 import { DevPanel } from './dev/DevPanel';
 
-createRoot(document.getElementById('root') as HTMLElement).render(
+/** Installs the in-browser mock backend first when it is requested or the real backend is down (see src/mock). */
+const mockReady = import('./mock/install').then((m) => m.maybeInstallMock()).catch(() => false);
+
+void mockReady.then(() => createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <ThemeProvider>
       <ToastProvider>
@@ -27,4 +30,4 @@ createRoot(document.getElementById('root') as HTMLElement).render(
       </ToastProvider>
     </ThemeProvider>
   </StrictMode>,
-);
+));

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useGloveStream, type TestSpec } from '../../../../api';
-import { Badge, Button, Card } from '../../../../components/ui';
+import { useGloveStream, type Lesson, type TestSpec } from '../../../../api';
+import { Button, Card } from '../../../../components/ui';
 import { useStreamClock } from '../../hooks/useStreamClock';
 import { TestResult } from '../TestResult';
+import { useBotSkill, useDuelOutcome } from '../useDuelOutcome';
 import { RallyGame, type PlayerId, type RallyPhase } from './rally';
 import { RallyScene } from './RallyScene';
 import { SwingTracker, type SwingReading } from './swing';
@@ -32,15 +33,16 @@ function snapshotOf(g: RallyGame): Snapshot {
  * ball reaches a racket the game reads that glove (swing speed, racket face, grip) and decides whether the return is good,
  * into the net or long. Space swings for players without gloves.
  */
-export function TableTennisRally({ spec }: { spec: TestSpec }) {
+export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Lesson }) {
   const twoPlayer = spec.opponent === 'two_player';
+  const botSkill = useBotSkill(lesson);
   const gloves = useGloveStream(true);
   const clock = useStreamClock(gloves);
   const [stage, setStage] = useState<'intro' | 'playing' | 'result'>('intro');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [cue, setCue] = useState(false);
   const [runKey, setRunKey] = useState(0);
-  const game = useRef<RallyGame>(new RallyGame({ twoPlayer, rounds: spec.rounds }));
+  const game = useRef<RallyGame>(new RallyGame({ twoPlayer, rounds: spec.rounds, botSkill }));
   const trackers = useRef<Record<PlayerId, SwingTracker>>({ a: new SwingTracker(), b: new SwingTracker() });
   const keySwing = useRef(0);
 
@@ -71,6 +73,7 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
     game.current = new RallyGame({
       twoPlayer,
       rounds: spec.rounds,
+      botSkill,
       streamNow: clock.now,
       scheduleContact: (after) => {
         if (!clock.simulated()) return null;
@@ -81,7 +84,7 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
     setSnap(snapshotOf(game.current));
     setRunKey((k) => k + 1);
     setStage('playing');
-  }, [clock, spec.rounds, twoPlayer]);
+  }, [clock, spec.rounds, twoPlayer, botSkill]);
 
   useEffect(() => {
     if (stage !== 'playing') return;
@@ -114,8 +117,11 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
   const leftName = twoPlayer ? 'Player 1 (left glove)' : 'You';
   const rightName = twoPlayer ? 'Player 2 (right glove)' : 'The bot';
 
+  const youWon = g.winner === 'a';
+  const share = g.totals.a + g.totals.b > 0 ? (g.totals.a / (g.totals.a + g.totals.b)) * 100 : 0;
+  const seal = useDuelOutcome(lesson, stage === 'result' && !twoPlayer, youWon, share);
+
   if (stage === 'result') {
-    const youWon = g.winner === 'a';
     const mine = twoPlayer ? Math.max(g.totals.a, g.totals.b) : g.totals.a;
     return (
       <TestResult
@@ -125,6 +131,7 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
         verdict={twoPlayer ? 'win' : youWon ? 'win' : 'lose'}
         verdictText={twoPlayer ? `${g.name(g.winner ?? 'a')} wins the match` : youWon ? 'You win the match' : 'The bot wins the match'}
         bestMoment={g.best.text || (g.longestRally > 0 ? `A rally of ${g.longestRally} returns` : '')}
+        footer={seal}
         details={<p className="note">Longest rally: {g.longestRally} returns. {twoPlayer ? `Winner took ${mine} points.` : `You won ${mine} points.`}</p>}
         onAgain={() => setStage('intro')}
       />
@@ -145,7 +152,7 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
           </span>
         </div>
         <div className="ap-board__mid">
-          <span className="ap-kicker">
+          <span className="ap-board__round">
             Round {snap.round} of {spec.rounds}
           </span>
           <span className="ap-board__first">First to 5</span>
@@ -168,7 +175,6 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
             {cue && <p className="ap-cue">SWING!</p>}
             {snap.phase === 'point' && snap.caption && (
               <p className="ap-replay" role="status">
-                <span className="ap-kicker">Instant replay</span>
                 {snap.caption}
               </p>
             )}
@@ -180,7 +186,6 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
         )}
         {stage === 'intro' && (
           <Card as="section" className="ap-intro" aria-label="How to play">
-            <p className="ap-kicker">Test your skills</p>
             <h2>{twoPlayer ? 'Two-player rally' : 'Rally against the bot'}</h2>
             <ul className="ap-intro__rules">
               <li>First to 5 points wins a round. Best of {spec.rounds} rounds.</li>
@@ -189,7 +194,6 @@ export function TableTennisRally({ spec }: { spec: TestSpec }) {
               <li>No gloves? Press Space to swing.</li>
             </ul>
             <div className="ap-intro__foot">
-              <Badge tone={gloves.status === 'open' ? 'ok' : 'neutral'}>{gloves.status === 'open' ? 'Gloves live' : 'Gloves not linked'}</Badge>
               <Button large onClick={start}>
                 Start the rally
               </Button>

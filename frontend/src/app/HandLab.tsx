@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Hand, HandCanvas, Keyboard, Racket, type CameraPreset, type HandStyle } from '../three';
 import type { MotionSpec } from '../api';
 import { PageHeader } from '../components/PageHeader';
-import { Tabs } from '../components/ui';
+import { Button, Tabs } from '../components/ui';
+import { useGloveStream } from '../api';
+import { MOTION_TEXT_MAX, motionProviderLine, useMotionFromText } from '../features/shared/useMotionFromText';
 
 const styles: HandStyle[] = ['chalk', 'wood', 'ghost', 'shadow'];
 const grip: MotionSpec = { preset: 'grip_and_swing', grip: 'shakehand', swing: 'forehand', beat_ms: 1800 };
@@ -18,6 +20,49 @@ function Cell({ title, preset, cam, children }: { title: string; preset?: Camera
       </div>
       <figcaption className="note">{title}</figcaption>
     </figure>
+  );
+}
+
+/** Say a movement in words and watch the simulator hand perform it: text to MotionSpec, then set_motion over the glove socket. */
+function DescribeLab() {
+  const gloves = useGloveStream(true);
+  const m = useMotionFromText('right');
+  const apply = async () => {
+    const r = await m.run();
+    if (r) gloves.setMotion(r.motion);
+  };
+  return (
+    <div style={{ display: 'grid', gap: '0.75rem', maxWidth: 900 }}>
+      <form
+        style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void apply();
+        }}
+      >
+        <div className="field" style={{ flex: '1 1 20rem' }}>
+          <label className="field__label" htmlFor="lab-describe">
+            Describe a movement
+          </label>
+          <input id="lab-describe" className="field__control" value={m.text} maxLength={MOTION_TEXT_MAX} placeholder="show me a pinch, slower" onChange={(e) => m.setText(e.target.value)} />
+        </div>
+        <Button type="submit" disabled={m.busy || !m.text.trim()}>
+          {m.busy ? 'Reading...' : 'Show me'}
+        </Button>
+      </form>
+      {m.error && <p className="note" role="alert">{m.error}</p>}
+      {m.result && !m.error && (
+        <p className="note" role="status">
+          {m.result.explanation} {motionProviderLine(m.result.provider)}
+        </p>
+      )}
+      {gloves.status !== 'open' && <p className="note">The glove stream is not connected, so the hand cannot move yet.</p>}
+      <div style={{ height: 520 }}>
+        <HandCanvas preset="single">
+          <Hand style="chalk" live={gloves.latest} motion={open} />
+        </HandCanvas>
+      </div>
+    </div>
   );
 }
 
@@ -101,6 +146,7 @@ export function HandLab() {
               </div>
             ),
           },
+          { id: 'describe', label: 'Describe', content: <DescribeLab /> },
         ]}
       />
     </>

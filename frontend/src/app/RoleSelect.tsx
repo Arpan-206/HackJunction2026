@@ -14,7 +14,7 @@ function Arrow() {
   );
 }
 
-/** First screen: choose Master or Apprentice, each with a live 3D hand. */
+/** First screen: choose Expert or Apprentice, each with a live 3D hand. */
 export function RoleSelect() {
   return (
     <div className="roles">
@@ -24,15 +24,14 @@ export function RoleSelect() {
       </header>
 
       <main className="roles__stage" id="main">
-        <Link to="/master" className="role">
+        <Link to="/expert" className="role">
           <div className="role__stage">
             <HandCanvas preset="closeup" sway={0.12} stage={{ controls: 'none' }}>
               <Hand side="right" style="chalk" motion={masterMotion} showJoints showTrails position={[0, 0, 0]} rotation={[0, 0.1, 0]} />
             </HandCanvas>
           </div>
           <div className="role__plate">
-            <span className="role__kicker">Il maestro</span>
-            <span className="role__title">I am a Master</span>
+            <span className="role__title">I am an Expert</span>
             <span className="role__desc">Record a skill once with your gloves, shape it into steps, and let learners train against your hand.</span>
             <span className="role__cta">
               Enter the studio <Arrow />
@@ -55,9 +54,8 @@ export function RoleSelect() {
             </HandCanvas>
           </div>
           <div className="role__plate">
-            <span className="role__kicker">L&rsquo;apprendista</span>
             <span className="role__title">I am an Apprentice</span>
-            <span className="role__desc">Follow the master&rsquo;s hand, see exactly which finger is wrong, and watch your score climb.</span>
+            <span className="role__desc">Follow the expert&rsquo;s hand, see exactly which finger is wrong, and watch your score climb.</span>
             <span className="role__cta">
               Begin learning <Arrow />
             </span>

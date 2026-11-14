@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { ApHeader } from '../ApHeader';
 import { PageHeader } from '../../../components/PageHeader';
 import { ButtonLink } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
@@ -14,7 +15,7 @@ export function TestPage() {
   if (error || !lesson) {
     return (
       <div className="ap-state">
-        <PageHeader kicker="L'apprendista" title="Lesson not found" />
+        <PageHeader title="Lesson not found" />
         <p className="note">{error?.message ?? 'That lesson does not exist.'}</p>
         <ButtonLink to="/apprentice" variant="secondary">
           Back to lessons
@@ -25,8 +26,9 @@ export function TestPage() {
   if (!lesson.test) {
     return (
       <div className="ap-state">
-        <PageHeader kicker={lesson.title} title="No test yet" />
-        <p className="note">This course has no final test. Finish the lessons and tell the master you are ready.</p>
+        <PageHeader title="No test yet" />
+        <p className="note">{lesson.title}</p>
+        <p className="note">This course has no final test. Finish the lessons and tell the expert you are ready.</p>
         <ButtonLink to={`/apprentice/lessons/${lesson.id}`} variant="secondary">
           Back to the course
         </ButtonLink>
@@ -35,9 +37,9 @@ export function TestPage() {
   }
   return (
     <>
-      <PageHeader kicker={lesson.title} title="Test your skills" actions={<ButtonLink to={`/apprentice/lessons/${lesson.id}`} variant="ghost">Back to syllabus</ButtonLink>} />
+      <ApHeader title="Test your skills" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} />
       {offline && <p className="note ap-banner">Backend offline: playing with the built-in demo lesson.</p>}
-      {lesson.test.kind === 'table_tennis_rally' ? <TableTennisRally spec={lesson.test} /> : <PianoPlayAlong spec={lesson.test} />}
+      {lesson.test.kind === 'table_tennis_rally' ? <TableTennisRally spec={lesson.test} lesson={lesson} /> : <PianoPlayAlong spec={lesson.test} lesson={lesson} />}
     </>
   );
 }

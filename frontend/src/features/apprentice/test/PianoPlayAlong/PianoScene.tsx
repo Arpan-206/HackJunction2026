@@ -12,7 +12,7 @@ export function PianoScene({ gloves, twoPlayer }: PianoSceneProps) {
   const right = useRef<HandHandle>(null);
   const left = useRef<HandHandle>(null);
   return (
-    <HandCanvas preset="keyboard" label="A paper keyboard on the table with your wooden hands above it" stage={{ cameraPosition: [0, 3.0, 2.9], target: [0, -0.3, -1.3] }}>
+    <HandCanvas preset="keyboard" label="A paper keyboard on the table with your wooden hands above it" stage={{ cameraPosition: [0, 3.1, 2.4], target: [0, -0.4, -1.15] }}>
       {twoPlayer ? (
         <>
           <group position={[-0.78, 0, 0]}>

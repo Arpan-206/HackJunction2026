@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 import type { Take } from '../hooks/useTakeBook';
 import { formatDuration } from '../lib';
 
@@ -11,6 +11,9 @@ interface TakeListProps {
   onSetReference: (id: string) => void;
   onReplay: (ids: string[]) => void;
 }
+
+/** Below this consistency score a take is genuinely off, the only time vermilion is used here. */
+const OFF_BELOW = 60;
 
 /**
  * The takes recorded for one move: duration, consistency against the reference take, keep or set aside,
@@ -39,14 +42,16 @@ export function TakeList({ takes, referenceId, onToggleKept, onDelete, onSetRefe
               <div className="mst-take__main">
                 <strong className="mst-take__name">Take {t.n}</strong>
                 <span className="note">{formatDuration(t.duration_s)}</span>
-                {isRef && <Badge tone="lapis">Reference</Badge>}
-                {!t.kept && <Badge>Set aside</Badge>}
+                {isRef && <span className="mst-take__ref">reference take</span>}
+                {!t.kept && <span className="mst-take__ref">set aside</span>}
                 {res && (
-                  <span className={`mst-take__score ${res.within_tolerance ? 'is-ok' : 'is-off'}`} title={res.hint}>
+                  <span className="mst-take__score" title={res.hint}>
                     {Math.round(res.overall)}
                     <small> consistency</small>
+                    {res.within_tolerance && <span className="mst-take__mark"> {'✓'}</span>}
                   </span>
                 )}
+                {res && res.overall < OFF_BELOW && <span className="mst-take__off">Check the {res.worst_finger} finger</span>}
                 {!res && !isRef && t.kept && <span className="note">Scoring...</span>}
               </div>
               <div className="mst-take__actions">

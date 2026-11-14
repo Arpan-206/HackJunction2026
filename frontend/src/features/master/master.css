@@ -1,4 +1,4 @@
-/* Master studio. Semantic tokens only; gold is not used here (reserved for verified), vermilion only for corrections. */
+/* Master studio. Semantic tokens only; gold is not used here (reserved for verified), vermilion only for corrections (a take that is actually off). */
 
 .mst-section {
   margin-bottom: clamp(1.75rem, 3.5vw, 3rem);
@@ -12,24 +12,19 @@
   letter-spacing: 0.08em;
   margin-bottom: 1rem;
 }
-.mst-h__n {
-  display: grid;
-  place-items: center;
-  width: 2.3rem;
-  height: 2.3rem;
-  border: 2px solid var(--line-strong);
-  border-radius: 50%;
-  font-size: 0.95rem;
-}
 .mst-alert {
   padding: 0.7rem 1rem;
-  border-left: 5px solid var(--danger);
-  background: var(--danger-soft);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface-2);
   border-radius: var(--radius-s);
   font-weight: 700;
   display: grid;
   gap: 0.5rem;
   justify-items: start;
+}
+.mst-alert--error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 .mst-empty {
   padding: 0.5rem 0;
@@ -86,14 +81,12 @@
   text-transform: uppercase;
 }
 .mst-move__desc {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   line-height: 1.3;
 }
 .mst-move__meta {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
   margin-top: 0.2rem;
+  font-size: var(--step-0);
 }
 .mst-move--free {
   cursor: default;
@@ -107,16 +100,20 @@
 }
 .mst-guide {
   position: relative;
-  height: 9.5rem;
+  height: 10.5rem;
   background: var(--stage-bg);
   border-radius: var(--radius-s);
   overflow: hidden;
 }
 
 /* Studio layout */
+.mst-guide__view {
+  width: 100%;
+  height: 100%;
+}
 .mst-studio {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(20rem, 1fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(21rem, 1fr);
   gap: clamp(1rem, 2vw, 1.75rem);
   align-items: start;
 }
@@ -149,7 +146,7 @@
 .mst-stage,
 .mst-replay__stage {
   position: relative;
-  height: clamp(22rem, 52vh, 36rem);
+  height: clamp(24rem, 62vh, 40rem);
   background: var(--stage-bg);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-m);
@@ -164,27 +161,31 @@
   flex-wrap: wrap;
   pointer-events: none;
 }
-.mst-stage__overlay .badge {
+.mst-stage__tag {
+  padding: 0.1em 0.7em;
+  border-radius: var(--radius-s);
   background: var(--surface);
+  color: var(--text);
+  font: italic 500 var(--step-0) var(--font-note);
 }
 .mst-recmark {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.15em 0.8em;
-  border-radius: 999px;
-  background: var(--danger);
-  color: #fff;
+  border-radius: var(--radius-s);
+  background: var(--text);
+  color: var(--bg);
   font: 700 var(--step-0) var(--font-ui);
   letter-spacing: 0.12em;
-  animation: mst-blink 1s ease-in-out infinite;
 }
 .mst-recmark::before {
   content: '';
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg);
+  animation: mst-blink 1s ease-in-out infinite;
 }
 @keyframes mst-blink {
   50% {
@@ -228,7 +229,7 @@
   accent-color: var(--accent);
 }
 .mst-scrub__time {
-  font: 500 var(--step-0) var(--font-display);
+  font: 700 var(--step-0) var(--font-ui);
   font-variant-numeric: tabular-nums;
   color: var(--text-2);
   white-space: nowrap;
@@ -255,8 +256,8 @@
   gap: 1rem;
   text-align: center;
   padding: 2rem;
-  background: color-mix(in srgb, var(--lapis-deep) 90%, transparent);
-  color: #f4f4f1;
+  background: color-mix(in srgb, var(--scrim) 92%, transparent);
+  color: var(--paper);
 }
 .mst-capture__step {
   font: italic 400 var(--step-2) var(--font-note);
@@ -270,14 +271,14 @@
   width: min(36rem, 80vw);
   height: 1.1rem;
   margin: 0 auto;
-  border: 2px solid #f4f4f1;
+  border: 2px solid var(--paper);
   border-radius: 999px;
   overflow: hidden;
 }
 .mst-progress__bar {
   height: 100%;
   width: 100%;
-  background: #f4f4f1;
+  background: var(--paper);
   transform-origin: left;
   animation: mst-fill linear forwards;
 }
@@ -302,7 +303,7 @@
   flex-wrap: wrap;
 }
 .mst-rec__count {
-  font: 500 var(--step-3) / 1 var(--font-display);
+  font: 700 var(--step-3) / 1 var(--font-ui);
 }
 .mst-rec__count small {
   font: 700 var(--step-0) var(--font-ui);
@@ -341,7 +342,9 @@
   background: var(--surface-2);
 }
 .mst-take--aside {
-  opacity: 0.65;
+  opacity: 0.6;
+  background: transparent;
+  border-style: dashed;
 }
 .mst-take__pick {
   display: grid;
@@ -366,19 +369,24 @@
   text-transform: uppercase;
 }
 .mst-take__score {
-  font: 500 var(--step-1) var(--font-display);
+  font: 700 var(--step-1) var(--font-ui);
+  color: var(--text);
 }
 .mst-take__score small {
-  font: 700 0.8rem var(--font-ui);
+  font: 700 var(--step--1) var(--font-ui);
   color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
-.mst-take__score.is-ok {
+.mst-take__mark {
   color: var(--ok);
+  font-weight: 700;
 }
-.mst-take__score.is-off {
+.mst-take__off {
   color: var(--danger);
+  font-weight: 700;
+}
+.mst-take__ref {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
 }
 .mst-take__actions {
   grid-column: 1 / -1;
@@ -414,7 +422,7 @@
   font-weight: 700;
 }
 .mst-steady__value {
-  font: 500 var(--step-1) var(--font-display);
+  font: 700 var(--step-1) var(--font-ui);
   min-width: 2.5rem;
   text-align: right;
 }
@@ -528,7 +536,7 @@
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-text);
-  font: 500 1.2rem var(--font-display);
+  font: 700 1.2rem var(--font-ui);
 }
 .mst-step__nums {
   display: grid;
@@ -579,7 +587,7 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: color-mix(in srgb, var(--lapis-deep) 70%, transparent);
+  background: color-mix(in srgb, var(--scrim) 70%, transparent);
 }
 .mst-modal__box {
   width: min(52rem, 100%);
@@ -608,10 +616,156 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mst-recmark {
+  .mst-recmark::before {
     animation: none;
   }
   .mst-move {
     transition: none;
   }
+}
+
+/* Chosen-move summary, stepper and plain-voice status lines */
+.mst-steps-bar {
+  margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+  max-width: 44rem;
+}
+.mst-chosen {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: var(--step-1);
+}
+.mst-chosen__name {
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.mst-line {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  font-variant-numeric: oldstyle-nums proportional-nums;
+}
+.mst-line--ok {
+  color: var(--ok);
+  font-style: normal;
+  font: 700 var(--step-0) var(--font-ui);
+}
+.mst-err {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+.mst-gen__provider {
+  margin-top: 1rem;
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  margin-bottom: 1rem;
+}
+.mst-strict {
+  display: grid;
+  gap: 0.4rem;
+}
+.mst-strict__note {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-step__status {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-step__status strong {
+  font: 700 var(--step-0) var(--font-ui);
+  color: var(--ok);
+}
+.mst-step__danger {
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--line);
+}
+.mst-cal--secondary {
+  box-shadow: none;
+  background: transparent;
+}
+.mst-cal--secondary .card__title {
+  font-size: var(--step-0);
+}
+.mst-recbtn-wrap {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+
+/* Describe the movement (text to motion) and video upload */
+.mst-describe {
+  display: grid;
+  gap: 0.4rem;
+}
+.mst-describe__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-describe__row .field__control {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.mst-describe__note {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-video {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.mst-video__title {
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.mst-video__row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mst-video__file {
+  font: 400 var(--step--1) var(--font-ui);
+  max-width: 100%;
+}
+.mst-video__progress {
+  height: 0.5rem;
+  width: min(30rem, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mst-video__bar {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+}
+.mst-gen__source {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.mst-gen__master {
+  margin-top: 1rem;
+  max-width: 60rem;
+}
+.mst-gen__master {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.5rem;
+}
+.mst-gen__master .mst-gen__source {
+  margin: 0;
 }

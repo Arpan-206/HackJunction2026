@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useLessons } from '../../api';
 import { PageHeader } from '../../components/PageHeader';
-import { Badge, Card } from '../../components/ui';
+import { Button, Card } from '../../components/ui';
 
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
@@ -13,15 +13,15 @@ function Arrow() {
   );
 }
 
-/** Master landing: start from scratch or generate steps, then existing lessons. */
+/** Expert landing: start from scratch or generate steps, then existing lessons. */
 export function MasterHome() {
-  const { data: lessons, error, loading } = useLessons();
+  const { data: lessons, error, loading, reload } = useLessons();
   return (
     <>
-      <PageHeader kicker="Il maestro" title="Master's studio" />
+      <PageHeader title="Expert's studio" context="La bottega: record a skill once, teach it to many hands." />
       <div className="choices">
         <Card as="article" className="choice card--interactive">
-          <Link to="/master/scratch" style={{ position: 'absolute', inset: 0 }} aria-label="Start from scratch" />
+          <Link to="/expert/scratch" style={{ position: 'absolute', inset: 0 }} aria-label="Start from scratch" />
           <svg className="choice__icon" viewBox="0 0 64 64" aria-hidden="true" {...stroke}>
             <circle cx="32" cy="32" r="22" />
             <path d="M32 6 16 58M32 6l16 52M21 38h22" />
@@ -35,7 +35,7 @@ export function MasterHome() {
         </Card>
 
         <Card as="article" className="choice card--interactive">
-          <Link to="/master/generate" style={{ position: 'absolute', inset: 0 }} aria-label="Generate steps" />
+          <Link to="/expert/generate" style={{ position: 'absolute', inset: 0 }} aria-label="Generate steps" />
           <svg className="choice__icon" viewBox="0 0 64 64" aria-hidden="true" {...stroke}>
             <path d="M12 54 44 12c3-4 8-4 8 0s-4 5-8 8L18 54z" />
             <path d="M40 22l4 4" />
@@ -51,17 +51,24 @@ export function MasterHome() {
 
       <h2 className="section-title">Your lessons</h2>
       {loading && <p className="note">Consulting the ledger...</p>}
-      {error && <p className="note">The backend is not answering ({error.message}). Lessons will appear here once it is.</p>}
+      {error && (
+        <div className="mst-err" role="alert">
+          <p className="note">The lesson ledger could not be opened. Check that the backend is running, then try again.</p>
+          <Button variant="secondary" onClick={reload}>
+            Try again
+          </Button>
+        </div>
+      )}
       {lessons && lessons.length === 0 && <p className="note">No lessons yet. Begin one above.</p>}
       {lessons && lessons.length > 0 && (
         <ul className="lesson-list">
           {lessons.map((l) => (
             <li key={l.id}>
-              <Link to={`/master/lessons/${l.id}`} className="card card--interactive lesson-row">
+              <Link to={`/expert/lessons/${l.id}`} className="card card--interactive lesson-row">
                 <span>
                   <strong>{l.title}</strong> <span className="note">{l.steps.length} steps</span>
                 </span>
-                <Badge tone={l.source === 'seed' ? 'lapis' : 'neutral'}>{l.source}</Badge>
+                <span className="note">{l.source === 'seed' ? 'from the pattern book' : l.source === 'generated' ? 'drafted for you' : 'recorded by hand'}</span>
               </Link>
             </li>
           ))}

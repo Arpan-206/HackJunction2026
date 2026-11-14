@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { HandCanvas, Keyboard, type HandHandle } from '../../../../three';
-import { FingerChips } from '../FingerChips';
+import { FaultMarks } from './FaultMarks';
 import { LearnerHand, MasterHand } from './LearnerHand';
 import { presetFor } from './Shadow';
 import type { ModeProps } from './types';
 
-/** Master on the left and learner on the right with mirrored cameras, and a status chip per finger under the learner. */
-export function SideBySide({ coach, gloves, side, prop, policy }: ModeProps) {
+/** Master on the left and learner on the right with mirrored cameras, and the correction marks on the learner's hand. */
+export function SideBySide({ coach, gloves, side, prop, policy, toleranceDeg }: ModeProps) {
   const learner = useRef<HandHandle>(null);
   const preset = presetFor(prop);
   const zoom = prop === 'racket' ? 1.75 : prop === 'keyboard' ? 1.5 : 1.3;
@@ -14,13 +14,13 @@ export function SideBySide({ coach, gloves, side, prop, policy }: ModeProps) {
   return (
     <div className="ap-split">
       <figure className="ap-split__pane">
-        <figcaption className="ap-split__cap">The master</figcaption>
+        <figcaption className="ap-split__cap">The expert</figcaption>
         {policy.showMaster ? (
-          <HandCanvas preset={preset} stage={{ cameraPosition: [-zoom * 1.9, zoom * 2.7, zoom * 2.4], target: [...target] }} label="The master's chalk hand">
+          <HandCanvas preset={preset} stage={{ cameraPosition: [-zoom * 1.9, zoom * 2.7, zoom * 2.4], target: [...target] }} label="The expert's chalk hand">
             <MasterHand coach={coach} side={side} prop={prop} style="chalk" withProp />
           </HandCanvas>
         ) : (
-          <p className="ap-split__hidden note">The master steps back for this attempt. Show your own hand.</p>
+          <p className="ap-split__hidden note">The expert steps back for this attempt. Show your own hand.</p>
         )}
       </figure>
       <figure className="ap-split__pane">
@@ -28,12 +28,8 @@ export function SideBySide({ coach, gloves, side, prop, policy }: ModeProps) {
         <HandCanvas preset={preset} stage={{ cameraPosition: [zoom * 1.9, zoom * 2.7, zoom * 2.4], target: [...target] }} label="Your wooden hand">
           {prop === 'keyboard' && <Keyboard handRef={learner} />}
           <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} />
+          <FaultMarks hand={learner} coach={coach} policy={policy} toleranceDeg={toleranceDeg} />
         </HandCanvas>
-        {policy.liveCoach && (
-          <div className="ap-split__chips">
-            <FingerChips coach={coach} compact policy={policy} />
-          </div>
-        )}
       </figure>
     </div>
   );

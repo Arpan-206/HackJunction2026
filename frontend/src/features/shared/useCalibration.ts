@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, ApiError, type Calibration, type Side } from '../../../api';
-import { CALIBRATION_SECONDS } from '../lib';
+import { api, ApiError, type Calibration, type Side } from '../../api';
+import { CALIBRATION_SECONDS } from '../master/lib';
 
 export type CalibrationPhase = 'idle' | 'countdown-flat' | 'capture-flat' | 'countdown-fist' | 'capture-fist';
 

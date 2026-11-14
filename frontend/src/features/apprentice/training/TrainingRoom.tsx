@@ -1,20 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, FINGERS, useGloveStream, type ScoreResult, type Step } from '../../../api';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { api, useGloveStream, type Lesson, type ScoreResult, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
-import { Badge, Button, ButtonLink, Countdown } from '../../../components/ui';
+import { ApHeader } from '../ApHeader';
+import { Button, ButtonLink, Countdown } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { recordAttempt } from '../hooks/useProgress';
+import { CalibrationPanel } from '../../shared/CalibrationPanel';
+import { useCalibration } from '../../shared/useCalibration';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import { useGuidance } from '../hooks/useGuidanceMode';
 import { configFromTolerance } from './coach/deviation';
-import { policyFor } from './coach/fade';
 import { localScore } from './coach/localScore';
-import { FINGER_LABEL } from './coach/tips';
-import { useAiHint } from './coach/useAiHint';
+import { attemptRetryLine, checkAttempt } from './coach/attemptGuard';
 import { useCoach, type PracticeMode } from './coach/useCoach';
+import { goalLine, repLine } from '../pipeline/coachLines';
+import { isDemo } from '../pipeline/flags';
+import type { RepOutcome } from '../pipeline/stages';
+import { PlanCard } from '../course/PlanCard';
+import { usePracticePlan } from '../hooks/usePracticePlan';
+import { StageLadder } from './StageLadder';
+import { useStepPipeline } from './useStepPipeline';
 import { CoachPanel } from './CoachPanel';
-import { FingerChips } from './FingerChips';
+import { FingerSummary } from './FingerSummary';
 import { GuidanceModeSwitch } from './GuidanceModeSwitch';
 import { GhostOverlay } from './modes/GhostOverlay';
 import { Marionette } from './modes/Marionette';
@@ -31,6 +39,10 @@ const PRACTICE_OPTIONS: { id: PracticeMode; label: string; hint: string }[] = [
 ];
 
 const MAX_ATTEMPT_S = 14;
+/** Longest a Follow attempt may run once recording has started. */
+const FOLLOW_CAP_MS = 60000;
+/** Slack on top of one motion period before an attempt that never recorded a frame is ended. */
+const START_GRACE_MS = 2000;
 
 function attemptLength(period: number): number {
   return Math.min(MAX_ATTEMPT_S, Math.max(period, Math.round(6 / period) * period));
@@ -53,7 +65,7 @@ export function TrainingRoom() {
   if (error || !lesson) {
     return (
       <div className="ap-state">
-        <PageHeader kicker="L'apprendista" title="Lesson not found" />
+        <PageHeader title="Lesson not found" />
         <p className="note">{error?.message ?? 'That lesson does not exist.'}</p>
         <ButtonLink to="/apprentice" variant="secondary">
           Back to lessons
@@ -64,17 +76,18 @@ export function TrainingRoom() {
   if (!step) {
     return (
       <div className="ap-state">
-        <PageHeader kicker="L'apprendista" title="Step not found" />
+        <PageHeader title="Step not found" />
         <ButtonLink to={`/apprentice/lessons/${lesson.id}`} variant="secondary">
           Back to the lesson
         </ButtonLink>
       </div>
     );
   }
-  return <Room key={`${lesson.id}:${step.id}`} lessonId={lesson.id} lessonTitle={lesson.title} step={step} index={index} total={lesson.steps.length} hasTest={Boolean(lesson.test)} dev={dev} offline={offline} />;
+  return <Room key={`${lesson.id}:${step.id}`} lesson={lesson} lessonId={lesson.id} lessonTitle={lesson.title} step={step} index={index} total={lesson.steps.length} hasTest={Boolean(lesson.test)} dev={dev} offline={offline} />;
 }
 
 interface RoomProps {
+  lesson: Lesson;
   lessonId: string;
   lessonTitle: string;
   step: Step;
@@ -85,7 +98,7 @@ interface RoomProps {
   offline: boolean;
 }
 
-function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline }: RoomProps) {
+function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev, offline }: RoomProps) {
   const navigate = useNavigate();
   const resultRef = useRef<HTMLDivElement>(null);
   const gloves = useGloveStream(true);
@@ -93,37 +106,53 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
   const side = stepSide(step);
   const config = useMemo(() => configFromTolerance(step.tolerance), [step.tolerance]);
   const { track, loading: refLoading, notice } = useReferenceTrack(step);
+  const calibration = useCalibration(side);
+  const calibrated = calibration.latest !== null;
 
   const [mode, setMode] = useState<PracticeMode>('flow');
   const [clumsy, setClumsy] = useState(dev);
-  const [aiOn, setAiOn] = useState(true);
+  const demo = useMemo(() => isDemo(), []);
+  const pipe = useStepPipeline(lessonId, step, demo);
+  const plan = usePracticePlan(lesson);
+  const planRequest = useRef(plan.request);
+  planRequest.current = plan.request;
   const [phase, setPhase] = useState<Phase>('ready');
-  const [attempt, setAttempt] = useState(1);
-  const [result, setResult] = useState<{ score: ScoreResult; source: 'backend' | 'local'; liveNote: string | null } | null>(null);
+  const [watchRate, setWatchRate] = useState(0.5);
+  const playedSnap = useRef(0);
+  const [result, setResult] = useState<{ score: ScoreResult; source: 'backend' | 'local'; outcome: RepOutcome } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const recordingId = useRef<string | null>(null);
   const endTimer = useRef<number | null>(null);
 
-  const ai = useAiHint({ enabled: aiOn, stepId: step.id, instruction: step.instruction, toleranceDeg: config.toleranceDeg, timingMs: config.timingMs });
-  const policy = policyFor(attempt);
+  const policy = pipe.policy;
+  const watching = pipe.stage === 'watch';
 
   const finishRef = useRef<() => void>(() => {});
+  const recordStartRef = useRef<() => void>(() => {});
   const coach = useCoach({
     track,
     gloves,
     side,
     config,
-    mode,
+    mode: watching ? 'flow' : mode,
+    rate: watching ? watchRate : 1,
     clumsy,
-    onSustainedOff: (info) => {
-      if (phase === 'running' && policy.liveCoach) void ai.request(info);
-    },
     onFollowDone: () => finishRef.current(),
+    onRecordStart: () => recordStartRef.current(),
   });
 
   useEffect(() => {
     if (step.motion) gloves.setMotion(step.motion);
   }, [step.motion, gloves, gloves.status]);
+
+  // Watch: two loops at half speed, then full speed. Nothing is scored.
+  const period = Math.max(1, track?.period ?? 1);
+  useEffect(() => {
+    if (!watching || !track) return;
+    setWatchRate(0.5);
+    const id = window.setTimeout(() => setWatchRate(1), Math.min(24, (2 * period) / 0.5) * 1000);
+    return () => window.clearTimeout(id);
+  }, [watching, track, period]);
 
   const finish = useCallback(async () => {
     if (endTimer.current !== null) window.clearTimeout(endTimer.current);
@@ -135,28 +164,38 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
     let source: 'backend' | 'local' = 'local';
     const id = recordingId.current;
     recordingId.current = null;
-    if (id) {
-      try {
-        await api.stopRecording(id);
-        const req = step.reference_recording_id
-          ? { reference_recording_id: step.reference_recording_id, attempt_recording_id: id, tolerance: step.tolerance }
-          : step.motion
-            ? { reference_motion: step.motion, attempt_recording_id: id, tolerance: step.tolerance }
+    const frames = coach.frames().slice();
+    // Never score a near-empty rep: it would be judged on a fraction of a second and could even count as clean.
+    const check = checkAttempt(frames, mode === 'flow' && track ? attemptLength(track.period) : 0);
+    if (!check.ok) {
+      if (id) void api.stopRecording(id).catch(() => undefined);
+      setProblem(attemptRetryLine(check));
+      setPhase('ready');
+      return;
+    }
+    try {
+      if (id) await api.stopRecording(id).catch(() => undefined);
+      const attempt = frames.length > 2 ? { attempt_frames: frames, ...(id ? { attempt_recording_id: id } : {}) } : id ? { attempt_recording_id: id } : null;
+      const sideField = step.hands === 'left' || step.hands === 'right' ? { side: step.hands } : {};
+      const req =
+        attempt && step.reference_recording_id
+          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+          : attempt && step.motion
+            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
             : null;
-        if (req) {
-          score = await api.score(req);
-          source = 'backend';
-        }
-      } catch (e) {
-        setProblem(`The scoring service did not answer (${e instanceof Error ? e.message : 'unknown error'}). Showing an estimate from this device.`);
+      if (req) {
+        score = await api.score(req);
+        source = 'backend';
       }
+    } catch (e) {
+      setProblem(`The scoring service did not answer (${e instanceof Error ? e.message : 'unknown error'}). Showing an estimate from this device.`);
     }
     recordAttempt(lessonId, step.id, score.overall);
-    const missed = FINGERS.filter((f) => stats.inTolerance[f] < 0.7);
-    const liveNote = missed.length ? `The live coach saw ${missed.map((f) => FINGER_LABEL[f].toLowerCase()).join(' and ')} outside the tolerance for most of the attempt.` : null;
-    setResult({ score, source, liveNote });
+    const outcome = pipe.submit(score);
+    if (outcome.event === 'mastered') void planRequest.current();
+    setResult({ score, source, outcome });
     setPhase('result');
-  }, [coach, config, lessonId, step]);
+  }, [coach, config, lessonId, step, calibrated, pipe, mode, track]);
   finishRef.current = () => {
     if (phase === 'running') void finish();
   };
@@ -164,7 +203,6 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
   const startAttempt = useCallback(async () => {
     setProblem(null);
     setResult(null);
-    ai.clear();
     recordingId.current = null;
     try {
       const rec = await api.startRecording({ lesson_id: lessonId, step_id: step.id });
@@ -172,11 +210,22 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
     } catch {
       setProblem('Recording is unavailable (the backend is not answering). The attempt is still coached and scored on this device.');
     }
+    // The attempt is timed from its first recorded frame, not from here: a phase-locked simulator waits for the next beat
+    // of the reference (up to one motion period) before anything is recorded.
+    const lengthMs = mode === 'flow' && track ? attemptLength(track.period) * 1000 : FOLLOW_CAP_MS;
+    const arm = (ms: number) => {
+      if (endTimer.current !== null) window.clearTimeout(endTimer.current);
+      endTimer.current = window.setTimeout(() => void finishRef.current(), ms);
+    };
+    recordStartRef.current = () => {
+      recordStartRef.current = () => {};
+      arm(lengthMs);
+    };
+    // Fallback when no frame ever arrives (no glove): end after the longest possible wait plus the attempt itself.
+    arm(lengthMs + (track ? track.period * 1000 : 0) + START_GRACE_MS);
     coach.begin();
     setPhase('running');
-    if (mode === 'flow' && track) endTimer.current = window.setTimeout(() => void finishRef.current(), attemptLength(track.period) * 1000);
-    else endTimer.current = window.setTimeout(() => void finishRef.current(), 60000);
-  }, [ai, coach, lessonId, mode, step.id, track]);
+  }, [coach, lessonId, mode, step.id, track]);
 
   useEffect(
     () => () => {
@@ -191,30 +240,54 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
 
   const onCountdownDone = useCallback(() => void startAttempt(), [startAttempt]);
 
-  const stageProps = { coach, gloves, side, prop: step.prop, policy };
+  const stageProps = {
+    coach,
+    gloves,
+    side,
+    prop: step.prop,
+    policy,
+    toleranceDeg: config.toleranceDeg,
+    combo: { count: pipe.machine.combo, need: pipe.cfg.cleanReps, snapKey: pipe.snapKey, played: playedSnap },
+  };
+  const goal = pipe.review ? 'Review: one blind try, no help.' : goalLine(pipe.last, pipe.stage);
   const nextTo = index + 1 < total ? `/apprentice/lessons/${lessonId}/steps/${index + 1}` : hasTest ? `/apprentice/lessons/${lessonId}/test` : `/apprentice/lessons/${lessonId}`;
   const nextLabel = index + 1 < total ? 'Next lesson' : hasTest ? 'Test your skills' : 'Finish';
   const busy = phase === 'countdown' || phase === 'running' || phase === 'scoring';
 
   return (
     <div className="ap-room">
-      <PageHeader
-        kicker={lessonTitle}
-        title={step.title}
-        actions={
-          <Link className="ap-back" to={`/apprentice/lessons/${lessonId}`}>
-            Back to syllabus
-          </Link>
-        }
-      />
+      <ApHeader title={step.title} context={lessonTitle} back={{ to: `/apprentice/lessons/${lessonId}`, label: 'Back to syllabus' }} />
       {offline && <p className="note ap-banner">Backend offline: practising with the built-in demo lesson. Scores are estimated on this device.</p>}
       {notice && <p className="note ap-banner">{notice}</p>}
 
+      {phase === 'result' && result ? (
+        <div ref={resultRef}>
+          <ScoreCard
+            result={result.score}
+            source={result.source}
+            attempt={pipe.reps}
+            lines={{ rep: repLine(result.score), stage: pipe.lines.stage, set: pipe.lines.set }}
+            clean={result.outcome.clean}
+            combo={{ count: result.outcome.event === 'none' || result.outcome.event === 'set_done' ? result.outcome.state.combo : pipe.cfg.cleanReps, need: pipe.cfg.cleanReps }}
+            retryLabel="Next rep"
+            restartLabel="Restart from the strings"
+            footer={result.outcome.event === 'mastered' ? <PlanCard lesson={lesson} /> : undefined}
+            onRetry={() => setPhase('ready')}
+            onRestart={() => {
+              pipe.restart();
+              setPhase('ready');
+            }}
+            nextLabel={nextLabel}
+            onNext={() => navigate(nextTo)}
+            planTo={`/apprentice/lessons/${lessonId}#plan`}
+          />
+        </div>
+      ) : (
       <div className="ap-room__grid">
         <section className="ap-stage" aria-label="Training stage">
           <div className="ap-stage__canvas">
             {refLoading || !track ? (
-              <p className="note ap-state">Loading the master's recording...</p>
+              <p className="note ap-state">Loading the expert's recording...</p>
             ) : guidance === 'marionette' ? (
               <Marionette {...stageProps} />
             ) : guidance === 'shadow' ? (
@@ -224,24 +297,19 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
             ) : (
               <SideBySide {...stageProps} />
             )}
-            <div className="ap-stage__tags">
-              <Badge tone={policy.attempt >= 3 ? 'neutral' : 'lapis'}>{policy.label}</Badge>
-              <Badge tone={gloves.status === 'open' ? 'ok' : 'neutral'}>{gloves.status === 'open' ? 'Gloves live' : 'Gloves not linked'}</Badge>
-              {track && <Badge>{track.source === 'recording' ? "Master's recording" : 'Mock guide'}</Badge>}
-            </div>
-            {phase === 'running' && (
-              <p className="ap-stage__live" role="status">
-                <span className="ap-stage__dot" aria-hidden="true" /> Recording attempt {attempt}
-              </p>
-            )}
           </div>
-          {policy.liveCoach && guidance !== 'side_by_side' && <FingerChips coach={coach} policy={policy} />}
-          <p className="note ap-stage__blurb">{policy.blurb}</p>
+          <FingerSummary coach={coach} policy={policy} />
+          <p className="ap-stage__cap">
+            {phase === 'running' && <span className="ap-stage__dot" aria-hidden="true" />}
+            {phase === 'running' ? `Recording rep ${pipe.reps + 1}. ` : watching ? `Watch, ${watchRate < 1 ? 'half speed' : 'full speed'}. ` : `${policy.label}. `}
+            {policy.blurb}
+            {track && <> {track.source === 'recording' ? "The expert's recording is the guide." : 'A mock guide stands in for the expert.'}</>}
+          </p>
         </section>
 
         <aside className="ap-side" aria-label="Controls and coaching">
           <div className="card ap-panel">
-            <p className="ap-kicker">Hand instruction</p>
+            <StageLadder machine={pipe.machine} cfg={pipe.cfg} review={pipe.review} goal={goal} />
             <p className="ap-instruction">{step.instruction}</p>
             <p className="ap-tolerance">
               Room for error: {config.toleranceDeg}&deg; per finger, {config.timingMs} ms of timing.
@@ -251,10 +319,14 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
                 <Button large variant="secondary" onClick={() => void finish()}>
                   Finish attempt
                 </Button>
+              ) : watching ? (
+                <Button large disabled={!track} onClick={pipe.endWatch}>
+                  Start with the strings
+                </Button>
               ) : (
                 phase !== 'result' && (
                   <Button large disabled={busy || !track} onClick={() => setPhase('countdown')}>
-                    {`Begin attempt ${attempt}`}
+                    {`Begin rep ${pipe.reps + 1}`}
                   </Button>
                 )
               )}
@@ -265,13 +337,17 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
 
           <div className="card ap-panel">
             <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running'} />
-            {aiOn && policy.liveCoach && (ai.hint || ai.pending) && (
-              <blockquote className="ap-annot">
-                <p className="note">{ai.pending && !ai.hint ? 'The coach is thinking...' : ai.hint?.text}</p>
-                {ai.hint && <footer>Coach note, {ai.hint.provider}</footer>}
-              </blockquote>
-            )}
           </div>
+
+          <CalibrationPanel
+            side={side}
+            onSide={() => undefined}
+            cal={calibration}
+            compact
+            hideSide
+            title="Calibrate your glove"
+            missingNote="Not calibrated yet. Scores assume an average hand until you do."
+          />
 
           <div className="card ap-panel">
             <GuidanceModeSwitch />
@@ -280,11 +356,6 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
               <Segmented label="Practice mode" value={mode} options={PRACTICE_OPTIONS} onChange={setMode} />
               <p className="note ap-field__hint">{PRACTICE_OPTIONS.find((o) => o.id === mode)?.hint}</p>
             </div>
-            <label className="ap-toggle">
-              <input type="checkbox" checked={aiOn} onChange={(e) => setAiOn(e.target.checked)} />
-              <span>AI coach</span>
-              <span className="note">adds a hint after 1.5 s of one finger missing</span>
-            </label>
             {dev && (
               <label className="ap-toggle ap-toggle--dev">
                 <input type="checkbox" checked={clumsy} onChange={(e) => setClumsy(e.target.checked)} />
@@ -295,29 +366,10 @@ function Room({ lessonId, lessonTitle, step, index, total, hasTest, dev, offline
           </div>
         </aside>
       </div>
-
-      {phase === 'countdown' && <Countdown from={3} onDone={onCountdownDone} caption={mode === 'follow' ? 'Match the ghost, then hold.' : 'Move with the master.'} />}
-
-      {phase === 'result' && result && (
-        <div ref={resultRef}>
-        <ScoreCard
-          result={result.score}
-          source={result.source}
-          liveNote={result.liveNote}
-          attempt={attempt}
-          onRetry={() => {
-            setAttempt((a) => a + 1);
-            setPhase('ready');
-          }}
-          onRestart={() => {
-            setAttempt(1);
-            setPhase('ready');
-          }}
-          nextLabel={nextLabel}
-          onNext={() => navigate(nextTo)}
-        />
-        </div>
       )}
+
+      {phase === 'countdown' && <Countdown from={3} onDone={onCountdownDone} caption={mode === 'follow' ? 'Match the ghost, then hold.' : 'Move with the expert.'} />}
+
     </div>
   );
 }

@@ -1,8 +1,12 @@
 /* ---------- Shell ---------- */
 .shell {
+  position: relative;
   display: grid;
   grid-template-columns: var(--rail-w) minmax(0, 1fr);
   min-height: 100vh;
+}
+.rail-col {
+  background: linear-gradient(180deg, var(--rail-bg-2), var(--rail-bg));
 }
 .rail {
   position: sticky;
@@ -13,7 +17,6 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1rem 0.5rem;
-  background: linear-gradient(180deg, var(--rail-bg-2), var(--rail-bg));
   color: var(--rail-text);
 }
 .rail__brand {
@@ -23,9 +26,9 @@
   margin-bottom: 1rem;
   text-decoration: none;
   color: var(--rail-text);
-  font: 500 0.72rem var(--font-display);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+}
+.rail__brand svg {
+  stroke: var(--rail-text);
 }
 .rail__nav {
   display: flex;
@@ -42,24 +45,24 @@
   border-radius: var(--radius-s);
   color: var(--rail-text-2);
   text-decoration: none;
-  font: 700 0.82rem var(--font-ui);
-  letter-spacing: 0.04em;
-  border-left: 4px solid transparent;
+  font: 700 1rem var(--font-ui);
+  letter-spacing: 0.02em;
+  width: 100%;
 }
 .rail__link:hover {
   color: var(--rail-text);
 }
 .rail__link[aria-current='page'] {
   color: var(--rail-text);
-  background: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--rail-text) 16%, transparent);
+  box-shadow: inset 0 -3px 0 var(--rail-text);
 }
 .rail__foot {
   margin-top: auto;
   display: grid;
   gap: 0.6rem;
   justify-items: center;
-  font: 700 0.72rem var(--font-ui);
+  font: 700 1rem var(--font-ui);
   color: var(--rail-text-2);
   text-align: center;
 }
@@ -72,10 +75,22 @@
   margin-right: 0.35rem;
 }
 .glove-dot--open {
-  background: #5cc496;
+  background: var(--rail-ok);
+}
+.glove-dot--sim {
+  background: transparent;
+  border: 2px dashed var(--rail-text-2);
+}
+.rail__mock {
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--rail-text);
+  font-weight: 500;
+  line-height: 1.2;
 }
 .glove-dot--connecting {
-  background: var(--gold);
+  background: transparent;
+  border: 2px solid var(--rail-text);
 }
 .theme-select {
   width: 100%;
@@ -84,10 +99,11 @@
   color: var(--rail-text);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--radius-s);
-  font: 700 0.78rem var(--font-ui);
+  font: 700 1rem var(--font-ui);
 }
 .theme-select option {
-  color: #1c1d24;
+  color: var(--text);
+  background: var(--surface);
 }
 .main {
   min-width: 0;
@@ -100,11 +116,13 @@
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
   }
+  .rail-col {
+    grid-row: 2;
+  }
   .rail {
     position: sticky;
     top: auto;
     bottom: 0;
-    grid-row: 2;
     height: auto;
     flex-direction: row;
     padding: 0.25rem 0.5rem;
@@ -120,11 +138,6 @@
   }
   .rail__link {
     flex: 1;
-    border-left: 0;
-    border-top: 4px solid transparent;
-  }
-  .rail__link[aria-current='page'] {
-    border-top-color: var(--gold);
   }
   .main {
     grid-row: 1;
@@ -138,9 +151,10 @@
   display: grid;
   gap: 0.4rem;
 }
-.page-head__kicker {
+.page-head__context {
   font: italic 400 var(--step-1) var(--font-note);
   color: var(--text-2);
+  font-variant-numeric: oldstyle-nums proportional-nums;
 }
 .page-head h1 {
   font-size: var(--step-3);
@@ -150,7 +164,7 @@
 .page-head__rule {
   height: 3px;
   width: 6rem;
-  background: var(--gold);
+  background: var(--text);
   margin-top: 0.4rem;
 }
 
@@ -260,9 +274,6 @@
   text-transform: uppercase;
   color: var(--accent);
 }
-:root[data-theme='notte'] .roles__brand {
-  color: var(--gold);
-}
 .roles__motto {
   font: italic 400 clamp(1.15rem, 1rem + 0.9vw, 1.9rem) var(--font-note);
   color: var(--text-2);
@@ -320,7 +331,7 @@
   gap: 0.35rem;
   padding: clamp(1rem, 2vw, 1.6rem) clamp(1.1rem, 2.2vw, 2rem) clamp(1.1rem, 2vw, 1.7rem);
 }
-.role__kicker {
+.role__tag {
   font: italic 400 clamp(1.1rem, 1rem + 0.6vw, 1.5rem) var(--font-note);
   color: var(--text-2);
 }
@@ -343,9 +354,6 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent);
-}
-:root[data-theme='notte'] .role__cta {
-  color: var(--gold);
 }
 .role__cta svg {
   transition: transform 0.2s;
@@ -370,7 +378,7 @@
   padding: 0 0.6rem;
 }
 .roles__foot .theme-select option {
-  color: #1c1d24;
+  color: var(--text);
 }
 @media (max-width: 860px) {
   .roles__stage {
@@ -383,4 +391,12 @@
     min-height: 0;
     grid-template-rows: 15rem auto;
   }
+}
+
+/* ---------- Shared preview canvas ---------- */
+.preview-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
 }

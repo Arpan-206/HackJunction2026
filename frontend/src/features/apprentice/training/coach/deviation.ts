@@ -79,16 +79,25 @@ export function tension(deviationDeg: number, toleranceDeg: number): number {
   return Math.max(0, Math.min(1, over / (toleranceDeg * 1.5)));
 }
 
-/** 100 inside the tolerance, falling to 0 at three times the tolerance. */
+/** Match at the tolerance edge. A finger inside the tolerance scores at least this, a finger outside it always less. */
+export const MATCH_IN_LINE = 75;
+
+/**
+ * One finger's match, 0 to 100: 100 when it mirrors the master exactly, MATCH_IN_LINE at the tolerance edge, then falling to
+ * 0 at three times the tolerance. A finger flagged as off therefore always reads below MATCH_IN_LINE.
+ */
 export function fingerMatch(deviationDeg: number, toleranceDeg: number): number {
-  const over = Math.abs(deviationDeg) - toleranceDeg;
-  if (over <= 0) return 100;
-  return Math.max(0, 100 - (over / (2 * toleranceDeg)) * 100);
+  const mag = Math.abs(deviationDeg);
+  if (mag <= toleranceDeg) return 100 - (100 - MATCH_IN_LINE) * (mag / toleranceDeg);
+  return Math.max(0, MATCH_IN_LINE - MATCH_IN_LINE * ((mag - toleranceDeg) / (2 * toleranceDeg)));
 }
 
-/** Mean per-finger match across the hand, 0 to 100. */
+/**
+ * The live match meter, 0 to 100: the weakest finger's match. A hand is only as in line as its worst finger, so the meter
+ * can never read high while a finger is flagged.
+ */
 export function matchMeter(deviations: FingerValues, toleranceDeg: number): number {
-  let sum = 0;
-  for (const f of FINGERS) sum += fingerMatch(deviations[f], toleranceDeg);
-  return sum / FINGERS.length;
+  let worst = 100;
+  for (const f of FINGERS) worst = Math.min(worst, fingerMatch(deviations[f], toleranceDeg));
+  return worst;
 }

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDevState, useGloveStream, type Side, type Step } from '../../../api';
-import { Badge } from '../../../components/ui';
-import { useCalibration } from '../hooks/useCalibration';
+import { useCalibration } from '../../shared/useCalibration';
 import { useSimulatorMotion } from '../hooks/useSimulatorMotion';
 import type { RecorderPhase } from '../hooks/useRecorder';
 import type { TakeBook } from '../hooks/useTakeBook';
 import { primarySide } from '../lib';
-import { CalibrationPanel } from './CalibrationPanel';
+import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { FingerLanes } from './FingerLanes';
 import { LiveHandStage } from './LiveHandStage';
 import { Modal } from './Modal';
@@ -51,7 +50,6 @@ export function StepRecorderDialog({ step, lessonId, book, onReference, onClose 
           ) : (
             <>
               <LiveHandStage glove={glove} showJoints showTrails={false} prop={step.prop}>
-                <Badge tone={glove.status === 'open' ? 'ok' : 'neutral'}>{glove.status === 'open' ? 'Glove live' : 'No glove stream'}</Badge>
                 {phase === 'recording' && <span className="mst-recmark">REC</span>}
               </LiveHandStage>
               <FingerLanes getHand={() => glove.latest.current?.hands.find((h) => h.side === side) ?? glove.latest.current?.hands[0] ?? null} />

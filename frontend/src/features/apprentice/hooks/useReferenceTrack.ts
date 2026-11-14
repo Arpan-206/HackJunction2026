@@ -53,6 +53,6 @@ export function useReferenceTrack(step: Step | null): ReferenceState {
   return {
     track: useRecording ? (recorded as { track: ReferenceTrack }).track : guide,
     loading: loading && recordingId !== null,
-    notice: failed ? `The master's recording could not be loaded (${failed}). Showing the mock guide instead.` : null,
+    notice: failed ? `The expert's recording could not be loaded (${failed}). Showing the mock guide instead.` : null,
   };
 }

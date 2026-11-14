@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type MutableRefObject, type RefObject } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Color, Group, Mesh, MeshToonMaterial, SphereGeometry, CylinderGeometry, TorusGeometry, Vector3, type InstancedInterleavedBuffer } from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
@@ -9,10 +9,14 @@ import { useStageColors, type HandHandle } from '../../../../three';
 import { toonGradient } from '../../../../three/materials';
 import type { Coach } from '../coach/useCoach';
 import type { AttemptPolicy } from '../coach/fade';
+import { frayLevels } from '../../pipeline/stages';
 import { STRING_POINTS, writeStringSegments } from './stringMath';
 
 const FAN = [-1.1, -0.55, 0, 0.55, 1.1];
 const SEGMENTS = STRING_POINTS - 1;
+/** Seconds a snapped string takes to recoil and vanish, and the stagger between neighbouring strings. */
+const SNAP_S = 0.65;
+const SNAP_STAGGER_S = 0.07;
 
 function makeLine(width: number, color: Color): Line2 {
   const geo = new LineGeometry();
@@ -29,6 +33,8 @@ interface StringsProps {
   learner: RefObject<HandHandle>;
   coach: Coach;
   policy: AttemptPolicy;
+  /** Clean-rep combo: strings thin as `count` approaches `need`, and snap whenever `snapKey` changes. */
+  combo?: { count: number; need: number; snapKey: number; played: MutableRefObject<number> };
 }
 
 /**
@@ -36,7 +42,7 @@ interface StringsProps {
  * tolerance hangs slack; as the error grows the thread pulls straight and turns vermilion. Geometry is rewritten in place
  * every frame, so React never re-renders.
  */
-export function Strings({ master, learner, coach, policy }: StringsProps) {
+export function Strings({ master, learner, coach, policy, combo }: StringsProps) {
   const stage = useStageColors();
   const size = useThree((s) => s.size);
   const colours = useMemo(() => ({ slack: new Color(stage.chalk), taut: new Color(stage.vermilion), mix: new Color() }), [stage.chalk, stage.vermilion]);
@@ -44,6 +50,7 @@ export function Strings({ master, learner, coach, policy }: StringsProps) {
     const group = new Group();
     const lines = FINGERS.map(() => {
       const l = makeLine(4.2, colours.slack);
+      (l.material as LineMaterial).transparent = true;
       group.add(l);
       return l;
     });
@@ -68,34 +75,56 @@ export function Strings({ master, learner, coach, policy }: StringsProps) {
     [strings],
   );
 
-  const scratch = useRef({ a: new Vector3(), b: new Vector3(), seg: new Float32Array(SEGMENTS * 6) });
+  const scratch = useRef({ a: new Vector3(), b: new Vector3(), seg: new Float32Array(SEGMENTS * 6), snapAt: -1e9 });
+  const comboRef = useRef(combo);
+  comboRef.current = combo;
 
   useFrame(() => {
     const m = master.current;
     const l = learner.current;
     const live = coach.live.current;
-    const { a, b, seg } = scratch.current;
-    strings.group.visible = Boolean(m && l && policy.showMaster && policy.strings !== 'none');
+    const sc = scratch.current;
+    const { a, b, seg } = sc;
+    const now = performance.now() / 1000;
+    const c = comboRef.current;
+    if (c && c.snapKey !== c.played.current && m && l) {
+      // Plays once per snap, on the first frame the strings are on screen, even if the canvas was rebuilt meanwhile.
+      c.played.current = c.snapKey;
+      sc.snapAt = now;
+    }
+    const snapping = now - sc.snapAt < SNAP_S + SNAP_STAGGER_S * FINGERS.length;
+    strings.group.visible = Boolean(m && l && policy.showMaster && (policy.strings !== 'none' || snapping));
     if (!strings.group.visible || !m || !l) return;
+    const fray = c ? frayLevels(c.count, c.need) : null;
     FINGERS.forEach((f, i) => {
       const line = strings.lines[i];
       const bead = strings.beads[i];
-      const off = live.status[f] === 'off';
-      const show = policy.strings === 'all' || off;
+      const off = live.status[f] === 'off' && (!policy.focus || policy.focus.includes(f));
+      const e = snapping ? Math.max(0, Math.min(1, (now - sc.snapAt - i * SNAP_STAGGER_S) / SNAP_S)) : 0;
+      const gone = snapping && e >= 1;
+      const show = !gone && (policy.strings === 'all' || off || snapping);
       line.visible = show;
       bead.visible = show;
       if (!show) return;
       m.getTipWorld(f, a);
       l.getTipWorld(f, b);
-      const t = live.hasLearner ? live.tension[f] : 0;
-      writeStringSegments([a.x, a.y, a.z], [b.x, b.y, b.z], 1 - t, FAN[i], seg);
+      const snapped = snapping;
+      if (snapped) {
+        // The cut string recoils up towards the master's fingertip, sagging and thinning as it goes.
+        const k = e * e;
+        b.lerp(a, k);
+      }
+      const t = snapped ? 0 : live.hasLearner ? live.tension[f] : 0;
+      writeStringSegments([a.x, a.y, a.z], [b.x, b.y, b.z], snapped ? Math.min(1, 0.3 + e) : 1 - t, FAN[i], seg);
       const attr = line.geometry.attributes.instanceStart as unknown as { data: InstancedInterleavedBuffer };
       attr.data.array.set(seg);
       attr.data.needsUpdate = true;
       colours.mix.lerpColors(colours.slack, colours.taut, Math.pow(t, 0.7));
       const mat = line.material as LineMaterial;
       mat.color.copy(colours.mix);
-      mat.linewidth = 4 + t * 1.5;
+      const level = snapped ? 0 : (fray?.[i] ?? 0);
+      mat.linewidth = Math.max(0.6, (4 + t * 1.5) * (1 - 0.65 * level) * (snapped ? 1 - e : 1));
+      mat.opacity = snapped ? 1 - e * 0.9 : 1 - 0.35 * level;
       mat.resolution.set(size.width, size.height);
       (bead.material as MeshToonMaterial).color.copy(colours.mix);
       bead.position.copy(a);

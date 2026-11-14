@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ApiError, type Lesson } from '../../../api';
-import { Badge, Button, Card, Field, TextArea, useToast } from '../../../components/ui';
+import { Button, Card, Field, TextArea, useToast } from '../../../components/ui';
 import { useLessonDraft } from '../hooks/useLessonDraft';
 import { useTakeBook } from '../hooks/useTakeBook';
 import { primarySide, skillLabel } from '../lib';
@@ -37,6 +37,15 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
   const replayStep = draft.steps.find((s) => s.id === replay) ?? null;
   const recorded = draft.steps.filter((s) => s.reference_recording_id).length;
 
+  const allRecorded = recorded === draft.steps.length && recorded > 0;
+
+  const removeWithUndo = (index: number) => {
+    const gone = draft.steps[index];
+    if (!gone) return;
+    d.removeStep(gone.id);
+    toast.show(`Step ${index + 1}, "${gone.title}", deleted.`, 'info', 8000, { label: 'Undo', onClick: () => d.restoreStep(gone, index) });
+  };
+
   const save = async () => {
     setSaving(true);
     setError(null);
@@ -55,15 +64,16 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
       <Card className="mst-details">
         <div className="mst-details__grid">
           <Field label="Lesson title" value={draft.title} onChange={(e) => d.patch({ title: e.target.value })} />
-          <Field label="Master" value={draft.master_name} onChange={(e) => d.patch({ master_name: e.target.value })} />
+          <Field label="Expert" value={draft.master_name} onChange={(e) => d.patch({ master_name: e.target.value })} />
         </div>
         <TextArea label="Summary" rows={2} value={draft.summary} onChange={(e) => d.patch({ summary: e.target.value })} />
         <div className="mst-details__meta">
-          <Badge tone="lapis">{skillLabel(draft.skill)}</Badge>
-          <Badge>{draft.source}</Badge>
-          <Badge tone={recorded === draft.steps.length && recorded > 0 ? 'ok' : 'neutral'}>
-            {recorded} of {draft.steps.length} steps in your own hand
-          </Badge>
+          <span className="note">
+            {skillLabel(draft.skill)}, {draft.source === 'seed' ? 'from the pattern book' : draft.source === 'generated' ? 'drafted for you' : 'recorded by hand'}.
+          </span>
+          <span className={allRecorded ? 'mst-ok' : 'note'}>
+            {recorded === 0 ? 'None' : recorded} of {draft.steps.length} steps in your own hand
+          </span>
         </div>
       </Card>
 
@@ -78,7 +88,7 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
             count={draft.steps.length}
             onChange={(f) => d.updateStep(s.id, f)}
             onMove={(delta) => d.moveStep(s.id, delta)}
-            onDelete={() => d.removeStep(s.id)}
+            onDelete={() => removeWithUndo(i)}
             onRecord={() => setRecording(s.id)}
             onReplay={() => setReplay(s.id)}
           />
@@ -92,7 +102,7 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
 
       <div className="mst-savebar">
         {error && (
-          <p className="mst-alert" role="alert">
+          <p className="mst-alert mst-alert--error" role="alert">
             {error}
           </p>
         )}
@@ -100,7 +110,7 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
           {saving ? 'Saving...' : saveLabel}
         </Button>
         {extraActions}
-        {!d.dirty && <span className="note">Nothing unsaved.</span>}
+        {draft.steps.length === 0 ? <span className="reason">Add a step to save the lesson.</span> : !d.dirty && <span className="note">Nothing unsaved.</span>}
       </div>
 
       {recStep && (

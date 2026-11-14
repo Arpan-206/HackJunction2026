@@ -2,7 +2,7 @@ export interface StepperItem {
   label: string;
 }
 
-/** Horizontal numbered progress, e.g. Capture, Assay, Publish. `current` is zero-based. */
+/** Horizontal numbered progress (Arabic numerals), e.g. Capture, Assay, Publish. `current` is zero-based. */
 export function Stepper({ steps, current, label = 'Progress' }: { steps: StepperItem[]; current: number; label?: string }) {
   return (
     <ol className="stepper" aria-label={label}>
@@ -11,7 +11,7 @@ export function Stepper({ steps, current, label = 'Progress' }: { steps: Stepper
         return (
           <li key={s.label} className={`stepper__item stepper__item--${state}`} aria-current={state === 'current' ? 'step' : undefined}>
             <span className="stepper__dot" aria-hidden="true">
-              {state === 'done' ? '✓' : toRoman(i + 1)}
+              {state === 'done' ? '✓' : i + 1}
             </span>
             <span className="stepper__label">
               {s.label}
@@ -22,8 +22,4 @@ export function Stepper({ steps, current, label = 'Progress' }: { steps: Stepper
       })}
     </ol>
   );
-}
-
-function toRoman(n: number): string {
-  return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n] ?? String(n);
 }

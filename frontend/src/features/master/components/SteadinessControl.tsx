@@ -12,7 +12,7 @@ export function SteadinessControl({ control }: { control: SteadinessHandle }) {
   return (
     <Card title="Steadiness" className="mst-steady">
       <p className="note">
-        Every hand trembles a little, even a master&rsquo;s. Raise steadiness to calm the tremor; lower it if the hand feels slow to follow you.
+        Every hand trembles a little, even an expert&rsquo;s. Raise steadiness to calm the tremor; lower it if the hand feels slow to follow you.
       </p>
       <div className="mst-steady__row">
         <label htmlFor={id} className="mst-steady__end">
@@ -25,14 +25,14 @@ export function SteadinessControl({ control }: { control: SteadinessHandle }) {
         </output>
       </div>
       <div className="mst-steady__row">
-        <Button variant={raw ? 'primary' : 'secondary'} aria-pressed={raw} onClick={() => setRaw(!raw)} disabled={!online}>
+        <Button variant="toggle" aria-pressed={raw} onClick={() => setRaw(!raw)} disabled={!online}>
           {raw ? 'Showing raw signal' : 'Show raw signal'}
         </Button>
         <span className="note">{raw ? 'Smoothing is off: you see the glove exactly as it reports.' : 'Smoothed: tremor is filtered out.'}</span>
       </div>
       {!online && <p className="note">The backend is offline, so steadiness cannot be changed yet.</p>}
       {error && (
-        <p className="mst-alert" role="alert">
+        <p className="mst-alert mst-alert--error" role="alert">
           {error}
         </p>
       )}

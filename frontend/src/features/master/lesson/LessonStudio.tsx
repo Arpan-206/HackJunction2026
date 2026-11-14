@@ -3,11 +3,14 @@ import { api, useLesson } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { LessonEditor } from '../components/LessonEditor';
+import { formatWhen } from '../lib';
+import { useStoredPlan } from '../../shared/practiceLog';
 
 /** /master/lessons/:lessonId: lesson overview and editor with an apprentice preview link. */
 export function LessonStudio() {
   const { lessonId } = useParams();
   const { data: lesson, loading, error, reload } = useLesson(lessonId);
+  const stored = useStoredPlan(lessonId);
 
   return (
     <>
@@ -20,6 +23,13 @@ export function LessonStudio() {
             Try again
           </Button>
         </div>
+      )}
+      {stored && stored.plan.master_note && (
+        <aside className="mst-gen__master" aria-label="Note from the coach">
+          <h2 className="section-title">Where this apprentice struggles</h2>
+          <p className="mst-gen__source">{stored.plan.master_note}</p>
+          <p className="mst-gen__source">From practice on this device, planned {formatWhen(stored.at)}. It is not shared across devices.</p>
+        </aside>
       )}
       {lesson && (
         <LessonEditor

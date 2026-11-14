@@ -1,6 +1,7 @@
 import type { Step } from '../../../api';
-import { Badge, Button, Field, TextArea } from '../../../components/ui';
-import { motionLabel, primarySide } from '../lib';
+import { Button, Field, TextArea } from '../../../components/ui';
+import { motionLabel, primarySide, STRICTNESS, strictnessOf } from '../lib';
+import { DescribeMotion } from './DescribeMotion';
 import { GuideHand } from './GuideHand';
 
 interface StepEditorProps {
@@ -9,6 +10,7 @@ interface StepEditorProps {
   count: number;
   onChange: (fields: Partial<Step>) => void;
   onMove: (delta: -1 | 1) => void;
+  /** Removes the step; the parent offers an undo. */
   onDelete: () => void;
   onRecord: () => void;
   onReplay: () => void;
@@ -26,6 +28,7 @@ const num = (v: string, fallback: number): number => {
 export function StepEditor({ step, index, count, onChange, onMove, onDelete, onRecord, onReplay }: StepEditorProps) {
   const recorded = Boolean(step.reference_recording_id);
   const n = index + 1;
+  const level = strictnessOf(step.tolerance);
   return (
     <li className="mst-step card">
       <div className="mst-step__guide">
@@ -37,7 +40,13 @@ export function StepEditor({ step, index, count, onChange, onMove, onDelete, onR
           prop={step.prop}
         />
         <div className="mst-step__status">
-          {recorded ? <Badge tone="ok">Your take</Badge> : <Badge>Mock guide: {motionLabel(step.motion)}</Badge>}
+          {recorded ? (
+            <>
+              <strong>Your own hand</strong>, recorded
+            </>
+          ) : (
+            <>Mock guide: {motionLabel(step.motion)}</>
+          )}
         </div>
       </div>
 
@@ -49,28 +58,25 @@ export function StepEditor({ step, index, count, onChange, onMove, onDelete, onR
           <Field label="Title" value={step.title} onChange={(e) => onChange({ title: e.target.value })} />
         </div>
         <TextArea label="Instruction" value={step.instruction} rows={3} onChange={(e) => onChange({ instruction: e.target.value })} />
+        {!recorded && <DescribeMotion side={primarySide(step.hands)} stepNumber={n} onMotion={(motion) => onChange({ motion })} />}
         <div className="mst-step__nums">
           <Field label="Repetitions" type="number" min={1} max={30} value={step.repetitions} onChange={(e) => onChange({ repetitions: Math.max(1, Math.round(num(e.target.value, 1))) })} />
-          <Field
-            label="Angle tolerance (deg)"
-            type="number"
-            min={1}
-            max={90}
-            value={step.tolerance.angle_deg}
-            onChange={(e) => onChange({ tolerance: { ...step.tolerance, angle_deg: num(e.target.value, 18) } })}
-          />
-          <Field
-            label="Timing tolerance (ms)"
-            type="number"
-            min={20}
-            max={2000}
-            step={10}
-            value={step.tolerance.timing_ms}
-            onChange={(e) => onChange({ tolerance: { ...step.tolerance, timing_ms: num(e.target.value, 250) } })}
-          />
+          <div className="mst-strict" role="group" aria-label={`Strictness for step ${n}`}>
+            <span className="field__label">Strictness</span>
+            <div className="mst-seg">
+              {STRICTNESS.map((o) => (
+                <Button key={o.id} variant="toggle" aria-pressed={level === o.id} onClick={() => onChange({ tolerance: { ...step.tolerance, angle_deg: o.angle_deg, timing_ms: o.timing_ms } })}>
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+            <span className="mst-strict__note">
+              {step.tolerance.angle_deg} degrees and {step.tolerance.timing_ms} ms of room{level ? '' : ' (custom)'}
+            </span>
+          </div>
         </div>
         <div className="mst-step__actions">
-          <Button onClick={onRecord}>{recorded ? 'Record this step again' : 'Record this step'}</Button>
+          <Button variant="secondary" onClick={onRecord}>{recorded ? 'Record this step again' : 'Record this step'}</Button>
           {recorded && (
             <Button variant="secondary" onClick={onReplay}>
               Replay take
@@ -83,9 +89,11 @@ export function StepEditor({ step, index, count, onChange, onMove, onDelete, onR
           <Button variant="ghost" onClick={() => onMove(1)} disabled={index === count - 1} aria-label={`Move step ${n} down`}>
             Down
           </Button>
-          <Button variant="ghost" onClick={onDelete} aria-label={`Delete step ${n}`}>
-            Delete
-          </Button>
+          <span className="mst-step__danger">
+            <Button variant="ghost" onClick={onDelete} aria-label={`Delete step ${n}`}>
+              Delete
+            </Button>
+          </span>
         </div>
       </div>
     </li>

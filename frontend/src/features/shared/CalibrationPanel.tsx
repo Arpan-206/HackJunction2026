@@ -1,7 +1,7 @@
-import type { Side } from '../../../api';
-import { Badge, Button, Card, Countdown } from '../../../components/ui';
-import type { CalibrationHandle } from '../hooks/useCalibration';
-import { CALIBRATION_SECONDS, formatWhen } from '../lib';
+import type { Side } from '../../api';
+import { Button, Card, Countdown } from '../../components/ui';
+import type { CalibrationHandle } from './useCalibration';
+import { CALIBRATION_SECONDS, formatWhen } from '../master/lib';
 
 interface CalibrationPanelProps {
   side: Side;
@@ -9,6 +9,12 @@ interface CalibrationPanelProps {
   cal: CalibrationHandle;
   /** Smaller layout for use inside a dialog. */
   compact?: boolean;
+  /** Hides the left or right choice when the glove is already decided, as in the training room. */
+  hideSide?: boolean;
+  /** Replaces the line shown while no calibration exists. */
+  missingNote?: string;
+  /** Replaces the card title. */
+  title?: string;
 }
 
 const PROMPTS = {
@@ -20,32 +26,42 @@ const PROMPTS = {
  * Guided glove calibration: a flat hand, then a loose fist, each with a 3-2-1 countdown and a progress bar
  * while the backend samples the glove. Shows when the glove was last calibrated.
  */
-export function CalibrationPanel({ side, onSide, cal, compact }: CalibrationPanelProps) {
+export function CalibrationPanel({ side, onSide, cal, compact, hideSide, missingNote, title = 'Calibrate the glove' }: CalibrationPanelProps) {
   const { phase, latest, loading, error } = cal;
   const running = phase !== 'idle';
   const which = phase.endsWith('flat') ? 'flat' : 'fist';
   const step = which === 'flat' ? 1 : 2;
 
   return (
-    <Card title="Calibrate the glove" className={compact ? 'mst-cal mst-cal--compact' : 'mst-cal'}>
+    <Card title={title} className={compact ? 'mst-cal mst-cal--compact' : 'mst-cal mst-cal--secondary'}>
       <div className="mst-cal__status">
-        {loading ? <Badge>Checking...</Badge> : latest ? <Badge tone="ok">Calibrated</Badge> : <Badge>Not calibrated yet</Badge>}
-        {latest && <span className="note">Last calibrated {formatWhen(latest.created_at)}</span>}
+        {loading ? (
+          <span className="mst-line">Checking the glove...</span>
+        ) : latest ? (
+          <>
+            <span className="mst-ok">Calibrated</span>
+            <span className="note">last calibrated {formatWhen(latest.created_at)}</span>
+          </>
+        ) : (
+          <span className="mst-line">{missingNote ?? 'Not calibrated yet. Do this once per glove before recording.'}</span>
+        )}
       </div>
       <div className="mst-cal__row">
-        <div className="mst-seg" role="group" aria-label="Which glove">
-          {(['right', 'left'] as const).map((s) => (
-            <Button key={s} variant={side === s ? 'primary' : 'secondary'} aria-pressed={side === s} onClick={() => onSide(s)} disabled={running}>
-              {s === 'right' ? 'Right hand' : 'Left hand'}
-            </Button>
-          ))}
-        </div>
-        <Button onClick={cal.start} disabled={running}>
+        {!hideSide && (
+          <div className="mst-seg" role="group" aria-label="Which glove">
+            {(['right', 'left'] as const).map((s) => (
+              <Button key={s} variant="toggle" aria-pressed={side === s} onClick={() => onSide(s)} disabled={running}>
+                {s === 'right' ? 'Right hand' : 'Left hand'}
+              </Button>
+            ))}
+          </div>
+        )}
+        <Button variant="secondary" onClick={cal.start} disabled={running}>
           {latest ? 'Calibrate again' : 'Calibrate'}
         </Button>
       </div>
       {error && (
-        <p className="mst-alert" role="alert">
+        <p className="mst-alert mst-alert--error" role="alert">
           {error}
         </p>
       )}

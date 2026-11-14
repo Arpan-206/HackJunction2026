@@ -9,6 +9,8 @@ export interface LessonDraftHandle {
   updateStep: (id: string, fields: Partial<Step>) => void;
   moveStep: (id: string, delta: -1 | 1) => void;
   removeStep: (id: string) => void;
+  /** Puts a removed step back at its old position (undo). */
+  restoreStep: (step: Step, index: number) => void;
   addStep: () => void;
   setTest: (test: TestSpec | null) => void;
   /** Marks the current draft as saved. */
@@ -40,6 +42,16 @@ export function useLessonDraft(initial: Lesson): LessonDraftHandle {
     [edit],
   );
   const removeStep = useCallback((id: string) => edit((l) => ({ ...l, steps: l.steps.filter((s) => s.id !== id) })), [edit]);
+  const restoreStep = useCallback(
+    (step: Step, index: number) =>
+      edit((l) => {
+        if (l.steps.some((s) => s.id === step.id)) return l;
+        const steps = [...l.steps];
+        steps.splice(Math.min(index, steps.length), 0, step);
+        return { ...l, steps };
+      }),
+    [edit],
+  );
   const addStep = useCallback(() => edit((l) => ({ ...l, steps: [...l.steps, { ...blankStep(), hands: l.steps[0]?.hands ?? 'right' }] })), [edit]);
   const setTest = useCallback((test: TestSpec | null) => edit((l) => ({ ...l, test })), [edit]);
   const commit = useCallback((saved: Lesson) => {
@@ -47,5 +59,5 @@ export function useLessonDraft(initial: Lesson): LessonDraftHandle {
     setDirty(false);
   }, []);
 
-  return { draft, dirty, patch, updateStep, moveStep, removeStep, addStep, setTest, commit };
+  return { draft, dirty, patch, updateStep, moveStep, removeStep, restoreStep, addStep, setTest, commit };
 }

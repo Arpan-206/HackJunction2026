@@ -10,6 +10,18 @@ export const skillLabel = (s: Skill): string => SKILLS.find((k) => k.id === s)?.
 
 export const DEFAULT_TOLERANCE: Tolerance = { angle_deg: 18, timing_ms: 250 };
 
+/** The one-dial "Strictness" control: how much room for error a learner gets on a step. */
+export const STRICTNESS = [
+  { id: 'gentle', label: 'Gentle', angle_deg: 28, timing_ms: 400 },
+  { id: 'standard', label: 'Standard', angle_deg: 18, timing_ms: 250 },
+  { id: 'strict', label: 'Strict', angle_deg: 10, timing_ms: 150 },
+] as const;
+
+/** Which strictness preset a tolerance matches exactly, or null when it was edited to custom values. */
+export function strictnessOf(t: Tolerance): (typeof STRICTNESS)[number]['id'] | null {
+  return STRICTNESS.find((o) => o.angle_deg === t.angle_deg && o.timing_ms === t.timing_ms)?.id ?? null;
+}
+
 /** Seconds a calibration phase captures for. */
 export const CALIBRATION_SECONDS = 2;
 

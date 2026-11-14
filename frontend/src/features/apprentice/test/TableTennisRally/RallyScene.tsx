@@ -170,7 +170,7 @@ export function RallyScene({ game, gloves, twoPlayer }: RallySceneProps) {
     <HandCanvas
       preset="single"
       label="A table tennis table seen from behind the near player"
-      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'none', cameraPosition: [0, 2.3, 4.3], target: [0, 0.8, -0.4] }}
+      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'none', cameraPosition: [0, 2.1, 3.9], target: [0, 0.78, -0.3] }}
     >
       <Table />
       <BallMesh game={game} />

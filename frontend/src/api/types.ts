@@ -5,7 +5,7 @@
 
 export type Side = 'left' | 'right';
 export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
-export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk';
+export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
 export type Skill = 'table_tennis' | 'piano' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 
@@ -116,6 +116,8 @@ export interface ScoreResult {
   within_tolerance: boolean;
   worst_finger: Finger;
   hint: string;
+  /** Plain notes about the scoring itself, for example an incomplete calibration that was ignored. Empty normally. */
+  warnings: string[];
 }
 
 /* ---- HTTP request and response bodies (prefix /api) ---- */
@@ -168,8 +170,17 @@ export type ScoreRequest = (
   | { reference_recording_id: string; reference_motion?: never }
   | { reference_motion: MotionSpec; reference_recording_id?: never }
 ) & {
-  attempt_recording_id: string;
+  attempt_recording_id?: string;
+  /** Frames to score instead of the stored recording; `t` starts at the reference's first beat. */
+  attempt_frames?: GloveFrame[];
   tolerance: Tolerance;
+  /** Normalise the attempt with the latest calibration stored for its side. */
+  use_latest_calibration?: boolean;
+  attempt_calibration_id?: string;
+  /** Has no effect on its own; only used together with an attempt calibration. */
+  reference_calibration_id?: string;
+  /** Which hand to score; omit to let the backend pick. */
+  side?: Side;
 };
 
 export interface CoachHintRequest {
@@ -182,6 +193,49 @@ export interface CoachHintRequest {
 export interface CoachHintResponse {
   hint: string;
   provider: string;
+}
+
+export interface CoachPlanRequest {
+  lesson_title: string;
+  /** At most 20. */
+  steps: { step_id: string; title: string }[];
+  /** At most 60. */
+  attempts: { step_id: string; score: ScoreResult }[];
+}
+
+export interface Drill {
+  step_id: string;
+  focus_finger: Finger | null;
+  exercise: string;
+}
+
+export interface CoachPlanResponse {
+  /** At most 60 words, second person. */
+  summary: string;
+  /** One to four drills. */
+  drills: Drill[];
+  /** Where this learner struggles, written for the master. */
+  master_note: string;
+  provider: string;
+}
+
+export interface MotionFromTextRequest {
+  /** At most 200 characters. */
+  text: string;
+  side?: Side;
+}
+
+export interface MotionFromTextResponse {
+  motion: MotionSpec;
+  explanation: string;
+  /** 'fake' when the keyword rules answered. */
+  provider: string;
+}
+
+/** Optional fields of POST /api/lessons/generate_from_video next to the video itself. */
+export interface GenerateFromVideoOptions {
+  prompt?: string;
+  skill?: Skill;
 }
 
 export interface VisionHandsResponse {

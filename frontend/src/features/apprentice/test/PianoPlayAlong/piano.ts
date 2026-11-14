@@ -210,16 +210,23 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-/** The bot pianist's score for a phrase: mostly right, with the odd slip. */
-export function botPerformance(notes: PhraseNote[], seed = 7): PianoScore {
+/** Bot skill used when none is given: reproduces the original fixed difficulty. */
+export const DEFAULT_BOT_SKILL = 0.5;
+
+/**
+ * The bot pianist's score for a phrase: mostly right, with the odd slip. `skill` (0 clumsy, 1 expert) scales how often it
+ * slips and how far it drifts off the beat; the default keeps the original performance.
+ */
+export function botPerformance(notes: PhraseNote[], seed = 7, skill: number = DEFAULT_BOT_SKILL): PianoScore {
+  const slip = 1.7 - 1.4 * Math.max(0, Math.min(1, skill));
   const rng = mulberry32(seed);
   const judge = new NoteJudge(notes);
   for (const n of notes) {
     const r = rng();
-    const offset = (rng() - 0.5) * 0.28;
-    if (r < 0.06) {
+    const offset = (rng() - 0.5) * 0.28 * slip;
+    if (r < 0.06 * slip) {
       judge.expire(n.time + NOTE_WINDOW_S + 0.001);
-    } else if (r < 0.12) {
+    } else if (r < 0.12 * slip) {
       const wrong = FINGERS[(n.finger % 5)];
       judge.press({ finger: wrong, t: n.time + offset });
     } else {

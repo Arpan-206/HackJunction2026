@@ -22,9 +22,9 @@ interface Palette {
 function readPalette(el: HTMLElement): Palette {
   const css = getComputedStyle(el);
   return {
-    line: css.getPropertyValue('--line').trim() || '#c3c6c8',
-    text: css.getPropertyValue('--text-2').trim() || '#4a4c57',
-    trace: css.getPropertyValue('--accent').trim() || '#1f2e78',
+    line: css.getPropertyValue('--line').trim() || 'GrayText',
+    text: css.getPropertyValue('--text-2').trim() || 'GrayText',
+    trace: css.getPropertyValue('--accent').trim() || 'CanvasText',
   };
 }
 

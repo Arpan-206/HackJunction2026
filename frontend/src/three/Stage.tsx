@@ -1,8 +1,9 @@
-import { Suspense, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { CanvasTexture, Group, Vector3 } from 'three';
 import { useTheme } from '../theme';
+import { BackdropProps, Optional, PlasterWall, WorkshopLight, Workbench, type StageQuality } from './atmosphere';
 import { StageColorsContext, useStageColors } from './stageContext';
 
 export type CameraPreset = 'single' | 'pair' | 'racket' | 'keyboard' | 'closeup';
@@ -44,6 +45,13 @@ export interface StageProps {
   target?: [number, number, number];
   /** Camera start position, used to centre the azimuth window. */
   cameraPosition?: [number, number, number];
+  /**
+   * Bottega set dressing: walnut bench, plaster wall, workshop light and backdrop props, replacing the drafting
+   * grid. Default true; small previews pass false to stay light.
+   */
+  decor?: boolean;
+  /** 'high' (default) adds live contact shadows and the model props; 'low' keeps the bench and light only. */
+  quality?: StageQuality;
 }
 
 function blobTexture(): CanvasTexture {
@@ -51,7 +59,7 @@ function blobTexture(): CanvasTexture {
   c.width = c.height = 128;
   const ctx = c.getContext('2d') as CanvasRenderingContext2D;
   const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
-  g.addColorStop(0, 'rgba(20,24,40,0.5)');
+  g.addColorStop(0, 'rgba(18,12,8,0.62)');
   g.addColorStop(1, 'rgba(20,24,40,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 128, 128);
@@ -70,6 +78,8 @@ export function Stage({
   controls = 'limited',
   target = [0, -0.12, -0.62],
   cameraPosition = [1.9, 2.7, 2.4],
+  decor = true,
+  quality = 'high',
 }: StageProps) {
   const s = useStageColors();
   const blob = useMemo(() => blobTexture(), []);
@@ -84,6 +94,10 @@ export function Stage({
     return new Float32Array(pts);
   }, [circleRadius]);
 
+  const benchW = Math.max(11, circleRadius * 2 + 6);
+  const benchD = 6;
+  const backZ = circleCenter[1] - 2.3;
+  const benchCz = backZ + benchD / 2;
   return (
     <>
       <color attach="background" args={[s.background]} />
@@ -91,7 +105,17 @@ export function Stage({
       <directionalLight position={[-2, 4, 3]} intensity={1.5} />
       <directionalLight position={[3, 2, -2]} intensity={0.5} />
 
-      {showGrid && <gridHelper args={[9, 36, s.grid, s.grid]} position={[0, groundY, 0]} material-transparent material-opacity={s.gridOpacity} material-depthWrite={false} />}
+      {decor && <WorkshopLight stage={s} />}
+      {decor && (
+        <Optional>
+          <Suspense fallback={null}>
+            <Workbench y={groundY} cx={circleCenter[0]} cz={benchCz} width={benchW} depth={benchD} />
+            <PlasterWall stage={s} y={groundY - 0.18} z={backZ - 0.05} width={benchW * 2.4} />
+          </Suspense>
+        </Optional>
+      )}
+      {decor && quality === 'high' && <BackdropProps y={groundY} cx={circleCenter[0]} backZ={backZ} halfWidth={benchW / 2 - 1} />}
+      {!decor && showGrid && <gridHelper args={[9, 36, s.grid, s.grid]} position={[0, groundY, 0]} material-transparent material-opacity={s.gridOpacity} material-depthWrite={false} />}
       {showCircle && (
         <lineLoop position={[circleCenter[0], groundY + 0.002, circleCenter[1]]}>
           <bufferGeometry>
@@ -143,6 +167,8 @@ export interface HandCanvasProps {
   style?: CSSProperties;
   /** Accessible description; the canvas is otherwise hidden from assistive tech. */
   label?: string;
+  /** 'demand' renders only when something invalidates, for static or rarely changing scenes. Default 'always'. */
+  frameloop?: 'always' | 'demand';
   children?: ReactNode;
 }
 
@@ -150,14 +176,36 @@ export interface HandCanvasProps {
  * Canvas + theme bridge + Stage in one. Put <Hand>, <Racket>, <Keyboard> as children. Fills its parent, so give the
  * parent a size.
  */
-export function HandCanvas({ preset = 'single', stage, sway = 0, className, style, label, children }: HandCanvasProps) {
+export function HandCanvas({ preset = 'single', stage, sway = 0, className, style, label, frameloop = 'always', children }: HandCanvasProps) {
   const { stage: colors } = useTheme();
+  const [epoch, setEpoch] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<[number, number] | null>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setSize([Math.round(e.contentRect.width), Math.round(e.contentRect.height)]));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // Small canvases skip the set dressing; mid-sized ones get the bench and light but not the model props.
+  const sizeKnown = size !== null;
+  const autoDecor = !sizeKnown || size[0] >= 300;
+  const autoQuality: StageQuality = !sizeKnown || (size[0] >= 760 && size[1] >= 540) ? 'high' : 'low';
   const p = PRESETS[preset];
   const cam = stage?.cameraPosition ?? p.position;
   const content = sway ? <Sway amount={sway}>{children}</Sway> : children;
   return (
-    <div className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+    <div ref={box} className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       <Canvas
+        key={epoch}
+        frameloop={frameloop}
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            window.setTimeout(() => setEpoch((n) => n + 1), 250);
+          });
+        }}
         flat
         dpr={[1, 2]}
         camera={{ position: cam, fov: 30, near: 0.1, far: 80 }}
@@ -176,6 +224,8 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
             controls={stage?.controls}
             target={stage?.target ?? p.target}
             cameraPosition={cam}
+            decor={stage?.decor ?? autoDecor}
+            quality={stage?.quality ?? autoQuality}
           />
           <Suspense fallback={null}>{content}</Suspense>
         </StageColorsContext.Provider>

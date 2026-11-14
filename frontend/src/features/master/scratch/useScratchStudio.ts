@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ApiError, useGloveStream, type Side, type Skill } from '../../../api';
 import { useToast } from '../../../components/ui';
-import { useCalibration } from '../hooks/useCalibration';
+import { useCalibration } from '../../shared/useCalibration';
 import { useMoveCatalogue } from '../hooks/useMoveCatalogue';
 import { useSimulatorMotion } from '../hooks/useSimulatorMotion';
 import { useSteadiness } from '../hooks/useSteadiness';
@@ -54,7 +54,7 @@ export function useScratchStudio() {
         title: title.trim() || `${skillLabel(planned[0].skill)} lesson`,
         skill: planned[0].skill,
         summary: `Recorded by hand: ${planned.map((c) => c.name).join(', ')}.`,
-        master_name: masterName.trim() || 'The master',
+        master_name: masterName.trim() || 'The expert',
         source: 'scratch',
         steps: planned.map((c) => {
           const kept = book.takesFor(c.id).filter((t) => t.kept).length;
@@ -63,7 +63,7 @@ export function useScratchStudio() {
         test: null,
       });
       toast.show('Lesson saved. Shaping it in the studio.', 'ok');
-      navigate(`/master/lessons/${lesson.id}`);
+      navigate(`/expert/lessons/${lesson.id}`);
     } catch (e) {
       setSaveError(e instanceof ApiError ? e.message : String(e));
     } finally {

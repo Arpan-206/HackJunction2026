@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Lesson, Skill } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
-import { Badge, Button, Card } from '../../../components/ui';
+import { Button, Card } from '../../../components/ui';
 import { useLessonLibrary } from '../hooks/useLessonData';
+import { TodayPanel } from './TodayPanel';
 
 const SKILL_LABEL: Record<Skill, string> = { table_tennis: 'Table tennis', piano: 'Piano', general: 'General' };
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
@@ -10,9 +12,20 @@ const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeL
 /** How much of a lesson has the master's real recording behind it. */
 export function referenceKind(lesson: Lesson): { label: string; tone: 'ok' | 'neutral' | 'lapis' } {
   const recorded = lesson.steps.filter((s) => s.reference_recording_id).length;
-  if (lesson.steps.length > 0 && recorded === lesson.steps.length) return { label: "Master's recording", tone: 'ok' };
+  if (lesson.steps.length > 0 && recorded === lesson.steps.length) return { label: "Expert's recording", tone: 'ok' };
   if (recorded > 0) return { label: `${recorded} of ${lesson.steps.length} recorded`, tone: 'lapis' };
   return { label: 'Mock guide only', tone: 'neutral' };
+}
+
+/** One card per lesson title: when a master has recorded the same course twice, the newest wins. */
+export function newestPerTitle(lessons: Lesson[]): Lesson[] {
+  const key = (l: Lesson) => l.title.trim().toLowerCase();
+  const best = new Map<string, Lesson>();
+  for (const l of lessons) {
+    const seen = best.get(key(l));
+    if (!seen || l.created_at > seen.created_at) best.set(key(l), l);
+  }
+  return lessons.filter((l) => best.get(key(l)) === l);
 }
 
 function SkillIcon({ skill }: { skill: Skill }) {
@@ -37,9 +50,10 @@ function SkillIcon({ skill }: { skill: Skill }) {
 /** Apprentice landing: every lesson with its skill, master, step count and whether a real recording backs it. */
 export function Library() {
   const { data: lessons, loading, error, offline, reload } = useLessonLibrary();
+  const unique = useMemo(() => (lessons ? newestPerTitle(lessons) : []), [lessons]);
   return (
     <>
-      <PageHeader kicker="L'apprendista" title="Choose a lesson" />
+      <PageHeader title="Choose a lesson" />
       {offline && <p className="note ap-banner">Backend offline: showing the built-in demo lessons. Practice works locally; scores are estimated on this device.</p>}
       {loading && <p className="note ap-state">Consulting the ledger...</p>}
       {error && (
@@ -50,10 +64,11 @@ export function Library() {
           </Button>
         </div>
       )}
-      {lessons && lessons.length === 0 && <p className="note ap-state">No lessons yet. Ask a master to record one, then come back.</p>}
+      {lessons && lessons.length === 0 && <p className="note ap-state">No lessons yet. Ask an expert to record one, then come back.</p>}
+      {lessons && lessons.length > 0 && <TodayPanel lessons={unique} />}
       {lessons && lessons.length > 0 && (
         <ul className="ap-library">
-          {lessons.map((l) => {
+          {unique.map((l) => {
             const ref = referenceKind(l);
             return (
               <li key={l.id}>
@@ -63,15 +78,15 @@ export function Library() {
                     <SkillIcon skill={l.skill} />
                   </div>
                   <div className="ap-lib-card__body">
-                    <p className="ap-kicker">{SKILL_LABEL[l.skill]}</p>
                     <h2>{l.title}</h2>
                     <p className="note">{l.summary}</p>
                     <ul className="ap-meta" aria-label="Lesson details">
-                      <li>Master: {l.master_name}</li>
-                      <li>{l.steps.length} lessons</li>
+                      <li>{SKILL_LABEL[l.skill]}</li>
+                      <li>Expert: {l.master_name}</li>
+                      <li>{l.steps.length} {l.steps.length === 1 ? "lesson" : "lessons"}</li>
                       {l.test && <li>Final test</li>}
                     </ul>
-                    <Badge tone={ref.tone}>{ref.label}</Badge>
+                    <p className="ap-lib-card__ref">{ref.label}</p>
                   </div>
                 </Card>
               </li>

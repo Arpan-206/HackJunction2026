@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Skill } from '../../../api';
-import { Badge, Button, Field, Tabs } from '../../../components/ui';
+import { Button, Field, Tabs } from '../../../components/ui';
 import type { MoveCatalogue } from '../hooks/useMoveCatalogue';
 import { SKILLS, choiceFromMove, freeChoice, type MoveChoice, primarySide } from '../lib';
 import { GuideHand } from './GuideHand';
@@ -12,6 +12,9 @@ interface MovePickerProps {
   choice: MoveChoice | null;
   onChoose: (c: MoveChoice) => void;
 }
+
+const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+const numberWord = (n: number): string => WORDS[n] ?? String(n);
 
 /** Pick a skill, then a move from the catalogue (each with a looping preview hand) or invent a free move. */
 export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: MovePickerProps) {
@@ -29,9 +32,8 @@ export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: Move
             <GuideHand label={`${m.name} preview`} motion={m.default_motion} side={primarySide(m.hands)} prop={m.prop} />
             <span className="mst-move__name">{m.name}</span>
             <span className="mst-move__desc note">{m.description}</span>
-            <span className="mst-move__meta">
-              <Badge>{m.default_repetitions} takes</Badge>
-              <Badge>{m.hands === 'both' ? 'Both hands' : `${m.hands} hand`}</Badge>
+            <span className="mst-move__meta note">
+              {numberWord(m.default_repetitions)} takes, {m.hands === 'both' ? 'both hands' : `${m.hands} hand`}
             </span>
           </button>
         );
@@ -40,9 +42,10 @@ export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: Move
         <span className="mst-move__name">Free move</span>
         <span className="mst-move__desc note">Record any movement of your own and name it. It is labelled for training data like the rest.</span>
         <Field label="Name of the move" value={freeName} placeholder="Topspin loop" onChange={(e) => setFreeName(e.target.value)} />
-        <Button variant={freeActive ? 'primary' : 'secondary'} disabled={!freeName.trim()} onClick={() => onChoose(freeChoice(freeName, skill))}>
-          Record this move
+        <Button variant="secondary" disabled={!freeName.trim()} onClick={() => onChoose(freeChoice(freeName, skill))}>
+          Use this move
         </Button>
+        {!freeName.trim() && <span className="reason">Name the move to use it.</span>}
       </div>
     </div>
   );
@@ -50,9 +53,12 @@ export function MovePicker({ catalogue, skill, onSkill, choice, onChoose }: Move
   return (
     <div className="mst-picker">
       {catalogue.offline && (
-        <p className="mst-alert" role="status">
-          The backend is not answering ({catalogue.errorMessage}). A small local set of moves is shown so you can still look around.
-        </p>
+        <div className="mst-alert" role="status">
+          <p>The pattern book could not be reached, so a small local set of moves is shown. Check that the backend is running.</p>
+          <Button variant="secondary" onClick={catalogue.retry}>
+            Try again
+          </Button>
+        </div>
       )}
       <Tabs
         label="Skill"

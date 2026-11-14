@@ -3,6 +3,11 @@ import type {
   Calibration,
   CoachHintRequest,
   CoachHintResponse,
+  CoachPlanRequest,
+  CoachPlanResponse,
+  GenerateFromVideoOptions,
+  MotionFromTextRequest,
+  MotionFromTextResponse,
   DevState,
   DevStatePatch,
   GenerateLessonRequest,
@@ -83,6 +88,43 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   return parsed as T;
 }
 
+/**
+ * POST a multipart body with XMLHttpRequest, because fetch cannot report upload progress.
+ * `onProgress` receives whole percentages (0 to 100) so callers re-render a few dozen times at most.
+ */
+function upload<T>(path: string, body: FormData, onProgress?: (percent: number) => void, signal?: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let last = -1;
+    xhr.open('POST', `${BASE}${path}`);
+    xhr.responseType = 'text';
+    xhr.upload.onprogress = (e) => {
+      if (!onProgress || !e.lengthComputable) return;
+      const pct = Math.floor((e.loaded / e.total) * 100);
+      if (pct !== last) {
+        last = pct;
+        onProgress(pct);
+      }
+    };
+    xhr.onerror = () => reject(new ApiError('Cannot reach the backend. Is it running on port 8000?', 0, path));
+    xhr.onabort = () => reject(new DOMException('Aborted', 'AbortError'));
+    xhr.onload = () => {
+      let parsed: unknown = undefined;
+      if (xhr.responseText) {
+        try {
+          parsed = JSON.parse(xhr.responseText);
+        } catch {
+          parsed = xhr.responseText;
+        }
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(parsed as T);
+      else reject(new ApiError(describeDetail(parsed) ?? `POST ${path} failed with ${xhr.status}`, xhr.status, path, parsed));
+    };
+    signal?.addEventListener('abort', () => xhr.abort());
+    xhr.send(body);
+  });
+}
+
 const qs = (params: Record<string, string | undefined>): string => {
   const p = Object.entries(params).filter((e): e is [string, string] => e[1] !== undefined);
   return p.length ? `?${new URLSearchParams(p).toString()}` : '';
@@ -100,6 +142,15 @@ export const api = {
   updateLesson: (lesson: Lesson) => request<Lesson>('PUT', `/lessons/${encodeURIComponent(lesson.id)}`, lesson),
   generateLesson: (req: GenerateLessonRequest) => request<GenerateLessonResponse>('POST', '/lessons/generate', req),
 
+  /** POST /api/lessons/generate_from_video: a clip of 50 MB at most (mp4, webm or mov) becomes a draft lesson. */
+  generateLessonFromVideo: (video: File, opts: GenerateFromVideoOptions = {}, onProgress?: (percent: number) => void, signal?: AbortSignal) => {
+    const form = new FormData();
+    form.append('video', video);
+    if (opts.prompt) form.append('prompt', opts.prompt);
+    if (opts.skill) form.append('skill', opts.skill);
+    return upload<GenerateLessonResponse>('/lessons/generate_from_video', form, onProgress, signal);
+  },
+
   calibrate: (req: CalibrationRequest) => request<Calibration>('POST', '/calibrations', req),
   latestCalibration: (side: 'left' | 'right', signal?: AbortSignal) =>
     request<Calibration>('GET', `/calibrations/latest${qs({ side })}`, undefined, signal),
@@ -110,6 +161,8 @@ export const api = {
 
   previewMotion: (req: MotionPreviewRequest) => request<MotionPreviewResponse>('POST', '/motion/preview', req),
   score: (req: ScoreRequest) => request<ScoreResult>('POST', '/score', req),
+  coachPlan: (req: CoachPlanRequest) => request<CoachPlanResponse>('POST', '/coach/plan', req),
+  motionFromText: (req: MotionFromTextRequest) => request<MotionFromTextResponse>('POST', '/motion/from_text', req),
   coachHint: (req: CoachHintRequest) => request<CoachHintResponse>('POST', '/coach/hint', req),
 
   devState: (signal?: AbortSignal) => request<DevState>('GET', '/dev/state', undefined, signal),

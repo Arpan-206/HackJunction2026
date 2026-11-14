@@ -5,11 +5,18 @@ interface ToastItem {
   id: number;
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
+}
+
+/** An optional button inside a toast, e.g. Undo. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
 }
 
 interface ToastApi {
-  /** Shows a toast for `ms` milliseconds (default 5000). */
-  show: (message: string, tone?: ToastTone, ms?: number) => void;
+  /** Shows a toast for `ms` milliseconds (default 5000), with an optional action button such as Undo. */
+  show: (message: string, tone?: ToastTone, ms?: number, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -20,9 +27,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const dismiss = useCallback((id: number) => setItems((l) => l.filter((t) => t.id !== id)), []);
   const show = useCallback(
-    (message: string, tone: ToastTone = 'info', ms = 5000) => {
+    (message: string, tone: ToastTone = 'info', ms = 5000, action?: ToastAction) => {
       const id = ++counter;
-      setItems((l) => [...l, { id, message, tone }]);
+      setItems((l) => [...l, { id, message, tone, action }]);
       window.setTimeout(() => dismiss(id), ms);
     },
     [dismiss],
@@ -35,6 +42,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((t) => (
           <div key={t.id} className={`toast ${t.tone === 'info' ? '' : `toast--${t.tone}`}`}>
             <span className="toast__msg">{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => {
+                  t.action?.onClick();
+                  dismiss(t.id);
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <button type="button" className="btn btn--ghost" onClick={() => dismiss(t.id)} aria-label="Dismiss">
               {'×'}
             </button>
@@ -45,7 +64,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** Returns { show(message, tone?, ms?) }. */
+/** Returns { show(message, tone?, ms?, action?) }. */
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used inside ToastProvider');

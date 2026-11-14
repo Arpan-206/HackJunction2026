@@ -32,8 +32,21 @@ export type RallyEvent =
 
 export type RallyPhase = 'serve' | 'flight' | 'point' | 'round' | 'match';
 
+/** Bot skill used when none is given: reproduces the original fixed difficulty. */
+export const DEFAULT_BOT_SKILL = 0.5;
+
+/** Chance that the bot returns well, given the length of the rally and its skill (0 clumsy, 1 expert). */
+export function botGoodChance(rally: number, skill: number = DEFAULT_BOT_SKILL): number {
+  const s = Math.max(0, Math.min(1, skill));
+  const base = 0.65 + 0.3 * s;
+  const floor = 0.3 + 0.3 * s;
+  return Math.max(floor, base - rally * 0.02);
+}
+
 export interface RallyOptions {
   twoPlayer: boolean;
+  /** How well the bot plays, 0 to 1; scaled to the learner's rank. Defaults to the original difficulty. */
+  botSkill?: number;
   rounds: number;
   rng?: () => number;
   /** Stream time now, in seconds. */
@@ -148,7 +161,7 @@ export class RallyGame {
       reading = read(who);
       decision = reading ? decideReturn(reading) : { outcome: 'net', reason: 'no glove signal: the ball dies at your racket', quality: 0 };
     } else {
-      const pGood = Math.max(0.45, 0.8 - this.rally * 0.02);
+      const pGood = botGoodChance(this.rally, this.opts.botSkill);
       const miss = this.rng() > pGood;
       decision = miss
         ? this.rng() < 0.5

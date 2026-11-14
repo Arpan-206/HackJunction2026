@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Badge, Card } from '../../../components/ui';
+import { Card } from '../../../components/ui';
 import { useRecorder, type RecordContext, type RecorderPhase } from '../hooks/useRecorder';
 import type { TakeBook } from '../hooks/useTakeBook';
 import { CountdownRecord } from './CountdownRecord';
@@ -31,10 +31,10 @@ export function RecorderPanel({ slot, title, targetReps, book, contextFor, onRep
     <Card title={title} className="mst-rec">
       <div className="mst-rec__goal">
         <span className="mst-rec__count" aria-live="polite">
-          {kept}
+          {kept === 0 ? 'None' : kept}
           <small> of {targetReps} takes kept</small>
         </span>
-        {kept >= targetReps && <Badge tone="ok">Target reached</Badge>}
+        {kept >= targetReps && <span className="mst-ok">Target reached</span>}
       </div>
       <div className="mst-rec__dots" aria-hidden="true">
         {Array.from({ length: Math.max(targetReps, kept) }, (_, i) => (
@@ -43,7 +43,7 @@ export function RecorderPanel({ slot, title, targetReps, book, contextFor, onRep
       </div>
       <CountdownRecord recorder={recorder} context={contextFor(nextRep)} />
       {recorder.error && (
-        <p className="mst-alert" role="alert">
+        <p className="mst-alert mst-alert--error" role="alert">
           {recorder.error}
         </p>
       )}

@@ -1,9 +1,16 @@
 import { useParams } from 'react-router-dom';
 import type { Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
-import { Badge, ButtonLink, Card } from '../../../components/ui';
+import { stepSide } from '../hooks/useReferenceTrack';
+import { BackLink } from '../ApHeader';
+import { ButtonLink, Card } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { useProgress } from '../hooks/useProgress';
+import { PlanCard } from './PlanCard';
+import { dayKey, isDue } from '../pipeline/progress';
+import { useLessonProgress } from '../pipeline/useRank';
+import { RankLine } from './RankLine';
+import { SealCard } from './SealCard';
 import { VideoSlot } from './VideoSlot';
 
 /** Keeps the master's own wording when it already starts "Lesson N", otherwise numbers the step. */
@@ -21,12 +28,14 @@ export function LessonCourse() {
   const { lessonId = '' } = useParams();
   const { data: lesson, loading, error, offline } = useLessonById(lessonId);
   const progress = useProgress(lessonId);
+  const lp = useLessonProgress(lesson);
+  const today = dayKey(new Date());
 
   if (loading) return <p className="note ap-state">Opening the course...</p>;
   if (error || !lesson) {
     return (
       <div className="ap-state">
-        <PageHeader kicker="L'apprendista" title="Lesson not found" />
+        <PageHeader title="Lesson not found" />
         <p className="note">{error?.message ?? 'That lesson does not exist.'}</p>
         <ButtonLink to="/apprentice" variant="secondary">
           Back to lessons
@@ -41,7 +50,10 @@ export function LessonCourse() {
 
   return (
     <>
-      <PageHeader kicker={`${lesson.master_name} teaches`} title={lesson.title} />
+      <PageHeader title={lesson.title} />
+      <p className="ap-course__master">Taught by {lesson.master_name}</p>
+      {lp && <RankLine rank={lp.rank} />}
+      {lp?.rank === 'sealed' && <SealCard master={lesson.master_name} lesson={lesson.title} at={lp.sealedAt} score={lp.blindScore} />}
       {offline && <p className="note ap-banner">Backend offline: showing the built-in demo lesson.</p>}
       <div className="ap-course__summary">
         <p className="note ap-course__lede">{lesson.summary}</p>
@@ -63,23 +75,23 @@ export function LessonCourse() {
             <li key={s.id}>
               <Card as="article" className="ap-lesson">
                 <div className="ap-lesson__media">
-                  <VideoSlot url={s.video_url} title={s.title} />
+                  <VideoSlot url={s.video_url} title={s.title} motion={s.motion} prop={s.prop} side={stepSide(s)} />
                 </div>
                 <div className="ap-lesson__body">
-                  <p className="ap-kicker">
-                    {i + 1} of {lesson.steps.length}
-                  </p>
                   <h2>{lessonTitle(s, i)}</h2>
                   <p className="ap-lesson__instruction">{s.instruction}</p>
                   <ul className="ap-meta" aria-label="Lesson details">
                     <li>{s.repetitions} repetitions</li>
                     <li>&plusmn;{s.tolerance.angle_deg}&deg; room for error</li>
-                    <li>{s.reference_recording_id ? "Master's recording" : 'Mock guide'}</li>
+                    <li>{s.reference_recording_id ? "Expert's recording" : 'Mock guide'}</li>
                   </ul>
                   <div className="ap-lesson__foot">
                     <span className="ap-lesson__prog">
                       {p.attempts === 0 ? 'Not started' : `Best ${p.best} in ${p.attempts} ${p.attempts === 1 ? 'attempt' : 'attempts'}`}
-                      {p.best >= 70 && <Badge tone="ok">Passed</Badge>}
+                      {p.best >= 70 && <strong className="ap-lesson__passed">Passed</strong>}
+                      {lp?.steps[i]?.mastered_at && (
+                        <span className="ap-lesson__mastery">{isDue(lp.steps[i], today) ? 'Mastered blind. Review due.' : `Mastered blind. Next review ${lp.steps[i].next_due}.`}</span>
+                      )}
                     </span>
                     <ButtonLink to={`/apprentice/lessons/${lesson.id}/steps/${i}`} large>
                       {p.attempts === 0 ? 'Start practising' : 'Practise again'}
@@ -94,7 +106,6 @@ export function LessonCourse() {
           <li>
             <Card as="article" className="ap-lesson ap-lesson--test">
               <div className="ap-lesson__body ap-lesson__body--wide">
-                <p className="ap-kicker">The finale</p>
                 <h2>{test.title}</h2>
                 <p className="ap-lesson__instruction">{test.blurb}</p>
                 <ul className="ap-meta" aria-label="Test details">
@@ -112,10 +123,9 @@ export function LessonCourse() {
           </li>
         )}
       </ol>
+      <PlanCard lesson={lesson} />
       <div className="ap-course__back">
-        <ButtonLink to="/apprentice" variant="ghost">
-          All lessons
-        </ButtonLink>
+        <BackLink to="/apprentice">All lessons</BackLink>
       </div>
     </>
   );

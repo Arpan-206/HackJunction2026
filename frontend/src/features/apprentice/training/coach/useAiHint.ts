@@ -42,7 +42,7 @@ export function useAiHint({ enabled, stepId, instruction, toleranceDeg, timingMs
         const res = await api.coachHint({ step_id: stepId, instruction, deviations: info.deviation, timing_ms: info.lagMs });
         setHint({ text: res.hint, provider: res.provider, finger: info.finger });
       } catch {
-        const tip = algorithmicTip(info.deviation, toleranceDeg, info.lagMs, timingMs) ?? `${FINGER_LABEL[info.finger]}: match the master a little more closely.`;
+        const tip = algorithmicTip(info.deviation, toleranceDeg, info.lagMs, timingMs) ?? `${FINGER_LABEL[info.finger]}: match the expert a little more closely.`;
         setHint({ text: tip, provider: 'algorithm', finger: info.finger });
       } finally {
         busy.current = false;

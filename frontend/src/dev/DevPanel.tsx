@@ -14,24 +14,26 @@ const MOTIONS: Record<string, MotionSpec> = {
   idle: { preset: 'idle' },
 };
 
+/** Shown only when the URL carries ?dev=1 (remembered in localStorage until ?dev=0). */
 function shouldShow(): boolean {
   try {
-    if (new URLSearchParams(location.search).get('dev') === '1') {
+    const flag = new URLSearchParams(location.search).get('dev');
+    if (flag === '1') {
       localStorage.setItem(STORAGE_KEY, '1');
       return true;
     }
-    if (new URLSearchParams(location.search).get('dev') === '0') {
+    if (flag === '0') {
       localStorage.removeItem(STORAGE_KEY);
-      return import.meta.env.VITE_DEV_PANEL === 'true';
+      return false;
     }
-    return localStorage.getItem(STORAGE_KEY) === '1' || import.meta.env.VITE_DEV_PANEL === 'true';
+    return localStorage.getItem(STORAGE_KEY) === '1';
   } catch {
-    return import.meta.env.VITE_DEV_PANEL === 'true';
+    return false;
   }
 }
 
 /**
- * Floating developer panel (backend switches, smoothing, theme, guidance default).
+ * Floating developer panel (backend switches, smoothing, theme, guidance default). Renders only with ?dev=1.
  * Delete this import and the <DevPanel /> in main.tsx before the demo.
  */
 export function DevPanel() {
@@ -42,7 +44,7 @@ export function DevPanel() {
     <aside className="dev" aria-label="Developer panel">
       {open && <Body />}
       <button type="button" className="dev__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        {open ? 'Close dev' : 'Dev'}
+        {open ? 'Close' : 'Dev'}
       </button>
     </aside>
   );
@@ -93,6 +95,7 @@ function Body() {
           <option value="simulator">simulator</option>
           <option value="rokoko_udp">rokoko_udp</option>
           <option value="rokoko_sdk">rokoko_sdk</option>
+          <option value="external">external</option>
         </select>
       </label>
 

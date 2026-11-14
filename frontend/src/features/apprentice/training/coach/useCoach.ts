@@ -67,6 +67,8 @@ const ALL_GOOD: Record<Finger, FingerStatus> = { thumb: 'good', index: 'good', m
 const SUSTAINED_OFF_S = 1.5;
 const TICK_MS = 33;
 const VIEW_MS = 125;
+/** Upper bound on buffered attempt frames (about 30 Hz for two minutes), well inside the scorer's limit. */
+const MAX_ATTEMPT_FRAMES = 4000;
 
 export interface UseCoachOptions {
   track: ReferenceTrack | null;
@@ -78,8 +80,15 @@ export interface UseCoachOptions {
   clumsy: boolean;
   /** Called when one finger has stayed out of tolerance for 1.5 s (repeats every 1.5 s while it stays out). */
   onSustainedOff?: (info: { finger: Finger; deviation: FingerValues; lagMs: number }) => void;
+  /** Playback speed of the reference in Flow practice (1 by default; the Watch stage plays at 0.5 first). */
+  rate?: number;
   /** Called when Follow practice reaches its final checkpoint. */
   onFollowDone?: () => void;
+  /**
+   * Called once per attempt when the first learner frame is actually recorded. A phase-locked simulator only starts on the
+   * next beat of the reference, so this can come up to one motion period after begin(); time the attempt from here.
+   */
+  onRecordStart?: () => void;
 }
 
 export interface Coach {
@@ -92,6 +101,11 @@ export interface Coach {
   end: () => AttemptStats;
   /** Moves a waiting Follow ghost on. */
   skip: () => void;
+  /**
+   * The learner frames actually compared during the last attempt (after any clumsy simulation), with `t` re-based so that
+   * zero is the reference's first beat. Ready to send to the scorer as `attempt_frames`.
+   */
+  frames: () => GloveFrame[];
 }
 
 function initialView(): CoachView {
@@ -116,11 +130,14 @@ export function useCoach(opts: UseCoachOptions): Coach {
   const run = useRef({
     running: false,
     startWall: performance.now(),
+    clock: 0,
     follow: startFollow() as FollowState,
     lastTick: performance.now(),
     sums: { abs: zeroValues(), good: zeroValues(), lag: 0, lagN: 0, n: 0, seconds: 0 },
     offSince: {} as Partial<Record<Finger, number>>,
     lastView: 0,
+    frames: [] as GloveFrame[],
+    base: null as number | null,
     lagMs: 0,
     tip: null as string | null,
   });
@@ -132,6 +149,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
   useEffect(() => {
     run.current.follow = startFollow();
     run.current.startWall = performance.now();
+    run.current.clock = 0;
     avg.current.reset();
     sim.current.reset();
   }, [track, mode, clumsy]);
@@ -155,7 +173,9 @@ export function useCoach(opts: UseCoachOptions): Coach {
       L.hasLearner = Boolean(learner);
 
       // Reference clock. A simulated glove is phase-locked so the ghost and the simulator share a beat.
-      const lock = frame?.source === 'simulator' && trk.periodic;
+      const rate = o.rate ?? 1;
+      r.clock += dt * rate;
+      const lock = frame?.source === 'simulator' && trk.periodic && rate === 1;
       let refTime: number;
       if (o.mode === 'follow') {
         const matched = r.running && FINGERS.every((f) => L.status[f] === 'good') && L.hasLearner;
@@ -167,9 +187,18 @@ export function useCoach(opts: UseCoachOptions): Coach {
           o.onFollowDone?.();
         }
       } else {
-        refTime = lock && frame ? frame.t : (now - r.startWall) / 1000;
+        refTime = lock && frame ? frame.t : r.clock;
       }
       L.refTime = refTime;
+      if (r.running && learner && frame && r.frames.length < MAX_ATTEMPT_FRAMES) {
+        // The scorer re-bases the first frame to zero, so a phase-locked attempt starts on the next beat of the reference.
+        // Follow practice drives its own reference clock from zero, so only Flow waits for the beat.
+        r.base ??= lock && o.mode === 'flow' && trk.period > 0 ? Math.ceil(refTime / trk.period) * trk.period : 0;
+        if (refTime >= r.base - 1e-6) {
+          if (r.frames.length === 0) o.onRecordStart?.();
+          r.frames.push({ t: Math.max(0, refTime - r.base), source: frame.source, hands: [learner] });
+        }
+      }
       L.master = trk.handAt(refTime);
 
       if (learner && trk) {
@@ -243,8 +272,11 @@ export function useCoach(opts: UseCoachOptions): Coach {
     const r = run.current;
     r.sums = { abs: zeroValues(), good: zeroValues(), lag: 0, lagN: 0, n: 0, seconds: 0 };
     r.offSince = {};
+    r.frames = [];
+    r.base = null;
     r.follow = startFollow();
     r.startWall = performance.now();
+    r.clock = 0;
     r.running = true;
   }, []);
 
@@ -275,6 +307,8 @@ export function useCoach(opts: UseCoachOptions): Coach {
     skipCheckpoint(run.current.follow, cpRef.current);
   }, []);
 
+  const frames = useCallback((): GloveFrame[] => run.current.frames, []);
+
   const subscribe = useCallback((cb: () => void) => {
     listeners.current.add(cb);
     return () => {
@@ -283,7 +317,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
   }, []);
   const getView = useCallback(() => viewRef.current, []);
 
-  return useMemo(() => ({ live, subscribe, getView, begin, end, skip }), [subscribe, getView, begin, end, skip]);
+  return useMemo(() => ({ live, subscribe, getView, begin, end, skip, frames }), [subscribe, getView, begin, end, skip, frames]);
 }
 
 /** Subscribes a component to the coach's coarse (about 8 Hz) view. */

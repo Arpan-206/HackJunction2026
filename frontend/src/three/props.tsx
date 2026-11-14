@@ -1,9 +1,22 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three';
 import type { HandHandle } from './Hand';
 import { toonGradient } from './materials';
+import { Optional } from './atmosphere';
 import { useStageColors } from './stageContext';
+import { createMarbleMaterial } from './surfaces';
+
+/** Polished marble slab under the keyboard. Falls back to nothing if the textures cannot load. */
+function MarbleBase({ y, width }: { y: number; width: number }) {
+  const mat = useMemo(() => createMarbleMaterial('#e6e0d6', [width / 2, 0.8]), [width]);
+  useEffect(() => () => mat.dispose(), [mat]);
+  return (
+    <mesh position={[0, y - 0.08, -1.75]} material={mat}>
+      <boxGeometry args={[width + 0.4, 0.07, 1.5]} />
+    </mesh>
+  );
+}
 
 function inflate(geo: BufferGeometry, amount: number): BufferGeometry {
   const g = geo.clone();
@@ -27,7 +40,7 @@ function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: 
  * A table-tennis racket in hand space (handle across the palm, blade towards the thumb side). Mount it as a child
  * of <Hand> so it follows the wrist: `<Hand><Racket /></Hand>`.
  */
-export function Racket({ rubber = '#b2321b' }: { rubber?: string }) {
+export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
   const stage = useStageColors();
   const group = useMemo(() => {
     const g = new Group();
@@ -158,5 +171,14 @@ export function Keyboard({ keys = 11, y = -0.49, handRef, activeKey = null }: Ke
     built.list.forEach((k, i) => k.mat.color.copy(i === idx ? gold : built.whiteBase));
   });
 
-  return <primitive object={built.g} />;
+  return (
+    <>
+      <primitive object={built.g} />
+      <Optional>
+        <Suspense fallback={null}>
+          <MarbleBase y={y} width={keys * w} />
+        </Suspense>
+      </Optional>
+    </>
+  );
 }
