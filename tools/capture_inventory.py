@@ -231,6 +231,30 @@ def stretch_rows(w: dict, cfg=None) -> list[dict]:
     return rows
 
 
+def clock_label(t_s: float, wall_start: str | None) -> str:
+    """Capture seconds as a wall clock, given the wall time of capture second 0 (HH:MM:SS); '' without one."""
+    if not wall_start:
+        return ""
+    h, m, s = (int(x) for x in wall_start.split(":"))
+    x = h * 3600 + m * 60 + s + int(round(t_s))
+    return f"{x // 3600 % 24:02d}:{x % 3600 // 60:02d}:{x % 60:02d}"
+
+
+def markdown(report: dict, wall_start: str | None = None) -> str:
+    """The stretch table as Markdown, one row per stretch, in capture order."""
+    lines = [
+        "| # | Hand | Start (s) | Clock, about | Length (s) | Pose (raw curls) | Thumb | Index | Middle | Ring | Little |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for k, r in enumerate(report["stretches"], 1):
+        f = r["flex_deg"]
+        lines.append(
+            f"| {k} | {r['side']} | {r['start_s']:.1f} | {clock_label(r['start_s'], wall_start)} | {r['length_s']:.1f} | {r['pose']} | "
+            f"{f['thumb']:.0f} | {f['index']:.0f} | {f['middle']:.0f} | {f['ring']:.0f} | {f['little']:.0f} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("capture", type=Path)
@@ -238,6 +262,8 @@ def main() -> int:
     ap.add_argument("--cache", type=Path, help="write (or with --reuse, read) the sampled hands here")
     ap.add_argument("--reuse", action="store_true")
     ap.add_argument("--json", type=Path, help="write the summary, activity and stretches here")
+    ap.add_argument("--md", type=Path, help="write the stretch table here as Markdown")
+    ap.add_argument("--wall-start", default=None, help="wall clock of capture second 0, HH:MM:SS, for the md table")
     a = ap.parse_args()
     cfg = load_config(None)
     if a.reuse and a.cache and a.cache.exists():
@@ -262,6 +288,8 @@ def main() -> int:
     print(f"{len(report['stretches'])} still stretches of {MIN_STILL_S:.0f} s or more")
     if a.json:
         a.json.write_text(json.dumps(report, indent=1, default=str))
+    if a.md:
+        a.md.write_text(markdown(report, a.wall_start))
     return 0
 
 
