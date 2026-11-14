@@ -104,7 +104,7 @@ export function roleSelectBlock(s: CameraSnapshot): string {
   if (Math.abs(s.target[0]) > 0.0005 || Math.abs(s.target[2]) > 0.0005) {
     lines.push(
       `// Panned off the ring column: target x = ${r3(s.target[0])}, z = ${r3(s.target[2])}. RoleSelect aims at (0, CARD_AIM_Y, 0),`,
-      `// so add these to CARD_CAMERA and AimAtHand's lookAt, or reset the pan.`,
+      `// so add these to CARD_CAMERA and CARD_AIM_Y (the role cards' orbit target), or reset the pan.`,
     );
   }
   lines.push(`// fov ${r3(s.fov)}, ${s.hand} hand, read at canvas aspect ${r3(s.aspect)}`);

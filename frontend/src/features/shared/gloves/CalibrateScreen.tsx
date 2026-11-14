@@ -212,7 +212,7 @@ function VerifyStep({ sides, onDone }: { sides: Side[]; onDone: (verified: boole
             <div key={s} className="gl-glove">
               <h3 className="gl-glove__title">{s === 'left' ? 'Left hand' : 'Right hand'}</h3>
               <div className="gl-glove__view">
-                <HandCanvas preset="closeup" stage={{ decor: false, showGrid: false, controls: 'none' }} label={`${s} hand, moving with yours`}>
+                <HandCanvas preset="closeup" stage={{ decor: false, showGrid: false, controls: 'orbit', target: [0, 0, 0] }} label={`${s} hand, moving with yours`}>
                   <Hand side={s} style="wood" live={gloves.latest} />
                 </HandCanvas>
               </div>

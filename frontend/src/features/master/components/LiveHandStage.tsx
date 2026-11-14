@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { GloveStreamHandle, HandFrame, Hands, Prop, Side } from '../../../api';
-import { Hand, HandCanvas, Racket } from '../../../three';
+import { Hand, HandCanvas, PAIR_LIFT, PAIR_SPREAD, PAIR_STAGE, Racket } from '../../../three';
 import { useHandSides } from '../hooks/useHandSides';
 import { handsSides } from '../../shared/sessionPrefs';
 import { CameraControls, ExpertCameraRig, useCameraRig } from './ExpertCamera';
@@ -42,13 +42,13 @@ export function LiveHandStage({ glove, showJoints, showTrails, prop = 'none', ha
   const holder: Side = sides.length === 1 ? sides[0] : 'right';
   const rig = useCameraRig();
   const frame = firstPerson ? expertFrame('record', sides) : null;
-  const spread = frame ? PAIR_HALF_GAP : 0.85;
+  const spread = frame ? PAIR_HALF_GAP : PAIR_SPREAD;
   return (
     <div className={`mst-stage ${live ? 'mst-stage--live' : ''}`}>
-      <HandCanvas preset={pair ? 'pair' : prop === 'racket' ? 'racket' : 'single'} stage={frame ? expertStage(frame) : undefined} label="Live view of your glove hand">
+      <HandCanvas preset={pair ? 'pair' : prop === 'racket' ? 'racket' : 'single'} stage={frame ? expertStage(frame) : pair ? PAIR_STAGE : undefined} label="Live view of your glove hand">
         {frame && <ExpertCameraRig frame={frame} sides={sides} preset={EXPERT_STAGE_CAMERA[frame.key]} rig={rig} />}
         {sides.map((s) => {
-          const at: [number, number, number] = pair ? [s === 'left' ? -spread : spread, 0, 0] : [0, 0, 0];
+          const at: [number, number, number] = pair ? [s === 'left' ? -spread : spread, PAIR_LIFT, 0] : [0, 0, 0];
           const ghost = playback?.ghost;
           return (
             <group key={`${s}-${playback ? 'take' : 'live'}`}>

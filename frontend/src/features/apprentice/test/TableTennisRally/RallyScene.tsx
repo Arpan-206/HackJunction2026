@@ -199,7 +199,8 @@ export function RallyScene({ game, gloves, twoPlayer, showProp = true }: RallySc
     <HandCanvas
       preset="single"
       label="A table tennis table seen from behind the near player"
-      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'none', cameraPosition: [0, 2.1, 3.9], target: [0, 0.78, -0.3] }}
+      // The view the game has always opened on (it looked at the world origin, the middle of the table): orbit round that.
+      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'orbit', cameraPosition: [0, 2.1, 3.9], target: [0, 0, 0] }}
     >
       <Table />
       <BallMesh game={game} />

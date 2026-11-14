@@ -1,5 +1,6 @@
 export { Hand, type HandProps, type HandHandle } from './Hand';
-export { HandCanvas, Stage, PRESETS, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
+export { HandCanvas, Stage, PRESETS, PAIR_LIFT, PAIR_SPREAD, PAIR_STAGE, pairPosition, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
+export { ResetViewButton, StageOrbit, useStageOrbit, ORBIT_FLOOR_GAP, type OrbitLink, type OrbitRig, type OrbitView, type ResetCorner } from './StageOrbit';
 export { Racket, Keyboard, RACKET_BLADE } from './props';
 export { BallSketch, KeysSketch, PropCue, RacketSketch } from './sketchProps';
 export { JointRings, FingertipTrails } from './overlays';

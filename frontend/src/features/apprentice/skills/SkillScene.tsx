@@ -155,7 +155,7 @@ export function SkillLive({ scene, getFrame, side = 'right', label, orbit = fals
       className={className}
       preset="single"
       label={label}
-      stage={{ ...st, controls: orbit ? 'limited' : 'none', decor: true, ...(orbit ? {} : { quality: 'low' as const }) }}
+      stage={{ ...st, controls: orbit ? 'orbit' : 'none', decor: true, ...(orbit ? {} : { quality: 'low' as const }) }}
     >
       {!orbit && <LookAt target={st.target} />}
       <SkillSet scene={scene} side={side} getFrame={getFrame} />

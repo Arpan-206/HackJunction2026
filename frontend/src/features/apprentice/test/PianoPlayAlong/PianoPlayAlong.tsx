@@ -144,7 +144,7 @@ export function PianoPlayAlong({ spec, lesson }: { spec: TestSpec; lesson?: Less
   return (
     <div className={`ap-arena ap-arena--piano ${stage === 'playing' ? 'ap-arena--live' : ''}`}>
       <div className="ap-arena__scene">
-        <PianoScene gloves={gloves} twoPlayer={twoPlayer} showProp={showProps} />
+        <PianoScene gloves={gloves} twoPlayer={twoPlayer} showProp={showProps} resetKey={run} />
         {stage === 'playing' && live.next && (
           <div className="ap-next" role="status" aria-live="polite">
             <span className="ap-next__round">

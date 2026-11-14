@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Euler, Quaternion } from 'three';
-import { curlsToFlexion, Hand, HandCanvas, Keyboard, Racket, type CameraPreset, type HandStyle } from '../three';
+import { curlsToFlexion, Hand, HandCanvas, Keyboard, PAIR_LIFT, PAIR_SPREAD, PAIR_STAGE, pairPosition, Racket, type CameraPreset, type HandStyle } from '../three';
 import type { HandFrame, MotionSpec, Side } from '../api';
 import { PageHeader } from '../components/PageHeader';
 import { Button, Tabs } from '../components/ui';
@@ -49,9 +49,9 @@ function AnatomyGrid() {
         <Cell key={a.title} title={a.title} preset={a.preset}>
           {a.pair ? (
             <>
-              <Hand style="chalk" side="left" frame={held([0.2, 0.3, 0.35, 0.4, 0.45], [0, 0, 0], 'left')} position={[-1.0, 0, 0]} />
-              <Hand style="sketch" side="right" frame={a.frame} position={[1.0, 0, 0]} />
-              <Hand style="ghost" side="right" frame={held([0.6, 0.7, 0.75, 0.8, 0.8])} position={[1.1, 0.08, -0.1]} />
+              <Hand style="chalk" side="left" frame={held([0.2, 0.3, 0.35, 0.4, 0.45], [0, 0, 0], 'left')} position={pairPosition('left')} />
+              <Hand style="sketch" side="right" frame={a.frame} position={pairPosition('right')} />
+              <Hand style="ghost" side="right" frame={held([0.6, 0.7, 0.75, 0.8, 0.8])} position={[PAIR_SPREAD + 0.1, PAIR_LIFT + 0.08, -0.1]} />
             </>
           ) : (
             <Hand style={a.style} frame={a.frame} {...(a.yaw ? turned(a.yaw) : {})} fingerTint={a.marks ? { ring: '#B2321B' } : undefined} focusFinger={a.marks ? 'index' : null}>
@@ -68,7 +68,7 @@ function Cell({ title, preset, cam, children }: { title: string; preset?: Camera
   return (
     <figure style={{ margin: 0 }}>
       <div style={{ height: 520 }}>
-        <HandCanvas preset={preset ?? 'single'} stage={cam ? { cameraPosition: cam, showShadow: false } : undefined}>{children}</HandCanvas>
+        <HandCanvas preset={preset ?? 'single'} stage={cam ? { cameraPosition: cam, showShadow: false } : preset === 'pair' ? PAIR_STAGE : undefined}>{children}</HandCanvas>
       </div>
       <figcaption className="note">{title}</figcaption>
     </figure>

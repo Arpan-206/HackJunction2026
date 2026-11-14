@@ -5,7 +5,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { FINGERS } from '../../../../api/types';
-import { Hand, HandCanvas, Keyboard, PropCue, Racket, RacketSketch, STRING_POINTS, useStageColors, writeStringSegments, type HandHandle, type StageProps } from '../../../../three';
+import { Hand, HandCanvas, Keyboard, PropCue, Racket, RacketSketch, STRING_POINTS, useStageColors, useStageOrbit, writeStringSegments, type HandHandle, type OrbitView, type StageProps } from '../../../../three';
 import { FaultMarks } from '../modes/FaultMarks';
 import { LearnerHand } from '../modes/LearnerHand';
 import { Crossbar } from '../modes/Strings';
@@ -32,7 +32,7 @@ function cardCamera(distance: number, elevationDeg: number, aimY: number): Vecto
   const el = (elevationDeg * Math.PI) / 180;
   return new Vector3(distance * Math.sin(az) * Math.cos(el), aimY + distance * Math.sin(el), distance * Math.cos(az) * Math.cos(el));
 }
-const STAGE: StageProps = { controls: 'none', groundY: GROUND_Y, showCircle: false, circleCenter: [0, 0], circleRadius: 1.25, shadowSize: [2.4, 2.6], cameraPosition: [1.7, 4.2, 3.2] };
+const STAGE: StageProps = { controls: 'orbit', groundY: GROUND_Y, showCircle: false, circleCenter: [0, 0], circleRadius: 1.25, shadowSize: [2.4, 2.6], cameraPosition: [1.7, 4.2, 3.2], target: [0, AIM_Y, 0] };
 
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -84,19 +84,42 @@ export function PracticeStage({ coach, gloves, side, prop, cue, policy, toleranc
   );
 }
 
-/** Moves the fixed camera between the watching frame (puppeteer and puppet) and the role-card frame on one hand. */
+/**
+ * The stage's default view, between the watching frame (puppeteer and puppet) and the role-card frame on one hand. The
+ * learner may orbit away from it; the change from watching to trying carries the camera to the new frame, and Reset view
+ * comes back to whichever frame is current.
+ */
 function FramingCamera({ progress, far }: { progress: () => number; far: number }) {
   const camera = useThree((s) => s.camera);
-  const scratch = useMemo(() => ({ watch: cardCamera(8 * far, 24, AIM_Y + WATCH_RAISE), card: cardCamera(5.8 * far, 55, AIM_Y), pos: new Vector3(), aim: new Vector3() }), [far]);
-  const apply = () => {
+  const orbit = useStageOrbit();
+  const scratch = useMemo(() => ({ watch: cardCamera(8 * far, 24, AIM_Y + WATCH_RAISE), card: cardCamera(5.8 * far, 55, AIM_Y), pos: new Vector3() }), [far]);
+  const shown = useRef<number | null>(null);
+  const view = (): OrbitView => {
     const e = ease(progress());
     scratch.pos.lerpVectors(scratch.watch, scratch.card, e);
-    scratch.aim.set(0, AIM_Y + WATCH_RAISE * (1 - e), 0);
-    camera.position.copy(scratch.pos);
-    camera.lookAt(scratch.aim);
+    return { position: [scratch.pos.x, scratch.pos.y, scratch.pos.z], target: [0, AIM_Y + WATCH_RAISE * (1 - e), 0] };
   };
-  useLayoutEffect(apply);
-  useFrame(apply);
+  if (orbit) orbit.framing = view;
+  // Move the camera only while the framing itself moves, so an orbit the learner made stays put between changes.
+  const apply = (force: boolean) => {
+    const e = ease(progress());
+    if (!force && shown.current === e) return;
+    shown.current = e;
+    const v = view();
+    if (orbit?.rig) orbit.rig.place(v);
+    else {
+      camera.position.set(...v.position);
+      camera.lookAt(...v.target);
+    }
+  };
+  useLayoutEffect(() => apply(true), [scratch]); // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(
+    () => () => {
+      if (orbit) orbit.framing = null;
+    },
+    [orbit],
+  );
+  useFrame(() => apply(false));
   return null;
 }
 

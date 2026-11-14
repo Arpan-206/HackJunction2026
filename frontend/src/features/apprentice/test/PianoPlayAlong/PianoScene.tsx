@@ -7,15 +7,17 @@ interface PianoSceneProps {
   twoPlayer: boolean;
   /** Draw the solid keyboard; otherwise the keys are sketched in chalk on the table. */
   showProp?: boolean;
+  /** Whenever this changes the view snaps back to its default (each new run starts on the usual view). */
+  resetKey?: unknown;
 }
 
 /** The paper keyboard on the table with one wooden hand over it, or two keyboards and two hands for the duel. */
-export function PianoScene({ gloves, twoPlayer, showProp = true }: PianoSceneProps) {
+export function PianoScene({ gloves, twoPlayer, showProp = true, resetKey }: PianoSceneProps) {
   const Keys = showProp ? Keyboard : KeysSketch;
   const right = useRef<HandHandle>(null);
   const left = useRef<HandHandle>(null);
   return (
-    <HandCanvas preset="keyboard" label="A paper keyboard on the table with your wooden hands above it" stage={{ cameraPosition: [0, 3.1, 2.4], target: [0, -0.4, -1.15] }}>
+    <HandCanvas preset="keyboard" label="A paper keyboard on the table with your wooden hands above it" stage={{ cameraPosition: [0, 3.1, 2.4], target: [0, -0.4, -1.15] }} resetKey={resetKey}>
       {twoPlayer ? (
         <>
           <group position={[-0.78, 0, 0]}>

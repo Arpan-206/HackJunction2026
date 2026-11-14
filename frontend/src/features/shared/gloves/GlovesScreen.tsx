@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGloveStream, type GloveDeviceStatus, type GloveIssue, type GloveRigStatus } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
-import { Hand, HandCanvas } from '../../../three';
+import { Hand, HandCanvas, type StageProps } from '../../../three';
 import { useDemoMode } from '../settings';
 import { CalibrationInUse } from './CalibrationInUse';
 import { DemoCheck } from './DemoCheck';
@@ -27,8 +27,8 @@ function SensorList({ g }: { g: GloveDeviceStatus }) {
   );
 }
 
-/** A live hand sits in a canvas of its own inside its box (so it scrolls with the page): plain stage, fixed camera. */
-const LIVE_STAGE = { decor: false, showGrid: false, controls: 'none' } as const;
+/** A live hand sits in a canvas of its own inside its box (so it scrolls with the page): plain stage, drag to turn it round. */
+const LIVE_STAGE: StageProps = { decor: false, showGrid: false, controls: 'orbit', target: [0, 0, 0] };
 
 function GloveColumn({ g, live }: { g: GloveDeviceStatus; live: ReturnType<typeof useGloveStream>['latest'] }) {
   const facts = gloveFacts(g);

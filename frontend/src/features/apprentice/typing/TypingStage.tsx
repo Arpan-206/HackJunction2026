@@ -28,6 +28,8 @@ interface TypingStageProps {
   /** The expert's hands as ghosts over the learner's, for the lesson room. */
   ghost?: Record<Side, () => HandFrame | null> | null;
   label: string;
+  /** Whenever this changes the view snaps back to its default (a game's round start). */
+  resetKey?: unknown;
   /** Extra things inside the canvas, such as the correction marks. */
   children?: ReactNode;
 }
@@ -61,9 +63,9 @@ function Hands({ hands, ghost, style = 'wood' }: Pick<TypingStageProps, 'hands' 
 }
 
 /** Two hands over a QWERTY keyboard on the bench: the stage for touch typing lessons, air typing and the keyboard mode. */
-export function TypingStage({ solid, target = null, getTarget, good = null, hands, ghost = null, style, label, children }: TypingStageProps) {
+export function TypingStage({ solid, target = null, getTarget, good = null, hands, ghost = null, style, label, resetKey, children }: TypingStageProps) {
   return (
-    <HandCanvas preset="keyboard" label={label} stage={TYPING_CAMERA}>
+    <HandCanvas preset="keyboard" label={label} stage={TYPING_CAMERA} resetKey={resetKey}>
       <TypingKeyboard solid={solid} target={target} getTarget={getTarget} good={good} />
       <Hands hands={hands} ghost={ghost} style={style} />
       {children}

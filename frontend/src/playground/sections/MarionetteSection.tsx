@@ -75,7 +75,7 @@ export default function MarionetteSection() {
         <HandCanvas
           preset="single"
           label="The expert's hand hangs from a marionette cross above the wooden hand, with a string to each fingertip"
-          stage={{ cameraPosition: [2.7, 3.5, 4.9], target: [0, 0.9, -0.85], circleCenter: [0, -0.5], controls: 'limited' }}
+          stage={{ cameraPosition: [2.7, 3.5, 4.9], target: [0, 0.9, -0.85], circleCenter: [0, -0.5], controls: 'orbit' }}
         >
           <FingerTinter hand={master} coach={coach} policy={policy} goodTint={false} />
           {keyboard && <Keyboard handRef={learner} />}

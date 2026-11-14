@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { GloveFrame, Hands, Prop, Side } from '../../../api';
 import { Button } from '../../../components/ui';
-import { Hand, HandCanvas, Racket } from '../../../three';
+import { Hand, HandCanvas, PAIR_STAGE, pairPosition, Racket } from '../../../three';
 import { framesDuration, usePlayback } from '../../shared/playback';
 import { useRecording } from '../hooks/useRecording';
 import { FingerLanes } from './FingerLanes';
@@ -58,19 +58,19 @@ export function ReplayPlayer({ items, side = 'right', hands, prop = 'none', onCl
   return (
     <section className="mst-replay" aria-label={compare ? 'Compare two takes' : 'Replay take'}>
       <div className="mst-replay__stage">
-        <HandCanvas preset={compare || both ? 'pair' : prop === 'racket' ? 'racket' : 'single'} label="Replay of your recorded take">
+        <HandCanvas preset={compare || both ? 'pair' : prop === 'racket' ? 'racket' : 'single'} stage={compare || both ? PAIR_STAGE : undefined} label="Replay of your recorded take">
           {both ? (
             (['left', 'right'] as const).map((s) => (
-              <Hand key={s} side={s} style="chalk" getFrame={() => pa.getFrame(s)} position={[s === 'left' ? -0.85 : 0.85, 0, 0]}>
+              <Hand key={s} side={s} style="chalk" getFrame={() => pa.getFrame(s)} position={pairPosition(s)}>
                 {prop === 'racket' && s === 'right' && <Racket />}
               </Hand>
             ))
           ) : (
-            <Hand side={side} style="chalk" getFrame={() => pa.getFrame(side)} position={compare ? [-0.85, 0, 0] : [0, 0, 0]}>
+            <Hand side={side} style="chalk" getFrame={() => pa.getFrame(side)} position={compare ? pairPosition('left') : [0, 0, 0]}>
               {prop === 'racket' && <Racket />}
             </Hand>
           )}
-          {compare && <Hand side={side} style="chalk" getFrame={() => pb.getFrame(side)} position={[0.85, 0, 0]} />}
+          {compare && <Hand side={side} style="chalk" getFrame={() => pb.getFrame(side)} position={pairPosition('right')} />}
         </HandCanvas>
         <div className="mst-stage__overlay">
           {items.map((it) => (

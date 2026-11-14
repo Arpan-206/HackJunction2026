@@ -1,11 +1,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { Group, Vector3 } from 'three';
+import { Group } from 'three';
 import { useTheme } from '../theme';
 import { BackdropProps, WorkshopLight, type StageQuality } from './atmosphere';
 import { Sketchbook, type SheetRect } from './sketchbook';
 import { StageAnchorContext, StageColorsContext, useStageColors } from './stageContext';
+import { ResetViewButton, StageOrbit, StageOrbitContext, type OrbitLink, type ResetCorner } from './StageOrbit';
 
 export type CameraPreset = 'single' | 'pair' | 'racket' | 'keyboard' | 'closeup';
 
@@ -31,6 +31,21 @@ export const PRESETS: Record<CameraPreset, PresetDef> = {
   closeup: { groundY: -0.55, position: z(0.85), target: [0, -0.1, -0.6], circle: 1.2, circleCenter: [0, -0.5], shadow: [1.8, 2], centreHands: true },
 };
 
+/**
+ * Two hands side by side (the 'pair' preset): each hand's anchor this far either side of the centre, and this far above
+ * its usual height, so two fists or two spread hands never meet or touch the bench. Positioning will come later.
+ */
+export const PAIR_SPREAD = 1.3;
+export const PAIR_LIFT = 0.15;
+/** Where a hand of a pair goes: left of centre or right, lifted. */
+export const pairPosition = (side: 'left' | 'right'): [number, number, number] => [side === 'left' ? -PAIR_SPREAD : PAIR_SPREAD, PAIR_LIFT, 0];
+/**
+ * The 'pair' preset's stage for two hands at PAIR_SPREAD: a wider ring and shadow, the camera drawn back just enough to
+ * keep both hands whole. (The preset itself stays as it is for the stages that only borrow its framing, such as the
+ * robot twin.)
+ */
+export const PAIR_STAGE: StageProps = { cameraPosition: z(2.0), circleRadius: 2.9, shadowSize: [6.2, 2.8] };
+
 export interface StageProps {
   /** Height of the paper; the grid, circle and hatched shadow sit here. Default -0.55. */
   groundY?: number;
@@ -42,11 +57,15 @@ export interface StageProps {
   /** Centre of the construction circle on the ground (x, z). */
   circleCenter?: readonly [number, number];
   shadowSize?: readonly [number, number];
-  /** limited: orbit within a safe window (no pan, little zoom). none: fixed camera. */
-  controls?: 'limited' | 'none';
-  /** Orbit target. */
+  /**
+   * orbit (default): turn all the way round the target, from overhead down to just above the bench, zoom within limits,
+   * with a Reset view button (see StageOrbit). none: a fixed camera, for stills and previews (it looks at the world
+   * origin unless the scene aims it).
+   */
+  controls?: 'orbit' | 'none';
+  /** Orbit target: the point the camera turns round and looks at. */
   target?: [number, number, number];
-  /** Camera start position, used to centre the azimuth window. */
+  /** The default camera position: the stage opens here and Reset view returns here. */
   cameraPosition?: [number, number, number];
   /**
    * Set dressing: the workshop image light (it gives the wooden hand its sheen) and, at 'high' quality, the still-life
@@ -56,11 +75,15 @@ export interface StageProps {
   decor?: boolean;
   /** 'high' (default) adds the still-life props; 'low' keeps the paper and light only. */
   quality?: StageQuality;
+  /** The orbit's link to the page (HandCanvas passes it, for its Reset view button). */
+  orbitLink?: OrbitLink;
+  /** Whenever this changes the orbit snaps back to the default view (a game's round start). */
+  resetKey?: unknown;
 }
 
 /**
  * The 3D set: a sketchbook page with a parchment study sheet (fine ink grid, double ruled border), the construction
- * circle in ink, the hands' shadows hatched in iron-gall ink, lights and orbit controls.
+ * circle in ink, the hands' shadows hatched in iron-gall ink, lights and the orbit (StageOrbit).
  */
 export function Stage({
   groundY = -0.55,
@@ -70,15 +93,15 @@ export function Stage({
   circleRadius = 1.55,
   circleCenter = [0, -0.5],
   shadowSize = [2.4, 2.6],
-  controls = 'limited',
+  controls = 'orbit',
   target = [0, -0.12, -0.62],
   cameraPosition = [1.9, 2.7, 2.4],
   decor = true,
   quality = 'high',
+  orbitLink,
+  resetKey,
 }: StageProps) {
   const s = useStageColors();
-  const az = Math.atan2(cameraPosition[0] - target[0], cameraPosition[2] - target[2]);
-  const dist = new Vector3(...cameraPosition).distanceTo(new Vector3(...target));
   const [ccx, ccz] = circleCenter;
   const circleGeo = useMemo(() => {
     const loop: number[] = [];
@@ -129,21 +152,7 @@ export function Stage({
           </lineSegments>
         </group>
       )}
-      {controls === 'limited' && (
-        <OrbitControls
-          target={target}
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={dist * 0.7}
-          maxDistance={dist * 1.25}
-          minPolarAngle={0.25}
-          maxPolarAngle={1.42}
-          minAzimuthAngle={az - 0.85}
-          maxAzimuthAngle={az + 0.85}
-          rotateSpeed={0.6}
-        />
-      )}
+      {controls === 'orbit' && <StageOrbit position={cameraPosition} target={target} groundY={groundY} link={orbitLink} resetKey={resetKey} />}
     </>
   );
 }
@@ -175,15 +184,45 @@ export interface HandCanvasProps {
    * sketchbook stage always has them, for the hatched hand shadows.
    */
   shadows?: boolean;
+  /** Whenever this changes an orbiting stage snaps back to its default view (a game's round start). */
+  resetKey?: unknown;
+  /**
+   * How an orbiting stage gets back to its default view: 'button' (default), the ink Reset view button in a corner;
+   * 'leave', the view glides back when the mouse leaves the stage (a stage inside a link, where a button cannot go).
+   */
+  resetView?: 'button' | 'leave';
+  /** Which corner the Reset view button sits in. Default top right. */
+  resetCorner?: ResetCorner;
   children?: ReactNode;
 }
+
+/** A press that travels further than this (px) before release is a drag, not a click. */
+const DRAG_PX = 6;
 
 /**
  * Canvas + theme bridge + Stage in one. Put <Hand>, <Racket>, <Keyboard> as children. Fills its parent, so give the
  * parent a size.
  */
-export function HandCanvas({ preset = 'single', stage, sway = 0, className, style, label, frameloop = 'always', bare = false, shadows = false, children }: HandCanvasProps) {
+export function HandCanvas({
+  preset = 'single',
+  stage,
+  sway = 0,
+  className,
+  style,
+  label,
+  frameloop = 'always',
+  bare = false,
+  shadows = false,
+  resetKey,
+  resetView = 'button',
+  resetCorner = 'top-right',
+  children,
+}: HandCanvasProps) {
   const { stage: colors } = useTheme();
+  const orbitLink = useRef<OrbitLink>({ rig: null, framing: null }).current;
+  const orbit = !bare && (stage?.controls ?? 'orbit') === 'orbit';
+  // A drag that turns the view must not also click whatever the stage sits in (the role cards are links).
+  const down = useRef<{ x: number; y: number } | null>(null);
   const [epoch, setEpoch] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<[number, number] | null>(null);
@@ -215,7 +254,26 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
   const circleAt = stage?.circleCenter ?? p.circleCenter;
   const content = sway ? <Sway amount={sway}>{children}</Sway> : children;
   return (
-    <div ref={box} className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+    <div
+      ref={box}
+      className={className}
+      style={{ position: 'relative', width: '100%', height: '100%', ...style }}
+      onPointerDownCapture={orbit ? (e) => (down.current = { x: e.clientX, y: e.clientY }) : undefined}
+      onClickCapture={
+        orbit
+          ? (e) => {
+              const d = down.current;
+              down.current = null;
+              if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > DRAG_PX) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }
+          : undefined
+      }
+      onPointerLeave={orbit && resetView === 'leave' ? (e) => e.pointerType === 'mouse' && orbitLink.rig?.reset() : undefined}
+    >
+      <div style={{ position: 'absolute', inset: 0 }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       <Canvas
         key={epoch}
         frameloop={inView ? frameloop : 'never'}
@@ -233,6 +291,7 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
         style={{ touchAction: 'pan-y' }}
       >
         <StageColorsContext.Provider value={colors}>
+          <StageOrbitContext.Provider value={orbit ? orbitLink : null}>
           <StageAnchorContext.Provider value={!bare && p.centreHands ? circleAt : null}>
           {!bare && <Stage
             groundY={stage?.groundY ?? p.groundY}
@@ -247,11 +306,16 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
             cameraPosition={cam}
             decor={stage?.decor ?? autoDecor}
             quality={stage?.quality ?? autoQuality}
+            orbitLink={orbitLink}
+            resetKey={resetKey}
           />}
           <Suspense fallback={null}>{content}</Suspense>
           </StageAnchorContext.Provider>
+          </StageOrbitContext.Provider>
         </StageColorsContext.Provider>
       </Canvas>
+      </div>
+      {orbit && resetView === 'button' && <ResetViewButton corner={resetCorner} onReset={() => orbitLink.rig?.reset()} />}
     </div>
   );
 }

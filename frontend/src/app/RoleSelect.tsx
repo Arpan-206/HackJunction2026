@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Vector3, type Group, type Mesh } from 'three';
 import { Link } from 'react-router-dom';
 import { HandCanvas, Hand, synthFrame, type HandHandle, type StageProps } from '../three';
@@ -38,16 +38,12 @@ export const CARD_STAGE: StageProps = {
 };
 
 /**
- * The card scenes use a fixed camera (controls 'none'), which looks at the world origin and ignores the preset target.
- * The hand and its circle sit on the origin column here, so aim at the middle of that column (between bench and hand).
+ * The cards on this screen orbit: drag a card's stage to turn round the hand, aimed at the middle of the column between
+ * bench and hand, where the fixed card camera has always looked. A card is a link, so a press that turns the view does
+ * not open it (HandCanvas); the view glides back when the mouse leaves the card, since a Reset view button cannot sit
+ * inside a link.
  */
-function AimAtHand() {
-  const camera = useThree((s) => s.camera);
-  useLayoutEffect(() => {
-    camera.lookAt(0, CARD_AIM_Y, 0);
-  }, [camera]);
-  return null;
-}
+const ROLE_CARD_STAGE: StageProps = { ...CARD_STAGE, controls: 'orbit', target: [0, CARD_AIM_Y, 0] };
 
 /**
  * One time source for both cards. Each canvas has its own clock (it starts when that canvas mounts and stops while it
@@ -159,10 +155,9 @@ export function RoleSelect() {
       </header>
 
       <main className="roles__stage" id="main">
-        <Link to="/expert" className="role">
+        <Link to="/expert" className="role" draggable={false}>
           <div className="role__stage">
-            <HandCanvas preset="closeup" stage={CARD_STAGE}>
-              <AimAtHand />
+            <HandCanvas preset="closeup" stage={ROLE_CARD_STAGE} resetView="leave">
               <CardRing />
               <CardSway>
                 <Hand side="right" style="chalk" getFrame={cardFrame} smoothing={false} rotation={[0, 0.1, 0]} />
@@ -186,10 +181,9 @@ export function RoleSelect() {
           </svg>
         </div>
 
-        <Link to="/apprentice" className="role">
+        <Link to="/apprentice" className="role" draggable={false}>
           <div className="role__stage">
-            <HandCanvas preset="closeup" stage={CARD_STAGE}>
-              <AimAtHand />
+            <HandCanvas preset="closeup" stage={ROLE_CARD_STAGE} resetView="leave">
               <CardRing />
               <CardSway>
                 <Hand ref={apprenticeHand} side="right" style="wood" getFrame={cardFrame} smoothing={false} rotation={[0, 0.1, 0]} />

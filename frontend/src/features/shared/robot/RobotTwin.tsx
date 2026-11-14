@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { useThree } from '@react-three/fiber';
 import { DESIGN_ASPECT, TWIN_TARGET as TARGET, twinCamera } from './twinFraming';
 import type { GloveFrame, HandFrame, Side } from '../../../api/types';
 import type { RobotStreamHandle } from '../../../api/useRobotStream';
@@ -61,17 +60,6 @@ function useAspect(ref: RefObject<HTMLElement | null>): number {
   return aspect;
 }
 
-/** Moves the canvas camera when the framing changes; the Canvas only reads its camera prop once. */
-function CameraTo({ position }: { position: [number, number, number] }) {
-  const camera = useThree((s) => s.camera);
-  const [x, y, z] = position;
-  useEffect(() => {
-    camera.position.set(x, y, z);
-    camera.lookAt(...TARGET);
-  }, [camera, x, y, z]);
-  return null;
-}
-
 /**
  * Geppetto and Pinocchio: the human hand on the left, the Dex3-1 twin on the right, a string from each human fingertip
  * to the robot's. The fingers the robot lacks (ring and little) hang their strings loose and show as chalk ghosts.
@@ -94,9 +82,8 @@ export function RobotTwin({ robot, human: given, className, label }: RobotTwinPr
       <HandCanvas
         preset="pair"
         label={label ?? 'The robot hand beside the human hand that drives it, strings between their fingertips'}
-        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'limited' }}
+        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'orbit' }}
       >
-        <CameraTo position={camera} />
         {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} centred={false} />}
         <RobotHand ref={robotRef} side={side} live={robot.latest} position={[showHuman ? ROBOT_X : 0, LIFT, 0]} rotation={robotRoll(side)} />
         {showHuman && <RobotStrings human={humanRef} robot={robotRef} />}

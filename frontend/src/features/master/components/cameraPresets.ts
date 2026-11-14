@@ -1,5 +1,5 @@
 import type { Side } from '../../../api';
-import type { StageProps } from '../../../three';
+import { PAIR_LIFT, type StageProps } from '../../../three';
 
 /**
  * The cameras of the expert's stages (the scratch Record and Replay screens). Every view is a point on a sphere round the
@@ -21,7 +21,7 @@ export interface ExpertCameraPreset {
  */
 export const EXPERT_STAGE_CAMERA = {
   record: { distance: 5.8, azimuthDeg: 20, elevationDeg: 55 },
-  recordBoth: { distance: 8.2, azimuthDeg: 0, elevationDeg: 55 },
+  recordBoth: { distance: 9.6, azimuthDeg: 0, elevationDeg: 55 },
   replayGhost: { distance: 5.8, azimuthDeg: 20, elevationDeg: 55 },
   replayStrings: { distance: 8.4, azimuthDeg: 20, elevationDeg: 42 },
 } satisfies Record<string, ExpertCameraPreset>;
@@ -40,8 +40,8 @@ export const EXPERT_GROUND_Y = -0.42;
 const AIM_Y = -0.2;
 /** In the Strings view the expert's hand hangs above the wooden one (MASTER_LIFT): aim between them. */
 const STRINGS_AIM_Y = 0.6;
-/** Two hands on the Record stage: each hand's anchor this far either side of the centre. */
-export const PAIR_HALF_GAP = 1.2;
+/** Two hands on the Record stage: each hand's anchor this far either side of the centre (wide enough that they never meet). */
+export const PAIR_HALF_GAP = 1.8;
 
 /** Where a stage looks and what it draws on the bench, for a hands set-up. */
 export interface ExpertFrame {
@@ -62,7 +62,7 @@ export interface ExpertFrame {
  */
 export function expertFrame(stage: 'record' | 'replayGhost' | 'replayStrings', sides: Side[]): ExpertFrame {
   if (stage === 'record' && sides.length === 2) {
-    return { key: 'recordBoth', target: [0, AIM_Y, 0], circleCenter: [0, 0], circleRadius: PAIR_HALF_GAP + 1.15, shadowSize: [4.7, 2.8], mirror: 1 };
+    return { key: 'recordBoth', target: [0, AIM_Y + PAIR_LIFT, 0], circleCenter: [0, 0], circleRadius: PAIR_HALF_GAP + 1.15, shadowSize: [2 * PAIR_HALF_GAP + 2.3, 2.8], mirror: 1 };
   }
   const mirror = sides[0] === 'left' ? -1 : 1;
   const y = stage === 'replayStrings' ? STRINGS_AIM_Y : AIM_Y;

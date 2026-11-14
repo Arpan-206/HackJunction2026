@@ -175,6 +175,7 @@ export function AirTyping({ spec, lesson }: { spec: TestSpec; lesson?: Lesson })
     <div className="ap-arena ty-arena">
       <div className="ap-arena__scene">
         <TypingStage
+          resetKey={stage === 'playing'}
           solid={showProps}
           target={stage === 'playing' ? (current?.char ?? null) : 'f'}
           good={good}
