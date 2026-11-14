@@ -1,5 +1,6 @@
-// Walks the whole app in mock mode (no Python backend needed): role select, expert scratch (pick, calibrate, record,
-// replay, save), generate steps and save, learner library, a training attempt with its score card, both tests.
+// Walks the whole app in mock mode (no Python backend needed): role select, expert scratch (pick, hands and prop set-up,
+// calibrate, record, replay, save), generate steps and save, the assistant switch, learner library, a training attempt
+// with its score card, both tests.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/mock-*.png.
 // Run: node e2e/mock-walk.mjs   (starts the Vite dev server on :5181 if nothing answers there).
 // Playwright is taken from the repo's genui package, so no extra dependency is added to the frontend.
@@ -60,6 +61,8 @@ try {
   await page.getByRole('link', { name: 'Start from scratch' }).click();
   await page.getByRole('button', { name: /shakehand grip/i }).click();
   await expectVisible(page.getByRole('button', { name: 'Record a take' }), 'Record a take button');
+  await expectVisible(page.getByRole('group', { name: 'How many hands' }), 'hands set-up');
+  if ((await page.getByRole('button', { name: 'Add a prop' }).getAttribute('aria-pressed')) !== 'false') throw new Error('props should be off by default');
   await shot('02-scratch-picked');
 
   step('expert: calibrate the glove');
@@ -74,6 +77,7 @@ try {
   await shot('04-recording');
   await page.getByRole('button', { name: /^Stop/ }).click();
   await expectVisible(page.getByRole('button', { name: 'Replay' }), 'Replay button for the take');
+  await expectVisible(page.getByText('One hand, right'), 'hands summary once capture started');
   await page.getByRole('button', { name: 'Replay' }).first().click();
   await expectVisible(page.getByRole('button', { name: /Pause|Play/ }), 'replay transport');
   await settle(1500);
@@ -90,7 +94,7 @@ try {
   await page.goto(`${BASE}/expert/generate`);
   await page.getByRole('button', { name: 'Five-finger scale for a child' }).click();
   await page.getByRole('button', { name: 'Generate steps' }).click();
-  await expectVisible(page.getByText(/Drafted by mock/), 'generated draft (provider "mock")', 20000);
+  await expectVisible(page.getByText(/The assistant drafted these steps/), 'generated draft', 20000);
   await shot('07-generated');
   await page.getByLabel('Lesson title').fill('Mock piano scale');
   await page.getByRole('button', { name: 'Save lesson' }).click();
@@ -101,8 +105,16 @@ try {
   await page.goto(`${BASE}/expert/generate`);
   await page.locator('input[type=file]').setInputFiles({ name: 'rally.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(300_000, 1) });
   await page.getByRole('button', { name: /Draft|video/i }).filter({ hasNotText: /Generate steps/ }).first().click();
-  await expectVisible(page.getByText(/Video analysis needs the Gemini provider|Drafted by mock/), 'video draft', 20000);
+  await expectVisible(page.getByText(/The assistant (watched your clip|could not watch the clip)/), 'video draft', 20000);
   await shot('09-video-draft');
+
+  step('assistant switch: off hides drafting and offers manual steps, on restores it');
+  await page.goto(`${BASE}/expert/generate`);
+  await page.getByRole('switch', { name: /Assistant on/ }).click();
+  await expectVisible(page.getByText('The assistant is off. Turn it on to draft steps from a sentence.'), 'assistant off note');
+  if (await page.getByRole('button', { name: 'Generate steps' }).count()) throw new Error('Generate steps should be hidden while the assistant is off');
+  await page.getByRole('button', { name: 'Turn the assistant on' }).click();
+  await expectVisible(page.getByRole('button', { name: 'Generate steps' }), 'drafting restored');
 
   step('apprentice: the library lists the saved lessons');
   await page.goto(`${BASE}/apprentice`);
