@@ -1,3 +1,4 @@
+import { delayProbe } from './delayProbe';
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
 import type { GloveFrame, MotionSpec, SetMotionMessage } from './types';
 
@@ -88,6 +89,7 @@ class GloveStore {
       }
       if (!frame || !Array.isArray(frame.hands)) return;
       this.latest = frame;
+      if (typeof frame.t === 'number') delayProbe.received(frame.t);
       this.listeners.forEach((l) => l(frame));
     };
     ws.onclose = () => {

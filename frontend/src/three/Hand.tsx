@@ -1,3 +1,4 @@
+import { delayProbe } from '../api/delayProbe';
 import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Mesh, Vector3, type Quaternion, type Material } from 'three';
@@ -226,6 +227,7 @@ function HandBody({
     if (!target) target = rest;
 
     smoother.step(target, Math.min(delta, 0.1), smoothing, joints);
+    delayProbe.drawn();
     applyPose(rig, smoother);
     const g = inner.current;
     if (g) {

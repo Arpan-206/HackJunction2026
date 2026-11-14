@@ -45,6 +45,8 @@ import numpy as np
 from . import geom
 
 SIDES = ("left", "right")
+# preset: (one_euro_beta, one_euro_d_cutoff)
+FILTER_PRESETS = {"steady": (2.0, 1.0), "fast": (6.0, 2.0)}
 _BASE_P = "_root_glove_p"
 _BASE_ANCHOR = "_root_glove_anchor"
 _TOUCHED = "_root_touched"
@@ -58,9 +60,18 @@ class FuseConfig:
     jump_m: float = 0.08             # a fix this far from the last good one is a wrong blob ...
     jump_frames: int = 5             # ... until this many such fixes in a row, each near the last
     one_euro: bool = True            # One Euro filter on the fused wrist: steady when slow, no lag when fast
+    # The wrist filter has two presets (FILTER_PRESETS): "steady" is the stabilisation-pass value, "fast"
+    # lags a 12 cm reach by 35 ms less and jumps a little more. one_euro_beta and one_euro_d_cutoff
+    # override the preset when they are set.
+    preset: str = "steady"
     one_euro_min_cutoff: float = 1.0
-    one_euro_beta: float = 2.0
-    one_euro_d_cutoff: float = 1.0
+    one_euro_beta: float | None = None
+    one_euro_d_cutoff: float | None = None
+    # Prediction: the fix is as old as the phone's capture delay, so the wrist is moved ahead along
+    # its filtered velocity by the age of the fix (at most lead_max_ms, at most lead_max_m). 0 = off.
+    lead_max_ms: float = 0.0         # off: on a 12 cm reach it cuts lag by 55 ms but overshoots the stop by 3 to 5 cm
+    lead_max_m: float = 0.06
+    lead_min_speed_m_s: float = 0.2   # slower than this: no prediction, so a still hand stays still
     # The work box (core world, metres): the wrist is clamped inside, so the hand never leaves the
     # stage. 45 cm wide (x), 25 cm high (y), 30 cm deep (z). Half sizes; centre between the rest poses.
     box: bool = True
@@ -82,9 +93,18 @@ class FuseConfig:
                 key = f"fuse_{k}"
                 if key in sec:
                     v = sec[key]
-                    setattr(c, k, tuple(float(x) for x in v) if isinstance(getattr(c, k), tuple)
-                            else type(getattr(c, k))(v))
+                    cur = getattr(c, k)
+                    setattr(c, k, tuple(float(x) for x in v) if isinstance(cur, tuple)
+                            else float(v) if cur is None else type(cur)(v))
         return c
+
+    def filter_params(self) -> tuple[float, float]:
+        """(beta, d_cutoff): the preset's values unless the explicit fields are set."""
+        if self.preset not in FILTER_PRESETS:
+            raise ValueError(f"fuse_preset must be one of {sorted(FILTER_PRESETS)}, not {self.preset!r}")
+        beta, d_cutoff = FILTER_PRESETS[self.preset]
+        return (beta if self.one_euro_beta is None else float(self.one_euro_beta),
+                d_cutoff if self.one_euro_d_cutoff is None else float(self.one_euro_d_cutoff))
 
 
 @dataclass
@@ -107,8 +127,8 @@ class RootFuser:
 
     def __post_init__(self) -> None:
         c = self.cfg
-        self.state = {s: _SideState(filt=geom.OneEuroFilter(c.one_euro_min_cutoff, c.one_euro_beta,
-                                                            c.one_euro_d_cutoff)) for s in SIDES}
+        beta, d_cutoff = c.filter_params()
+        self.state = {s: _SideState(filt=geom.OneEuroFilter(c.one_euro_min_cutoff, beta, d_cutoff)) for s in SIDES}
         self.swaps = 0
         self.held_ambiguous = 0
         self.last_assigned: dict = {}
@@ -269,10 +289,25 @@ class RootFuser:
                     step = step * (cap / n)
                 goal = st.pos + step
             st.pos = st.filt(goal, t_us) if c.one_euro else np.asarray(goal, dtype=float).copy()
-            h.wrist_p = self.clamp(st.pos)
+            h.wrist_p = self.clamp(st.pos + self._lead(st, age, anchor))
             h.anchor = anchor
             setattr(h, _TOUCHED, True)
             self.applied[side] = anchor
+
+    def _lead(self, st, age: float, anchor: str) -> np.ndarray:
+        """How far ahead of the filtered wrist to draw it: velocity times the age of the fix."""
+        c = self.cfg
+        v = getattr(st.filt, "_dx", None)
+        if not c.one_euro or c.lead_max_ms <= 0 or anchor != "camera" or v is None:
+            return np.zeros(3)
+        speed = float(np.linalg.norm(v))
+        if speed <= c.lead_min_speed_m_s:
+            return np.zeros(3)
+        # fade in above the minimum speed, so the prediction never switches on with a step
+        gain = min(1.0, (speed - c.lead_min_speed_m_s) / c.lead_min_speed_m_s)
+        d = v * (gain * min(age, c.lead_max_ms / 1000.0))
+        n = float(np.linalg.norm(d))
+        return d * (c.lead_max_m / n) if n > c.lead_max_m else d
 
     def clamp(self, p: np.ndarray) -> np.ndarray:
         if not self.cfg.box:
@@ -289,5 +324,6 @@ class RootFuser:
 
     def status(self) -> dict:
         return {"applied": dict(self.applied), "swaps": self.swaps, "held_ambiguous": self.held_ambiguous,
+                "filter_preset": self.cfg.preset,
                 "accepted": {s: self.state[s].accepted for s in SIDES},
                 "rejected": {s: self.state[s].rejected for s in SIDES}}

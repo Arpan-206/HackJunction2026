@@ -63,7 +63,7 @@ def main(argv=None) -> int:
                     help="glove hands the simulated session has (sets one-hand or two-hand matching)")
     ap.add_argument("--mode", default=None, help='"auto", "blobs" or "mediapipe"')
     ap.add_argument("--fuse", action="append", default=[], metavar="KEY=VALUE",
-                    help="override a FuseConfig field, for example --fuse one_euro_beta=2")
+                    help="override a FuseConfig field, for example --fuse preset=fast")
     args = ap.parse_args(argv)
     import cv2
 
@@ -79,7 +79,8 @@ def main(argv=None) -> int:
     fc = FuseConfig.from_config(cfg)
     for kv in args.fuse:
         k, v = kv.split("=", 1)
-        setattr(fc, k, type(getattr(fc, k))(v))
+        cur = getattr(fc, k)
+        setattr(fc, k, float(v) if cur is None else type(cur)(v))
     fuser = RootFuser(fc)
     sides = ("left", "right") if args.gloves == "both" else (args.gloves,)
     key_side: dict = {}

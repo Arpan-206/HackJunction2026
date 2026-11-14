@@ -309,3 +309,16 @@ def test_flag_on_with_a_hand_moves_the_wrist_and_sends_wrist_pos(cfg, tmp_path):
     assert out[59]["frame"]["hands"]["right"]["anchor"] == "camera"
     assert out[75]["frame"]["hands"]["right"]["anchor"] == "held"
     assert wp[-1] is None and out[-1]["frame"]["hands"]["right"]["wrist"]["p"] == pytest.approx(list(REST["right"]))
+
+
+def test_filter_presets_steady_is_the_default_and_fast_is_a_setting(cfg):
+    from core.root_fuse import FILTER_PRESETS
+
+    assert FuseConfig().preset == "steady" and FuseConfig().filter_params() == FILTER_PRESETS["steady"] == (2.0, 1.0)
+    assert FuseConfig(preset="fast").filter_params() == (6.0, 2.0)
+    assert FuseConfig(preset="fast", one_euro_beta=3.0).filter_params() == (3.0, 2.0)
+    assert FuseConfig.from_config(cfg).preset == "steady"
+    f = RootFuser(FuseConfig(preset="fast"))
+    assert f.state["left"].filt.beta == 6.0 and f.state["left"].filt.d_cutoff == 2.0
+    with pytest.raises(ValueError):
+        RootFuser(FuseConfig(preset="quick"))

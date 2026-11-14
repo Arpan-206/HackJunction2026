@@ -41,6 +41,7 @@ from pathlib import Path
 import numpy as np
 
 from .. import geom
+from ..delay import STATS
 from .depth import DepthFrame
 from .depth_track import ARKIT_TO_OPENCV, DepthTracker, Table, TrackerConfig, app_table, backproject, fit_table
 
@@ -559,6 +560,10 @@ class HandRootLive:
         self.error: str | None = None
         self._ages: list[float] = []
         self._last_log = 0.0
+        # delay per stage (core/delay.py): stamps of the newest processed frame, counted once at the tick
+        self._meta: tuple | None = None      # (frame_id, arrival_us, done_us, excess_ms)
+        self._counted_fid: int | None = None
+        self._offsets: list[tuple[float, float]] = []   # (arrival s, arrival minus the phone's stamp)
 
     @classmethod
     def from_config(cls, cfg, source, owns_source: bool = False, threaded: bool = True) -> "HandRootLive":
@@ -607,9 +612,22 @@ class HandRootLive:
             self.error = f"{type(e).__name__}: {e}"
             log.exception("hand root frame %s failed", f.frame_id)
             return True
+        done = self._now_us()
+        excess = None
+        if f.arrival_us and f.stream_t:
+            a = f.arrival_us / 1e6
+            self._offsets.append((a, a - float(f.stream_t)))
+            while self._offsets and a - self._offsets[0][0] > 60.0:
+                self._offsets.pop(0)
+            excess = (a - float(f.stream_t) - min(o for _, o in self._offsets)) * 1000.0
         with self._lock:
             self._fixes = fixes
+            self._meta = (f.frame_id, int(f.arrival_us), done, excess)
         return True
+
+    def _now_us(self) -> int:
+        clock = getattr(self.source, "clock", None)
+        return int(clock.now_us()) if clock is not None else time.monotonic_ns() // 1000
 
     def latest(self) -> list[WristFix]:
         with self._lock:
@@ -628,12 +646,23 @@ class HandRootLive:
         for f in self.fuser.last_assigned.values():
             self._ages.append((t_us - f.t_us) / 1000.0)
         del self._ages[:-300]
+        with self._lock:
+            meta = self._meta
+        if meta is not None and meta[0] != self._counted_fid and self.fuser.last_assigned:
+            self._counted_fid = meta[0]
+            _, arrival, done, excess = meta
+            if excess is not None:
+                STATS.add("capture_to_arrival_over_fastest", excess)
+            if arrival:
+                STATS.add("arrival_to_done", (done - arrival) / 1000.0)
+            STATS.add("done_to_tick", (t_us - done) / 1000.0)
         now = time.monotonic()
         if self._ages and now - self._last_log >= 5.0:
             self._last_log = now
             a = np.array(self._ages)
             log.info("hand root: delay capture to frame p50 %.0f ms, p95 %.0f ms; tracker %.0f ms a frame; %s",
                      np.percentile(a, 50), np.percentile(a, 95), self.tracker.process_ms, self.fuser.applied)
+            log.info("hand root stages (ms): %s", STATS.line())
 
     def status(self) -> dict:
         a = np.array(self._ages) if self._ages else None

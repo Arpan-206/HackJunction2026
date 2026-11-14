@@ -419,8 +419,12 @@ floor_y_m = 0.05
 fuse_jump_m = 0.08
 fuse_jump_frames = 5
 fuse_max_speed_m_s = 1.5
+# Wrist filter preset: "steady" (the stabilisation-pass value: fewest jumps) or "fast" (35 ms less
+# lag on a reach, a few more jumps). fuse_one_euro_beta and fuse_one_euro_d_cutoff override it.
+fuse_preset = "steady"
 fuse_one_euro_min_cutoff = 1.0
-fuse_one_euro_beta = 2.0
+# Prediction along the filtered velocity by the age of the fix (ms cap). 0 = off: it overshoots stops.
+fuse_lead_max_ms = 0.0
 fuse_box = true
 fuse_box_centre = [0.0, 0.175, -0.2]
 fuse_box_half = [0.225, 0.125, 0.15]

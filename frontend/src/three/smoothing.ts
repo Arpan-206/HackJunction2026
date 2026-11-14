@@ -13,6 +13,9 @@ export interface SmoothingConfig {
 
 export const DEFAULT_SMOOTHING: Required<SmoothingConfig> = { tau: 0.045, quatTau: 0.06 };
 
+/** Time constant (s) for wrist_pos: short, because the core has filtered it once already. */
+const POS_TAU = 0.015;
+
 const N_FLEX = 15;
 const N_SPREAD = 5;
 /** Time constant (s) of the blend between the angle pose and the core's joint pose, so a switch never pops. */
@@ -62,7 +65,9 @@ export class HandSmoother {
 
     const p = frame.wrist_pos;
     // the first position after none snaps: the hand root can start or stop sending one mid-stream
-    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed && this.hadPos ? a : 1);
+    // the core already filters the position (One Euro), so only a short blend here, to bridge 30 Hz data at 60 fps
+    const ap = tau <= 0 ? 1 : 1 - Math.exp(-dt / Math.min(tau, POS_TAU));
+    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed && this.hadPos ? ap : 1);
     this.hadPos = !!p;
     this.coreAngles = isCoreAngleSpread(frame.spread);
 
