@@ -127,8 +127,9 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Twenty-two commits on `core-overnight` (`git log --oneline main..core-overnight`),
-nothing pushed, nothing of the teammate's touched. Commit signing was disabled
+Twenty-one commits of core work on top of `origin/main`
+(`git log --oneline origin/main..core-overnight`), pushed to
+`origin/core-overnight`, nothing of the teammate's changed. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
 are fixed and 7 have regression tests (DECISIONS D23). The branch is based on the old `main` (the "Research" commit);
