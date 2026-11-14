@@ -341,6 +341,18 @@ arm_wmax_max_m = 0.15
 arm_h95_max_m = 0.15
 arm_confirm_frames = 3
 arm_confirm_window = 5
+# Colour proposes, depth confirms (core/camera/depth_colour.py): MediaPipe hands in the phone's
+# colour image, accepted when their palm lies on or above the table in depth. Off: about 44 ms a
+# frame on this Mac, too slow inline at 30 Hz; the live step runs it in its own thread when on.
+# On bench-stand-1 (same spans): arm found 22 percent alone, 51 percent with the shape gate
+# (either), 0 false accepts. No glove frame is found (no dark-glove outline yet).
+colour_confirm = false
+colour_min_valid = 0.8
+colour_h_min_m = -0.01
+colour_h_max_m = 0.20
+colour_max_range_m = 1.0
+colour_max_age_ms = 150.0
+cloud_fine_band_m = 0.004
 # Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
 correct_yaw = true
 side = "right"
