@@ -55,3 +55,12 @@ Each `frame` gains a `depth` object when the step is on (`schema/depth.json` `$d
 - `applied` means the glove hand's wrist in this frame is already turned by `correction_deg`. Draw `hands` as they come; do not apply it again.
 - A small status line is enough for the UI, for example "Depth: table, arm, yaw corrected by 6.6 deg". Keep it out of the learner's way. It is a debugging aid, not product copy.
 - `frame.json` itself is not changed. Its top level allows extra keys, so the block validates. A patch to list it in `frame.json` is in `STATUS-lidar.md`.
+
+## Hand root: the wrist moves in 3D
+
+The gloves give joint angles and the wrist orientation, but no position. The hand root moves the glove wrist with the phone. It is off by default. Turn it on with `python -m core --root` (this also turns on the depth step) or `[camera] root_tracking = true`. Settings are in `[camera.root]`.
+
+- No new wire field. The core changes the glove hand's `wrist.p` on `/ws` and sets `anchor` to `"camera"` (live fix) or `"held"` (tracking lost, holding or easing back). The compat `/ws/gloves` hand then sends `wrist_pos` in metres. With no fix, `anchor` stays `"rest"` and `wrist_pos` stays `null`, exactly as before.
+- The frontend hand (`frontend/src/three/Hand.tsx`) follows `wrist_pos` whenever it is present. The offset is from the core's rest pose for that side, at 12 scene units per metre. Pass `followWristPos={false}` to keep a hand fixed in a scene that needs it.
+- Gloved hands: depth blobs first (the black gloves return solid depth), with the glove's ring LED for identity when its colour is set. Bare hands: MediaPipe on the colour frame, turned upright by gravity. Code: `core/camera/hand_root.py`, `hand_root_blobs.py`, `hand_root_led.py`, `core/root_fuse.py`.
+- Numbers, limits and what is unverified: `STATUS-hand-root.md`. Check a clip with `python -m tools.hand_root_check <clip>.gdrec.gz`.
