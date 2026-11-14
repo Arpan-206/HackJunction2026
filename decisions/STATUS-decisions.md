@@ -112,4 +112,4 @@ thread and emit the line on the next tick (not built; the core would need a
 2. Decide the tick trade-off in section 2: keep 600 ms, or lower `DECISIONS_BUDGET_MS`.
 3. If the rubric should drive the scorer, apply the optional `load_lesson` lines and compare scores on `tools/score_capture.py` with and without it.
 4. For the demo: start the core with the key in the environment or the `.env` in place, so the warm-up runs before the first learner attempt.
-5. Push: branch `worktree-decisions` is pushed to origin; merge into `main` only from the main checkout.
+5. Review and merge draft PR #2 (https://github.com/Blacbrd/HackJunction2026/pull/2) from branch `worktree-decisions`; merge into `main` only from the main checkout.
