@@ -81,7 +81,11 @@ class TrackerConfig:
     arm_len_max_m: float = 0.26
     arm_min_px: int = 1200               # a hand 30 to 50 cm from the phone covers thousands of depth pixels
     arm_confirm_frames: int = 3          # the gate must pass now and in this many of the last arm_confirm_window frames
-    arm_confirm_window: int = 5          # (a one-frame flicker of a bottle is not an arm)
+    arm_confirm_window: int = 5
+    # 3D view only, never the yaw: a flat hand lies within millimetres of the table. The plane
+    # fit RMS on the first real clip is 1.2 mm, so high-confidence points this far above the
+    # table stop counting as table, and those joined to a confirmed arm count as arm.
+    cloud_fine_band_m: float = 0.004          # (a one-frame flicker of a bottle is not an arm)
     arm_taper_min: float = 1.3           # widest slice in the far half / narrowest in the near half
     arm_wmax_min_m: float = 0.05         # the hand's width
     arm_wmax_max_m: float = 0.15
@@ -129,6 +133,7 @@ class DepthObs:
     cyl_rms_m: float | None = None
     axis_tilt_deg: float | None = None   # the cylinder axis's angle above the table
     shape: dict = field(default_factory=dict)  # shape-gate features of the chosen (or largest) blob
+    fine_px: int = 0                     # cloud only: pixels in the fine band joined to the arm
     hand_depth: bool = False
     forearm_yaw_deg: float | None = None
     forearm_ok: bool = False             # direction good enough to correct a glove with
@@ -342,8 +347,18 @@ class DepthTracker:
         else:
             self._push_pass(False)
         if want_cloud:
+            cloud_arm = None
+            if blob is not None and obs.arm_found:
+                # the arm plus the fine band joined to it: fingers flat on the table (view only)
+                fine = (valid & (conf >= 2) & (h >= cfg.cloud_fine_band_m) & (h <= cfg.band_max_m)
+                        & (dist <= cfg.max_range_m)).reshape(H, W)
+                n_f, lab_f = cv2.connectedComponents((fine | blob).astype(np.uint8), connectivity=8)
+                ids = np.unique(lab_f[blob])
+                cloud_arm = np.isin(lab_f, ids[ids > 0])
+                obs.fine_px = int(cloud_arm.sum() - blob.sum())
             obs.cloud = self._cloud(frame, rel @ R.T, valid & (dist <= cfg.max_range_m * 1.5), h,
-                                    None if blob is None else blob.reshape(-1), dark_img.reshape(-1))
+                                    None if cloud_arm is None else cloud_arm.reshape(-1), dark_img.reshape(-1),
+                                    conf)
         if want_masks:
             obs.masks = {"arm": blob if blob is not None else np.zeros((H, W), bool), "dark": dark_img,
                          "table": (valid & (np.abs(h) < cfg.table_band_m)).reshape(H, W),
@@ -587,7 +602,7 @@ class DepthTracker:
         return dark
 
     def _cloud(self, frame: DepthFrame, q: np.ndarray, keep: np.ndarray, h: np.ndarray,
-               blob: np.ndarray | None, dark: np.ndarray) -> dict:
+               blob: np.ndarray | None, dark: np.ndarray, conf: np.ndarray | None = None) -> dict:
         import cv2
         idx = np.nonzero(keep)[0]
         n_target = self.cfg.cloud_points
@@ -603,6 +618,9 @@ class DepthTracker:
             pick = idx[np.linspace(0, len(idx) - 1, min(len(idx), n_target)).astype(int)] if len(idx) else idx
         labels = np.full(len(pick), LABEL_OTHER, np.uint8)
         labels[np.abs(h[pick]) < self.cfg.table_band_m] = LABEL_TABLE
+        if conf is not None:   # sure points a few millimetres up are not table (a flat hand)
+            up = (h[pick] >= self.cfg.cloud_fine_band_m) & (conf[pick] >= 2)
+            labels[up & (labels == LABEL_TABLE)] = LABEL_OTHER
         if blob is not None:
             labels[blob[pick]] = LABEL_ARM
         labels[dark[pick]] = LABEL_DARK
