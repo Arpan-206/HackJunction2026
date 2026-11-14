@@ -4,12 +4,7 @@ from dataclasses import dataclass
 
 from app import constants as c
 from app.schemas.api import CoachHintRequest, HintDraft, Severity
-from app.schemas.common import Finger, Margin
-
-
-def worst_finger(deviations_deg: dict[str, float]) -> Finger:
-    """Return the finger with the largest absolute deviation."""
-    return max(c.FINGERS, key=lambda f: abs(deviations_deg.get(f, 0.0)))  # type: ignore[return-value]
+from app.schemas.common import Margin
 
 
 @dataclass(frozen=True)
@@ -57,13 +52,42 @@ def thresholds(
 STANDARD = thresholds()
 
 
+def focus_finger(
+    deviations_deg: dict[str, float], per_finger: dict[str, Thresholds]
+) -> str | None:
+    """Return the finger to correct, or None: among fingers past their own hint threshold, the furthest outside its own tolerance.
+
+    With the same thresholds for every finger this is the finger with the largest absolute deviation (ties go to the
+    first in thumb to little order), the behaviour before per-finger tolerances existed.
+    """
+    over = [
+        f
+        for f in c.FINGERS
+        if abs(deviations_deg.get(f, 0.0)) >= per_finger[f].finger_deg
+    ]
+    if not over:
+        return None
+    return max(
+        over,
+        key=lambda f: abs(deviations_deg.get(f, 0.0)) / per_finger[f].angle_tol_deg,
+    )
+
+
 def build_hint(
-    deviations_deg: dict[str, float], timing_ms: float, limits: Thresholds = STANDARD
+    deviations_deg: dict[str, float],
+    timing_ms: float,
+    limits: Thresholds = STANDARD,
+    per_finger: dict[str, Thresholds] | None = None,
 ) -> str:
-    """Describe the biggest problem. Deviation is signed degrees of total finger flexion, summed over its joints (positive: curled too much); timing is positive when late."""
-    finger = worst_finger(deviations_deg)
-    deviation = deviations_deg.get(finger, 0.0)
-    if abs(deviation) >= limits.finger_deg:
+    """Describe the biggest problem. Deviation is signed degrees of total finger flexion, summed over its joints (positive: curled too much); timing is positive when late.
+
+    per_finger gives each finger its own thresholds (a step with per-finger tolerance); without it every finger uses limits.
+    """
+    finger = focus_finger(
+        deviations_deg, per_finger or dict.fromkeys(c.FINGERS, limits)
+    )
+    if finger is not None:
+        deviation = deviations_deg[finger]
         if deviation > 0:
             return f"Relax your {finger} finger, it is curled about {abs(deviation):.0f} degrees (in total) too much."
         return f"Curl your {finger} finger more, it is about {abs(deviation):.0f} degrees (in total) too straight."
@@ -127,9 +151,13 @@ def _pick(candidates: list[str], last_hint: str | None) -> str:
     return next((t for t in fits if t.lower() != last), fits[0])
 
 
-def _limits(request: CoachHintRequest) -> Thresholds:
-    """The hint thresholds for a live request: its own tolerance widened by its margin of error."""
-    return thresholds(request.margin, request.tolerance_deg)
+def _limits(request: CoachHintRequest, finger: str | None = None) -> Thresholds:
+    """The hint thresholds for a live request: its own tolerance (the finger's own when it sends one) widened by its margin."""
+    per = request.finger_tolerance_deg or {}
+    tolerance = (
+        per.get(finger, request.tolerance_deg) if finger else request.tolerance_deg
+    )  # type: ignore[call-overload]
+    return thresholds(request.margin, tolerance)
 
 
 def _finger_hint(request: CoachHintRequest, finger: str, deviation: float) -> HintDraft:
@@ -156,7 +184,7 @@ def _finger_hint(request: CoachHintRequest, finger: str, deviation: float) -> Hi
         hint=text,
         focus_finger=finger,
         cue_type="extend" if too_curled else "curl",  # type: ignore[arg-type]
-        severity=_severity(size / _limits(request).angle_tol_deg),
+        severity=_severity(size / _limits(request, finger).angle_tol_deg),
     )
 
 
@@ -200,12 +228,13 @@ def _wrist_hint(request: CoachHintRequest) -> HintDraft:
 
 def build_hint_draft(request: CoachHintRequest) -> HintDraft:
     """Choose the biggest problem relative to its tolerance and phrase it as one imperative cue; praise if nothing stands out."""
-    finger = worst_finger(request.deviations.model_dump())
-    deviation = getattr(request.deviations, finger)
     limits = _limits(request)
+    per_finger = {f: _limits(request, f) for f in c.FINGERS}
+    finger = focus_finger(request.deviations.model_dump(), per_finger)
+    deviation = getattr(request.deviations, finger) if finger else 0.0
     scored: list[tuple[float, str]] = []
-    if abs(deviation) >= limits.finger_deg:
-        scored.append((abs(deviation) / limits.angle_tol_deg, "finger"))
+    if finger is not None:
+        scored.append((abs(deviation) / per_finger[finger].angle_tol_deg, "finger"))
     if abs(request.timing_ms) >= limits.timing_ms:
         scored.append((abs(request.timing_ms) / limits.timing_tol_ms, "timing"))
     if (
@@ -222,6 +251,6 @@ def build_hint_draft(request: CoachHintRequest) -> HintDraft:
             hint=praise, focus_finger=None, cue_type="praise", severity="low"
         )
     kind = max(scored)[1]
-    if kind == "finger":
+    if kind == "finger" and finger is not None:
         return _finger_hint(request, finger, deviation)
     return _timing_hint(request) if kind == "timing" else _wrist_hint(request)

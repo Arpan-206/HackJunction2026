@@ -127,16 +127,21 @@ def to_result(
     """Turn alignment statistics into the contract's ScoreResult, judged with the learner's margin of error.
 
     The margin widens (or narrows) the step's tolerance before anything is computed, and the hint thresholds with it.
+    A per-finger tolerance (tolerance.finger_angle_deg) gives each finger its own band; the worst finger is then the one
+    furthest outside its own band, which is the largest error when every band is the same.
     """
     limits = hints.thresholds(margin, tolerance.angle_deg, tolerance.timing_ms)
+    finger_limits = {
+        f: hints.thresholds(margin, tolerance.angle_for(f), tolerance.timing_ms)
+        for f in c.FINGERS
+    }
     tolerance = tolerance.widened(margin)
-    per_finger = [
-        _gaussian_score(cmp.error_deg[f], tolerance.angle_deg) for f in c.FINGERS
-    ]
+    band = {f: tolerance.angle_for(f) for f in c.FINGERS}
+    per_finger = [_gaussian_score(cmp.error_deg[f], band[f]) for f in c.FINGERS]
     timing = _gaussian_score(cmp.timing_abs_ms, tolerance.timing_ms)
     overall = c.FINGER_WEIGHT * float(np.mean(per_finger)) + c.TIMING_WEIGHT * timing
     within = (
-        all(e <= tolerance.angle_deg for e in cmp.error_deg.values())
+        all(cmp.error_deg[f] <= band[f] for f in c.FINGERS)
         and cmp.timing_abs_ms <= tolerance.timing_ms
     )
     return ScoreResult(
@@ -144,8 +149,10 @@ def to_result(
         per_finger=FingerValues.from_list([round(v, 1) for v in per_finger]),
         timing=round(timing, 1),
         within_tolerance=within,
-        worst_finger=max(c.FINGERS, key=lambda f: cmp.error_deg[f]),  # type: ignore[arg-type]
-        hint=hints.build_hint(cmp.deviation_deg, cmp.timing_signed_ms, limits),
+        worst_finger=max(c.FINGERS, key=lambda f: cmp.error_deg[f] / band[f]),  # type: ignore[arg-type]
+        hint=hints.build_hint(
+            cmp.deviation_deg, cmp.timing_signed_ms, limits, finger_limits
+        ),
         margin=margin,
     )
 

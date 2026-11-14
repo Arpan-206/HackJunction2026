@@ -69,7 +69,11 @@ class LessonGenerator:
                 update={
                     "move_id": s.move_id
                     if s.move_id and self._moves.get(s.move_id)
-                    else None
+                    else None,
+                    "take_ids": [],
+                    "tolerance": s.tolerance.model_copy(
+                        update={"finger_angle_deg": None}
+                    ),
                 }
             )
             for s in draft.steps

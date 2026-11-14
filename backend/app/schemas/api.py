@@ -11,6 +11,7 @@ from app.schemas.common import (
     GloveSource,
     Hands,
     Margin,
+    PositiveDeg,
     Side,
     Skill,
 )
@@ -105,6 +106,11 @@ class CoachHintRequest(BaseModel):
     )
     wrist_axis: Literal["pitch", "yaw", "roll"] | None = None
     tolerance_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
+    finger_tolerance_deg: dict[Finger, PositiveDeg] | None = Field(
+        default=None,
+        description="Optional per-finger angle tolerance (the step's tolerance.finger_angle_deg); a finger left out "
+        "uses tolerance_deg.",
+    )
     margin: Margin = Field(
         default=c.DEFAULT_MARGIN,
         description="The learner's margin of error; scales tolerance_deg and the hint thresholds.",
