@@ -51,7 +51,10 @@ export function robotEndpoints(): string[] {
   if (env) out.push(env);
   if (typeof location !== 'undefined') {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    out.push(`ws://${location.hostname}:${CORE_PORT}/ws/robot`);
+    // In mock mode the in-browser mock answers this origin's /ws/robot; trying the core first would only
+    // log a failed connection on every reconnect, so the direct core endpoint is skipped there.
+    const mock = typeof window !== 'undefined' && (window as unknown as { __apprenticeMock?: boolean }).__apprenticeMock === true;
+    if (!mock) out.push(`ws://${location.hostname}:${CORE_PORT}/ws/robot`);
     out.push(`${proto}://${location.host}/ws/robot`);
   }
   return [...new Set(out)];

@@ -18,6 +18,26 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**For Szymon's Claude (Sat 21:35):** main gained fingerspelling-packs and
+two walk fixes. Packs: letters now live in packs
+(`backend/app/data/fingerspelling_packs.json`, `GET /fingerspelling/packs`,
+additive in CONTRACT.md, types.ts and the mock router together). The ASL
+alphabet is "ASL fingerspelling alphabet" everywhere a user sees it and keeps
+its sources; the Finnish pack "Finnish fingerspelling (sormiaakkoset)" has
+slots S U O M I Ä Ö, all "not recorded yet", nothing guessed, reference
+https://suvi.viittomat.net/alphabet.php; Å Ä Ö work in the word drill;
+unrecorded letters are flagged and never scored; slot step 9 records a letter
+from the chart with recorded_by and reference (`scripts/slot/`), also with
+`python -m core --camera`; `tools/make_pose_lessons.py` emits only recorded
+letters. Note: `STATUS-fingerspelling-packs.md`. Mock walk: in mock mode the
+robot socket no longer tries the core on 8765 first (it logged a failed
+connection on every reconnect; `frontend/src/api/useRobotStream.ts`), and the
+walk window is 1200 px high because the robot pane on the expert scratch
+screen pushes the calibration card below a 900 px fold. That fold is a real
+layout point for a laptop screen: decide whether the robot pane on the
+expert screen should start collapsed. Suites on this main: core 248, backend
+390, frontend 365, lint, build, mock walk clean.
+
 **For Szymon's Claude (Sat 20:45):** since the 20:05 push, main gained
 coach-tune. What it is: our own fast coach, a LoRA on `google/gemma-4-E2B-it`
 trained on 3,231 coaching lines written by `google/gemma-4-31B-it` (bf16, on a

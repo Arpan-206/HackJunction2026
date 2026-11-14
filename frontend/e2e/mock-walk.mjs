@@ -33,7 +33,9 @@ if (!(await up(BASE))) {
 }
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+// 1200 high: the robot pane on the expert screen pushes the calibration card below a 900 px fold, and Playwright's
+// scroll-and-click there was flaky under load. The apprentice and demo walks keep their own sizes.
+const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 const problems = [];
 page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
 page.on('console', (m) => {
@@ -67,7 +69,8 @@ try {
 
   step('expert: calibrate the glove');
   await page.getByRole('button', { name: 'Calibrate', exact: true }).click();
-  await expectVisible(page.getByText('Calibrated', { exact: true }), 'calibrated state', 30000);
+  // two phases of countdown and capture take about 22 s in the mock; under load the old 30 s limit was too tight
+  await expectVisible(page.getByText('Calibrated', { exact: true }), 'calibrated state', 60000);
   await shot('03-calibrated');
 
   step('expert: record a take and replay it');
