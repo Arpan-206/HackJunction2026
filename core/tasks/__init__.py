@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-TASKS = ["general", "chords", "piano", "boxing"]
+TASKS = ["general", "chords", "piano", "boxing", "typing"]
 
 
 def task_state(session) -> dict:
@@ -15,6 +15,10 @@ def task_state(session) -> dict:
         from .piano import state as piano_state
 
         out = piano_state(session)
+    elif task == "typing":
+        from .typing import state as typing_state
+
+        out = typing_state(session)
     elif task == "boxing":
         from .boxing import state as boxing_state
 
