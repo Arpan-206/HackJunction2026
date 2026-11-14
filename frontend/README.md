@@ -71,7 +71,7 @@ To add a theme:
 | `ghost` | overlays | translucent, fresnel rim, fading out past the wrist; a depth pre-pass keeps only the nearest layer |
 | `shadow` | shadow guidance | dark translucent silhouette (same pre-pass and fade) |
 
-Per-finger tints (vermilion corrections, the gold focus finger) are uniforms read through per-vertex finger weights, so a tint stops at the knuckle crease. The hand lab's Anatomy tab (`/lab`, then Anatomy) holds open, fist, pinch, point, palm-up, two-hand and racket-grip poses for checking the hand; `node e2e/hand-shots.mjs <outDir> [prefix]` screenshots it and the design frames with hands.
+Per-finger tints (vermilion corrections, the gold focus finger) are uniforms read through per-vertex finger weights, so a tint stops at the knuckle crease. The hand lab's Anatomy tab (`/lab`, then Anatomy) holds open, fist, pinch, point, palm-up, two-hand and racket-grip poses for checking the hand; `node e2e/hand-shots.mjs <outDir> [prefix]` screenshots it and the design frames with hands. `e2e/shots/` keeps four small JPEG after shots (lab sheet, score bench, both hands, sketch turntable).
 
 Wood textures live in `public/textures/wood/` (source and licence in `SOURCE.md`). The hand model is MIT licensed, Copyright (c) 2019 Amazon, from the WebXR Input Profiles assets (`@webxr-input-profiles/assets`, https://github.com/immersive-web/webxr-input-profiles); the notice and the list of load-time modifications are in `public/models/hands/LICENSE.md`.
 
