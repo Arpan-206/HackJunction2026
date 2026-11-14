@@ -117,3 +117,28 @@ New files: `core/tasks/typing.py`, `tests/test_typing.py`, `tools/typing_accurac
 5. Type the marker again at the end. Press Esc.
 6. Convert times: `--capture-start-wall-us` is the birth time times 1,000,000. `--from-s` and `--to-s` cut the capture around the log (log wall time minus capture start, in seconds, with 10 s spare).
 7. Run with `--sweep-s 3`. Check that the fitted lag puts the three marker Spaces on right-thumb presses. Then rerun with `--lag-ms` set to that lag and without `--sweep-s`, so the number is not fitted on the whole log.
+
+## Real-glove measurement (Sat 14:13, guided key log, both gloves on, calibration loaded)
+
+Clean run: no other glove task during the log, marker typed, lag fitted by
+the tool (+540 ms). Data: `logs/live/20261114-131952/keys2.jsonl` (112 keys,
+101 on the chart) against the solver capture window 14:10:28 to 14:13:08.
+
+| Measure | Value |
+| --- | --- |
+| Keys with any detected press within 120 ms | 15 of 101 |
+| Keys with a clear finger | 17 of 101 (17%) |
+| Clear keys where the finger matched the chart | 1 of 17 (6%) |
+| Detected finger when wrong | mostly right little and right thumb, on keys of other fingers |
+
+Reading: with the `[typing]` thresholds (60 deg/s, 4 deg) the solver's finger
+angles at 83 Hz do not show a distinct flexion event for most keystrokes, and
+when something is detected it is usually a stray motion of the little finger
+or thumb. The keyboard side works; the glove side does not identify the
+typing finger at this sensitivity. Before claiming "right key, wrong finger"
+in a demo: try the raw driver stream on 12276 (per-sensor orientations and
+hub acceleration, unsmoothed; the same run's `driver_12276.rgmp` holds it),
+or judge the finger by hand pose instead of a press (which finger is lowest
+or most bent at the keydown), and re-measure. The typist typed with 25 slips
+on the home row and 9 on the words, so the chart finger itself was not
+always used; a drill with an expert typist would set a cleaner upper bound.
