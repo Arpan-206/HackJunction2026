@@ -13,6 +13,12 @@ import { TypingStage, type FingerMark } from '../../typing/TypingStage';
 
 /** The line to copy; every letter of the alphabet, so every finger gets its turn. */
 export const PRACTICE_LINE = 'the quick brown fox jumps over the lazy dog';
+/** The line cut into words, each with its trailing space, so it only wraps between words. */
+const LINE_WORDS = PRACTICE_LINE.split(/(?<= )/).reduce<{ word: string; at: number }[]>((out, word) => {
+  const prev = out[out.length - 1];
+  out.push({ word, at: prev ? prev.at + prev.word.length : 0 });
+  return out;
+}, []);
 const SHOW_VERDICT_S = 1.4;
 
 const wallS = () => performance.now() / 1000;
@@ -124,9 +130,16 @@ export function KeyboardTyping() {
           label={`Your two wooden hands over a ${showProps ? 'keyboard' : 'keyboard sketched in chalk'}; type the line on your own keyboard`}
         />
         <div className="ty-line" aria-label={`Type: ${PRACTICE_LINE}`}>
-          {[...PRACTICE_LINE].map((c, i) => (
-            <span key={i} className={`ty-line__char ${i < pos ? 'ty-line__char--done' : i === pos ? 'ty-letter--now' : ''}`}>
-              {c === ' ' ? ' ' : c}
+          {LINE_WORDS.map(({ word, at }) => (
+            <span key={at} className="ty-line__word">
+              {[...word].map((c, k) => {
+                const i = at + k;
+                return (
+                  <span key={i} className={`ty-line__char ${i < pos ? 'ty-line__char--done' : i === pos ? 'ty-letter--now' : ''}`}>
+                    {c === ' ' ? '\u00a0' : c}
+                  </span>
+                );
+              })}
             </span>
           ))}
         </div>

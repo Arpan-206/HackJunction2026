@@ -6,7 +6,7 @@
 
 export const KEY_PITCH = 0.28;
 /** Depth (z) of the home row's key centres. Fingertips hover here; the hand's knuckles are towards +z. */
-export const HOME_Z = -1.52;
+export const HOME_Z = -1.62;
 /** Bench height under the keyboard, matching the stage's keyboard preset. */
 export const BENCH_Y = -0.55;
 /** Top of a solid keycap. */

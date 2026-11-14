@@ -34,8 +34,8 @@ interface TypingStageProps {
 
 const SIDES: Side[] = ['left', 'right'];
 export const TYPING_CAMERA: { cameraPosition: [number, number, number]; target: [number, number, number] } = {
-  cameraPosition: [0, 3.2, 1.75],
-  target: [0, -0.5, -1.3],
+  cameraPosition: [0, 4.6, -0.25],
+  target: [0, -0.55, -1.6],
 };
 
 function position(side: Side): [number, number, number] {
