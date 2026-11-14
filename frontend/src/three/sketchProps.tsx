@@ -56,7 +56,7 @@ export function RacketSketch({ weight = 1 }: { weight?: number }) {
   }, [weight]);
   useDisposeAll(geos);
   return (
-    <group position={[0.04, -0.21, -0.78]} rotation={[0, 0, 0.05]}>
+    <group position={[0, -0.4, -0.92]} rotation={[0, -0.45, 0.05, 'YXZ']}>
       {geos.map((g, i) => (
         <mesh key={i} geometry={g} material={mat} renderOrder={5} userData={{ noCast: true }} />
       ))}
