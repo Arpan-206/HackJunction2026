@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = c.DEFAULT_OPENAI_MODEL
     llm_provider: Literal["fake", "gemini", "ollama", "openai"] = "fake"
+    # Providers tried after llm_provider fails, comma separated, then fake rule lines. "none" turns the chain off.
+    llm_fallback: str = "ollama"
     glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
         "simulator"
     )

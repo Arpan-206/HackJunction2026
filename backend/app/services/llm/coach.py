@@ -10,6 +10,7 @@ from app.core.errors import RateLimitedError
 from app.schemas.api import CoachHintRequest, CoachHintResponse, HintDraft
 from app.services import hints
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import answered_by
 from app.services.llm.rate_limit import TTLCache
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -170,7 +171,7 @@ class CoachService:
     def __init__(self, llm: LLMState) -> None:
         """Use the active provider from llm."""
         self._llm = llm
-        self._cache: TTLCache[HintDraft] = TTLCache(
+        self._cache: TTLCache[tuple[HintDraft, str]] = TTLCache(
             c.HINT_CACHE_TTL_S, c.HINT_CACHE_MAX_ENTRIES
         )
 
@@ -197,7 +198,8 @@ class CoachService:
         prompt = build_prompt(request, fallback)
         cached = self._cache.get(prompt)
         if cached is not None:
-            return CoachHintResponse(**cached.model_dump(), provider=client.name)
+            draft, provider = cached
+            return CoachHintResponse(**draft.model_dump(), provider=provider)
         llm_request = LLMRequest(
             SYSTEM_PROMPT,
             prompt,
@@ -227,5 +229,6 @@ class CoachService:
         if not self._accept(draft, fallback, request):
             log.warning("Coach LLM hint rejected: %s", json.dumps(draft.model_dump()))
             return CoachHintResponse(**fallback.model_dump(), provider=ALGORITHMIC)
-        self._cache.put(prompt, draft)
-        return CoachHintResponse(**draft.model_dump(), provider=client.name)
+        provider = answered_by(client.name)
+        self._cache.put(prompt, (draft, provider))
+        return CoachHintResponse(**draft.model_dump(), provider=provider)
