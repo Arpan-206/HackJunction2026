@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     llm_fallback: str = "gemini,openai"
     # Per-role first provider, for example "lesson=openai,plan=openai" sends those roles to Gemma on Verda first.
     llm_routes: str = ""
+    # The tuned coach (coach_tune/): with COACH_MODEL=tuned and TUNED_BASE_URL set, live hints try the small fine-tuned
+    # Gemma first, then the chain above. Off by default.
+    coach_model: Literal["default", "tuned"] = "default"
+    tuned_base_url: str = ""
+    tuned_api_key: str | None = None
+    tuned_model: str = c.DEFAULT_TUNED_MODEL
+    tuned_lang: Literal["en", "de", "fi"] = "en"
     glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
         "simulator"
     )
