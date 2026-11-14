@@ -11,7 +11,9 @@ from safetensors import safe_open
 from safetensors.torch import save_file
 
 MERGED = "/w/merged/model.safetensors"
-base_dir = snapshot_download("google/gemma-4-E2B-it", allow_patterns=["*.safetensors", "*.json"])
+base_dir = snapshot_download(
+    "google/gemma-4-E2B-it", allow_patterns=["*.safetensors", "*.json"]
+)
 with safe_open(MERGED, "pt") as m:
     merged = {k: m.get_tensor(k) for k in m.keys()}
     meta = m.metadata()

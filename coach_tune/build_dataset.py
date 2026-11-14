@@ -36,12 +36,12 @@ ROOT = LANE.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(LANE))
 
-from core import hand as H  # noqa: E402
-from core.config import load_config  # noqa: E402
-from core.recorder import Lesson  # noqa: E402
-from core.scorer import Tolerances, focus_fingers, hint_for, score_frame  # noqa: E402
+import prompt as P
 
-import prompt as P  # noqa: E402
+from core import hand as H
+from core.config import load_config
+from core.recorder import Lesson
+from core.scorer import Tolerances, focus_fingers, hint_for, score_frame
 
 MAIN = Path("/Users/arpanpandey/Code/Junction/repo")
 LESSONS_DIR = MAIN / "lessons"
@@ -59,6 +59,7 @@ LANG_SPLIT = (("en", 0.70), ("de", 0.15), ("fi", 0.15))
 
 # -- config and scoring -----------------------------------------------------------------------------------------------
 
+
 class Scoring:
     def __init__(self, cfg) -> None:
         s = cfg.score
@@ -67,29 +68,67 @@ class Scoring:
         self.focus_min = float(s.focus_min_weight)
         self.pass_score = float(s.pass_score)
 
-    def score(self, hand: str, learner: np.ndarray, target: np.ndarray, weights: dict[str, float],
-              slot_weights: np.ndarray | None = None) -> dict | None:
+    def score(
+        self,
+        hand: str,
+        learner: np.ndarray,
+        target: np.ndarray,
+        weights: dict[str, float],
+        slot_weights: np.ndarray | None = None,
+    ) -> dict | None:
         """The scorer's verdict as an example body, or None when there is nothing to fix."""
-        fs, flex, spread = score_frame(hand, learner, target, weights, self.tol, self.spread_weight, slot_weights,
-                                       self.focus_min)
+        fs, flex, spread = score_frame(
+            hand,
+            learner,
+            target,
+            weights,
+            self.tol,
+            self.spread_weight,
+            slot_weights,
+            self.focus_min,
+        )
         # Something to fix: the worst finger scores below the pass score, the rule the scorer's own step summary
         # uses to list a finger (StepScorer.summary). The overall score can still pass when one of five fingers fails.
-        if fs.worst is None or fs.hint is None or fs.fingers[fs.worst] >= self.pass_score:
+        if (
+            fs.worst is None
+            or fs.hint is None
+            or fs.fingers[fs.worst] >= self.pass_score
+        ):
             return None
         focus = focus_fingers(weights, self.focus_min)
-        errors = [{"finger": fs.worst, "hint": fs.hint, "err_deg": round(float(fs.err_deg[fs.worst]), 1)}]
-        others = sorted((f for f in focus if f != fs.worst and fs.fingers[f] < self.pass_score),
-                        key=lambda f: -fs.err_deg[f])
+        errors = [
+            {
+                "finger": fs.worst,
+                "hint": fs.hint,
+                "err_deg": round(float(fs.err_deg[fs.worst]), 1),
+            }
+        ]
+        others = sorted(
+            (f for f in focus if f != fs.worst and fs.fingers[f] < self.pass_score),
+            key=lambda f: -fs.err_deg[f],
+        )
         for f in others:
             h = hint_for(flex[f], spread[f])
             if h is not None:
-                errors.append({"finger": f, "hint": h, "err_deg": round(float(fs.err_deg[f]), 1)})
-        return {"score": round(float(fs.overall) * 100, 1), "errors": errors[:3], "top_finger": fs.worst,
-                "top_hint": fs.hint}
+                errors.append(
+                    {"finger": f, "hint": h, "err_deg": round(float(fs.err_deg[f]), 1)}
+                )
+        return {
+            "score": round(float(fs.overall) * 100, 1),
+            "errors": errors[:3],
+            "top_finger": fs.worst,
+            "top_hint": fs.hint,
+        }
 
 
-def perturb(target: np.ndarray, finger: str, hint: str, mag: float, rng: np.random.Generator,
-            noise_deg: float = 3.0) -> np.ndarray:
+def perturb(
+    target: np.ndarray,
+    finger: str,
+    hint: str,
+    mag: float,
+    rng: np.random.Generator,
+    noise_deg: float = 3.0,
+) -> np.ndarray:
     """The target with `finger` pushed `mag` degrees in the hint's direction (learner minus master signs as in
     core/scorer.py hint_for), plus small noise on every slot."""
     a = np.asarray(target, dtype=float) + rng.normal(0.0, noise_deg, H.N_ANGLES)
@@ -102,7 +141,11 @@ def perturb(target: np.ndarray, finger: str, hint: str, mag: float, rng: np.rand
         a[ss] += sign * mag
         # A spread slot counts half and is shared with a neighbour, so spread alone rarely fails a finger. A
         # zero-mean wobble on the finger's own joints raises its error while the mean flexion (the hint) stays small.
-        wob = np.array([1.0, -1.0, 0.0][: len(fs)]) if len(fs) == 3 else np.array([1.0, -1.0])
+        wob = (
+            np.array([1.0, -1.0, 0.0][: len(fs)])
+            if len(fs) == 3
+            else np.array([1.0, -1.0])
+        )
         a[fs] += wob * mag * rng.uniform(0.5, 0.8)
     return a
 
@@ -118,7 +161,9 @@ def unit_of(lesson: Lesson, step) -> str:
     m = LETTER_RE.search(step.name.strip())
     if m and ("spell" in lesson.id or "fingerspelling" in lesson.id):
         return f"letter-{m.group(1).upper()}"
-    return "puppet-" + re.sub(r"[^a-z]+", "-", step.name.lower().replace("the ", "")).strip("-")
+    return "puppet-" + re.sub(
+        r"[^a-z]+", "-", step.name.lower().replace("the ", "")
+    ).strip("-")
 
 
 def unit_kind(unit: str) -> str:
@@ -156,18 +201,35 @@ def collect_targets(lessons: list[Lesson]) -> dict[str, list[dict]]:
     for lesson in lessons:
         hand = lesson.master_hand or "right"
         for step in lesson.steps:
-            w = {f: float(step.weights.get(f, 1.0)) for f in H.FINGERS} if step.weights else {f: 1.0 for f in H.FINGERS}
+            w = (
+                {f: float(step.weights.get(f, 1.0)) for f in H.FINGERS}
+                if step.weights
+                else {f: 1.0 for f in H.FINGERS}
+            )
             for t in step_targets(lesson, step):
-                units[unit_of(lesson, step)].append({
-                    "lesson": lesson.id, "task": lesson.title, "step_name": step.name, "step_index": step.index,
-                    "kind": step.kind, "hand": hand, "target": t, "weights": w,
-                })
+                units[unit_of(lesson, step)].append(
+                    {
+                        "lesson": lesson.id,
+                        "task": lesson.title,
+                        "step_name": step.name,
+                        "step_index": step.index,
+                        "kind": step.kind,
+                        "hand": hand,
+                        "target": t,
+                        "weights": w,
+                    }
+                )
     return units
 
 
 # -- split ------------------------------------------------------------------------------------------------------------
 
-HOLDOUT = {"real": (2, 1), "fake": (1, 0), "puppet": (1, 0), "letter": (5, 2)}  # kind: (test, val)
+HOLDOUT = {
+    "real": (2, 1),
+    "fake": (1, 0),
+    "puppet": (1, 0),
+    "letter": (5, 2),
+}  # kind: (test, val)
 
 
 def split_units(units: list[str], seed: int) -> dict[str, str]:
@@ -184,11 +246,14 @@ def split_units(units: list[str], seed: int) -> dict[str, str]:
             replay = [u for u in order if u.startswith("replay-")]
             order = [replay[0]] + [u for u in order if u != replay[0]]
         for i, u in enumerate(order):
-            split[u] = "test" if i < n_test else ("val" if i < n_test + n_val else "train")
+            split[u] = (
+                "test" if i < n_test else ("val" if i < n_test + n_val else "train")
+            )
     return split
 
 
 # -- capture ----------------------------------------------------------------------------------------------------------
+
 
 def capture_frames(cfg) -> dict[str, tuple[np.ndarray, np.ndarray | None]]:
     """side -> (calibrated tracked frames (n, 18), slot weights or None)."""
@@ -209,11 +274,16 @@ def capture_frames(cfg) -> dict[str, tuple[np.ndarray, np.ndarray | None]]:
         cal = load_hand(CAL_DIR, side, WEARER, cfg.calibration, cfg.hand)
         if cal is not None:
             ang = np.stack([cal.apply(a) for a in ang])
-        out[side] = (ang, None if cal is None else cal.slot_weights(), None if cal is None else cal.finger_weights())
+        out[side] = (
+            ang,
+            None if cal is None else cal.slot_weights(),
+            None if cal is None else cal.finger_weights(),
+        )
     return out
 
 
 # -- build ------------------------------------------------------------------------------------------------------------
+
 
 def build(total: int, seed: int) -> list[dict]:
     cfg = load_config(None)
@@ -228,7 +298,10 @@ def build(total: int, seed: int) -> list[dict]:
     cell_count: Counter = Counter()
 
     def add(rec: dict, body: dict, source: str, unit: str) -> None:
-        ex = {k: rec[k] for k in ("lesson", "task", "step_name", "step_index", "kind", "hand")}
+        ex = {
+            k: rec[k]
+            for k in ("lesson", "task", "step_name", "step_index", "kind", "hand")
+        }
         ex.update(body)
         ex.update({"source": source, "unit": unit, "split": split[unit]})
         examples.append(ex)
@@ -267,7 +340,9 @@ def build(total: int, seed: int) -> list[dict]:
         if cap_count[cell] >= cap_cell or per_unit_cap[unit] >= unit_cap_limit:
             continue
         add(rec, body, "capture", unit)
-        cell_count[cell] -= 1  # capture rows do not count toward the synthetic per-cell quota
+        cell_count[cell] -= (
+            1  # capture rows do not count toward the synthetic per-cell quota
+        )
         cap_count[cell] += 1
         per_unit_cap[unit] += 1
         n_cap += 1
@@ -294,10 +369,14 @@ def build(total: int, seed: int) -> list[dict]:
 
     leaked = [e for e in examples if e["source"] == "capture" and e["split"] != "test"]
     if leaked:
-        raise SystemExit(f"{len(leaked)} real-capture examples outside the test split; captures are test data only")
+        raise SystemExit(
+            f"{len(leaked)} real-capture examples outside the test split; captures are test data only"
+        )
 
     # 3. ids, languages, prompt check
-    examples.sort(key=lambda e: (e["split"], e["unit"], e["source"], e["step_index"], e["score"]))
+    examples.sort(
+        key=lambda e: (e["split"], e["unit"], e["source"], e["step_index"], e["score"])
+    )
     lang_rng = np.random.default_rng(seed)
     langs, probs = zip(*LANG_SPLIT)
     for i, ex in enumerate(examples):
@@ -308,14 +387,20 @@ def build(total: int, seed: int) -> list[dict]:
 
 
 def table(rows: list[list], head: list[str]) -> str:
-    lines = ["| " + " | ".join(head) + " |", "| " + " | ".join("---" for _ in head) + " |"]
+    lines = [
+        "| " + " | ".join(head) + " |",
+        "| " + " | ".join("---" for _ in head) + " |",
+    ]
     lines += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
     return "\n".join(lines)
 
 
 def coverage(exs: list[dict]) -> str:
     c = Counter((e["top_finger"], e["top_hint"]) for e in exs)
-    rows = [[f] + [c[(f, h)] for h in P.HINTS] + [sum(c[(f, h)] for h in P.HINTS)] for f in H.FINGERS]
+    rows = [
+        [f] + [c[(f, h)] for h in P.HINTS] + [sum(c[(f, h)] for h in P.HINTS)]
+        for f in H.FINGERS
+    ]
     return table(rows, ["finger"] + list(P.HINTS) + ["total"])
 
 
@@ -323,27 +408,80 @@ def report(examples: list[dict], split: dict[str, str], seed: int) -> str:
     by = defaultdict(list)
     for e in examples:
         by[e["split"]].append(e)
-    out = ["# Coach-tune dataset", "", f"Seed {seed}. Built by `coach_tune/build_dataset.py`. Scorer: core/scorer.py "
-           "score_frame, tolerances from config.toml [score].", "", "## Counts", ""]
+    out = [
+        "# Coach-tune dataset",
+        "",
+        f"Seed {seed}. Built by `coach_tune/build_dataset.py`. Scorer: core/scorer.py "
+        "score_frame, tolerances from config.toml [score].",
+        "",
+        "## Counts",
+        "",
+    ]
     rows = []
     for s in ("train", "val", "test"):
         exs = by[s]
         src = Counter(e["source"] for e in exs)
-        rows.append([s, len(exs), src["capture"], src["synthetic"], len({e["unit"] for e in exs})])
-    rows.append(["all", len(examples), sum(r[2] for r in rows), sum(r[3] for r in rows), len(split)])
+        rows.append(
+            [
+                s,
+                len(exs),
+                src["capture"],
+                src["synthetic"],
+                len({e["unit"] for e in exs}),
+            ]
+        )
+    rows.append(
+        [
+            "all",
+            len(examples),
+            sum(r[2] for r in rows),
+            sum(r[3] for r in rows),
+            len(split),
+        ]
+    )
     out += [table(rows, ["split", "examples", "capture", "synthetic", "units"]), ""]
-    out += ["## Held-out units", "", "A unit is a lesson; for the pose lessons it is one shape (a puppet or a letter, "
-            "including that letter inside the spelled words).", ""]
+    out += [
+        "## Held-out units",
+        "",
+        "A unit is a lesson; for the pose lessons it is one shape (a puppet or a letter, "
+        "including that letter inside the spelled words).",
+        "",
+    ]
     for s in ("test", "val"):
-        out.append(f"- {s}: " + ", ".join(sorted(u for u, v in split.items() if v == s)))
-    out += ["", "## Coverage, finger x hint (the top error)", "", "### All", "", coverage(examples), ""]
+        out.append(
+            f"- {s}: " + ", ".join(sorted(u for u, v in split.items() if v == s))
+        )
+    out += [
+        "",
+        "## Coverage, finger x hint (the top error)",
+        "",
+        "### All",
+        "",
+        coverage(examples),
+        "",
+    ]
     for s in ("train", "val", "test"):
         out += [f"### {s}", "", coverage(by[s]), ""]
     lang = Counter(e["lang"] for e in examples)
-    out += ["## Languages", "", table([[k, v, f"{100 * v / len(examples):.1f}%"] for k, v in sorted(lang.items())],
-                                      ["lang", "examples", "share"]), ""]
+    out += [
+        "## Languages",
+        "",
+        table(
+            [
+                [k, v, f"{100 * v / len(examples):.1f}%"]
+                for k, v in sorted(lang.items())
+            ],
+            ["lang", "examples", "share"],
+        ),
+        "",
+    ]
     kinds = Counter(e["kind"] for e in examples)
-    out += ["## Step kinds", "", table([[k, v] for k, v in sorted(kinds.items())], ["kind", "examples"]), ""]
+    out += [
+        "## Step kinds",
+        "",
+        table([[k, v] for k, v in sorted(kinds.items())], ["kind", "examples"]),
+        "",
+    ]
     return "\n".join(out)
 
 

@@ -60,7 +60,6 @@ describe('glove status in mock mode', () => {
     ['no_usb', 'no_usb_devices', true],
     ['one_glove', 'glove_missing', false],
     ['low_fps', 'low_frame_rate', false],
-    ['saturated', 'saturation', false],
     ['not_streaming', 'not_streaming', true],
     ['no_frames', 'no_frames', true],
   ] as const)('scenario %s puts %s first', (scenario, code, blocking) => {
@@ -81,7 +80,7 @@ describe('glove status in mock mode', () => {
     expect(fix('one_glove')).toMatchObject({ side: 'left', title: 'The left glove is missing' });
     expect(fix('low_fps').fix).toMatch(/battery/);
     expect(fix('low_fps').fix).toMatch(/Wi-Fi/);
-    expect(fix('saturated').fix).toMatch(/metal and magnets.*recalibrate/);
+    expect(mockGloveStatus('external', 'saturated').issues).toEqual([]);
     expect(fix('not_streaming').fix).toMatch(/not a glove fault/);
   });
 

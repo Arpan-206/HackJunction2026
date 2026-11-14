@@ -37,6 +37,11 @@ const PLAY_COPY = {
 };
 
 /** The title of a course's last part: its own game, or the generic Play round. */
+/** One line on what the course's game (or Play round) asks of the learner. */
+export function finaleBlurb(lesson: Pick<Lesson, 'test'>): string {
+  return lesson.test ? TEST_COPY[lesson.test.kind].blurb : PLAY_COPY.blurb;
+}
+
 export function finaleTitle(lesson: Pick<Lesson, 'test'>): string {
   return lesson.test ? TEST_COPY[lesson.test.kind].title : PLAY_COPY.title;
 }

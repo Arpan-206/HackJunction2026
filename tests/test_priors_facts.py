@@ -64,8 +64,13 @@ def test_piano_flag_flags_a_flat_hand(monkeypatch):
 
 def test_checker_directions():
     r = piano.PianoRanges(
-        lo=np.full(H.N_ANGLES, 10.0), hi=np.full(H.N_ANGLES, 40.0),
-        lo_press=None, hi_press=None, lo_free=None, hi_free=None, band=(5, 95),
+        lo=np.full(H.N_ANGLES, 10.0),
+        hi=np.full(H.N_ANGLES, 40.0),
+        lo_press=None,
+        hi_press=None,
+        lo_free=None,
+        hi_free=None,
+        band=(5, 95),
     )
     a = np.full(H.N_ANGLES, 20.0)
     a[2] = 0.0  # index_mcp flat
@@ -73,8 +78,13 @@ def test_checker_directions():
     a[15] = 50.0  # spread index-middle wide
     out = r.check(a)
     by = {i["joint"]: i for i in out}
-    assert by["index_mcp"]["direction"] == "flatter" and by["index_mcp"]["by_deg"] == 10.0
-    assert by["middle_pip"]["direction"] == "more_curled" and by["middle_pip"]["by_deg"] == 30.0
+    assert (
+        by["index_mcp"]["direction"] == "flatter" and by["index_mcp"]["by_deg"] == 10.0
+    )
+    assert (
+        by["middle_pip"]["direction"] == "more_curled"
+        and by["middle_pip"]["by_deg"] == 30.0
+    )
     assert by["spread_index_middle"]["direction"] == "wider"
     assert out[0]["joint"] == "middle_pip"  # worst first
     w = np.ones(H.N_ANGLES)
@@ -84,7 +94,10 @@ def test_checker_directions():
 
 def test_furelise_mapping_matches_core_features():
     """A synthetic hand dropped to FurElise's 21 joints gives the same flexion angles back."""
-    h = H.synth_hand("right", curl={"thumb": 0.3, "index": 0.5, "middle": 0.2, "ring": 0.7, "little": 0.4})
+    h = H.synth_hand(
+        "right",
+        curl={"thumb": 0.3, "index": 0.5, "middle": 0.2, "ring": 0.7, "little": 0.4},
+    )
     J = h.joints_local
     j21 = np.zeros((21, 3))
     j21[0] = J[1]

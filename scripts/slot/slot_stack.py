@@ -54,20 +54,37 @@ class Procs:
     run_dir: Path
     procs: list[Proc] = field(default_factory=list)
 
-    def start(self, name: str, cmd: list[str], cwd: Path, env: dict | None = None,
-              trace: Trace | None = None) -> Proc:
+    def start(
+        self,
+        name: str,
+        cmd: list[str],
+        cwd: Path,
+        env: dict | None = None,
+        trace: Trace | None = None,
+    ) -> Proc:
         log = self.run_dir / f"{name}.log"
         full_env = {**os.environ, **(env or {})}
         f = log.open("w")
-        p = subprocess.Popen(cmd, cwd=str(cwd), env=full_env, stdout=f, stderr=subprocess.STDOUT,
-                             stdin=subprocess.DEVNULL, start_new_session=True)
+        p = subprocess.Popen(
+            cmd,
+            cwd=str(cwd),
+            env=full_env,
+            stdout=f,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )
         f.close()
         proc = Proc(name, cmd, p, log)
         self.procs.append(proc)
         envs = " ".join(f"{k}={v}" for k, v in (env or {}).items())
         if trace is not None:
-            trace.add("process", f"(cd {cwd} && {envs + ' ' if envs else ''}{' '.join(cmd)})", True,
-                      f"pid {p.pid}, log {log}")
+            trace.add(
+                "process",
+                f"(cd {cwd} && {envs + ' ' if envs else ''}{' '.join(cmd)})",
+                True,
+                f"pid {p.pid}, log {log}",
+            )
         return proc
 
     def wait_port(self, proc: Proc, port: int, seconds: float) -> None:
@@ -76,14 +93,22 @@ class Procs:
             if port_open(port):
                 return
             if not proc.alive():
-                raise RuntimeError(f"{proc.name} exited early (code {proc.popen.returncode}); log tail:\n{proc.tail()}")
+                raise RuntimeError(
+                    f"{proc.name} exited early (code {proc.popen.returncode}); log tail:\n{proc.tail()}"
+                )
             time.sleep(0.2)
-        raise RuntimeError(f"{proc.name} did not open port {port} within {seconds:.0f} s; log tail:\n{proc.tail()}")
+        raise RuntimeError(
+            f"{proc.name} did not open port {port} within {seconds:.0f} s; log tail:\n{proc.tail()}"
+        )
 
     def stop(self, proc: Proc) -> None:
         if not proc.alive():
             return
-        for sig, wait in ((signal.SIGINT, 5.0), (signal.SIGTERM, 3.0), (signal.SIGKILL, 1.0)):
+        for sig, wait in (
+            (signal.SIGINT, 5.0),
+            (signal.SIGTERM, 3.0),
+            (signal.SIGKILL, 1.0),
+        ):
             try:
                 os.killpg(proc.popen.pid, sig)
             except (ProcessLookupError, PermissionError):
@@ -125,7 +150,14 @@ class Endpoints:
 
 
 class DryStack:
-    def __init__(self, repo: Path, py: str, run_dir: Path, wearer: str, backend_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        repo: Path,
+        py: str,
+        run_dir: Path,
+        wearer: str,
+        backend_dir: Path | None = None,
+    ) -> None:
         self.repo = Path(repo)
         self.py = py
         self.run_dir = Path(run_dir)
@@ -141,23 +173,78 @@ class DryStack:
         core_port, backend_port, depth_port = free_port(), free_port(), free_port()
         py = self.py
         core = self.procs.start(
-            "core", [py, "-m", "core", "--fake", "--host", "127.0.0.1", "--port", str(core_port),
-                     "--wearer", self.wearer, "--calibration-dir", str(data)], self.repo, trace=trace)
+            "core",
+            [
+                py,
+                "-m",
+                "core",
+                "--fake",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(core_port),
+                "--wearer",
+                self.wearer,
+                "--calibration-dir",
+                str(data),
+            ],
+            self.repo,
+            trace=trace,
+        )
         depth = self.procs.start(
-            "depth-fake", [py, "-m", "ios.mac.fake_sender", "--host", "127.0.0.1", "--port", str(depth_port)],
-            self.repo, trace=trace)
+            "depth-fake",
+            [
+                py,
+                "-m",
+                "ios.mac.fake_sender",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(depth_port),
+            ],
+            self.repo,
+            trace=trace,
+        )
         backend = self.procs.start(
-            "backend", ["uv", "run", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(backend_port)],
+            "backend",
+            [
+                "uv",
+                "run",
+                "uvicorn",
+                "app.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(backend_port),
+            ],
             self.backend_dir,
-            env={"GLOVE_SOURCE": "external", "GLOVE_AUTOSTART": "off", "GLOVE_MONITOR": "false",
-                 "GLOVE_DRIVER_TAP": "false", "LLM_PROVIDER": "fake", "DATA_DIR": str(data)},
-            trace=trace)
+            env={
+                "GLOVE_SOURCE": "external",
+                "GLOVE_AUTOSTART": "off",
+                "GLOVE_MONITOR": "false",
+                "GLOVE_DRIVER_TAP": "false",
+                "LLM_PROVIDER": "fake",
+                "DATA_DIR": str(data),
+            },
+            trace=trace,
+        )
         self.procs.wait_port(core, core_port, 60)
         self.procs.wait_port(depth, depth_port, 30)
         self.procs.wait_port(backend, backend_port, 240)
         self.procs.start(
-            "bridge", [py, "-m", "tools.ingest_bridge", "--core", f"ws://127.0.0.1:{core_port}/ws/gloves",
-                       "--backend", f"ws://127.0.0.1:{backend_port}/ws/ingest?activate=1"], self.repo, trace=trace)
+            "bridge",
+            [
+                py,
+                "-m",
+                "tools.ingest_bridge",
+                "--core",
+                f"ws://127.0.0.1:{core_port}/ws/gloves",
+                "--backend",
+                f"ws://127.0.0.1:{backend_port}/ws/ingest?activate=1",
+            ],
+            self.repo,
+            trace=trace,
+        )
         backend_url = f"http://127.0.0.1:{backend_port}"
         # the bridge switches the backend to the external source; wait until it reports it
         end = time.time() + 30
@@ -179,20 +266,65 @@ class DryStack:
         assert self.ep is not None
         if self._b_started:
             return self.ep
-        solver_port, rcsp_port, control_port, core_b = free_port(), free_port(), free_port(), free_port()
+        solver_port, rcsp_port, control_port, core_b = (
+            free_port(),
+            free_port(),
+            free_port(),
+            free_port(),
+        )
         led_log = self.run_dir / "leds.jsonl"
         py = self.py
         solver = self.procs.start(
-            "solver-fake", [py, "-m", "tools.fake_rgmp_server", "--host", "127.0.0.1", "--port", str(solver_port)],
-            self.repo, trace=trace)
+            "solver-fake",
+            [
+                py,
+                "-m",
+                "tools.fake_rgmp_server",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(solver_port),
+            ],
+            self.repo,
+            trace=trace,
+        )
         driver = self.procs.start(
-            "driver-fake", [py, "-m", "tools.fake_rcsp_server", "--port", str(rcsp_port),
-                            "--control-port", str(control_port), "--led-log", str(led_log)], self.repo, trace=trace)
+            "driver-fake",
+            [
+                py,
+                "-m",
+                "tools.fake_rcsp_server",
+                "--port",
+                str(rcsp_port),
+                "--control-port",
+                str(control_port),
+                "--led-log",
+                str(led_log),
+            ],
+            self.repo,
+            trace=trace,
+        )
         self.procs.wait_port(solver, solver_port, 30)
         self.procs.wait_port(driver, control_port, 30)
         core = self.procs.start(
-            "core-b", [py, "-m", "core", "--solver", f"127.0.0.1:{solver_port}", "--rcsp", f"127.0.0.1:{rcsp_port}",
-                       "--host", "127.0.0.1", "--port", str(core_b), "--no-calibration"], self.repo, trace=trace)
+            "core-b",
+            [
+                py,
+                "-m",
+                "core",
+                "--solver",
+                f"127.0.0.1:{solver_port}",
+                "--rcsp",
+                f"127.0.0.1:{rcsp_port}",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(core_b),
+                "--no-calibration",
+            ],
+            self.repo,
+            trace=trace,
+        )
         self.procs.wait_port(core, core_b, 60)
         self.ep.core_b_port = core_b
         self.ep.rcsp_control_port = control_port

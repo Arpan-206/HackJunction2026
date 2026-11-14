@@ -455,20 +455,6 @@
   margin: 0.25rem 0 0;
   color: var(--text-2);
 }
-.sk-course {
-  margin-top: 1rem;
-}
-.sk-course__head {
-  display: grid;
-  gap: 0.1rem;
-}
-.sk-course__head h3 {
-  margin: 0;
-  font: 700 var(--step-0) var(--font-ui);
-}
-.sk-course__by {
-  color: var(--text-2);
-}
 .sk-link {
   color: var(--text);
   text-decoration: underline;
@@ -589,170 +575,239 @@
 }
 
 /* ---------- Skill page: the path ----------
- * A folio of chapters (courses). Each lesson is a station on one inked spine: a numbered roundel, its title and progress,
- * and its four parts (Tutorial, Watch, Ghost on, Ghost off) as a ledger line of links. Malachite ticks mark what is
- * done, gold marks mastery only, the walnut roundel marks where the learner is.
+ * Every lesson of the skill as a node on one inked line, the course's game a lozenge at its end. The line is inked solid
+ * behind what is mastered and dashed ahead. Gold fills a mastered node (mastery only), walnut the lesson the learner is on;
+ * the chosen node is ringed and underlined, and the panel under the line holds the one action and the lesson's four parts.
  */
-.sk-path {
-  margin-top: clamp(2.25rem, 5vw, 3.75rem);
-  padding-top: clamp(1.5rem, 3vw, 2.25rem);
-  border-top: 2px solid var(--rule);
+.sk-trail {
   display: grid;
-  gap: clamp(1.75rem, 3.5vw, 2.75rem);
+  gap: 0.9rem;
+  min-width: 0;
 }
-.sk-path__head {
+.sk-trail__head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.35rem 2rem;
+  gap: 0.25rem 1.5rem;
 }
-.sk-path__head h2 {
+.sk-trail__head h2 {
   margin: 0;
-  font-size: var(--step-2);
+  font-size: var(--step-1);
 }
-.sk-path__sum {
+.sk-trail__sum {
   margin: 0;
   font: italic 400 var(--step-0) / 1.4 var(--font-note);
   color: var(--text-2);
 }
-.sk-chapter {
+/* One row per course: its title, who teaches it, and its line. */
+.sk-trail__row {
   display: grid;
-  gap: 1rem;
+  gap: 0.35rem;
+  min-width: 0;
 }
-.sk-chapter__head {
+.sk-trail__course {
   display: grid;
-  gap: 0.2rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--line);
+  gap: 0.1rem;
 }
-.sk-chapter__head h3 {
+.sk-trail__course h3 {
   margin: 0;
-  font: 600 var(--step-1) / 1.2 var(--font-display);
-  letter-spacing: 0.01em;
+  font: 600 var(--step-0) / 1.3 var(--font-ui);
 }
-.sk-chapter__link {
-  color: var(--text);
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
-}
-.sk-chapter__link:hover {
-  text-decoration-color: currentColor;
-}
-.sk-chapter__by {
+.sk-trail__course p {
   margin: 0;
   color: var(--text-2);
 }
 
-/* The spine: the roundels sit on one ruled line, drawn by each station so it stops at the last one. */
-.sk-spine {
-  --mark: 2.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.sk-node {
+.sk-line {
+  --mark: 3rem;
+  --stop: clamp(7rem, 10vw, 9rem);
   position: relative;
-  display: grid;
-  grid-template-columns: var(--mark) minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: clamp(0.9rem, 2vw, 1.5rem);
-  row-gap: 0.6rem;
-  padding: 0.85rem 0;
+  display: flex;
+  margin: 0;
+  /* Room on every side for the focus ring, which the horizontal scroller would otherwise clip. */
+  padding: 0.35rem 6px 0.5rem;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
 }
-.sk-node::before {
+.sk-line__stop {
+  position: relative;
+  flex: 1 0 var(--stop);
+  max-width: 14rem;
+  scroll-snap-align: center;
+}
+/* The rule from this node's centre to the next one's, under both marks. */
+.sk-line__stop:not(.is-last)::after {
   content: '';
   position: absolute;
-  left: calc(var(--mark) / 2 - 1px);
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--rule);
-  opacity: 0.55;
+  z-index: 0;
+  top: calc(0.35rem + var(--mark) / 2 - 1px);
+  left: 50%;
+  width: 100%;
+  height: 0;
+  border-top: 2px dashed color-mix(in srgb, var(--rule) 60%, transparent);
 }
-.sk-node:first-child::before {
-  top: 50%;
+.sk-line__stop.is-behind:not(.is-last)::after {
+  border-top: 3px solid var(--rule);
+  top: calc(0.35rem + var(--mark) / 2 - 1.5px);
 }
-.sk-node:last-child::before {
-  bottom: 50%;
-}
-.sk-node + .sk-node {
-  border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
-}
-.sk-node__mark {
+.sk-line__node {
   position: relative;
   z-index: 1;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: var(--target);
+  padding: 0.35rem 0.4rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-m);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.sk-line__node:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.sk-line__mark {
   display: grid;
   place-items: center;
   width: var(--mark);
   height: var(--mark);
   border-radius: 50%;
-  border: 2px solid var(--line);
+  border: 2px solid var(--line-strong);
   background: var(--surface);
   color: var(--text-2);
-  font: 600 1.15rem / 1 var(--font-display);
+  font: 600 1.25rem / 1 var(--font-display);
   font-variant-numeric: lining-nums;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
-.sk-node.is-started .sk-node__mark {
+.sk-line__node:hover .sk-line__mark {
+  transform: scale(1.06);
+}
+.sk-line__stop.is-started .sk-line__mark {
   border-color: var(--accent);
+  border-width: 3px;
   color: var(--text);
 }
-.sk-node.is-here .sk-node__mark {
+.sk-line__stop.is-here .sk-line__mark {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--accent);
 }
-.sk-node.is-mastered .sk-node__mark {
+/* A dark rim keeps the gold disc clear of the parchment, so mastery does not rest on the fill alone. */
+.sk-line__stop.is-mastered .sk-line__mark {
   background: var(--gold);
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   color: var(--ink-sea);
 }
-/* The course's game closes the chapter: a lozenge, not a numbered station. */
-.sk-node--finale .sk-node__mark {
-  width: calc(var(--mark) * 0.62);
-  height: calc(var(--mark) * 0.62);
-  margin-inline: auto;
-  border-radius: 2px;
+/* The lesson the learner is on stays walnut even when mastered (a review is due): a gold rim says it was mastered. */
+.sk-line__stop.is-here.is-mastered .sk-line__mark {
+  background: var(--accent);
+  border: 3px solid var(--gold);
+  color: var(--accent-text);
+}
+/* The course's game: a lozenge with a play mark, not a numbered station. */
+.sk-line__stop.is-finale .sk-line__mark {
+  width: calc(var(--mark) * 0.7);
+  height: calc(var(--mark) * 0.7);
+  margin-block: calc(var(--mark) * 0.15);
+  border-radius: 3px;
   transform: rotate(45deg);
 }
-.sk-node__main {
-  display: grid;
-  gap: 0.15rem;
-  min-width: 0;
+.sk-line__play {
+  transform: rotate(-45deg);
 }
-.sk-node__title {
-  margin: 0;
-  font: 700 var(--step-0) / 1.3 var(--font-ui);
+.sk-line__stop.is-finale .sk-line__node:hover .sk-line__mark {
+  transform: rotate(45deg) scale(1.06);
 }
-.sk-node__link {
-  color: var(--text);
-  text-decoration: none;
+.sk-line__node.is-selected .sk-line__mark {
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 6px var(--line-strong);
 }
-.sk-node__link:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+.sk-line__label {
+  font: 700 max(1rem, var(--step--1)) / 1.25 var(--font-ui);
+  overflow-wrap: anywhere;
 }
-.sk-node__state {
-  margin: 0;
+.sk-line__state {
   color: var(--text-2);
   font-size: max(1rem, var(--step--1));
+  line-height: 1.25;
 }
-.sk-node.is-mastered .sk-node__state {
+.sk-line__stop.is-here .sk-line__state {
+  font: italic 600 max(1rem, var(--step--1)) / 1.25 var(--font-note);
+  color: var(--text);
+}
+.sk-line__stop.is-mastered:not(.is-here) .sk-line__state {
   color: var(--gold-text);
   font-weight: 700;
 }
-.sk-node__here {
-  font: italic 600 var(--step-0) var(--font-note);
+.sk-line__node.is-selected .sk-line__label {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25em;
+}
+
+.sk-stop {
+  display: grid;
+  gap: 0.9rem;
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+.sk-stop__head {
+  display: grid;
+  gap: 0.2rem;
+}
+.sk-stop__title {
+  margin: 0;
+  font: 700 var(--step-1) / 1.25 var(--font-ui);
+}
+.sk-stop__state {
+  margin: 0;
+  color: var(--text-2);
+}
+.sk-stop__back {
+  margin: 0;
+}
+.sk-stop__back button {
+  min-height: var(--target);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+/* The game's line sits where a lesson's parts would, so the panel keeps its height when the choice moves to the game. */
+.sk-stop__blurb {
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  margin: 0;
+  font: italic 400 var(--step-0) / 1.4 var(--font-note);
 }
 
 /* The four parts of a lesson: a ledger line of links, joined by a thin rule. */
 .sk-parts {
   display: flex;
-  margin: 0;
+  flex-wrap: wrap;
+  margin: 0 0 0 -0.6rem;
   padding: 0;
   list-style: none;
 }
@@ -798,7 +853,7 @@
   color: var(--text);
 }
 /* Only the lesson the learner is on underlines its next part: that is the one place "you are here" points. */
-.sk-node.is-here .sk-part.is-now {
+.sk-stop.is-here .sk-part.is-now {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 0.3em;
@@ -811,32 +866,10 @@
   opacity: 0.55;
 }
 
-/* Below a wide desk the parts drop under the title; on a phone they become a two-by-two grid of large targets. */
-@media (max-width: 1180px) {
-  .sk-node {
-    grid-template-columns: var(--mark) minmax(0, 1fr);
-    align-items: start;
-  }
-  .sk-node__mark {
-    margin-top: 0.1rem;
-  }
-  /* Roundels sit at the top of a tall station, so the spine starts and ends at their centres, not the station's. */
-  .sk-node:first-child::before {
-    top: calc(0.95rem + var(--mark) / 2);
-  }
-  .sk-node:last-child::before {
-    bottom: auto;
-    height: calc(0.95rem + var(--mark) / 2);
-  }
-  .sk-parts {
-    grid-column: 2;
-    flex-wrap: wrap;
-    margin-left: -0.6rem;
-  }
-}
 @media (max-width: 560px) {
-  .sk-spine {
-    --mark: 2.4rem;
+  .sk-line {
+    --mark: 2.6rem;
+    --stop: 7rem;
   }
   .sk-parts {
     display: grid;
@@ -851,4 +884,19 @@
     width: 100%;
     padding-inline: 0.35rem;
   }
+}
+/* Hover growth is movement too, for the system setting and the in-app Reduce motion switch alike. */
+@media (prefers-reduced-motion: reduce) {
+  .sk-line__node:hover .sk-line__mark {
+    transform: none;
+  }
+  .sk-line__stop.is-finale .sk-line__node:hover .sk-line__mark {
+    transform: rotate(45deg);
+  }
+}
+:root[data-reduce-motion] .sk-line__node:hover .sk-line__mark {
+  transform: none;
+}
+:root[data-reduce-motion] .sk-line__stop.is-finale .sk-line__node:hover .sk-line__mark {
+  transform: rotate(45deg);
 }

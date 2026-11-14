@@ -13,7 +13,12 @@ if str(ROOT) not in sys.path:
 try:
     import core.camera.depth  # noqa: F401
 except ImportError:
-    main = Path(os.environ.get("GEPPETTO_MAIN_CHECKOUT", ROOT.parents[2] if ".claude" in ROOT.parts else ROOT))
+    main = Path(
+        os.environ.get(
+            "GEPPETTO_MAIN_CHECKOUT",
+            ROOT.parents[2] if ".claude" in ROOT.parts else ROOT,
+        )
+    )
     src = main / "core" / "camera" / "depth.py"
     spec = importlib.util.spec_from_file_location("core.camera.depth", src)
     mod = importlib.util.module_from_spec(spec)

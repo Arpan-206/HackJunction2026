@@ -20,5 +20,7 @@ async def get_pack(pack_id: str) -> FingerspellingPack:
     """One pack by id; 404 when there is no such pack."""
     pack = _packs.get(pack_id)
     if pack is None:
-        raise HTTPException(status_code=404, detail=f"no fingerspelling pack {pack_id!r}")
+        raise HTTPException(
+            status_code=404, detail=f"no fingerspelling pack {pack_id!r}"
+        )
     return pack

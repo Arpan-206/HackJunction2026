@@ -164,7 +164,6 @@ def _other(side: Side) -> Side:
 
 
 # Plain words for the two sensors whose stream names mean little to a wearer.
-SENSOR_WORDS = {"hub": "back of the hand", "arm": "forearm"}
 
 
 def diagnose(s: RigSnapshot) -> list[GloveIssue]:
@@ -288,33 +287,6 @@ def diagnose(s: RigSnapshot) -> list[GloveIssue]:
                     blocking=False,
                     title=f"The {g.side} glove sends {round(rate)} frames a second",
                     fix=f"For the {g.side} glove, {how}. On Wi-Fi, move closer to the router and away from other networks.",
-                )
-            )
-    for g in connected:
-        bad = [
-            f"{SENSOR_WORDS.get(sensor.name, sensor.name)} ({', '.join(sensor.saturated)})"
-            for sensor in g.sensors
-            if sensor.saturated
-        ]
-        if bad:
-            issues.append(
-                GloveIssue(
-                    code="saturation",
-                    side=g.side,
-                    blocking=False,
-                    title=f"Saturated sensors on the {g.side} glove: {', '.join(bad)}",
-                    fix="Move away from metal and magnets (laptops, speakers, metal table frames), hold still for a few seconds, then recalibrate.",
-                )
-            )
-    for g in connected:
-        if g.heading_reliable is False:
-            issues.append(
-                GloveIssue(
-                    code="heading_unreliable",
-                    side=g.side,
-                    blocking=False,
-                    title=f"The {g.side} glove's heading is still settling",
-                    fix="Move your hands to settle the compass: turn both wrists slowly a few times, away from metal. It settles with movement after a still moment.",
                 )
             )
     return issues

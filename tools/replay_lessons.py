@@ -46,7 +46,11 @@ EDGE_S = 0.25
 # capture seconds 2968.6 to 2979.0. Used for the calibration only.
 THUMB_WINDOW = (2969.0, 9.5)
 WEARER = "arpan"
-RIGHT_RANGE_ID, LEFT_RANGE_ID, WEARER_REC_ID = "c8713cacaff6", "50462cbe80bd", "a907152ed526"
+RIGHT_RANGE_ID, LEFT_RANGE_ID, WEARER_REC_ID = (
+    "c8713cacaff6",
+    "50462cbe80bd",
+    "a907152ed526",
+)
 
 
 def stretches(w: dict, side: str, exclude: tuple[float, float]) -> list[dict]:
@@ -56,8 +60,17 @@ def stretches(w: dict, side: str, exclude: tuple[float, float]) -> list[dict]:
         t0, t1 = float(d["t_s"][i0]), float(d["t_s"][i1])
         if t1 - t0 < MIN_LEN_S or (t0 < exclude[1] and t1 > exclude[0]):
             continue
-        med = np.median(d["angles"][i0:i1 + 1], axis=0)
-        out.append({"side": side, "t0": t0, "t1": t1, "len": t1 - t0, "flex": med[inv.FLEX], "angles": med})
+        med = np.median(d["angles"][i0 : i1 + 1], axis=0)
+        out.append(
+            {
+                "side": side,
+                "t0": t0,
+                "t1": t1,
+                "len": t1 - t0,
+                "flex": med[inv.FLEX],
+                "angles": med,
+            }
+        )
     return out
 
 
@@ -98,33 +111,80 @@ def write_thumb_calibration(cfg, capture: Path, src_dir: Path, out_dir: Path) ->
     thumb = angles_to_triples(raw, cmc)
     rng = json.loads((src_dir / "calibrations" / f"{RIGHT_RANGE_ID}.json").read_text())
     left = json.loads((src_dir / "calibrations" / f"{LEFT_RANGE_ID}.json").read_text())
-    rec = json.loads((src_dir / "glove_calibrations" / f"{WEARER_REC_ID}.json").read_text())
+    rec = json.loads(
+        (src_dir / "glove_calibrations" / f"{WEARER_REC_ID}.json").read_text()
+    )
     new_right_id = f"{RIGHT_RANGE_ID}-thumb"
-    rng_new = {**rng, "id": new_right_id, "thumb": thumb,
-               "note": f"replay-demo lane: thumb phase cut offline from the capture, capture seconds {THUMB_WINDOW[0]} "
-                       f"to {THUMB_WINDOW[0] + THUMB_WINDOW[1]}; flat and fist copied from {RIGHT_RANGE_ID}"}
-    rec_new = {**rec, "id": f"{WEARER_REC_ID}-thumb",
-               "range_calibration_ids": {"left": LEFT_RANGE_ID, "right": new_right_id}}
+    rng_new = {
+        **rng,
+        "id": new_right_id,
+        "thumb": thumb,
+        "note": f"replay-demo lane: thumb phase cut offline from the capture, capture seconds {THUMB_WINDOW[0]} "
+        f"to {THUMB_WINDOW[0] + THUMB_WINDOW[1]}; flat and fist copied from {RIGHT_RANGE_ID}",
+    }
+    rec_new = {
+        **rec,
+        "id": f"{WEARER_REC_ID}-thumb",
+        "range_calibration_ids": {"left": LEFT_RANGE_ID, "right": new_right_id},
+    }
     (out_dir / "calibrations").mkdir(parents=True, exist_ok=True)
     (out_dir / "glove_calibrations").mkdir(parents=True, exist_ok=True)
-    (out_dir / "calibrations" / f"{new_right_id}.json").write_text(json.dumps(rng_new, indent=1))
-    (out_dir / "calibrations" / f"{LEFT_RANGE_ID}.json").write_text(json.dumps(left, indent=1))
-    (out_dir / "glove_calibrations" / f"{rec_new['id']}.json").write_text(json.dumps(rec_new, indent=1))
-    flat = {k: round(float(np.degrees(rng["flat"]["thumb"][j])), 1) for k, j in (("mcp", 1), ("ip", 2))}
-    fist = {k: round(float(np.degrees(rng["fist"]["thumb"][j])), 1) for k, j in (("mcp", 1), ("ip", 2))}
-    folded = {"mcp": round(float(raw[0]), 1), "ip": round(float(raw[1]), 1), "cmc": round(float(np.degrees(cmc)), 1)}
-    fingers = {f: round(float(np.mean(raw[H.FLEXION_SLOTS[f]])), 1) for f in ("index", "middle", "ring", "little")}
-    return {"frames": len(hands), "window": THUMB_WINDOW, "flat_thumb_deg": flat, "fist_thumb_deg": fist,
-            "folded_thumb_deg": folded, "fingers_deg_during_fold": fingers, "thumb_triple": thumb,
-            "files": sorted(str(p.relative_to(out_dir)) for p in out_dir.rglob("*.json"))}
+    (out_dir / "calibrations" / f"{new_right_id}.json").write_text(
+        json.dumps(rng_new, indent=1)
+    )
+    (out_dir / "calibrations" / f"{LEFT_RANGE_ID}.json").write_text(
+        json.dumps(left, indent=1)
+    )
+    (out_dir / "glove_calibrations" / f"{rec_new['id']}.json").write_text(
+        json.dumps(rec_new, indent=1)
+    )
+    flat = {
+        k: round(float(np.degrees(rng["flat"]["thumb"][j])), 1)
+        for k, j in (("mcp", 1), ("ip", 2))
+    }
+    fist = {
+        k: round(float(np.degrees(rng["fist"]["thumb"][j])), 1)
+        for k, j in (("mcp", 1), ("ip", 2))
+    }
+    folded = {
+        "mcp": round(float(raw[0]), 1),
+        "ip": round(float(raw[1]), 1),
+        "cmc": round(float(np.degrees(cmc)), 1),
+    }
+    fingers = {
+        f: round(float(np.mean(raw[H.FLEXION_SLOTS[f]])), 1)
+        for f in ("index", "middle", "ring", "little")
+    }
+    return {
+        "frames": len(hands),
+        "window": THUMB_WINDOW,
+        "flat_thumb_deg": flat,
+        "fist_thumb_deg": fist,
+        "folded_thumb_deg": folded,
+        "fingers_deg_during_fold": fingers,
+        "thumb_triple": thumb,
+        "files": sorted(str(p.relative_to(out_dir)) for p in out_dir.rglob("*.json")),
+    }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("capture", type=Path)
-    ap.add_argument("--cache", type=Path, required=True, help="tools/capture_inventory.py --cache output")
+    ap.add_argument(
+        "--cache",
+        type=Path,
+        required=True,
+        help="tools/capture_inventory.py --cache output",
+    )
     ap.add_argument("--lessons-dir", type=Path, default=None)
-    ap.add_argument("--cal-dir", type=Path, default=None, help="the backend data dir with today's records (read only)")
+    ap.add_argument(
+        "--cal-dir",
+        type=Path,
+        default=None,
+        help="the backend data dir with today's records (read only)",
+    )
     ap.add_argument("--cal-out", type=Path, default=Path("docs/replay-demo/cal-thumb"))
     ap.add_argument("--json", type=Path, default=Path("docs/replay-demo/results.json"))
     a = ap.parse_args()
@@ -137,8 +197,14 @@ def main() -> int:
     thumb = write_thumb_calibration(cfg, a.capture, cal_dir, a.cal_out)
     cals = {
         "raw": {"left": None, "right": None},
-        "before": {s: load_hand(cal_dir, s, WEARER, cfg.calibration, cfg.hand) for s in ("left", "right")},
-        "after": {s: load_hand(a.cal_out, s, WEARER, cfg.calibration, cfg.hand) for s in ("left", "right")},
+        "before": {
+            s: load_hand(cal_dir, s, WEARER, cfg.calibration, cfg.hand)
+            for s in ("left", "right")
+        },
+        "after": {
+            s: load_hand(a.cal_out, s, WEARER, cfg.calibration, cfg.hand)
+            for s in ("left", "right")
+        },
     }
     excl = (THUMB_WINDOW[0] - 1, THUMB_WINDOW[0] + THUMB_WINDOW[1] + 1)
     rows = []
@@ -152,19 +218,35 @@ def main() -> int:
             ex_raw = window_hands(a.capture, side, *e_win, cfg=cfg)
             le_raw = window_hands(a.capture, side, *l_win, cfg=cfg)
             wr_raw = window_hands(a.capture, side, *w_win, cfg=cfg)
-            row = {"lesson": f"replay-{name}", "side": side, "pose": pose,
-                   "expert": [round(x, 1) for x in e_win], "learner": [round(x, 1) for x in l_win],
-                   "wrong": [round(x, 1) for x in w_win],
-                   "pose_dist_deg": round(pose_dist(e, l), 1), "wrong_dist_deg": round(pose_dist(e, wr), 1),
-                   "flex_deg": {f: round(float(np.mean(e["angles"][H.FLEXION_SLOTS[f]])), 0) for f in H.FINGERS},
-                   "scores": {}}
+            row = {
+                "lesson": f"replay-{name}",
+                "side": side,
+                "pose": pose,
+                "expert": [round(x, 1) for x in e_win],
+                "learner": [round(x, 1) for x in l_win],
+                "wrong": [round(x, 1) for x in w_win],
+                "pose_dist_deg": round(pose_dist(e, l), 1),
+                "wrong_dist_deg": round(pose_dist(e, wr), 1),
+                "flex_deg": {
+                    f: round(float(np.mean(e["angles"][H.FLEXION_SLOTS[f]])), 0)
+                    for f in H.FINGERS
+                },
+                "scores": {},
+            }
             for mode, by_side in cals.items():
                 cal = by_side[side]
                 ex = ex_raw  # apply_calibration recomputes angles from angles_raw on every pass
                 apply_calibration(ex, cal, cfg)
                 # the "before" lesson is the one written to disk: what the live core would have recorded
-                lesson = cut_lesson(cfg, ex, side, f"Held pose: {pose} ({side})", row["lesson"],
-                                    lessons_dir if mode == "before" else None, cal)
+                lesson = cut_lesson(
+                    cfg,
+                    ex,
+                    side,
+                    f"Held pose: {pose} ({side})",
+                    row["lesson"],
+                    lessons_dir if mode == "before" else None,
+                    cal,
+                )
                 apply_calibration(le_raw, cal, cfg)
                 right = score_take(cfg, lesson, le_raw, side, cal)
                 apply_calibration(wr_raw, cal, cfg)
@@ -172,13 +254,22 @@ def main() -> int:
                 row["scores"][mode] = {"right": right, "wrong": bad}
             rows.append(row)
             sc = row["scores"]
-            print(f"{row['lesson']:52s} same {sc['before']['right']['score_mean']:5.1f} "
-                  f"(raw {sc['raw']['right']['score_mean']:5.1f}, thumb {sc['after']['right']['score_mean']:5.1f}) "
-                  f"pass {sc['before']['right']['passed']}  wrong {sc['before']['wrong']['score_mean']:5.1f} "
-                  f"pass {sc['before']['wrong']['passed']}", flush=True)
-    out = {"capture": str(a.capture), "thumb_calibration": thumb,
-           "calibration_summary": {m: {s: (None if c is None else c.summary()) for s, c in v.items()} for m, v in cals.items()},
-           "lessons": rows}
+            print(
+                f"{row['lesson']:52s} same {sc['before']['right']['score_mean']:5.1f} "
+                f"(raw {sc['raw']['right']['score_mean']:5.1f}, thumb {sc['after']['right']['score_mean']:5.1f}) "
+                f"pass {sc['before']['right']['passed']}  wrong {sc['before']['wrong']['score_mean']:5.1f} "
+                f"pass {sc['before']['wrong']['passed']}",
+                flush=True,
+            )
+    out = {
+        "capture": str(a.capture),
+        "thumb_calibration": thumb,
+        "calibration_summary": {
+            m: {s: (None if c is None else c.summary()) for s, c in v.items()}
+            for m, v in cals.items()
+        },
+        "lessons": rows,
+    }
     a.json.parent.mkdir(parents=True, exist_ok=True)
     a.json.write_text(json.dumps(out, indent=1, default=str))
     print(f"wrote {a.json}")

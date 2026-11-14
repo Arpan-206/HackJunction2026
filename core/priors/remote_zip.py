@@ -51,7 +51,7 @@ class HttpRangeFile(io.RawIOBase):
             try:
                 with urllib.request.urlopen(req, timeout=120) as r:
                     return r.read()
-            except Exception:  # noqa: BLE001 - retry any network fault
+            except Exception:
                 if attempt == 4:
                     raise
         return b""

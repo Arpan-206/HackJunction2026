@@ -20,20 +20,19 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from pydantic import ValidationError
-
 import paths
+from pydantic import ValidationError
 
 paths.add_repo_paths()
 
-import recording as R  # noqa: E402
-from app import constants as c  # noqa: E402
-from app.core.utils import new_id, utc_now_iso  # noqa: E402
-from app.schemas.common import Skill  # noqa: E402
-from app.schemas.lesson import Lesson, LessonBase  # noqa: E402
-from app.services.llm.lesson_generator import SYSTEM_PROMPT  # noqa: E402
-from app.services.llm.schema import llm_schema  # noqa: E402
-from app.services.moves import MoveCatalog  # noqa: E402
+import recording as R
+from app import constants as c
+from app.core.utils import new_id, utc_now_iso
+from app.schemas.common import Skill
+from app.schemas.lesson import Lesson, LessonBase
+from app.services.llm.lesson_generator import SYSTEM_PROMPT
+from app.services.llm.schema import llm_schema
+from app.services.moves import MoveCatalog
 
 DEFAULT_MODEL = "google/gemma-4-31B-it"
 ENDPOINT_FILE = paths.OUT / "endpoint.json"
@@ -91,13 +90,22 @@ class Endpoint:
             raise SystemExit("no endpoint: run deploy.py first, or set VERDA_GEMMA_URL")
         paths.require(secrets, "VERDA_INFERENCE_KEY")
         model = secrets.get("VERDA_GEMMA_MODEL") or info.get("model") or DEFAULT_MODEL
-        return cls(base_url=base_url.rstrip("/"), api_key=secrets["VERDA_INFERENCE_KEY"], model=model)
+        return cls(
+            base_url=base_url.rstrip("/"),
+            api_key=secrets["VERDA_INFERENCE_KEY"],
+            model=model,
+        )
 
     def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
     def _client(self) -> httpx.Client:
-        return httpx.Client(timeout=self.timeout_s, transport=self.transport, headers=self._headers())
+        return httpx.Client(
+            timeout=self.timeout_s, transport=self.transport, headers=self._headers()
+        )
 
     def health(self) -> bool:
         """True when vLLM answers its health check through the gateway."""
@@ -126,10 +134,18 @@ class Endpoint:
         If the server rejects the schema (HTTP 400, an unsupported JSON Schema feature) the call is repeated asking for
         any JSON object; the caller validates either way.
         """
-        body: dict[str, Any] = {"model": self.model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        body: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
         mode = "none"
         if schema is not None:
-            body["response_format"] = {"type": "json_schema", "json_schema": {"name": "lesson", "schema": schema}}
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "lesson", "schema": schema},
+            }
             mode = "json_schema"
         started = time.monotonic()
         with self._client() as client:
@@ -141,12 +157,20 @@ class Endpoint:
             r.raise_for_status()
         data = r.json()
         text = data["choices"][0]["message"].get("content") or ""
-        return ChatResult(text=text, usage=data.get("usage") or {}, latency_s=time.monotonic() - started, schema_mode=mode)
+        return ChatResult(
+            text=text,
+            usage=data.get("usage") or {},
+            latency_s=time.monotonic() - started,
+            schema_mode=mode,
+        )
 
 
 def catalogue_text(moves: MoveCatalog, skill: Skill | None) -> str:
     """The move list exactly as the backend's lesson generator writes it."""
-    return "\n".join(f"- {m.id}: {m.name} ({m.skill}, motion preset {m.default_motion.preset})" for m in moves.list(skill))
+    return "\n".join(
+        f"- {m.id}: {m.name} ({m.skill}, motion preset {m.default_motion.preset})"
+        for m in moves.list(skill)
+    )
 
 
 def build_messages(
@@ -164,10 +188,17 @@ def build_messages(
         f"MOVE CATALOGUE:\n{catalogue_text(moves, skill)}",
     ]
     if errors:
-        parts.append(f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}")
-    content: list[dict[str, Any]] = [{"type": "image_url", "image_url": {"url": R.image_data_url(p)}} for p in frames]
+        parts.append(
+            f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}"
+        )
+    content: list[dict[str, Any]] = [
+        {"type": "image_url", "image_url": {"url": R.image_data_url(p)}} for p in frames
+    ]
     content.append({"type": "text", "text": "\n\n".join(parts)})
-    return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": content}]
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": content},
+    ]
 
 
 def recorded_hand(rec: R.Recording) -> str | None:
@@ -182,8 +213,11 @@ def finalise(draft: LessonBase, moves: MoveCatalog, hand: str | None = None) -> 
     `hand` is the hand the gloves measured. The gloves are the ground truth for which hand moved, so a one-hand
     recording sets `hands` on every step (Gemma 4 wrote "right" for a left-hand take on 14 Nov; Gemini did not).
     """
+
     def fix(s):
-        update: dict[str, Any] = {"move_id": s.move_id if s.move_id and moves.get(s.move_id) else None}
+        update: dict[str, Any] = {
+            "move_id": s.move_id if s.move_id and moves.get(s.move_id) else None
+        }
         if hand:
             update["hands"] = hand
         return s.model_copy(update=update)
@@ -268,19 +302,40 @@ def generate_lesson(
             prompt_chars=prompt_chars,
             errors=history,
         )
-    raise LessonGenerationError(f"no valid lesson after {attempts} attempts; last errors:\n{errors}")
+    raise LessonGenerationError(
+        f"no valid lesson after {attempts} attempts; last errors:\n{errors}"
+    )
 
 
-def lesson_from_recording(recording_dir: str | Path, text: str = "", skill: Skill | None = None, **kwargs: Any) -> dict[str, Any]:
+def lesson_from_recording(
+    recording_dir: str | Path, text: str = "", skill: Skill | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """The lesson JSON the backend already uses (a `Lesson`, as `POST /lessons/generate` returns it)."""
     return generate_lesson(recording_dir, text, skill, **kwargs).lesson
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("recording", help="a lesson folder: lesson.json, frames/, trace.npz")
-    ap.add_argument("--text", default="", help="the expert's request; default: " + c.VIDEO_DEFAULT_PROMPT)
-    ap.add_argument("--skill", default=None, choices=["table_tennis", "piano", "shadow_puppets", "surgical_grips", "crochet", "general"])
+    ap.add_argument(
+        "recording", help="a lesson folder: lesson.json, frames/, trace.npz"
+    )
+    ap.add_argument(
+        "--text",
+        default="",
+        help="the expert's request; default: " + c.VIDEO_DEFAULT_PROMPT,
+    )
+    ap.add_argument(
+        "--skill",
+        default=None,
+        choices=[
+            "table_tennis",
+            "piano",
+            "shadow_puppets",
+            "surgical_grips",
+            "crochet",
+            "general",
+        ],
+    )
     ap.add_argument("--max-frames", type=int, default=R.DEFAULT_MAX_FRAMES)
     ap.add_argument("--out", default=None, help="write the lesson JSON here")
     a = ap.parse_args(argv)

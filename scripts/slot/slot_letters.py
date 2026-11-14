@@ -29,7 +29,14 @@ for p in (str(HERE), str(REPO)):
 FINGERS = ("thumb", "index", "middle", "ring", "little")
 BACKEND_PACKS = Path("backend/app/data/fingerspelling_packs.json")
 MOCK_PACKS = Path("frontend/src/mock/data/fingerspelling-packs.json")
-RECORD_FIELDS = ("recorded_by", "reference", "recorded_at", "move_id", "lesson_id", "pose")
+RECORD_FIELDS = (
+    "recorded_by",
+    "reference",
+    "recorded_at",
+    "move_id",
+    "lesson_id",
+    "pose",
+)
 
 
 def pack_files(repo: Path) -> list[Path]:
@@ -62,7 +69,9 @@ def letters_to_record(pack: dict, wanted: list[str] | None = None) -> list[str]:
         want = [w.strip().upper() for w in wanted if w.strip()]
         bad = [w for w in want if w not in slots]
         if bad:
-            raise ValueError(f"{', '.join(bad)} not a slot of {pack['name']} (slots: {', '.join(slots)})")
+            raise ValueError(
+                f"{', '.join(bad)} not a slot of {pack['name']} (slots: {', '.join(slots)})"
+            )
         return want
     return [x["letter"] for x in pack["letters"] if x["status"] != "recorded"]
 
@@ -94,14 +103,26 @@ def curls_from_lesson(lesson: dict) -> dict[str, float]:
     return {f: round(float(curls[f]), 3) for f in FINGERS}
 
 
-def store_letter(data: dict, pack_id: str, letter: str, recorded_by: str, reference: str, lesson_id: str,
-                 pose: dict[str, float], recorded_at: str | None = None) -> dict:
+def store_letter(
+    data: dict,
+    pack_id: str,
+    letter: str,
+    recorded_by: str,
+    reference: str,
+    lesson_id: str,
+    pose: dict[str, float],
+    recorded_at: str | None = None,
+) -> dict:
     """Mark one slot recorded, with who, against what, when, the core lesson and the pose. Returns the slot."""
     if not recorded_by.strip():
-        raise ValueError("a recorded letter needs the name of the person who recorded it")
+        raise ValueError(
+            "a recorded letter needs the name of the person who recorded it"
+        )
     if not reference.strip():
         raise ValueError("a recorded letter needs the reference it was held against")
-    if set(pose) != set(FINGERS) or not all(0.0 <= float(v) <= 1.0 for v in pose.values()):
+    if set(pose) != set(FINGERS) or not all(
+        0.0 <= float(v) <= 1.0 for v in pose.values()
+    ):
         raise ValueError(f"pose must give a curl 0..1 for each of {', '.join(FINGERS)}")
     pack = find_pack(data, pack_id)
     slot = next((x for x in pack["letters"] if x["letter"] == letter), None)
@@ -127,7 +148,15 @@ class Take:
     error: str | None = None
 
 
-def record_take(core, http_get, letter: str, title: str, pose_seconds: float, hold_seconds: float, say) -> Take:
+def record_take(
+    core,
+    http_get,
+    letter: str,
+    title: str,
+    pose_seconds: float,
+    hold_seconds: float,
+    say,
+) -> Take:
     """One hold take on the core: get into the shape, record_start, hold still, record_stop, read the lesson back."""
     say(f"   get into {letter} ({pose_seconds:.0f} s)")
     time.sleep(pose_seconds)
@@ -150,9 +179,19 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--pack", default="fi")
-    ap.add_argument("--letter", action="append", help="slot to record (repeatable); default every slot not recorded yet")
-    ap.add_argument("--by", default="", help="the name of the person recording (asked if missing)")
-    ap.add_argument("--reference", default="", help="URL or document name held against (default: the pack's chart)")
+    ap.add_argument(
+        "--letter",
+        action="append",
+        help="slot to record (repeatable); default every slot not recorded yet",
+    )
+    ap.add_argument(
+        "--by", default="", help="the name of the person recording (asked if missing)"
+    )
+    ap.add_argument(
+        "--reference",
+        default="",
+        help="URL or document name held against (default: the pack's chart)",
+    )
     ap.add_argument("--core-port", type=int, default=8765)
     ap.add_argument("--pose-seconds", type=float, default=3.0)
     ap.add_argument("--hold-seconds", type=float, default=3.0)
@@ -164,10 +203,14 @@ def main(argv: list[str] | None = None) -> int:
     pack = find_pack(data, a.pack)
     todo = letters_to_record(pack, a.letter)
     if not todo:
-        c.say(f"Every slot of {pack['name']} is recorded. Name one with --letter to record it again.")
+        c.say(
+            f"Every slot of {pack['name']} is recorded. Name one with --letter to record it again."
+        )
         return 0
     by = a.by or c.text("Your name (stored as recorded_by)", "")
-    ref = a.reference or c.text("Reference you hold the letters against", pack["default_reference"]["url"])
+    ref = a.reference or c.text(
+        "Reference you hold the letters against", pack["default_reference"]["url"]
+    )
     base = f"http://127.0.0.1:{a.core_port}"
     core = CoreLink(f"ws://127.0.0.1:{a.core_port}/ws")
     try:
@@ -177,8 +220,15 @@ def main(argv: list[str] | None = None) -> int:
         for letter in todo:
             c.say(f"--- {letter}: hold it as the chart shows ({ref}) ---")
             c.enter("Press Enter, then make the letter.")
-            t = record_take(core, lambda lid: http("GET", f"{base}/lessons/{lid}", timeout=5), letter,
-                            take_title(pack, letter), a.pose_seconds, a.hold_seconds, c.say)
+            t = record_take(
+                core,
+                lambda lid: http("GET", f"{base}/lessons/{lid}", timeout=5),
+                letter,
+                take_title(pack, letter),
+                a.pose_seconds,
+                a.hold_seconds,
+                c.say,
+            )
             if t.error or not t.pose:
                 c.say(f"Not stored: {t.error}")
                 continue

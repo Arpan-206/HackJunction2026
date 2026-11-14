@@ -19,13 +19,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from core import hand as H  # noqa: E402
-from core.calibration import load_hand  # noqa: E402
-from core.config import load_config  # noqa: E402
-from core.recorder import Lesson, reweight_lesson  # noqa: E402
+from core import hand as H
+from core.calibration import load_hand
+from core.config import load_config
+from core.recorder import Lesson, reweight_lesson
 
 
-def check(lesson_dir: Path, data_dir: Path | None, wearer: str, takes: int, keys: str) -> dict:
+def check(
+    lesson_dir: Path, data_dir: Path | None, wearer: str, takes: int, keys: str
+) -> dict:
     cfg = load_config()
     lesson = Lesson.load(lesson_dir)
     before = [dict(s.weights) for s in lesson.steps]
@@ -35,7 +37,10 @@ def check(lesson_dir: Path, data_dir: Path | None, wearer: str, takes: int, keys
     if takes:
         lesson.task_config = {**lesson.task_config, "takes": takes}
     if keys:
-        lesson.task, lesson.task_config = "typing", {**lesson.task_config, "keys": list(keys)}
+        lesson.task, lesson.task_config = (
+            "typing",
+            {**lesson.task_config, "keys": list(keys)},
+        )
     reweight_lesson(lesson, cfg.record, None if cal is None else cal.finger_weights())
     return {
         "lesson": lesson.id,
@@ -58,10 +63,14 @@ def print_table(res: dict) -> None:
     print(f"\n{res['lesson']} ({res['master_hand']} hand)")
     cal = res["calibration"]
     if cal:
-        print(f"calibration {cal.get('range_calibration_id')}: unusable {cal.get('unusable')}")
-    print("| Step | Kind | Takes | Weights before | Weights after | Consistency | Calibration | Chart |")
+        print(
+            f"calibration {cal.get('range_calibration_id')}: unusable {cal.get('unusable')}"
+        )
+    print(
+        "| Step | Kind | Takes | Weights before | Weights after | Consistency | Calibration | Chart |"
+    )
     print("| --- | --- | --- | --- | --- | --- | --- | --- |")
-    fmt = lambda d: " ".join(f"{f[0]}{d[f]:.2f}" for f in H.FINGERS)  # noqa: E731
+    fmt = lambda d: " ".join(f"{f[0]}{d[f]:.2f}" for f in H.FINGERS)
     for s in res["steps"]:
         src = s["from"]
         print(

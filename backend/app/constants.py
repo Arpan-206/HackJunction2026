@@ -14,7 +14,9 @@ SEED_DIR = Path(__file__).resolve().parent / "data" / "seed"
 SEED_LESSON_PREFIX = "seed-"
 MOVES_FILE = Path(__file__).resolve().parent / "data" / "moves.json"
 # Fingerspelling packs, one alphabet per pack (schemas/fingerspelling.py). The slot kit writes recorded letters here.
-FINGERSPELLING_PACKS_FILE = Path(__file__).resolve().parent / "data" / "fingerspelling_packs.json"
+FINGERSPELLING_PACKS_FILE = (
+    Path(__file__).resolve().parent / "data" / "fingerspelling_packs.json"
+)
 DEFAULT_DATA_DIR = BACKEND_ROOT / "data"
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")

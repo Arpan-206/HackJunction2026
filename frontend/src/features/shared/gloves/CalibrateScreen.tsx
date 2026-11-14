@@ -24,7 +24,6 @@ function ConnectionStep({ onNext }: { onNext: () => void }) {
   const [draft, setDraft] = useState(wearer);
   const status = rig.status;
   const connected = status?.gloves.filter((g) => g.connected) ?? [];
-  const unsettled = connected.filter((g) => g.heading_reliable === false);
   const { now } = status ? splitIssues(status.issues) : { now: null };
   const name = draft.trim();
   return (
@@ -45,9 +44,6 @@ function ConnectionStep({ onNext }: { onNext: () => void }) {
         <p className="gl-ready">
           {connected.length === 2 ? 'Both gloves are streaming.' : connected.length === 1 ? `Only the ${connected[0].side} glove is connected. You can calibrate it on its own.` : 'No gloves yet.'}
         </p>
-      )}
-      {unsettled.length > 0 && (
-        <p className="gl-line">Move your hands to settle the compass: turn both wrists slowly a few times, away from metal. It settles with movement after a still moment.</p>
       )}
       <div className="gl-field">
         <label className="gl-label" htmlFor="gl-wearer">

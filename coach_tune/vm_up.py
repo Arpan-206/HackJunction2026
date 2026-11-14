@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import vm  # noqa: E402
+import vm
 
 KEY = Path.home() / ".ssh" / "geppetto_coach_tune"
 KEY_NAME = "geppetto-coach-tune"
@@ -28,7 +28,11 @@ INSTANCE_FILE = vm.OUT / "instance.json"
 
 def ensure_key(c) -> str:
     if not KEY.exists():
-        subprocess.run(["ssh-keygen", "-t", "ed25519", "-N", "", "-C", KEY_NAME, "-f", str(KEY)], check=True, capture_output=True)
+        subprocess.run(
+            ["ssh-keygen", "-t", "ed25519", "-N", "", "-C", KEY_NAME, "-f", str(KEY)],
+            check=True,
+            capture_output=True,
+        )
     pub = KEY.with_suffix(".pub").read_text().strip()
     for k in c.ssh_keys.get():
         if k.name == KEY_NAME:
@@ -47,8 +51,14 @@ def free_types(c) -> dict[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--type", default=None, help="instance type; default: the first free of " + ", ".join(PREFERRED))
-    ap.add_argument("--hours", type=float, default=3.0, help="planned hours, for the floor check")
+    ap.add_argument(
+        "--type",
+        default=None,
+        help="instance type; default: the first free of " + ", ".join(PREFERRED),
+    )
+    ap.add_argument(
+        "--hours", type=float, default=3.0, help="planned hours, for the floor check"
+    )
     ap.add_argument("--hostname", default="geppetto-coach-tune")
     a = ap.parse_args(argv)
 
@@ -59,9 +69,13 @@ def main(argv: list[str] | None = None) -> int:
     pick = next((t for t in wanted if t in free), None)
     if pick is None:
         raise SystemExit(f"none of {wanted} is free now; free: {sorted(free)}")
-    price = next(t.price_per_hour for t in c.instance_types.get() if t.instance_type == pick)
+    price = next(
+        t.price_per_hour for t in c.instance_types.get() if t.instance_type == pick
+    )
     planned = price * a.hours
-    print(f"balance {bal['amount']} {bal['currency']}; {pick} in {free[pick]} at {price} USD/h; planned {planned:.2f} USD")
+    print(
+        f"balance {bal['amount']} {bal['currency']}; {pick} in {free[pick]} at {price} USD/h; planned {planned:.2f} USD"
+    )
     if bal["amount"] is None or bal["amount"] - planned < vm.BALANCE_FLOOR:
         vm.log_cost("refused", type=pick, balance=bal, planned_usd=planned)
         raise SystemExit("refused: the planned spend would break the 50 floor")
@@ -93,7 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     }
     vm.OUT.mkdir(parents=True, exist_ok=True)
     INSTANCE_FILE.write_text(json.dumps(info, indent=2) + "\n")
-    vm.log_cost("vm_up", **{k: v for k, v in info.items() if k != "balance_before"}, balance=bal)
+    vm.log_cost(
+        "vm_up", **{k: v for k, v in info.items() if k != "balance_before"}, balance=bal
+    )
     print(json.dumps(info, indent=2))
     return 0 if inst.status == "running" else 1
 

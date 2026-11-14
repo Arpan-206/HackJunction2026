@@ -40,7 +40,7 @@ def test_drift_correction_on_real_glove_window(dark):
     q = w["wrist_q"]
     yaw = np.degrees(np.unwrap(np.radians(w["yaw_deg"])))
     mean = float(yaw.mean())
-    assert 15 < np.ptp(yaw) < 60          # the hand really turns in this window
+    assert 15 < np.ptp(yaw) < 60  # the hand really turns in this window
 
     def glove_yaw(t):
         return float(np.interp(t, ts, yaw))
@@ -50,8 +50,11 @@ def test_drift_correction_on_real_glove_window(dark):
     scene = FakeDepthScene(dark_hand=dark, yaw_fn=lambda t: glove_yaw(t) - mean)
     clock = FakeClock()
     fps = 10.0
-    dt = DepthTracking(FakeDepthSource(scene, clock=clock, fps=fps), TrackerConfig(gate="cylinder", entry_margin_px=2),
-                       corrector_cfg=YawCorrectorConfig(lock_s=2.0, lock_min_samples=10, tau_s=1.5))
+    dt = DepthTracking(
+        FakeDepthSource(scene, clock=clock, fps=fps),
+        TrackerConfig(gate="cylinder", entry_margin_px=2),
+        corrector_cfg=YawCorrectorConfig(lock_s=2.0, lock_min_samples=10, tau_s=1.5),
+    )
     t0 = clock.now_us()
     errs, raw_errs = [], []
     for k in range(int(ts[-1] * fps)):
@@ -60,9 +63,18 @@ def test_drift_correction_on_real_glove_window(dark):
         i = int(np.searchsorted(ts, t))
         i = min(i, len(ts) - 1)
         # the real glove quaternion, turned by the injected drift about world up
-        qk = geom.quat_mul(geom.yaw_quat(np.radians(drift(t) + glove_yaw(t) - float(yaw[i]))), q[i])
-        h = H.HandState(side="right", device_id=1, source="glove", t_us=clock.now_us(),
-                        joints_local=np.zeros((26, 3)), wrist_p=np.zeros(3), wrist_q=qk)
+        qk = geom.quat_mul(
+            geom.yaw_quat(np.radians(drift(t) + glove_yaw(t) - float(yaw[i]))), q[i]
+        )
+        h = H.HandState(
+            side="right",
+            device_id=1,
+            source="glove",
+            t_us=clock.now_us(),
+            joints_local=np.zeros((26, 3)),
+            wrist_p=np.zeros(3),
+            wrist_q=qk,
+        )
         dt.step()
         dt.apply({"right": h}, clock.now_us())
         if t > ts[-1] - 5.0:
@@ -72,7 +84,7 @@ def test_drift_correction_on_real_glove_window(dark):
             raw_errs.append(drift(t))
     st = dt.status()
     assert st["locked"] and st["updates"] > 100, st
-    assert np.mean(raw_errs) > 20                     # uncorrected: 20 to 25 degrees off by the end
+    assert np.mean(raw_errs) > 20  # uncorrected: 20 to 25 degrees off by the end
     # measured 2.3 to 2.6 deg: the lag of a 1.5 s filter behind a 1.5 deg/s ramp
     assert abs(np.mean(errs)) < 3.5, (np.mean(errs), st)
     assert np.abs(errs).max() < 4.5, (np.abs(errs).max(), st)

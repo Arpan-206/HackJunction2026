@@ -173,11 +173,11 @@ try {
   await shot('11-course');
   // The seeded demo history has mastered the first two table tennis lessons, so the walk opens the third, still fresh.
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/steps/2`);
-  await expectVisible(page.getByRole('button', { name: /Start with the strings/ }), 'Start with the strings button');
+  await expectVisible(page.getByRole('button', { name: /Try it out/ }), 'Try it out button');
   // The skinned hand and the room's shaders take a moment on the software renderer; shoot once they are drawn.
   await settle(1500);
   await shot('12-room');
-  await page.getByRole('button', { name: /Start with the strings/ }).click();
+  await page.getByRole('button', { name: /Try it out/ }).click();
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button');
   await page.getByRole('button', { name: /Begin (rep|attempt) 1/ }).click();
   await expectVisible(page.getByRole('region', { name: /Score for (attempt|rep) 1/ }), 'score card', 60000);
@@ -192,7 +192,7 @@ try {
   await page.goto(`${BASE}/apprentice/lessons/seed-shadow-puppets/steps/0`);
   await expectVisible(page.locator('.sp-theatre__name', { hasText: 'The rabbit' }), 'shape name above the wall');
   await expectVisible(page.getByText('The expert', { exact: true }), 'expert label on the bench');
-  await page.getByRole('button', { name: /Start with the strings/ }).click();
+  await page.getByRole('button', { name: /Try it out/ }).click();
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button in the theatre');
   await settle(2500);
   await shot('13b-shadow-puppets');

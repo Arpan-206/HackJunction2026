@@ -3,6 +3,7 @@
 A recording keeps every packet exactly as it came over the wire, plus its arrival time,
 so a replay feeds the same reader the same bytes. ios/mac/recording.py re-exports this.
 """
+
 from __future__ import annotations
 
 import gzip
@@ -44,7 +45,7 @@ class RecordingWriter:
     def close(self) -> None:
         self._f.close()
 
-    def __enter__(self) -> "RecordingWriter":
+    def __enter__(self) -> RecordingWriter:
         return self
 
     def __exit__(self, *exc) -> None:

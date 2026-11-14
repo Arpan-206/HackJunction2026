@@ -84,10 +84,11 @@ In Python:
 
 ```python
 from ios.mac.geppetto_depth import GeppettoDepthCamera
+
 cam = GeppettoDepthCamera("127.0.0.1", 7700, clock=clock, latency_us=60000)
 cam.start()
-f = cam.read()          # newest DepthFrame or None, never blocks
-cam.status()            # connected, frames, fps, tracking, plane, error
+f = cam.read()  # newest DepthFrame or None, never blocks
+cam.status()  # connected, frames, fps, tracking, plane, error
 ```
 
 ## WiFi instead of the cable

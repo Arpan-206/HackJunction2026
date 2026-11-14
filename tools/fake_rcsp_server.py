@@ -98,7 +98,11 @@ class FakeRcspServer:
 
     def _record_led(self, args: dict) -> None:
         did = int(args.get("DeviceId", -1))
-        rgb = (int(args.get("Red", 0)), int(args.get("Green", 0)), int(args.get("Blue", 0)))
+        rgb = (
+            int(args.get("Red", 0)),
+            int(args.get("Green", 0)),
+            int(args.get("Blue", 0)),
+        )
         rec = {
             "t": time.time(),
             "device_id": did,
@@ -115,7 +119,11 @@ class FakeRcspServer:
         if cmd == "ListDevices":
             return {
                 "Devices": [
-                    {"DeviceId": did, "DeviceType": "Smartgloves II", "Connections": ["usb"]}
+                    {
+                        "DeviceId": did,
+                        "DeviceType": "Smartgloves II",
+                        "Connections": ["usb"],
+                    }
                     for did in self.ids.values()
                 ]
             }
@@ -126,7 +134,9 @@ class FakeRcspServer:
             self._record_led(args)
         return {}
 
-    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _handle(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         self.writers.append(writer)
         parser = RcspParser()
         try:
@@ -143,7 +153,12 @@ class FakeRcspServer:
                     writer.write(
                         pack(
                             T_OK,
-                            {"TrackId": body.get("TrackId"), "Status": "Ok", "Version": 1, "Response": resp},
+                            {
+                                "TrackId": body.get("TrackId"),
+                                "Status": "Ok",
+                                "Version": 1,
+                                "Response": resp,
+                            },
                         )
                     )
                 await writer.drain()
@@ -153,7 +168,9 @@ class FakeRcspServer:
             if writer in self.writers:
                 self.writers.remove(writer)
 
-    async def _handle_control(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _handle_control(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         try:
             while True:
                 line = await reader.readline()
@@ -164,7 +181,9 @@ class FakeRcspServer:
                     n = await self.push_button(parts[0], parts[1])
                     writer.write(f"ok {n}\n".encode())
                 else:
-                    writer.write(b"error: send 'left|right SinglePress|DoublePress|LongPress'\n")
+                    writer.write(
+                        b"error: send 'left|right SinglePress|DoublePress|LongPress'\n"
+                    )
                 await writer.drain()
         except (ConnectionError, asyncio.CancelledError):
             pass
@@ -173,9 +192,14 @@ class FakeRcspServer:
 
 
 async def _main(a: argparse.Namespace) -> None:
-    srv = FakeRcspServer(a.host, a.port, a.control_port, a.led_log, a.left_id, a.right_id)
+    srv = FakeRcspServer(
+        a.host, a.port, a.control_port, a.led_log, a.left_id, a.right_id
+    )
     await srv.start()
-    print(f"fake RCSP on {a.host}:{srv.port}, control on {a.host}:{srv.control_port}", flush=True)
+    print(
+        f"fake RCSP on {a.host}:{srv.port}, control on {a.host}:{srv.control_port}",
+        flush=True,
+    )
     try:
         await asyncio.Event().wait()
     finally:
@@ -183,11 +207,18 @@ async def _main(a: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=45451)
     p.add_argument("--control-port", type=int, default=45452)
-    p.add_argument("--led-log", type=Path, default=None, help="append each SetColorLed here as JSONL")
+    p.add_argument(
+        "--led-log",
+        type=Path,
+        default=None,
+        help="append each SetColorLed here as JSONL",
+    )
     p.add_argument("--left-id", type=int, default=LEFT_ID)
     p.add_argument("--right-id", type=int, default=RIGHT_ID)
     a = p.parse_args(argv)

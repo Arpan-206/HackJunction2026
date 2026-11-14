@@ -41,7 +41,13 @@ def evaluate(n: int, seed: int) -> dict:
         top1 = float((p.argmax(1) == te.y).mean())
         top2 = float(np.mean([y in np.argsort(r)[::-1][:2] for r, y in zip(p, te.y)]))
         per_session.append(
-            {"session": key, "records": [w.record_id for w in test_w], "top1": round(top1, 3), "top2": round(top2, 3), "n": int(len(te.y))}
+            {
+                "session": key,
+                "records": [w.record_id for w in test_w],
+                "top1": round(top1, 3),
+                "top2": round(top2, 3),
+                "n": len(te.y),
+            }
         )
         c = asl.confusion(m, te)
         total_conf = c if total_conf is None else total_conf + c
@@ -74,7 +80,11 @@ def confusion_markdown(classes: list[str], conf: list[list[int]]) -> str:
     for c, r in zip(classes, conf):
         tot = sum(r) or 1
         k = classes.index(c)
-        rows.append(f"| {c.upper()} | " + " | ".join(str(v) if v else "." for v in r) + f" | {r[k] / tot:.0%} |")
+        rows.append(
+            f"| {c.upper()} | "
+            + " | ".join(str(v) if v else "." for v in r)
+            + f" | {r[k] / tot:.0%} |"
+        )
     return "\n".join(rows)
 
 
@@ -91,7 +101,10 @@ def main(argv: list[str] | None = None) -> int:
     groups = asl.letter_groups(asl.letter_curls())
     meta = {
         "component": "asl_letters",
-        "inputs": ["backend/app/data/moves.json (fs_ moves)", "backend/data/calibrations (records listed)"],
+        "inputs": [
+            "backend/app/data/moves.json (fs_ moves)",
+            "backend/data/calibrations (records listed)",
+        ],
         "calibration_records": [w.record_id for w in wearers],
         "seed": a.seed,
         "n_per_letter": a.n,
@@ -99,16 +112,43 @@ def main(argv: list[str] | None = None) -> int:
     }
     model.save(
         extra={
-            "metrics": {k: ev[k] for k in ("mean_top1", "mean_top2", "ideal_glove_top1", "per_session", "reliability")},
+            "metrics": {
+                k: ev[k]
+                for k in (
+                    "mean_top1",
+                    "mean_top2",
+                    "ideal_glove_top1",
+                    "per_session",
+                    "reliability",
+                )
+            },
             "merged_groups": [g for g in groups if len(g) > 1],
             "provenance": "core/priors/data/asl_letters.provenance.json",
         }
     )
     write_manifest("asl_letters", list(ds.source), meta)
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "asl_eval.json").write_text(json.dumps(ev, indent=1) + "\n", encoding="utf-8")
-    (OUT / "asl_confusion.md").write_text(confusion_markdown(ev["classes"], ev["confusion"]) + "\n", encoding="utf-8")
-    print(json.dumps({k: ev[k] for k in ("mean_top1", "mean_top2", "ideal_glove_top1", "temperature", "reliability")}, indent=1))
+    (OUT / "asl_eval.json").write_text(
+        json.dumps(ev, indent=1) + "\n", encoding="utf-8"
+    )
+    (OUT / "asl_confusion.md").write_text(
+        confusion_markdown(ev["classes"], ev["confusion"]) + "\n", encoding="utf-8"
+    )
+    print(
+        json.dumps(
+            {
+                k: ev[k]
+                for k in (
+                    "mean_top1",
+                    "mean_top2",
+                    "ideal_glove_top1",
+                    "temperature",
+                    "reliability",
+                )
+            },
+            indent=1,
+        )
+    )
     return 0
 
 

@@ -27,6 +27,7 @@ The dark-hand case (black gloves, no hand depth) needs no special path: the hand
 carry confidence 0, so the blob is the forearm alone, and the direction still comes out.
 hand_depth says whether the blob looks like more than a forearm.
 """
+
 from __future__ import annotations
 
 import math
@@ -46,32 +47,50 @@ LABEL_OTHER, LABEL_TABLE, LABEL_ARM, LABEL_DARK = 0, 1, 2, 3
 class TrackerConfig:
     """[camera.depth] in config.toml. Units: metres, degrees, pixels at the depth resolution."""
 
-    min_confidence: int = 1          # arm pixels need at least this (0 low, 1 medium, 2 high)
-    band_min_m: float = 0.012        # an arm point is this far above the table at least
-    band_max_m: float = 0.35         # and at most this
-    max_range_m: float = 1.0         # ignore points farther than this from the camera
-    min_blob_px: int = 150           # smallest arm blob
-    forearm_len_m: float = 0.15      # the stretch from the entry used for the direction
-    min_elongation: float = 1.8      # sqrt of the PCA eigenvalue ratio, below this the direction is unsure
+    min_confidence: int = 1  # arm pixels need at least this (0 low, 1 medium, 2 high)
+    band_min_m: float = 0.012  # an arm point is this far above the table at least
+    band_max_m: float = 0.35  # and at most this
+    max_range_m: float = 1.0  # ignore points farther than this from the camera
+    min_blob_px: int = 150  # smallest arm blob
+    forearm_len_m: float = 0.15  # the stretch from the entry used for the direction
+    min_elongation: float = (
+        1.8  # sqrt of the PCA eigenvalue ratio, below this the direction is unsure
+    )
     min_forearm_points: int = 40
     ransac_iters: int = 60
     ransac_tol_m: float = 0.006
     ransac_points: int = 2500
-    max_tilt_deg: float = 25.0       # with gravity known, the fitted table normal is this close to up
-    table_band_m: float = 0.01       # cloud points this close to the table are labelled table
-    camera_yaw_deg: float = 180.0    # core yaw of the camera's viewing direction on the table
+    max_tilt_deg: float = (
+        25.0  # with gravity known, the fitted table normal is this close to up
+    )
+    table_band_m: float = (
+        0.01  # cloud points this close to the table are labelled table
+    )
+    camera_yaw_deg: float = (
+        180.0  # core yaw of the camera's viewing direction on the table
+    )
     cloud_points: int = 2000
-    dark_min_px: int = 120           # a conf-0 patch at least this big at the arm's far end means a dark hand
-    cylinder: bool = True            # refine the direction with a 3D cylinder fit (see _cylinder_axis)
+    dark_min_px: int = (
+        120  # a conf-0 patch at least this big at the arm's far end means a dark hand
+    )
+    cylinder: bool = (
+        True  # refine the direction with a 3D cylinder fit (see _cylinder_axis)
+    )
     # Shape gates: a blob is an arm only if its forearm stretch is arm-wide and, with the
     # cylinder fit on, fits a cylinder of arm radius. They reject bags and boxes on the bench.
-    arm_width_min_m: float = 0.01        # the visible half of a 7 cm arm measures 2 to 5 cm here
+    arm_width_min_m: float = (
+        0.01  # the visible half of a 7 cm arm measures 2 to 5 cm here
+    )
     arm_width_max_m: float = 0.16
     arm_radius_min_m: float = 0.015
     arm_radius_max_m: float = 0.07
     cylinder_max_rms_m: float = 0.012
-    require_entry: bool = True           # an arm comes from outside the view, so it crosses the image border
-    entry_margin_px: int = 6             # "touches the border" means within this many depth pixels of it
+    require_entry: bool = (
+        True  # an arm comes from outside the view, so it crosses the image border
+    )
+    entry_margin_px: int = (
+        6  # "touches the border" means within this many depth pixels of it
+    )
     # Arm gate. "shape" (default since the first real clip, captures/bench-stand-1): every blob is
     # scored and an arm must enter from the edge, be long enough but not too long, widen from a
     # wrist toward the hand (taper) and stay low over the table. "cylinder" is the first gate
@@ -79,19 +98,27 @@ class TrackerConfig:
     gate: str = "shape"
     arm_len_min_m: float = 0.12
     arm_len_max_m: float = 0.26
-    arm_min_px: int = 1200               # a hand 30 to 50 cm from the phone covers thousands of depth pixels
-    arm_confirm_frames: int = 3          # the gate must pass now and in this many of the last arm_confirm_window frames
+    arm_min_px: int = (
+        1200  # a hand 30 to 50 cm from the phone covers thousands of depth pixels
+    )
+    arm_confirm_frames: int = 3  # the gate must pass now and in this many of the last arm_confirm_window frames
     arm_confirm_window: int = 5
-    max_candidates: int = 4              # the shape gate scores at most this many blobs, largest first
+    max_candidates: int = (
+        4  # the shape gate scores at most this many blobs, largest first
+    )
     # 3D view only, never the yaw: a flat hand lies within millimetres of the table. The plane
     # fit RMS on the first real clip is 1.2 mm, so high-confidence points this far above the
     # table stop counting as table, and those joined to a confirmed arm count as arm.
-    cloud_fine_band_m: float = 0.004          # (a one-frame flicker of a bottle is not an arm)
-    arm_taper_min: float = 1.3           # widest slice in the far half / narrowest in the near half
-    arm_wmax_min_m: float = 0.05         # the hand's width
+    cloud_fine_band_m: float = 0.004  # (a one-frame flicker of a bottle is not an arm)
+    arm_taper_min: float = (
+        1.3  # widest slice in the far half / narrowest in the near half
+    )
+    arm_wmax_min_m: float = 0.05  # the hand's width
     arm_wmax_max_m: float = 0.15
-    arm_h95_max_m: float = 0.15          # 95th percentile height above the table
-    arm_max_tilt_deg: float = 40.0       # the cylinder axis lies along the table, not standing up from it
+    arm_h95_max_m: float = 0.15  # 95th percentile height above the table
+    arm_max_tilt_deg: float = (
+        40.0  # the cylinder axis lies along the table, not standing up from it
+    )
 
     @classmethod
     def from_section(cls, sec) -> "TrackerConfig":
@@ -106,10 +133,10 @@ class TrackerConfig:
 
 @dataclass
 class Table:
-    point: np.ndarray        # (3,) on the plane, world (or camera) frame
-    normal: np.ndarray       # (3,) unit, pointing to the camera's side
-    source: str              # "app" or "fit"
-    inliers: float = 0.0     # fraction of sampled points within ransac_tol_m (fit only)
+    point: np.ndarray  # (3,) on the plane, world (or camera) frame
+    normal: np.ndarray  # (3,) unit, pointing to the camera's side
+    source: str  # "app" or "fit"
+    inliers: float = 0.0  # fraction of sampled points within ransac_tol_m (fit only)
     rms_m: float = 0.0
     camera_height_m: float = 0.0
 
@@ -125,33 +152,41 @@ class DepthObs:
     frame_id: int
     table: Table | None = None
     table_fit: Table | None = None
-    agree_deg: float | None = None       # angle between app and fitted normals
-    agree_mm: float | None = None        # distance of the app plane's centre from the fitted plane
-    blob_found: bool = False             # something stands above the table
-    arm_found: bool = False              # and it has an arm's shape (the gates in TrackerConfig)
+    agree_deg: float | None = None  # angle between app and fitted normals
+    agree_mm: float | None = (
+        None  # distance of the app plane's centre from the fitted plane
+    )
+    blob_found: bool = False  # something stands above the table
+    arm_found: bool = False  # and it has an arm's shape (the gates in TrackerConfig)
     width_m: float = 0.0
     cyl_radius_m: float | None = None
     cyl_rms_m: float | None = None
-    axis_tilt_deg: float | None = None   # the cylinder axis's angle above the table
-    shape: dict = field(default_factory=dict)  # shape-gate features of the chosen (or largest) blob
-    fine_px: int = 0                     # cloud only: pixels in the fine band joined to the arm
+    axis_tilt_deg: float | None = None  # the cylinder axis's angle above the table
+    shape: dict = field(
+        default_factory=dict
+    )  # shape-gate features of the chosen (or largest) blob
+    fine_px: int = 0  # cloud only: pixels in the fine band joined to the arm
     hand_depth: bool = False
     forearm_yaw_deg: float | None = None
-    forearm_ok: bool = False             # direction good enough to correct a glove with
+    forearm_ok: bool = False  # direction good enough to correct a glove with
     elongation: float = 0.0
     forearm_points: int = 0
     blob_px: int = 0
     dark_px: int = 0
-    entry: str = ""                      # which image border the arm crosses: top, bottom, left, right, or ""
+    entry: str = (
+        ""  # which image border the arm crosses: top, bottom, left, right, or ""
+    )
     length_m: float = 0.0
     dir_bench: np.ndarray | None = None  # (3,) unit forearm direction, bench frame
     entry_bench: np.ndarray | None = None
     process_ms: float = 0.0
-    cloud: dict | None = None            # points (n,3) bench frame, labels (n,), rgb (n,3)
-    bench_R: np.ndarray | None = None    # rows: bench axes in the points' frame
+    cloud: dict | None = None  # points (n,3) bench frame, labels (n,), rgb (n,3)
+    bench_R: np.ndarray | None = None  # rows: bench axes in the points' frame
     bench_origin: np.ndarray | None = None
     in_world: bool = False
-    masks: dict = field(default_factory=dict)  # arm, dark, table, valid at depth resolution (for images)
+    masks: dict = field(
+        default_factory=dict
+    )  # arm, dark, table, valid at depth resolution (for images)
 
 
 def wrap_deg(a: float) -> float:
@@ -203,8 +238,13 @@ def fit_plane_svd(p: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return c, vt[2]
 
 
-def fit_table(p: np.ndarray, cam: np.ndarray, up: np.ndarray | None, cfg: TrackerConfig,
-              rng: np.random.Generator) -> Table | None:
+def fit_table(
+    p: np.ndarray,
+    cam: np.ndarray,
+    up: np.ndarray | None,
+    cfg: TrackerConfig,
+    rng: np.random.Generator,
+) -> Table | None:
     """RANSAC plane on the given points (already confidence-masked). up: gravity, if known."""
     n_all = len(p)
     if n_all < 50:
@@ -235,7 +275,13 @@ def fit_table(p: np.ndarray, cam: np.ndarray, up: np.ndarray | None, cfg: Tracke
     if nrm @ (cam - c) < 0:
         nrm = -nrm
     res = (p[inl] - c) @ nrm
-    t = Table(point=c, normal=nrm, source="fit", inliers=float(inl.mean()), rms_m=float(np.sqrt((res ** 2).mean())))
+    t = Table(
+        point=c,
+        normal=nrm,
+        source="fit",
+        inliers=float(inl.mean()),
+        rms_m=float(np.sqrt((res**2).mean())),
+    )
     t.camera_height_m = float((cam - c) @ nrm)
     return t
 
@@ -258,14 +304,18 @@ class DepthTracker:
     def __init__(self, cfg: TrackerConfig | None = None, seed: int = 0) -> None:
         self.cfg = cfg or TrackerConfig()
         self.rng = np.random.default_rng(seed)
-        self.ref_fwd: np.ndarray | None = None   # camera's first viewing direction on the table (world)
+        self.ref_fwd: np.ndarray | None = (
+            None  # camera's first viewing direction on the table (world)
+        )
         self._ref_in_world: bool | None = None
         self.last_dir: np.ndarray | None = None
         self._recent: list[bool] = []
         self.frames = 0
 
     # -- bench frame -----------------------------------------------------------
-    def bench_axes(self, table: Table, cam_fwd: np.ndarray, in_world: bool) -> np.ndarray:
+    def bench_axes(
+        self, table: Table, cam_fwd: np.ndarray, in_world: bool
+    ) -> np.ndarray:
         """3x3 rows X, Y, Z of the bench frame (core orientation) in the points' frame."""
         n = table.normal
         if self.ref_fwd is None or self._ref_in_world != in_world or not in_world:
@@ -278,12 +328,17 @@ class DepthTracker:
         f /= np.linalg.norm(f)
         X = np.cross(f, n)
         Z = -f
-        R = np.stack([X, n, Z])                  # H frame: -Z = camera forward
-        return rot_y(self.cfg.camera_yaw_deg) @ R  # turn to the core's world orientation
+        R = np.stack([X, n, Z])  # H frame: -Z = camera forward
+        return (
+            rot_y(self.cfg.camera_yaw_deg) @ R
+        )  # turn to the core's world orientation
 
     # -- main ------------------------------------------------------------------
-    def process(self, frame: DepthFrame, want_cloud: bool = False, want_masks: bool = False) -> DepthObs:
+    def process(
+        self, frame: DepthFrame, want_cloud: bool = False, want_masks: bool = False
+    ) -> DepthObs:
         import cv2
+
         t0 = time.perf_counter()
         cfg = self.cfg
         obs = DepthObs(t_us=frame.t_us, frame_id=frame.frame_id)
@@ -294,7 +349,11 @@ class DepthTracker:
         H, W = frame.depth.shape
         p, valid, in_world = backproject(frame)
         cam, cam_fwd = camera_pose(frame, in_world)
-        conf = frame.confidence.reshape(-1) if frame.confidence is not None else np.full(H * W, 2, np.uint8)
+        conf = (
+            frame.confidence.reshape(-1)
+            if frame.confidence is not None
+            else np.full(H * W, 2, np.uint8)
+        )
         dist = np.linalg.norm(p - cam, axis=1)
         near = valid & (dist <= cfg.max_range_m * 2.0)
 
@@ -305,7 +364,10 @@ class DepthTracker:
         obs.table_fit = fit
         obs.table = app or fit
         if app is not None and fit is not None:
-            obs.agree_deg = round(math.degrees(math.acos(min(1.0, abs(float(app.normal @ fit.normal))))), 2)
+            obs.agree_deg = round(
+                math.degrees(math.acos(min(1.0, abs(float(app.normal @ fit.normal))))),
+                2,
+            )
             obs.agree_mm = round(float(fit.height(app.point[None])[0]) * 1000, 1)
         table = obs.table
         if table is None:
@@ -313,8 +375,13 @@ class DepthTracker:
             return obs
 
         h = table.height(p)
-        arm = valid & (conf >= cfg.min_confidence) & (h >= cfg.band_min_m) & (h <= cfg.band_max_m) \
+        arm = (
+            valid
+            & (conf >= cfg.min_confidence)
+            & (h >= cfg.band_min_m)
+            & (h <= cfg.band_max_m)
             & (dist <= cfg.max_range_m)
+        )
         arm_img = arm.reshape(H, W).astype(np.uint8)
         arm_img = cv2.morphologyEx(arm_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n_lab, lab, stats, _ = cv2.connectedComponentsWithStats(arm_img, connectivity=8)
@@ -323,10 +390,16 @@ class DepthTracker:
         rel = p - table.point
         blob = None
         self._shape_pass = False
-        order = [k for k in np.argsort(-stats[1:, cv2.CC_STAT_AREA]) + 1 if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px]
-        order = order[:max(1, cfg.max_candidates)]   # time: a person in view makes many blobs
+        order = [
+            k
+            for k in np.argsort(-stats[1:, cv2.CC_STAT_AREA]) + 1
+            if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px
+        ]
+        order = order[
+            : max(1, cfg.max_candidates)
+        ]  # time: a person in view makes many blobs
         if order:
-            blob = lab == order[0]               # the largest, shown even when it is not an arm
+            blob = lab == order[0]  # the largest, shown even when it is not an arm
             if cfg.gate == "shape":
                 best = None
                 for k in order:
@@ -335,7 +408,7 @@ class DepthTracker:
                         obs.shape = sh
                     if sh["pass"]:
                         best = (k, sh)
-                        break                    # the largest blob that passes
+                        break  # the largest blob that passes
                 if best is not None:
                     blob = lab == best[0]
                     obs.shape = best[1]
@@ -345,32 +418,50 @@ class DepthTracker:
             obs.blob_found = True
             obs.blob_px = int(blob.sum())
             self._forearm(obs, blob, rel, R, H, W, dist, R @ (cam - table.point))
-            dark_img = self._dark_patch(obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W))
+            dark_img = self._dark_patch(
+                obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W)
+            )
         else:
             self._push_pass(False)
         if want_cloud:
             cloud_arm = None
             if blob is not None and obs.arm_found:
                 # the arm plus the fine band joined to it: fingers flat on the table (view only)
-                fine = (valid & (conf >= 2) & (h >= cfg.cloud_fine_band_m) & (h <= cfg.band_max_m)
-                        & (dist <= cfg.max_range_m)).reshape(H, W)
-                n_f, lab_f = cv2.connectedComponents((fine | blob).astype(np.uint8), connectivity=8)
+                fine = (
+                    valid
+                    & (conf >= 2)
+                    & (h >= cfg.cloud_fine_band_m)
+                    & (h <= cfg.band_max_m)
+                    & (dist <= cfg.max_range_m)
+                ).reshape(H, W)
+                n_f, lab_f = cv2.connectedComponents(
+                    (fine | blob).astype(np.uint8), connectivity=8
+                )
                 ids = np.unique(lab_f[blob])
                 cloud_arm = np.isin(lab_f, ids[ids > 0])
                 obs.fine_px = int(cloud_arm.sum() - blob.sum())
-            obs.cloud = self._cloud(frame, rel @ R.T, valid & (dist <= cfg.max_range_m * 1.5), h,
-                                    None if cloud_arm is None else cloud_arm.reshape(-1), dark_img.reshape(-1),
-                                    conf)
+            obs.cloud = self._cloud(
+                frame,
+                rel @ R.T,
+                valid & (dist <= cfg.max_range_m * 1.5),
+                h,
+                None if cloud_arm is None else cloud_arm.reshape(-1),
+                dark_img.reshape(-1),
+                conf,
+            )
         if want_masks:
-            obs.masks = {"arm": blob if blob is not None else np.zeros((H, W), bool), "dark": dark_img,
-                         "table": (valid & (np.abs(h) < cfg.table_band_m)).reshape(H, W),
-                         "valid": valid.reshape(H, W)}
+            obs.masks = {
+                "arm": blob if blob is not None else np.zeros((H, W), bool),
+                "dark": dark_img,
+                "table": (valid & (np.abs(h) < cfg.table_band_m)).reshape(H, W),
+                "valid": valid.reshape(H, W),
+            }
         obs.process_ms = (time.perf_counter() - t0) * 1000
         return obs
 
     def _push_pass(self, passed: bool) -> None:
         self._recent.append(bool(passed))
-        del self._recent[:-max(1, self.cfg.arm_confirm_window)]
+        del self._recent[: -max(1, self.cfg.arm_confirm_window)]
 
     def _border(self, H: int, W: int) -> np.ndarray:
         m = max(1, int(self.cfg.entry_margin_px))
@@ -379,10 +470,19 @@ class DepthTracker:
         border[:, :m] = border[:, -m:] = True
         return border
 
-    def _shape(self, bm: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int) -> dict:
+    def _shape(
+        self, bm: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int
+    ) -> dict:
         """Shape features of one blob for the "shape" gate, in the bench frame."""
         cfg = self.cfg
-        out = {"pass": False, "entry": False, "length_m": 0.0, "taper": 0.0, "wmax_m": 0.0, "h95_m": 0.0}
+        out = {
+            "pass": False,
+            "entry": False,
+            "length_m": 0.0,
+            "taper": 0.0,
+            "wmax_m": 0.0,
+            "h95_m": 0.0,
+        }
         flat = bm.reshape(-1)
         q = rel[flat] @ R.T
         xz, hh = q[:, [0, 2]], q[:, 1]
@@ -412,17 +512,31 @@ class DepthTracker:
         out["length_m"] = round(L, 3)
         out["taper"] = round(float(ws[half:].max() / max(ws[:half].min(), 1e-3)), 2)
         out["wmax_m"] = round(float(ws.max()), 3)
-        out["pass"] = bool(int(bm.sum()) >= cfg.arm_min_px and cfg.arm_len_min_m <= L <= cfg.arm_len_max_m and out["taper"] >= cfg.arm_taper_min
-                           and cfg.arm_wmax_min_m <= out["wmax_m"] <= cfg.arm_wmax_max_m
-                           and out["h95_m"] <= cfg.arm_h95_max_m)
+        out["pass"] = bool(
+            int(bm.sum()) >= cfg.arm_min_px
+            and cfg.arm_len_min_m <= L <= cfg.arm_len_max_m
+            and out["taper"] >= cfg.arm_taper_min
+            and cfg.arm_wmax_min_m <= out["wmax_m"] <= cfg.arm_wmax_max_m
+            and out["h95_m"] <= cfg.arm_h95_max_m
+        )
         return out
 
-    def _forearm(self, obs: DepthObs, blob: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int,
-                 dist: np.ndarray, cam_bench: np.ndarray) -> None:
+    def _forearm(
+        self,
+        obs: DepthObs,
+        blob: np.ndarray,
+        rel: np.ndarray,
+        R: np.ndarray,
+        H: int,
+        W: int,
+        dist: np.ndarray,
+        cam_bench: np.ndarray,
+    ) -> None:
         import cv2
+
         cfg = self.cfg
         flat = blob.reshape(-1)
-        q = rel[flat] @ R.T                 # bench frame
+        q = rel[flat] @ R.T  # bench frame
         xz = q[:, [0, 2]]
         centre = xz.mean(axis=0)
         border = self._border(H, W)
@@ -433,7 +547,11 @@ class DepthTracker:
             # The arm may touch the border in several places (fingers can leave the image too).
             # Each contiguous run of border contact is a candidate; the arm comes from the person,
             # so take the run farthest from the camera, and keep with the last direction if it flips.
-            n_runs, runs = cv2.connectedComponents(cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)) & edge.astype(np.uint8), connectivity=8)
+            n_runs, runs = cv2.connectedComponents(
+                cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8))
+                & edge.astype(np.uint8),
+                connectivity=8,
+            )
             runs_flat = runs.reshape(-1)[flat]
             dist_blob = dist[flat]
             best, best_score = None, -math.inf
@@ -445,15 +563,22 @@ class DepthTracker:
                 score = float(np.median(dist_blob[m]))
                 if self.last_dir is not None:
                     v = centre - e
-                    if np.linalg.norm(v) > 1e-6 and (v / np.linalg.norm(v)) @ self.last_dir[[0, 2]] < -0.3:
+                    if (
+                        np.linalg.norm(v) > 1e-6
+                        and (v / np.linalg.norm(v)) @ self.last_dir[[0, 2]] < -0.3
+                    ):
                         score -= 10.0
                 if score > best_score:
                     best, best_score = (e, m), score
             if best is not None:
                 entry = best[0]
                 vv, uu = np.nonzero(runs == (np.bincount(runs_flat[best[1]]).argmax()))
-                sides = {"top": (vv < m_px).sum(), "bottom": (vv >= H - m_px).sum(), "left": (uu < m_px).sum(),
-                         "right": (uu >= W - m_px).sum()}
+                sides = {
+                    "top": (vv < m_px).sum(),
+                    "bottom": (vv >= H - m_px).sum(),
+                    "left": (uu < m_px).sum(),
+                    "right": (uu >= W - m_px).sum(),
+                }
                 obs.entry = max(sides, key=sides.get)
         if entry is not None:
             sel = np.linalg.norm(xz - entry, axis=1) <= cfg.forearm_len_m
@@ -469,11 +594,17 @@ class DepthTracker:
         axis = V[:, 1]
         axis_pca = axis.copy()
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
-        obs.width_m = float(math.sqrt(12.0 * max(w[0], 0.0)))   # full width of a uniform band
-        if cfg.cylinder and (cfg.gate != "shape" or self._shape_pass):   # no time on blobs already rejected
+        obs.width_m = float(
+            math.sqrt(12.0 * max(w[0], 0.0))
+        )  # full width of a uniform band
+        if cfg.cylinder and (
+            cfg.gate != "shape" or self._shape_pass
+        ):  # no time on blobs already rejected
             d3 = self._cylinder_axis(q[sel], axis, cam_bench, obs)
             if d3 is not None:
-                obs.axis_tilt_deg = float(math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2]))))
+                obs.axis_tilt_deg = float(
+                    math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2])))
+                )
             if d3 is not None and np.hypot(d3[0], d3[2]) > 1e-6:
                 a2 = np.array([d3[0], d3[2]]) / np.hypot(d3[0], d3[2])
                 axis = a2 if a2 @ axis >= 0 else -a2
@@ -486,30 +617,47 @@ class DepthTracker:
         else:
             # no entry seen and no history: the arm reaches from the person, so it points to the camera,
             # which is bench +z turned back by camera_yaw_deg
-            toward_cam = (rot_y(self.cfg.camera_yaw_deg) @ np.array([0.0, 0.0, 1.0]))[[0, 2]]
+            toward_cam = (rot_y(self.cfg.camera_yaw_deg) @ np.array([0.0, 0.0, 1.0]))[
+                [0, 2]
+            ]
             if axis @ toward_cam < 0:
                 axis = -axis
         d = np.array([axis[0], 0.0, axis[1]])
         obs.dir_bench = d
         obs.entry_bench = None if entry is None else np.array([entry[0], 0.0, entry[1]])
         proj = (xz - (entry if entry is not None else c)) @ axis
-        obs.length_m = float(np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2))))
+        obs.length_m = float(
+            np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2)))
+        )
         obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
         if cfg.gate == "shape":
-            if cfg.cylinder and not (obs.cyl_rms_m is not None and obs.cyl_rms_m <= cfg.cylinder_max_rms_m
-                                     and obs.cyl_radius_m is not None
-                                     and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m):
+            if cfg.cylinder and not (
+                obs.cyl_rms_m is not None
+                and obs.cyl_rms_m <= cfg.cylinder_max_rms_m
+                and obs.cyl_radius_m is not None
+                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m
+            ):
                 # a flat hand is no cylinder: keep the plain axis for it
-                a = axis_pca if (entry is None or (centre - entry) @ axis_pca >= 0) else -axis_pca
+                a = (
+                    axis_pca
+                    if (entry is None or (centre - entry) @ axis_pca >= 0)
+                    else -axis_pca
+                )
                 d = np.array([a[0], 0.0, a[1]])
                 obs.dir_bench = d
                 obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
             passed = bool(self._shape_pass and entry is not None)
             self._push_pass(passed)
             obs.shape["recent"] = int(sum(self._recent))
-            obs.arm_found = passed and sum(self._recent) >= max(1, cfg.arm_confirm_frames)
+            obs.arm_found = passed and sum(self._recent) >= max(
+                1, cfg.arm_confirm_frames
+            )
             # only a long, clear arm may move the glove yaw; a round blob is found but not trusted
-            obs.forearm_ok = obs.arm_found and obs.forearm_points >= cfg.min_forearm_points                 and obs.elongation >= cfg.min_elongation
+            obs.forearm_ok = (
+                obs.arm_found
+                and obs.forearm_points >= cfg.min_forearm_points
+                and obs.elongation >= cfg.min_elongation
+            )
             if obs.forearm_ok:
                 self.last_dir = obs.dir_bench
             return
@@ -517,18 +665,31 @@ class DepthTracker:
         if cfg.require_entry:
             arm_like = arm_like and entry is not None
         if cfg.cylinder:
-            arm_like = arm_like and obs.cyl_radius_m is not None \
-                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m \
-                and obs.cyl_rms_m is not None and obs.cyl_rms_m <= cfg.cylinder_max_rms_m \
-                and obs.axis_tilt_deg is not None and obs.axis_tilt_deg <= cfg.arm_max_tilt_deg
+            arm_like = (
+                arm_like
+                and obs.cyl_radius_m is not None
+                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m
+                and obs.cyl_rms_m is not None
+                and obs.cyl_rms_m <= cfg.cylinder_max_rms_m
+                and obs.axis_tilt_deg is not None
+                and obs.axis_tilt_deg <= cfg.arm_max_tilt_deg
+            )
         obs.arm_found = bool(arm_like)
-        obs.forearm_ok = obs.arm_found and obs.elongation >= cfg.min_elongation \
+        obs.forearm_ok = (
+            obs.arm_found
+            and obs.elongation >= cfg.min_elongation
             and obs.forearm_points >= cfg.min_forearm_points
+        )
         if obs.forearm_ok:
             self.last_dir = d
 
-    def _cylinder_axis(self, P: np.ndarray, axis_xz: np.ndarray, cam: np.ndarray,
-                       obs: DepthObs | None = None) -> np.ndarray | None:
+    def _cylinder_axis(
+        self,
+        P: np.ndarray,
+        axis_xz: np.ndarray,
+        cam: np.ndarray,
+        obs: DepthObs | None = None,
+    ) -> np.ndarray | None:
         """Fit a cylinder to the forearm's 3D points (bench frame); its axis direction, or None.
 
         The camera sees only the near half of the arm, and from a different angle along it,
@@ -585,18 +746,29 @@ class DepthTracker:
             obs.cyl_rms_m = float(np.sqrt(np.mean(resid(x) ** 2)))
         return d
 
-    def _dark_patch(self, obs: DepthObs, blob: np.ndarray, conf: np.ndarray, valid: np.ndarray,
-                    h: np.ndarray) -> np.ndarray:
+    def _dark_patch(
+        self,
+        obs: DepthObs,
+        blob: np.ndarray,
+        conf: np.ndarray,
+        valid: np.ndarray,
+        h: np.ndarray,
+    ) -> np.ndarray:
         """Low-confidence pixels touching the arm blob and not part of the table: a hand with no depth."""
         import cv2
+
         low = valid & (conf == 0) & ~blob & (h > -0.02)
         # thin low-confidence bands follow every depth edge; a dark hand is a thick patch
-        low = cv2.morphologyEx(low.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).astype(bool)
+        low = cv2.morphologyEx(
+            low.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)
+        ).astype(bool)
         if not low.any():
             obs.hand_depth = True
             return np.zeros_like(blob)
         n, lab = cv2.connectedComponents(low.astype(np.uint8), connectivity=8)
-        grown = cv2.dilate(blob.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(bool)
+        grown = cv2.dilate(blob.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(
+            bool
+        )
         touching = np.unique(lab[grown & low])
         touching = touching[touching > 0]
         dark = np.isin(lab, touching) if len(touching) else np.zeros_like(blob)
@@ -604,31 +776,58 @@ class DepthTracker:
         obs.hand_depth = obs.dark_px < self.cfg.dark_min_px
         return dark
 
-    def _cloud(self, frame: DepthFrame, q: np.ndarray, keep: np.ndarray, h: np.ndarray,
-               blob: np.ndarray | None, dark: np.ndarray, conf: np.ndarray | None = None) -> dict:
+    def _cloud(
+        self,
+        frame: DepthFrame,
+        q: np.ndarray,
+        keep: np.ndarray,
+        h: np.ndarray,
+        blob: np.ndarray | None,
+        dark: np.ndarray,
+        conf: np.ndarray | None = None,
+    ) -> dict:
         import cv2
+
         idx = np.nonzero(keep)[0]
         n_target = self.cfg.cloud_points
         if blob is not None:
             arm_idx = np.nonzero(blob & keep)[0]
             rest = np.setdiff1d(idx, arm_idx, assume_unique=True)
             n_arm = min(len(arm_idx), n_target // 2)
-            pick = np.concatenate([
-                arm_idx[np.linspace(0, len(arm_idx) - 1, n_arm).astype(int)] if n_arm else arm_idx[:0],
-                rest[np.linspace(0, len(rest) - 1, min(len(rest), n_target - n_arm)).astype(int)] if len(rest) else rest,
-            ])
+            pick = np.concatenate(
+                [
+                    arm_idx[np.linspace(0, len(arm_idx) - 1, n_arm).astype(int)]
+                    if n_arm
+                    else arm_idx[:0],
+                    rest[
+                        np.linspace(
+                            0, len(rest) - 1, min(len(rest), n_target - n_arm)
+                        ).astype(int)
+                    ]
+                    if len(rest)
+                    else rest,
+                ]
+            )
         else:
-            pick = idx[np.linspace(0, len(idx) - 1, min(len(idx), n_target)).astype(int)] if len(idx) else idx
+            pick = (
+                idx[np.linspace(0, len(idx) - 1, min(len(idx), n_target)).astype(int)]
+                if len(idx)
+                else idx
+            )
         labels = np.full(len(pick), LABEL_OTHER, np.uint8)
         labels[np.abs(h[pick]) < self.cfg.table_band_m] = LABEL_TABLE
-        if conf is not None:   # sure points a few millimetres up are not table (a flat hand)
+        if (
+            conf is not None
+        ):  # sure points a few millimetres up are not table (a flat hand)
             up = (h[pick] >= self.cfg.cloud_fine_band_m) & (conf[pick] >= 2)
             labels[up & (labels == LABEL_TABLE)] = LABEL_OTHER
         if blob is not None:
             labels[blob[pick]] = LABEL_ARM
         labels[dark[pick]] = LABEL_DARK
         H, W = frame.depth.shape
-        small = cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA).reshape(-1, 3)
+        small = cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA).reshape(
+            -1, 3
+        )
         rgb = small[pick][:, ::-1]
         return {"points": q[pick], "labels": labels, "rgb": rgb}
 
@@ -637,17 +836,25 @@ class DepthTracker:
 class YawCorrectorConfig:
     """[camera.depth] keys for the correction."""
 
-    side: str = "right"               # the glove whose forearm the phone sees
-    reference: str = "lock"           # "lock": learn the depth-glove offset first, then remove drift from it;
-                                      # "table": trust camera_yaw_deg and correct to the absolute bench yaw
-    lock_s: float = 2.0               # how long to average before the lock
+    side: str = "right"  # the glove whose forearm the phone sees
+    reference: str = (
+        "lock"  # "lock": learn the depth-glove offset first, then remove drift from it;
+    )
+    # "table": trust camera_yaw_deg and correct to the absolute bench yaw
+    lock_s: float = 2.0  # how long to average before the lock
     lock_min_samples: int = 20
-    tau_s: float = 1.5                # time constant of the slow offset (SPEC: 2 percent a frame at 30 Hz)
-    outlier_deg: float = 25.0         # a sample this far from the current correction is skipped,
-    outlier_run: int = 45             # unless this many in a row agree it is real (about 1.5 s)
+    tau_s: float = (
+        1.5  # time constant of the slow offset (SPEC: 2 percent a frame at 30 Hz)
+    )
+    outlier_deg: float = (
+        25.0  # a sample this far from the current correction is skipped,
+    )
+    outlier_run: int = 45  # unless this many in a row agree it is real (about 1.5 s)
     max_correction_deg: float = 60.0
-    max_rate_deg_s: float = 3.0       # the offset never moves faster than this, whatever the depth says
-    stale_ms: float = 300.0           # depth older than this does not update the correction
+    max_rate_deg_s: float = (
+        3.0  # the offset never moves faster than this, whatever the depth says
+    )
+    stale_ms: float = 300.0  # depth older than this does not update the correction
 
     @classmethod
     def from_section(cls, sec) -> "YawCorrectorConfig":
@@ -708,14 +915,23 @@ class YawCorrector:
                 return False
         else:
             self._run = 0
-        dt = 0.0 if self.last_us is None else max(0.0, min(0.2, (t_us - self.last_us) / 1e6))
+        dt = (
+            0.0
+            if self.last_us is None
+            else max(0.0, min(0.2, (t_us - self.last_us) / 1e6))
+        )
         self.last_us = t_us
         k = 1.0 - math.exp(-dt / max(1e-3, self.cfg.tau_s))
         step = k * err
         cap = max(0.0, self.cfg.max_rate_deg_s) * dt
         step = float(np.clip(step, -cap, cap))
-        self.offset_deg = float(np.clip(self.offset_deg + step, -self.cfg.max_correction_deg,
-                                        self.cfg.max_correction_deg))
+        self.offset_deg = float(
+            np.clip(
+                self.offset_deg + step,
+                -self.cfg.max_correction_deg,
+                self.cfg.max_correction_deg,
+            )
+        )
         self.updates += 1
         return True
 
@@ -732,12 +948,16 @@ class HandBlobConfig:
     """[camera.depth] hand_* keys. Metres; pixels at the depth resolution."""
 
     hand_min_confidence: int = 1
-    hand_h_min_m: float = 0.01           # above the work surface
-    hand_h_max_m: float = 0.28           # bench-gloves-1: hands at the chest 0.11 m, raised 0.19 m, the face 0.34 m and up
+    hand_h_min_m: float = 0.01  # above the work surface
+    hand_h_max_m: float = 0.28  # bench-gloves-1: hands at the chest 0.11 m, raised 0.19 m, the face 0.34 m and up
     hand_max_range_m: float = 1.2
-    hand_body_gap_m: float = 0.06        # nearer to the lens than the body's main distance by this much
-    hand_body_h_min_m: float = 0.08      # points this high above the surface vote for the body distance
-    hand_area_min_m2: float = 0.004      # a hand, seen from above, is about 0.01 to 0.03 m2
+    hand_body_gap_m: float = (
+        0.06  # nearer to the lens than the body's main distance by this much
+    )
+    hand_body_h_min_m: float = (
+        0.08  # points this high above the surface vote for the body distance
+    )
+    hand_area_min_m2: float = 0.004  # a hand, seen from above, is about 0.01 to 0.03 m2
     hand_area_max_m2: float = 0.08
     hand_open_px: int = 3
 
@@ -754,17 +974,23 @@ class HandBlobConfig:
 
 @dataclass
 class HandBlob:
-    centre_world: np.ndarray             # (3,) ARKit world metres, mean of the blob's points
-    centre_uv: tuple[float, float]       # normalised 0..1 in the colour frame as streamed (not rotated)
-    axis_world: np.ndarray | None        # (3,) unit long axis on the table, pointing away from the body
-    height_m: float                      # centre height above the table
-    area_px: int                         # at the depth resolution
-    mask: np.ndarray                     # bool (depth H, W)
-    darkness: float                      # 0..1, mean colour darkness in the mask (1 = black)
+    centre_world: np.ndarray  # (3,) ARKit world metres, mean of the blob's points
+    centre_uv: tuple[
+        float, float
+    ]  # normalised 0..1 in the colour frame as streamed (not rotated)
+    axis_world: (
+        np.ndarray | None
+    )  # (3,) unit long axis on the table, pointing away from the body
+    height_m: float  # centre height above the table
+    area_px: int  # at the depth resolution
+    mask: np.ndarray  # bool (depth H, W)
+    darkness: float  # 0..1, mean colour darkness in the mask (1 = black)
     area_m2: float = 0.0
     elongation: float = 0.0
-    range_m: float = 0.0                 # centre distance from the lens
-    side_hint: str | None = None         # "left" / "right" from the bench x position (person's view)
+    range_m: float = 0.0  # centre distance from the lens
+    side_hint: str | None = (
+        None  # "left" / "right" from the bench x position (person's view)
+    )
     centre_bench: np.ndarray | None = None
 
 
@@ -775,29 +1001,51 @@ def upright_turns(frame: DepthFrame) -> int:
     if T is None or np.allclose(T, np.eye(4)):
         return 0
     Rcv = (np.asarray(T, dtype=float) @ ARKIT_TO_OPENCV)[:3, :3]
-    up_cam = Rcv.T @ np.array([0.0, 1.0, 0.0])      # world up in camera axes (x right, y down)
+    up_cam = Rcv.T @ np.array(
+        [0.0, 1.0, 0.0]
+    )  # world up in camera axes (x right, y down)
     ux, uy = float(up_cam[0]), float(up_cam[1])
     # image direction of "up": (ux, uy) in (x right, y down); upright means it points to -y
     if abs(uy) >= abs(ux):
         return 0 if uy < 0 else 2
-    return 1 if ux < 0 else 3   # up points left: turn clockwise once; up points right: counter-clockwise
+    return (
+        1 if ux < 0 else 3
+    )  # up points left: turn clockwise once; up points right: counter-clockwise
 
 
 def rotate_upright(img: np.ndarray, turns: int) -> np.ndarray:
     import cv2
-    return img if turns % 4 == 0 else cv2.rotate(img, [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180,
-                                                       cv2.ROTATE_90_COUNTERCLOCKWISE][turns % 4])
+
+    return (
+        img
+        if turns % 4 == 0
+        else cv2.rotate(
+            img,
+            [
+                None,
+                cv2.ROTATE_90_CLOCKWISE,
+                cv2.ROTATE_180,
+                cv2.ROTATE_90_COUNTERCLOCKWISE,
+            ][turns % 4],
+        )
+    )
 
 
-def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
-               cfg: HandBlobConfig | None = None, tracker_cfg: TrackerConfig | None = None,
-               camera_yaw_deg: float | None = None) -> list[HandBlob]:
+def hand_blobs(
+    frame: DepthFrame,
+    table: Table | None = None,
+    max_n: int = 2,
+    cfg: HandBlobConfig | None = None,
+    tracker_cfg: TrackerConfig | None = None,
+    camera_yaw_deg: float | None = None,
+) -> list[HandBlob]:
     """The max_n largest hand-sized blobs nearer than the body and above the work surface.
 
     No fingers: ARKit depth is too smooth; fingers come from the gloves. With table=None the
     table is the app's plane, else our RANSAC fit (as DepthTracker does).
     """
     import cv2
+
     cfg = cfg or HandBlobConfig()
     tcfg = tracker_cfg or TrackerConfig()
     if frame.depth is None:
@@ -805,7 +1053,11 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
     H, W = frame.depth.shape
     p, valid, in_world = backproject(frame)
     cam, cam_fwd = camera_pose(frame, in_world)
-    conf = frame.confidence.reshape(-1) if frame.confidence is not None else np.full(H * W, 2, np.uint8)
+    conf = (
+        frame.confidence.reshape(-1)
+        if frame.confidence is not None
+        else np.full(H * W, 2, np.uint8)
+    )
     if table is None:
         table = app_table(frame, cam, in_world)
         if table is None:
@@ -821,18 +1073,29 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
     body = ok & (h >= cfg.hand_body_h_min_m) & (h <= 0.8)
     if body.sum() < 50:
         return []
-    hist, edges = np.histogram(r[body], bins=np.arange(0.0, cfg.hand_max_range_m + 0.02, 0.02))
+    hist, edges = np.histogram(
+        r[body], bins=np.arange(0.0, cfg.hand_max_range_m + 0.02, 0.02)
+    )
     body_r = float(edges[int(np.argmax(hist))] + 0.01)
-    m = ok & (h >= cfg.hand_h_min_m) & (h <= cfg.hand_h_max_m) & (r <= body_r - cfg.hand_body_gap_m)
+    m = (
+        ok
+        & (h >= cfg.hand_h_min_m)
+        & (h <= cfg.hand_h_max_m)
+        & (r <= body_r - cfg.hand_body_gap_m)
+    )
     img = m.reshape(H, W).astype(np.uint8)
     if cfg.hand_open_px > 1:
-        img = cv2.morphologyEx(img, cv2.MORPH_OPEN, np.ones((cfg.hand_open_px, cfg.hand_open_px), np.uint8))
+        img = cv2.morphologyEx(
+            img, cv2.MORPH_OPEN, np.ones((cfg.hand_open_px, cfg.hand_open_px), np.uint8)
+        )
     n, lab, stats, _ = cv2.connectedComponentsWithStats(img, connectivity=8)
     if n <= 1:
         return []
     K = frame.depth_intrinsics()
-    pix_m2 = (r / K[0, 0]) * (r / K[1, 1])                 # approximate metric area per pixel
-    gray = cv2.cvtColor(cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+    pix_m2 = (r / K[0, 0]) * (r / K[1, 1])  # approximate metric area per pixel
+    gray = cv2.cvtColor(
+        cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY
+    )
     yaw = tcfg.camera_yaw_deg if camera_yaw_deg is None else camera_yaw_deg
     # bench axes: y up from the table, -z the camera's viewing direction on the table, turned by yaw
     nrm = table.normal
@@ -853,20 +1116,32 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
         q = (P - table.point) @ R.T
         cb = q.mean(axis=0)
         xz = q[:, [0, 2]] - cb[[0, 2]]
-        w, V = np.linalg.eigh(np.cov(xz.T)) if len(xz) > 3 else (np.array([1.0, 1.0]), np.eye(2))
+        w, V = (
+            np.linalg.eigh(np.cov(xz.T))
+            if len(xz) > 3
+            else (np.array([1.0, 1.0]), np.eye(2))
+        )
         a = V[:, 1]
         # point away from the body: in the bench frame the person is at +z
         if a[1] > 0:
             a = -a
         axis_world = np.array([a[0], 0.0, a[1]]) @ R
         vv, uu = np.nonzero(bm)
-        out.append(HandBlob(
-            centre_world=c, centre_uv=(float((uu.mean() + 0.5) / W), float((vv.mean() + 0.5) / H)),
-            axis_world=axis_world / max(1e-9, np.linalg.norm(axis_world)),
-            height_m=float(table.height(c[None])[0]), area_px=int(bm.sum()), mask=bm,
-            darkness=float(1.0 - gray[bm].mean() / 255.0), area_m2=round(area_m2, 4),
-            elongation=float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12))),
-            range_m=float(np.linalg.norm(c - cam)), centre_bench=cb))
+        out.append(
+            HandBlob(
+                centre_world=c,
+                centre_uv=(float((uu.mean() + 0.5) / W), float((vv.mean() + 0.5) / H)),
+                axis_world=axis_world / max(1e-9, np.linalg.norm(axis_world)),
+                height_m=float(table.height(c[None])[0]),
+                area_px=int(bm.sum()),
+                mask=bm,
+                darkness=float(1.0 - gray[bm].mean() / 255.0),
+                area_m2=round(area_m2, 4),
+                elongation=float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12))),
+                range_m=float(np.linalg.norm(c - cam)),
+                centre_bench=cb,
+            )
+        )
         if len(out) >= max_n:
             break
     # side from the bench x (core world: x to the person's right): two blobs split by x,
@@ -898,7 +1173,7 @@ class HandBlobSides:
     def update(self, blobs: list[HandBlob]) -> list[HandBlob]:
         self.k += 1
         if len(blobs) == 2:
-            pass                                    # hand_blobs already split them by x
+            pass  # hand_blobs already split them by x
         else:
             for b in blobs:
                 best, bd = None, self.gate_m
@@ -914,4 +1189,3 @@ class HandBlobSides:
             if b.side_hint:
                 self.tracks[b.side_hint] = (b.centre_world, self.k)
         return blobs
-

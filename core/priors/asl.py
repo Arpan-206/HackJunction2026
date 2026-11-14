@@ -42,7 +42,9 @@ from ..calibration import FLEX_SLOTS, HandCalibration, _phase_present, triples_t
 
 ROOT = Path(__file__).resolve().parents[2]
 MOVES_FILE = ROOT / "backend" / "app" / "data" / "moves.json"
-CAL_DIR_DEFAULT = Path("/Users/arpanpandey/Code/Junction/repo/backend/data/calibrations")
+CAL_DIR_DEFAULT = Path(
+    "/Users/arpanpandey/Code/Junction/repo/backend/data/calibrations"
+)
 MODEL_FILE = Path(__file__).resolve().parent / "models" / "asl_lda.json"
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
@@ -93,7 +95,9 @@ def target_angles(curl: dict[str, float], spread_deg: float = 0.0) -> np.ndarray
     return H.synth_hand("right", curl=curl, spread_deg=spread_deg).angles.copy()
 
 
-def letter_groups(curls: dict[str, dict[str, float]], tol_deg: float = 0.5) -> list[list[str]]:
+def letter_groups(
+    curls: dict[str, dict[str, float]], tol_deg: float = 0.5
+) -> list[list[str]]:
     """Letters whose 18-angle targets are the same, merged in alphabet order."""
     groups: list[list[str]] = []
     reps: list[np.ndarray] = []
@@ -134,8 +138,13 @@ def wearer_records(cal_dir: Path = CAL_DIR_DEFAULT) -> list[Wearer]:
             continue
         flat = triples_to_angles(d["flat"])
         fist = triples_to_angles(d["fist"])
-        long_slots = [s for f in ("index", "middle", "ring", "little") for s in H.FLEXION_SLOTS[f]]
-        if all(len(set(np.round(flat[H.FLEXION_SLOTS[f]], 3))) == 1 for f in ("index", "middle", "ring", "little")):
+        long_slots = [
+            s for f in ("index", "middle", "ring", "little") for s in H.FLEXION_SLOTS[f]
+        ]
+        if all(
+            len(set(np.round(flat[H.FLEXION_SLOTS[f]], 3))) == 1
+            for f in ("index", "middle", "ring", "little")
+        ):
             continue
         span = fist - flat
         if np.median(span[long_slots]) < 30.0:
@@ -163,7 +172,10 @@ def simulate(
     sd[list(H.SPREAD_SLOTS)] = SPREAD_SD
     spread_slots = list(H.SPREAD_SLOTS)
     for i in range(n):
-        c = {f: float(np.clip(v + rng.normal(0, CURL_SD), 0.0, 1.0)) for f, v in curl.items()}
+        c = {
+            f: float(np.clip(v + rng.normal(0, CURL_SD), 0.0, 1.0))
+            for f, v in curl.items()
+        }
         a = target_angles(c, spread_deg=float(rng.normal(0, SPREAD_FAN_SD)))
         if wearer is None:
             raw = a + rng.normal(0, sd)
@@ -172,7 +184,10 @@ def simulate(
             continue
         span_true = np.where(wearer.span > MIN_RANGE_DEG, wearer.span, 10.0)
         raw = a.copy()
-        raw[FLEX_SLOTS] = wearer.flat[FLEX_SLOTS] + a[FLEX_SLOTS] / full[FLEX_SLOTS] * span_true[FLEX_SLOTS]
+        raw[FLEX_SLOTS] = (
+            wearer.flat[FLEX_SLOTS]
+            + a[FLEX_SLOTS] / full[FLEX_SLOTS] * span_true[FLEX_SLOTS]
+        )
         raw[spread_slots] += rng.normal(0, SPREAD_OFFSET_SD)
         raw = raw + rng.normal(0, sd)
         flat_m = wearer.flat + rng.normal(0, CAL_FLAT_SD, H.N_ANGLES)
@@ -285,13 +300,19 @@ class LetterModel:
     @classmethod
     def from_json(cls, d: dict) -> LetterModel:
         return cls(
-            d["classes"], np.array(d["means"]), np.array(d["prec"]), np.array(d["log_prior"]),
+            d["classes"],
+            np.array(d["means"]),
+            np.array(d["prec"]),
+            np.array(d["log_prior"]),
             float(d.get("temperature", 1.0)),
         )
 
     def save(self, path: Path = MODEL_FILE, extra: dict | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({**self.to_json(), **(extra or {})}, indent=1) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps({**self.to_json(), **(extra or {})}, indent=1) + "\n",
+            encoding="utf-8",
+        )
 
     @classmethod
     def load(cls, path: Path = MODEL_FILE) -> LetterModel:
@@ -316,7 +337,9 @@ def split_wearers(wearers: list[Wearer]) -> tuple[list[Wearer], list[Wearer]]:
         sessions.setdefault(w.created_at[:16], []).append(w)
     keys = sorted(sessions)
     test = sessions[keys[-1]] if len(keys) > 1 else []
-    train = [w for k in keys[:-1] for w in sessions[k]] if len(keys) > 1 else list(wearers)
+    train = (
+        [w for k in keys[:-1] for w in sessions[k]] if len(keys) > 1 else list(wearers)
+    )
     return train, test
 
 
@@ -333,7 +356,9 @@ def fit_temperature(scores: np.ndarray, y: np.ndarray) -> float:
     return best_t
 
 
-def calibration_table(p: np.ndarray, y: np.ndarray, bins=(0.0, 0.5, 0.7, 0.9, 1.01)) -> list[dict]:
+def calibration_table(
+    p: np.ndarray, y: np.ndarray, bins=(0.0, 0.5, 0.7, 0.9, 1.01)
+) -> list[dict]:
     """Top-1 confidence against how often top-1 is right, per confidence bin."""
     conf = p.max(axis=1)
     right = p.argmax(axis=1) == y
@@ -341,6 +366,13 @@ def calibration_table(p: np.ndarray, y: np.ndarray, bins=(0.0, 0.5, 0.7, 0.9, 1.
     for lo, hi in zip(bins[:-1], bins[1:]):
         m = (conf >= lo) & (conf < hi)
         if m.any():
-            out.append({"conf_from": lo, "conf_to": min(hi, 1.0), "share": round(float(m.mean()), 3),
-                        "mean_conf": round(float(conf[m].mean()), 3), "right": round(float(right[m].mean()), 3)})
+            out.append(
+                {
+                    "conf_from": lo,
+                    "conf_to": min(hi, 1.0),
+                    "share": round(float(m.mean()), 3),
+                    "mean_conf": round(float(conf[m].mean()), 3),
+                    "right": round(float(right[m].mean()), 3),
+                }
+            )
     return out

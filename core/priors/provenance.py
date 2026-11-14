@@ -59,7 +59,11 @@ def write_manifest(name: str, sources: list[str], meta: dict) -> Path:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"{name}.provenance.json"
     path.write_text(
-        json.dumps({"name": name, "n_examples": len(sources), "sources": counts, **meta}, indent=1, sort_keys=True)
+        json.dumps(
+            {"name": name, "n_examples": len(sources), "sources": counts, **meta},
+            indent=1,
+            sort_keys=True,
+        )
         + "\n",
         encoding="utf-8",
     )

@@ -44,8 +44,16 @@ def tail(path: str, n: int = 30) -> list[str]:
 
 def gpu() -> str:
     try:
-        return subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total,memory.used", "--format=csv,noheader"],
-                              capture_output=True, text=True, timeout=10).stdout.strip()
+        return subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total,memory.used",
+                "--format=csv,noheader",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
     except Exception as e:  # noqa: BLE001
         return f"nvidia-smi failed: {e}"
 
@@ -63,9 +71,24 @@ def stop_vllm() -> None:
 
 def start_vllm(which: str) -> None:
     stop_vllm()
-    model, name = (BASE, BASE) if which == "base" else (f"{W}/merged", "geppetto-coach-e2b")
-    cmd = ["vllm", "serve", model, "--served-model-name", name, "--port", "8001", "--max-model-len", "2048",
-           "--gpu-memory-utilization", "0.85", "--limit-mm-per-prompt", json.dumps({"image": 0, "audio": 0})]
+    model, name = (
+        (BASE, BASE) if which == "base" else (f"{W}/merged", "geppetto-coach-e2b")
+    )
+    cmd = [
+        "vllm",
+        "serve",
+        model,
+        "--served-model-name",
+        name,
+        "--port",
+        "8001",
+        "--max-model-len",
+        "2048",
+        "--gpu-memory-utilization",
+        "0.85",
+        "--limit-mm-per-prompt",
+        json.dumps({"image": 0, "audio": 0}),
+    ]
     log = open(f"{W}/vllm_{which}.log", "w")
     PROCS["vllm"] = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
     STATE["vllm"] = which
@@ -76,10 +99,14 @@ def train(args: str) -> None:
         STATE["phase"] = "training"
         STATE["train_rc"] = None
     stop_vllm()
-    script = (f"pip install -q 'peft>=0.17' 'accelerate>=1.0' && python3 {W}/train_lora.py --data {W}/sft "
-              f"--out {W}/adapter --merged {W}/merged {args}")
+    script = (
+        f"pip install -q 'peft>=0.17' 'accelerate>=1.0' && python3 {W}/train_lora.py --data {W}/sft "
+        f"--out {W}/adapter --merged {W}/merged {args}"
+    )
     with open(f"{W}/train.log", "w") as log:
-        rc = subprocess.run(["bash", "-c", script], stdout=log, stderr=subprocess.STDOUT).returncode
+        rc = subprocess.run(
+            ["bash", "-c", script], stdout=log, stderr=subprocess.STDOUT
+        ).returncode
     with LOCK:
         STATE["phase"] = "trained" if rc == 0 else "train_failed"
         STATE["train_rc"] = rc
@@ -91,7 +118,9 @@ def run_script(name: str) -> None:
         STATE["train_rc"] = None
     stop_vllm()
     with open(f"{W}/{name}.log", "w") as log:
-        rc = subprocess.run(["bash", f"{W}/{name}"], stdout=log, stderr=subprocess.STDOUT, cwd=W).returncode
+        rc = subprocess.run(
+            ["bash", f"{W}/{name}"], stdout=log, stderr=subprocess.STDOUT, cwd=W
+        ).returncode
     with LOCK:
         STATE["phase"] = f"done:{name}" if rc == 0 else f"failed:{name}"
         STATE["train_rc"] = rc
@@ -119,17 +148,27 @@ class H(BaseHTTPRequestHandler):
 
     def proxy(self, method: str) -> None:
         data = self.body() if method == "POST" else None
-        req = urllib.request.Request("http://127.0.0.1:8001" + self.path, data=data, method=method,
-                                     headers={"Content-Type": self.headers.get("Content-Type", "application/json")})
+        req = urllib.request.Request(
+            "http://127.0.0.1:8001" + self.path,
+            data=data,
+            method=method,
+            headers={
+                "Content-Type": self.headers.get("Content-Type", "application/json")
+            },
+        )
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
-                self.send(r.status, r.read(), r.headers.get("Content-Type", "application/json"))
+                self.send(
+                    r.status,
+                    r.read(),
+                    r.headers.get("Content-Type", "application/json"),
+                )
         except urllib.error.HTTPError as e:
             self.send(e.code, e.read())
         except Exception as e:  # noqa: BLE001
             self.js({"error": f"vllm not reachable: {e}"}, 503)
 
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         if u.path == "/health":
@@ -138,8 +177,14 @@ class H(BaseHTTPRequestHandler):
             v = STATE["vllm"]
             ph = STATE["phase"]
             log = f"{W}/{ph.split(':', 1)[1]}.log" if ":" in ph else f"{W}/train.log"
-            return self.js({**STATE, "gpu": gpu(), "train_log": tail(log),
-                            "vllm_log": tail(f"{W}/vllm_{v}.log", 15) if v else []})
+            return self.js(
+                {
+                    **STATE,
+                    "gpu": gpu(),
+                    "train_log": tail(log),
+                    "vllm_log": tail(f"{W}/vllm_{v}.log", 15) if v else [],
+                }
+            )
         if u.path == "/ctl/fetch":
             d = os.path.join(W, os.path.basename(q.get("dir", ["adapter"])[0]))
             if not os.path.isdir(d):
@@ -152,7 +197,7 @@ class H(BaseHTTPRequestHandler):
             return self.proxy("GET")
         self.js({"error": "not found"}, 404)
 
-    def do_POST(self):  # noqa: N802
+    def do_POST(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         if u.path == "/ctl/upload":

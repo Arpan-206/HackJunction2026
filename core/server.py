@@ -90,7 +90,9 @@ class Core:
         self.clients: dict[int, ClientState] = {}
         self.compat_clients: dict[int, ClientState] = {}
         self.robot_clients: dict[int, ClientState] = {}
-        self.depth_clients: dict[int, ClientState] = {}   # /ws/depth, point clouds (depth step only)
+        self.depth_clients: dict[
+            int, ClientState
+        ] = {}  # /ws/depth, point clouds (depth step only)
         self._last_cloud_us = 0
         self.started = time.time()
         self.frames = 0
@@ -528,7 +530,9 @@ class Core:
                 "detections": self.camera_source.detections,
                 "error": self.camera_source.error,
             },
-            "depth": None if self.session.depth is None else self.session.depth.status(),
+            "depth": None
+            if self.session.depth is None
+            else self.session.depth.status(),
             "validation_errors": self.validation_errors,
             "last_validation_error": self.last_validation_error,
             "mode": self.session.mode,
@@ -544,7 +548,7 @@ def create_app(core: Core) -> FastAPI:
             if src is not None and hasattr(src, "start"):
                 await src.start()
         if core.session.depth is not None:
-            core.session.depth.start()     # its own threads; returns at once
+            core.session.depth.start()  # its own threads; returns at once
         try:
             yield
         finally:
@@ -563,7 +567,9 @@ def create_app(core: Core) -> FastAPI:
                     try:
                         await asyncio.wait_for(src.stop(), 3.0)
                     except Exception:
-                        log.warning("source %s did not stop in time", type(src).__name__)
+                        log.warning(
+                            "source %s did not stop in time", type(src).__name__
+                        )
             if core._task is not None:
                 core._task.cancel()
                 try:
@@ -597,7 +603,9 @@ def create_app(core: Core) -> FastAPI:
     def depth_view():
         p = REPO_ROOT / "tools" / "depth_view.html"
         if not p.exists():
-            return JSONResponse({"error": "tools/depth_view.html missing"}, status_code=404)
+            return JSONResponse(
+                {"error": "tools/depth_view.html missing"}, status_code=404
+            )
         return FileResponse(p, media_type="text/html")
 
     @app.get("/health")

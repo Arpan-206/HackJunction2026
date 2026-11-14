@@ -7,6 +7,6 @@ LANE = Path(__file__).resolve().parent.parent
 if str(LANE) not in sys.path:
     sys.path.insert(0, str(LANE))
 
-import paths  # noqa: E402
+import paths
 
 paths.add_repo_paths()

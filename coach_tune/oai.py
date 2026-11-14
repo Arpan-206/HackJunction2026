@@ -9,7 +9,6 @@ import asyncio
 import os
 import time
 from pathlib import Path
-
 from urllib.parse import urlparse
 
 import httpx
@@ -36,11 +35,21 @@ def inference_key() -> str:
 
 
 def headers(base_url: str = BASE_URL) -> dict[str, str]:
-    return {"Authorization": f"Bearer {inference_key()}"} if urlparse(base_url).hostname == GATEWAY_HOST else {}
+    return (
+        {"Authorization": f"Bearer {inference_key()}"}
+        if urlparse(base_url).hostname == GATEWAY_HOST
+        else {}
+    )
 
 
 def where(base_url: str = BASE_URL) -> str:
-    return "verda serverless container" if urlparse(base_url).hostname == GATEWAY_HOST else "verda via ssh tunnel"
+    return (
+        "verda serverless container"
+        if urlparse(base_url).hostname == GATEWAY_HOST
+        else "verda via ssh tunnel"
+    )
+
+
 # Labels may only come from a self-hosted open-weights Gemma 4 served under its Hugging Face id.
 TEACHER_PREFIX = "google/gemma-4-"
 
@@ -52,7 +61,9 @@ class ForbiddenHost(RuntimeError):
 def check_host(url: str) -> None:
     host = urlparse(url).hostname
     if host not in ALLOWED_HOSTS:
-        raise ForbiddenHost(f"coach_tune only talks to its own vLLM through the tunnel, not {host}")
+        raise ForbiddenHost(
+            f"coach_tune only talks to its own vLLM through the tunnel, not {host}"
+        )
 
 
 async def served_model(base_url: str = BASE_URL) -> str:
@@ -63,20 +74,35 @@ async def served_model(base_url: str = BASE_URL) -> str:
         return r.json()["data"][0]["id"]
 
 
-async def complete(client: httpx.AsyncClient, model: str, messages: list[dict], temperature: float, max_tokens: int = 48,
-                   base_url: str = BASE_URL) -> tuple[str, float]:
+async def complete(
+    client: httpx.AsyncClient,
+    model: str,
+    messages: list[dict],
+    temperature: float,
+    max_tokens: int = 48,
+    base_url: str = BASE_URL,
+) -> tuple[str, float]:
     check_host(base_url)
-    body = {"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+    body = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
     t0 = time.perf_counter()
     r = await client.post(base_url + "/v1/chat/completions", json=body)
     r.raise_for_status()
-    return (r.json()["choices"][0]["message"].get("content") or "").strip(), time.perf_counter() - t0
+    return (
+        r.json()["choices"][0]["message"].get("content") or ""
+    ).strip(), time.perf_counter() - t0
 
 
 async def run_all(items: list, call, concurrency: int) -> list:
     """Run `call(client, item)` for every item with at most `concurrency` in flight; keeps the order."""
     sem = asyncio.Semaphore(concurrency)
-    async with httpx.AsyncClient(timeout=300, headers=headers(), limits=httpx.Limits(max_connections=concurrency)) as client:
+    async with httpx.AsyncClient(
+        timeout=300, headers=headers(), limits=httpx.Limits(max_connections=concurrency)
+    ) as client:
 
         async def one(item):
             async with sem:

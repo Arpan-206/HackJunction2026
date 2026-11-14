@@ -5,7 +5,6 @@ Thresholds are at the top of this file with the measurement each comes from.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import math
 import shlex
@@ -15,7 +14,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from slot_links import CommandFailed, CoreLink, HttpError, Trace, http, port_open
+from slot_links import CoreLink, HttpError, Trace, http, port_open
 from slot_log import Console, Result
 
 # --- thresholds ----------------------------------------------------------------
@@ -86,19 +85,39 @@ class Ctx:
         return f"http://127.0.0.1:{self.core_port}"
 
     def core(self, port: int | None = None, path: str = "/ws") -> CoreLink:
-        return CoreLink(f"ws://127.0.0.1:{port or self.core_port}{path}", trace=self.trace)
+        return CoreLink(
+            f"ws://127.0.0.1:{port or self.core_port}{path}", trace=self.trace
+        )
 
     def health(self, port: int | None = None) -> dict:
-        return http("GET", f"http://127.0.0.1:{port or self.core_port}/health", timeout=5, trace=self.trace)
+        return http(
+            "GET",
+            f"http://127.0.0.1:{port or self.core_port}/health",
+            timeout=5,
+            trace=self.trace,
+        )
 
     def sh(self, cmd: list[str], timeout: float = 120.0) -> subprocess.CompletedProcess:
         label = " ".join(shlex.quote(str(x)) for x in cmd)
         try:
-            p = subprocess.run([str(x) for x in cmd], cwd=self.repo, capture_output=True, text=True, timeout=timeout)
+            p = subprocess.run(
+                [str(x) for x in cmd],
+                cwd=self.repo,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
         except subprocess.TimeoutExpired as e:
-            self.trace.add("shell", label, False, f"timeout after {timeout} s: {e.stdout or ''}")
+            self.trace.add(
+                "shell", label, False, f"timeout after {timeout} s: {e.stdout or ''}"
+            )
             raise
-        self.trace.add("shell", label, p.returncode == 0, f"exit {p.returncode}\n{p.stdout}{p.stderr}")
+        self.trace.add(
+            "shell",
+            label,
+            p.returncode == 0,
+            f"exit {p.returncode}\n{p.stdout}{p.stderr}",
+        )
         return p
 
 
@@ -117,7 +136,11 @@ def _bad(ctx: Ctx) -> str:
 
 
 def _fake_note(ctx: Ctx) -> str:
-    return " (fake hands ignore the prompts; quality not judged in the dry run)" if ctx.dry else ""
+    return (
+        " (fake hands ignore the prompts; quality not judged in the dry run)"
+        if ctx.dry
+        else ""
+    )
 
 
 def hold(ctx: Ctx, text: str, seconds: float) -> None:
@@ -126,6 +149,7 @@ def hold(ctx: Ctx, text: str, seconds: float) -> None:
 
 
 # --- hand geometry from frame messages ------------------------------------------
+
 
 def palm_heading_deg(joints: list) -> float | None:
     """Heading of wrist (1) to middle proximal (12) on the table plane.
@@ -157,44 +181,75 @@ def ang_diff(a: float, b: float) -> float:
 def headings(frames: list[dict]) -> dict[str, float | None]:
     out = {}
     for side in SIDES:
-        hs = [palm_heading_deg((f.get("hands") or {}).get(side, {}).get("joints"))
-              for f in frames if (f.get("hands") or {}).get(side)]
+        hs = [
+            palm_heading_deg((f.get("hands") or {}).get(side, {}).get("joints"))
+            for f in frames
+            if (f.get("hands") or {}).get(side)
+        ]
         out[side] = circ_mean_deg([h for h in hs if h is not None])
     return out
 
 
 # --- step 0: the stack ----------------------------------------------------------
 
+
 def step_stack(ctx: Ctx) -> Result:
     c = ctx.console
     if ctx.dry:
         h = ctx.health()
-        return Result("ok", f"fake stack up: core on {ctx.core_port} (fake {h.get('fake')}), backend {ctx.backend_url}, "
-                            f"fake phone on {ctx.depth_port}", {"core_health": h})
+        return Result(
+            "ok",
+            f"fake stack up: core on {ctx.core_port} (fake {h.get('fake')}), backend {ctx.backend_url}, "
+            f"fake phone on {ctx.depth_port}",
+            {"core_health": h},
+        )
     from slot_stack import live_stack_up
+
     up = live_stack_up(ctx.core_port, ctx.backend_url)
     if up["core"] is None or up["backend"] is None:
-        c.say("The live stack is not up. Quit the Rokoko desktop app and Rokoko Studio. Plug in both gloves by USB.")
+        c.say(
+            "The live stack is not up. Quit the Rokoko desktop app and Rokoko Studio. Plug in both gloves by USB."
+        )
         if c.yes(f"Start it now with scripts/live.sh {ctx.wearer}?"):
             p = ctx.sh([str(ctx.repo / "scripts" / "live.sh"), ctx.wearer], timeout=240)
             c.say(p.stdout[-2500:])
             up = live_stack_up(ctx.core_port, ctx.backend_url)
     core, backend = up.get("core"), up.get("backend")
-    ctx.trace.add("http", "core /health and backend /api/health", bool(core and backend), up)
+    ctx.trace.add(
+        "http", "core /health and backend /api/health", bool(core and backend), up
+    )
     if core is None or backend is None:
-        return Result("error", "core or backend does not answer", up,
-                      fix="Run scripts/live.sh WEARER and read logs/live/current/*.log (docs/GLOVE-SLOT.md section 4).")
+        return Result(
+            "error",
+            "core or backend does not answer",
+            up,
+            fix="Run scripts/live.sh WEARER and read logs/live/current/*.log (docs/GLOVE-SLOT.md section 4).",
+        )
     gloves = core.get("gloves") or {}
     devices = (core.get("rgmp") or {}).get("devices") or {}
     rcsp = (core.get("rcsp") or {}).get("connected")
-    details = {"gloves": gloves, "devices": devices, "rcsp": rcsp, "glove_source": backend.get("glove_source")}
+    details = {
+        "gloves": gloves,
+        "devices": devices,
+        "rcsp": rcsp,
+        "glove_source": backend.get("glove_source"),
+    }
     if not all(gloves.get(s) for s in SIDES):
-        return Result("bad", f"gloves tracked: {gloves}; devices {devices}", details,
-                      fix="docs/GLOVE-SLOT.md section 4: USB cable, rokoko device list, solver.log.")
-    return Result("ok", f"both gloves tracked, rcsp {rcsp}, backend source {backend.get('glove_source')}", details)
+        return Result(
+            "bad",
+            f"gloves tracked: {gloves}; devices {devices}",
+            details,
+            fix="docs/GLOVE-SLOT.md section 4: USB cable, rokoko device list, solver.log.",
+        )
+    return Result(
+        "ok",
+        f"both gloves tracked, rcsp {rcsp}, backend source {backend.get('glove_source')}",
+        details,
+    )
 
 
 # --- step 1: depth clip ---------------------------------------------------------
+
 
 def _module_of(template: str) -> str | None:
     parts = shlex.split(template)
@@ -204,8 +259,16 @@ def _module_of(template: str) -> str | None:
 
 
 def _module_exists(ctx: Ctx, mod: str) -> bool:
-    p = subprocess.run([ctx.py, "-c", f"import importlib.util,sys; sys.exit(0 if importlib.util.find_spec({mod!r}) else 1)"],
-                       cwd=ctx.repo, capture_output=True, text=True)
+    p = subprocess.run(
+        [
+            ctx.py,
+            "-c",
+            f"import importlib.util,sys; sys.exit(0 if importlib.util.find_spec({mod!r}) else 1)",
+        ],
+        cwd=ctx.repo,
+        capture_output=True,
+        text=True,
+    )
     return p.returncode == 0
 
 
@@ -213,23 +276,53 @@ def step_depth(ctx: Ctx) -> Result:
     c = ctx.console
     host, port, secs = ctx.depth_host, ctx.depth_port, ctx.opts.depth_seconds
     c.say("1. Open the GeppettoDepth app on the iPhone. Point it down at the table.")
-    c.say("2. For the cable: run ios/mac/forward.sh in a second terminal and leave it running.")
-    c.say("   For WiFi: start this script with --depth-host <the address the app shows>.")
-    c.say(f"3. Put on the gloves. Put the gloved hand on the table in view. Move it slowly for {secs / 2:.0f} s.")
-    c.say(f"4. When the script says so, take the hand away. Leave the table empty for {secs / 2:.0f} s.")
+    c.say(
+        "2. For the cable: run ios/mac/forward.sh in a second terminal and leave it running."
+    )
+    c.say(
+        "   For WiFi: start this script with --depth-host <the address the app shows>."
+    )
+    c.say(
+        f"3. Put on the gloves. Put the gloved hand on the table in view. Move it slowly for {secs / 2:.0f} s."
+    )
+    c.say(
+        f"4. When the script says so, take the hand away. Leave the table empty for {secs / 2:.0f} s."
+    )
     c.say(f"The script reads the phone at {host}:{port}.")
     if not port_open(port, host, timeout=2):
         c.enter("Nothing answers yet. Start the app or forward.sh, then press Enter.")
     if not port_open(port, host, timeout=2):
-        return Result("error", f"nothing answers on {host}:{port}", {"host": host, "port": port},
-                      fix="Open GeppettoDepth. Cable: ios/mac/forward.sh (iproxy). WiFi: --depth-host <phone address>.")
+        return Result(
+            "error",
+            f"nothing answers on {host}:{port}",
+            {"host": host, "port": port},
+            fix="Open GeppettoDepth. Cable: ios/mac/forward.sh (iproxy). WiFi: --depth-host <phone address>.",
+        )
     c.enter(f"Press Enter to start the {secs:.0f} s recording.")
     out = ctx.run_dir / "depth_clip.gdrec.gz"
-    note = f"glove slot {ctx.run_dir.name}: gloved hand on the table, then empty table" + (" (FAKE sender, dry run)" if ctx.dry else "")
-    cmd = [ctx.py, "-m", "ios.mac.record", str(out), "--host", host, "--port", str(port), "--seconds", f"{secs:g}", "--note", note]
+    note = (
+        f"glove slot {ctx.run_dir.name}: gloved hand on the table, then empty table"
+        + (" (FAKE sender, dry run)" if ctx.dry else "")
+    )
+    cmd = [
+        ctx.py,
+        "-m",
+        "ios.mac.record",
+        str(out),
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--seconds",
+        f"{secs:g}",
+        "--note",
+        note,
+    ]
     label = " ".join(shlex.quote(x) for x in cmd)
     t0 = time.time()
-    p = subprocess.Popen(cmd, cwd=ctx.repo, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    p = subprocess.Popen(
+        cmd, cwd=ctx.repo, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
     c.say("Recording. Hand on the table, move it slowly.")
     said_half = False
     next_tick = 10.0
@@ -243,16 +336,30 @@ def step_depth(ctx: Ctx) -> Result:
             next_tick += 10.0
         time.sleep(0.1)
     rec_out = p.stdout.read() if p.stdout else ""
-    ctx.trace.add("shell", label, p.returncode == 0, f"exit {p.returncode}\n{rec_out[-3000:]}")
+    ctx.trace.add(
+        "shell", label, p.returncode == 0, f"exit {p.returncode}\n{rec_out[-3000:]}"
+    )
     if p.returncode != 0 or not out.exists():
-        return Result("error", f"ios.mac.record failed (exit {p.returncode})", {"output": rec_out[-1000:]},
-                      fix="Check the app is in the foreground and the address is right.")
+        return Result(
+            "error",
+            f"ios.mac.record failed (exit {p.returncode})",
+            {"output": rec_out[-1000:]},
+            fix="Check the app is in the foreground and the address is right.",
+        )
     info_p = ctx.sh([ctx.py, "-m", "ios.mac.replay", str(out), "--info"])
     try:
         info = json.loads(info_p.stdout)
     except ValueError:
-        return Result("error", "ios.mac.replay --info gave no JSON", {"output": info_p.stdout[-1000:]})
-    frames, fps, gaps = int(info.get("frames", 0)), float(info.get("fps") or 0), int(info.get("gaps", 0))
+        return Result(
+            "error",
+            "ios.mac.replay --info gave no JSON",
+            {"output": info_p.stdout[-1000:]},
+        )
+    frames, fps, gaps = (
+        int(info.get("frames", 0)),
+        float(info.get("fps") or 0),
+        int(info.get("gaps", 0)),
+    )
     details = {"file": str(out), "bytes": out.stat().st_size, "info": info}
 
     # the lidar lane's check, when it exists
@@ -262,29 +369,53 @@ def step_depth(ctx: Ctx) -> Result:
     check_ok = True
     if mod and not _module_exists(ctx, mod):
         check_note = f"depth check skipped: {mod} is not on this branch yet (lidar lane). Run later: {tmpl.format(file=out)}"
-        ctx.trace.add("shell", tmpl.format(file=out), True, f"SKIPPED: module {mod} not found")
+        ctx.trace.add(
+            "shell", tmpl.format(file=out), True, f"SKIPPED: module {mod} not found"
+        )
         details["depth_check"] = "skipped"
     else:
-        argv = [ctx.py if a == "python" else a for a in shlex.split(tmpl.format(file=str(out)))]
+        argv = [
+            ctx.py if a == "python" else a
+            for a in shlex.split(tmpl.format(file=str(out)))
+        ]
         try:
             dc = ctx.sh(argv, timeout=600)
             (ctx.run_dir / "depth_check.txt").write_text(dc.stdout + dc.stderr)
-            details["depth_check"] = {"exit": dc.returncode, "output_tail": (dc.stdout + dc.stderr)[-1500:]}
+            details["depth_check"] = {
+                "exit": dc.returncode,
+                "output_tail": (dc.stdout + dc.stderr)[-1500:],
+            }
             check_ok = dc.returncode == 0
             check_note = f"depth check exit {dc.returncode}, output in depth_check.txt"
         except subprocess.TimeoutExpired:
             check_ok = False
             check_note = "depth check timed out after 600 s"
     summary = f"{frames} frames, {fps:.1f} fps, {gaps} gaps, plane in {info.get('with_plane')} frames; {check_note}"
-    good = fps >= DEPTH_MIN_FPS and gaps <= DEPTH_MAX_GAP_FRACTION * max(frames, 1) and frames > 0
+    good = (
+        fps >= DEPTH_MIN_FPS
+        and gaps <= DEPTH_MAX_GAP_FRACTION * max(frames, 1)
+        and frames > 0
+    )
     if not good:
-        return Result("bad", summary, details, fix="Use the cable (forward.sh), close other apps on the phone, record again.")
+        return Result(
+            "bad",
+            summary,
+            details,
+            fix="Use the cable (forward.sh), close other apps on the phone, record again.",
+        )
     if not check_ok:
-        return Result("bad", summary, details, fix="Read depth_check.txt in the run folder.")
-    return Result("look" if ctx.dry else "ok", summary + (" (fake phone)" if ctx.dry else ""), details)
+        return Result(
+            "bad", summary, details, fix="Read depth_check.txt in the run folder."
+        )
+    return Result(
+        "look" if ctx.dry else "ok",
+        summary + (" (fake phone)" if ctx.dry else ""),
+        details,
+    )
 
 
 # --- steps 2 and 3: flat and fist calibration -------------------------------------
+
 
 def _deg_ranges(cal: dict) -> dict[str, float]:
     """Backend Calibration (radians, per finger triple) to the flat-to-fist change in degrees, summed per finger."""
@@ -299,29 +430,63 @@ def _deg_ranges(cal: dict) -> dict[str, float]:
 def _core_view(ctx: Ctx, side: str) -> dict | None:
     """What the core loads for this wearer and side: the same function the core calls on `calibrate`."""
     from core.calibration import load_hand
+
     hc = load_hand(ctx.data_dir, side, ctx.wearer, ctx.cfg.calibration, ctx.cfg.hand)
     return None if hc is None else hc.summary()
 
 
-def calibrate_side(ctx: Ctx, side: str, flat_text: str, fist_text: str) -> tuple[dict, dict | None, dict]:
+def calibrate_side(
+    ctx: Ctx, side: str, flat_text: str, fist_text: str
+) -> tuple[dict, dict | None, dict]:
     """Flat, fist, neutral, finish, core calibrate. Returns (backend calibration, core view, details)."""
     c, api, hs = ctx.console, f"{ctx.backend_url}/api", ctx.opts.hold_seconds
     hold(ctx, flat_text, hs)
-    http("POST", f"{api}/calibrations", {"side": side, "phase": "flat", "duration_s": hs}, timeout=hs + 20, trace=ctx.trace)
+    http(
+        "POST",
+        f"{api}/calibrations",
+        {"side": side, "phase": "flat", "duration_s": hs},
+        timeout=hs + 20,
+        trace=ctx.trace,
+    )
     hold(ctx, fist_text, hs)
-    cal = http("POST", f"{api}/calibrations", {"side": side, "phase": "fist", "duration_s": hs}, timeout=hs + 20, trace=ctx.trace)
+    cal = http(
+        "POST",
+        f"{api}/calibrations",
+        {"side": side, "phase": "fist", "duration_s": hs},
+        timeout=hs + 20,
+        trace=ctx.trace,
+    )
     c.say("Good. Now the start pose that links this to your name.")
-    hold(ctx, "Put both hands flat on the table, palms down, thumbs together. Keep still.", hs)
+    hold(
+        ctx,
+        "Put both hands flat on the table, palms down, thumbs together. Keep still.",
+        hs,
+    )
     try:
-        prev = http("GET", f"{api}/gloves/calibrations/latest?wearer={ctx.wearer}", timeout=10, trace=ctx.trace)
+        prev = http(
+            "GET",
+            f"{api}/gloves/calibrations/latest?wearer={ctx.wearer}",
+            timeout=10,
+            trace=ctx.trace,
+        )
     except HttpError:
         prev = None
-    neu = http("POST", f"{api}/gloves/calibrations/neutral", {"wearer": ctx.wearer, "duration_s": hs},
-               timeout=hs + 30, trace=ctx.trace)
+    neu = http(
+        "POST",
+        f"{api}/gloves/calibrations/neutral",
+        {"wearer": ctx.wearer, "duration_s": hs},
+        timeout=hs + 30,
+        trace=ctx.trace,
+    )
     ids = dict((prev or {}).get("range_calibration_ids") or {})
     ids[side] = cal["id"]
-    fin = http("POST", f"{api}/gloves/calibrations/{neu['id']}/finish", {"range_calibration_ids": ids},
-               timeout=10, trace=ctx.trace)
+    fin = http(
+        "POST",
+        f"{api}/gloves/calibrations/{neu['id']}/finish",
+        {"range_calibration_ids": ids},
+        timeout=10,
+        trace=ctx.trace,
+    )
     with link(ctx) as core:
         core.cmd("calibrate")
     time.sleep(0.3)
@@ -349,54 +514,91 @@ def _loaded_note(ctx: Ctx, side: str, cal_id: str, details: dict) -> str:
 
 
 def step_right_thumb(ctx: Ctx) -> Result:
-    ctx.console.say("Right glove only. This redoes the right range with the thumb folded, because the last fist")
-    ctx.console.say("read the thumb less bent than flat (STATUS-weights.md, range c8713cacaff6).")
+    ctx.console.say(
+        "Right glove only. This redoes the right range with the thumb folded, because the last fist"
+    )
+    ctx.console.say(
+        "read the thumb less bent than flat (STATUS-weights.md, range c8713cacaff6)."
+    )
     cal, view, d = calibrate_side(
-        ctx, "right",
+        ctx,
+        "right",
         "Put the RIGHT hand flat on the table, fingers together, thumb along the side of the index finger.",
         "Make a RIGHT fist. Fold the thumb across the middle of the fingers, outside the fist, not tucked in.",
     )
     loaded = _loaded_note(ctx, "right", cal["id"], d)
     if view is None:
-        return Result("error", "the core could not load a right calibration for this wearer", d,
-                      fix=f"Check {ctx.data_dir}/glove_calibrations for wearer {ctx.wearer}.")
+        return Result(
+            "error",
+            "the core could not load a right calibration for this wearer",
+            d,
+            fix=f"Check {ctx.data_dir}/glove_calibrations for wearer {ctx.wearer}.",
+        )
     thumb = view["range_deg"]["thumb"]
     s = f"right thumb range {thumb} deg (needs {THUMB_MIN_RANGE_DEG:g}), all {view['range_deg']}; {loaded}"
     if thumb < THUMB_MIN_RANGE_DEG:
-        return Result(_bad(ctx), s + _fake_note(ctx), d, fix="Fold the thumb further across the fingers in the fist and retry. "
-                                        "If it stays low, the thumb keeps weight 0 for this wearer.")
+        return Result(
+            _bad(ctx),
+            s + _fake_note(ctx),
+            d,
+            fix="Fold the thumb further across the fingers in the fist and retry. "
+            "If it stays low, the thumb keeps weight 0 for this wearer.",
+        )
     return Result("look" if ctx.dry else "ok", s, d)
 
 
 def step_left_glove(ctx: Ctx) -> Result:
-    ctx.console.say("Left glove. The last left range was 0.7 to 8 deg: the glove was loose or not seated.")
-    ctx.console.say("Pull the left glove on fully: each fingertip to the end of its sleeve, strap snug.")
+    ctx.console.say(
+        "Left glove. The last left range was 0.7 to 8 deg: the glove was loose or not seated."
+    )
+    ctx.console.say(
+        "Pull the left glove on fully: each fingertip to the end of its sleeve, strap snug."
+    )
     cal, view, d = calibrate_side(
-        ctx, "left",
+        ctx,
+        "left",
         "Put the LEFT hand flat on the table, fingers together, thumb along the side of the index finger.",
         "Make a LEFT fist. Fold the thumb across the middle of the fingers, outside the fist.",
     )
     loaded = _loaded_note(ctx, "left", cal["id"], d)
     if view is None:
-        return Result("error", "the core could not load a left calibration for this wearer", d)
+        return Result(
+            "error", "the core could not load a left calibration for this wearer", d
+        )
     rng = view["range_deg"]
-    low = [f for f in FINGERS if rng[f] < (THUMB_MIN_RANGE_DEG if f == "thumb" else FINGER_MIN_RANGE_DEG)]
+    low = [
+        f
+        for f in FINGERS
+        if rng[f] < (THUMB_MIN_RANGE_DEG if f == "thumb" else FINGER_MIN_RANGE_DEG)
+    ]
     s = f"left ranges {rng}; low: {low or 'none'}; {loaded}"
     if low:
-        return Result(_bad(ctx), s + _fake_note(ctx), d, fix="Reseat the left glove, check the strap, then retry. Compare with the right glove.")
+        return Result(
+            _bad(ctx),
+            s + _fake_note(ctx),
+            d,
+            fix="Reseat the left glove, check the strap, then retry. Compare with the right glove.",
+        )
     return Result("look" if ctx.dry else "ok", s, d)
 
 
 # --- step 4: button, LED, mirror, duel -------------------------------------------
 
+
 def _press(ctx: Ctx, side: str, kind: str) -> None:
     """Dry run only: push a button event through the fake driver's control port."""
     import socket
+
     port = ctx.stack.ep.rcsp_control_port
     with socket.create_connection(("127.0.0.1", port), timeout=3) as s:
         s.sendall(f"{side} {kind}\n".encode())
         reply = s.makefile().readline().strip()
-    ctx.trace.add("fake", f"fake_rcsp_server control: {side} {kind}", reply.startswith("ok"), reply)
+    ctx.trace.add(
+        "fake",
+        f"fake_rcsp_server control: {side} {kind}",
+        reply.startswith("ok"),
+        reply,
+    )
 
 
 def _leds(ctx: Ctx, side: str, t0: float) -> list[str]:
@@ -418,13 +620,24 @@ def _button_side(ctx: Ctx, core: CoreLink, side: str, timeout: float) -> dict:
     # The recording (and its red LED) goes to the master glove. With no master
     # set, the core records the first tracked hand (left), whichever button was
     # pressed. So make the pressed glove the master first.
-    core.cmd("set_roles", {side: "master", ("left" if side == "right" else "right"): "free"})
+    core.cmd(
+        "set_roles", {side: "master", ("left" if side == "right" else "right"): "free"}
+    )
     t0 = time.time()
-    c.say(f"Press the button on the {side.upper()} glove once. A recording starts and the {side} LED turns red.")
+    c.say(
+        f"Press the button on the {side.upper()} glove once. A recording starts and the {side} LED turns red."
+    )
     if ctx.dry:
         _press(ctx, side, "SinglePress")
-    ev = core.wait_event(t0, lambda m: m.get("name") == "button" and m.get("hand") == side
-                         and (m.get("data") or {}).get("press") == "SinglePress", timeout)
+    ev = core.wait_event(
+        t0,
+        lambda m: (
+            m.get("name") == "button"
+            and m.get("hand") == side
+            and (m.get("data") or {}).get("press") == "SinglePress"
+        ),
+        timeout,
+    )
     res["single"] = ev is not None
     started = core.wait_event(t0, lambda m: m.get("name") == "recording_started", 3)
     res["recording_started"] = started is not None
@@ -432,20 +645,35 @@ def _button_side(ctx: Ctx, core: CoreLink, side: str, timeout: float) -> dict:
     if ctx.dry:
         res["led_while_recording"] = _leds(ctx, side, t0)
     t1 = time.time()
-    c.say(f"Now double press the {side.upper()} button. The recording is thrown away and the LED goes back to blue.")
+    c.say(
+        f"Now double press the {side.upper()} button. The recording is thrown away and the LED goes back to blue."
+    )
     if ctx.dry:
         _press(ctx, side, "DoublePress")
-    ev2 = core.wait_event(t1, lambda m: m.get("name") == "button" and m.get("hand") == side
-                          and (m.get("data") or {}).get("press") == "DoublePress", timeout)
+    ev2 = core.wait_event(
+        t1,
+        lambda m: (
+            m.get("name") == "button"
+            and m.get("hand") == side
+            and (m.get("data") or {}).get("press") == "DoublePress"
+        ),
+        timeout,
+    )
     res["double"] = ev2 is not None
     stopped = core.wait_event(t1, lambda m: m.get("name") == "recording_stopped", 3)
-    res["recording_discarded"] = stopped is not None and (stopped.get("data") or {}).get("lesson_id") is None
+    res["recording_discarded"] = (
+        stopped is not None and (stopped.get("data") or {}).get("lesson_id") is None
+    )
     time.sleep(0.6)
     if ctx.dry:
         res["led_after"] = _leds(ctx, side, t1)
-        res["led_ok"] = "recording" in res["led_while_recording"] and "idle" in res["led_after"]
+        res["led_ok"] = (
+            "recording" in res["led_while_recording"] and "idle" in res["led_after"]
+        )
     else:
-        res["led_ok"] = c.yes(f"Did the {side} ring LED turn red while recording, then blue?")
+        res["led_ok"] = c.yes(
+            f"Did the {side} ring LED turn red while recording, then blue?"
+        )
     return res
 
 
@@ -454,7 +682,9 @@ def _mirror(ctx: Ctx, core: CoreLink) -> dict:
     secs = ctx.opts.mirror_seconds
     core.cmd("set_roles", {"left": "master", "right": "learner"})
     core.cmd("set_mode", {"mode": "mirror"})
-    c.say(f"Mirror: the LEFT hand leads, the RIGHT hand copies. Make slow shapes for {secs:.0f} s.")
+    c.say(
+        f"Mirror: the LEFT hand leads, the RIGHT hand copies. Make slow shapes for {secs:.0f} s."
+    )
     c.enter("Press Enter to start.")
     t0 = time.time()
     time.sleep(secs)
@@ -466,7 +696,9 @@ def _mirror(ctx: Ctx, core: CoreLink) -> dict:
         "frames": len(frames),
         "scored_fraction": round(len(scored) / max(1, len(frames)), 3),
         "mean_overall": round(sum(overall) / len(overall), 3) if overall else None,
-        "at_or_above_0_85": round(sum(1 for o in overall if o >= 0.85) / max(1, len(overall)), 3),
+        "at_or_above_0_85": round(
+            sum(1 for o in overall if o >= 0.85) / max(1, len(overall)), 3
+        ),
     }
 
 
@@ -485,31 +717,49 @@ def _duel(ctx: Ctx, core: CoreLink) -> dict:
     c = ctx.console
     lesson = _pick_duel_lesson(ctx)
     if not lesson:
-        return {"skipped": "no lesson on the core to duel on; record one in step 8 and rerun with --only 4"}
+        return {
+            "skipped": "no lesson on the core to duel on; record one in step 8 and rerun with --only 4"
+        }
     secs = ctx.opts.duel_seconds
     core.cmd("lesson_load", {"lesson_id": lesson})
     core.cmd("set_roles", {"left": "learner", "right": "learner"})
     core.cmd("set_mode", {"mode": "duel"})
-    c.say(f"Duel on lesson {lesson}: both hands copy the pose on screen. The first hand to hold it wins the round.")
+    c.say(
+        f"Duel on lesson {lesson}: both hands copy the pose on screen. The first hand to hold it wins the round."
+    )
     c.say(f"Play for {secs:.0f} s.")
     c.enter("Press Enter to start.")
     t0 = time.time()
     time.sleep(secs)
     wins = [e for e in core.since(t0, "event") if e.get("name") == "round_won"]
     frames = core.since(t0, "frame")
-    duel_state = next(((f.get("task") or {}).get("duel") for f in reversed(frames) if (f.get("task") or {}).get("duel")), None)
+    duel_state = next(
+        (
+            (f.get("task") or {}).get("duel")
+            for f in reversed(frames)
+            if (f.get("task") or {}).get("duel")
+        ),
+        None,
+    )
     scored = sum(1 for f in frames if f.get("score"))
     core.cmd("set_mode", {"mode": "idle"})
     core.cmd("set_roles", {"left": "free", "right": "free"})
-    return {"lesson": lesson, "rounds_won": [w.get("hand") for w in wins], "duel": duel_state,
-            "frames": len(frames), "scored_frames": scored}
+    return {
+        "lesson": lesson,
+        "rounds_won": [w.get("hand") for w in wins],
+        "duel": duel_state,
+        "frames": len(frames),
+        "scored_frames": scored,
+    }
 
 
 def step_button_led_mirror_duel(ctx: Ctx) -> Result:
     c = ctx.console
     details: dict = {}
     if ctx.dry:
-        c.say("Dry run: the button and LED run on a second, non-fake core with a fake solver and a fake RCSP driver.")
+        c.say(
+            "Dry run: the button and LED run on a second, non-fake core with a fake solver and a fake RCSP driver."
+        )
         ctx.stack.start_rcsp_core(ctx.trace)
         bport = ctx.stack.ep.core_b_port
     else:
@@ -523,7 +773,10 @@ def step_button_led_mirror_duel(ctx: Ctx) -> Result:
         c.enter()
         time.sleep(1.0)  # GloveControl finds the gloves and sets the first LED colour
         with link(ctx, bport) as core:
-            details["buttons"] = {s: _button_side(ctx, core, s, timeout=6 if ctx.dry else 30) for s in ("right", "left")}
+            details["buttons"] = {
+                s: _button_side(ctx, core, s, timeout=6 if ctx.dry else 30)
+                for s in ("right", "left")
+            }
             core.cmd("set_roles", {"left": "free", "right": "free"})
     with link(ctx) as core:
         c.say("Part B: mirror mode.")
@@ -532,7 +785,9 @@ def step_button_led_mirror_duel(ctx: Ctx) -> Result:
         details["duel"] = _duel(ctx, core)
 
     btn = details["buttons"]
-    btn_ok = isinstance(btn, dict) and all(v.get("single") and v.get("double") and v.get("led_ok") for v in btn.values())
+    btn_ok = isinstance(btn, dict) and all(
+        v.get("single") and v.get("double") and v.get("led_ok") for v in btn.values()
+    )
     m = details["mirror"]
     mirror_ok = m["scored_fraction"] >= MIRROR_MIN_SCORED
     duel = details["duel"]
@@ -544,20 +799,42 @@ def step_button_led_mirror_duel(ctx: Ctx) -> Result:
     ]
     s = "; ".join(parts)
     if not btn_ok and not isinstance(btn, str):
-        return Result("bad", s, details, fix="Read core.log for RCSP lines; check rcsp.connected in /health.")
+        return Result(
+            "bad",
+            s,
+            details,
+            fix="Read core.log for RCSP lines; check rcsp.connected in /health.",
+        )
     if not mirror_ok:
-        return Result("bad", s, details, fix="Mirror needs one master and one learner glove, both tracked.")
+        return Result(
+            "bad",
+            s,
+            details,
+            fix="Mirror needs one master and one learner glove, both tracked.",
+        )
     if duel_ok is False:
-        return Result("look", s, details, fix="No round won: hold the pose longer, or loosen [score] perfect_deg.")
-    return Result("look" if (ctx.dry or isinstance(btn, str) or duel_ok is None) else "ok", s, details)
+        return Result(
+            "look",
+            s,
+            details,
+            fix="No round won: hold the pose longer, or loosen [score] perfect_deg.",
+        )
+    return Result(
+        "look" if (ctx.dry or isinstance(btn, str) or duel_ok is None) else "ok",
+        s,
+        details,
+    )
 
 
 # --- step 5: yaw ----------------------------------------------------------------
 
+
 def step_yaw(ctx: Ctx) -> Result:
     c = ctx.console
     with link(ctx) as core:
-        c.say("Put both hands flat on the table, palms down, fingers pointing straight away from you.")
+        c.say(
+            "Put both hands flat on the table, palms down, fingers pointing straight away from you."
+        )
         c.enter("Press Enter, then keep still for 2 s.")
         t0 = time.time()
         core.cmd("calibrate")
@@ -566,31 +843,50 @@ def step_yaw(ctx: Ctx) -> Result:
         t1 = time.time()
         time.sleep(1.5)
         fwd = headings(core.since(t1, "frame"))
-        c.say("Now turn both hands a quarter turn to the LEFT (fingers point left), palms still down.")
+        c.say(
+            "Now turn both hands a quarter turn to the LEFT (fingers point left), palms still down."
+        )
         c.enter("Press Enter, then keep still for 2 s.")
         t2 = time.time()
         time.sleep(1.5)
         left = headings(core.since(t2, "frame"))
-    d = {"calibrated_event": ev is not None, "forward_deg": fwd, "turned_left_deg": left}
+    d = {
+        "calibrated_event": ev is not None,
+        "forward_deg": fwd,
+        "turned_left_deg": left,
+    }
     bad = []
     for s in SIDES:
         if fwd[s] is None or abs(fwd[s]) > YAW_FORWARD_TOL_DEG:
             bad.append(f"{s} forward {fwd[s]}")
-        if left[s] is None or fwd[s] is None or abs(ang_diff(left[s] - fwd[s], 90.0)) > YAW_TURN_TOL_DEG:
-            bad.append(f"{s} turn {None if left[s] is None or fwd[s] is None else round(ang_diff(left[s], fwd[s]), 1)}")
+        if (
+            left[s] is None
+            or fwd[s] is None
+            or abs(ang_diff(left[s] - fwd[s], 90.0)) > YAW_TURN_TOL_DEG
+        ):
+            bad.append(
+                f"{s} turn {None if left[s] is None or fwd[s] is None else round(ang_diff(left[s], fwd[s]), 1)}"
+            )
     fmt = {s: (None if fwd[s] is None else round(fwd[s], 1)) for s in SIDES}
     fmt2 = {s: (None if left[s] is None else round(left[s], 1)) for s in SIDES}
     summary = f"heading after calibrate {fmt} (0 is away), after left turn {fmt2} (90 expected)"
     if not ev:
         return Result("error", "no calibrated event from the core", d)
     if bad:
-        return Result("look" if ctx.dry else "bad", summary + f"; off: {bad}" + (" (fake hands do not follow the prompts)" if ctx.dry else ""),
-                      d, fix="Calibrate again away from metal. If the turn has the wrong sign, the wrist frame "
-                             "convention differs: see core/hand.py wrist_frame_from_joints (core owner).")
+        return Result(
+            "look" if ctx.dry else "bad",
+            summary
+            + f"; off: {bad}"
+            + (" (fake hands do not follow the prompts)" if ctx.dry else ""),
+            d,
+            fix="Calibrate again away from metal. If the turn has the wrong sign, the wrist frame "
+            "convention differs: see core/hand.py wrist_frame_from_joints (core owner).",
+        )
     return Result("ok", summary, d)
 
 
 # --- step 6: piano ----------------------------------------------------------------
+
 
 def step_piano(ctx: Ctx) -> Result:
     c = ctx.console
@@ -598,7 +894,9 @@ def step_piano(ctx: Ctx) -> Result:
     with link(ctx) as core:
         core.cmd("set_task", {"task": "piano"})
         c.say("Rest the RIGHT hand on the table, fingers curved, like on a keyboard.")
-        c.say(f"The script names one finger every {cue:.0f} s. Tap that finger on the table twice, firmly.")
+        c.say(
+            f"The script names one finger every {cue:.0f} s. Tap that finger on the table twice, firmly."
+        )
         c.enter("Press Enter to start.")
         windows = []
         for f in FINGERS:
@@ -610,8 +908,11 @@ def step_piano(ctx: Ctx) -> Result:
         ts = time.time()
         time.sleep(cue)
         te = time.time()
-        downs = [e for e in core.since(windows[0][1], "event")
-                 if e.get("name") == "finger_down" and e.get("hand") == "right"]
+        downs = [
+            e
+            for e in core.since(windows[0][1], "event")
+            if e.get("name") == "finger_down" and e.get("hand") == "right"
+        ]
         core.cmd("set_task", {"task": "general"})
     per = {}
     for f, a, b in windows:
@@ -621,16 +922,26 @@ def step_piano(ctx: Ctx) -> Result:
     hit = [f for f in FINGERS if per[f]["cued"] >= 1]
     d = {"per_finger": per, "false_when_still": false_still, "events": len(downs)}
     s = f"cued fingers detected {len(hit)}/5 ({', '.join(hit) or 'none'}); taps while still {false_still}"
-    fix = ("Missed taps: lower [piano] press_velocity_deg_s in config.toml. Idle triggers: raise press_min_deg. "
-           "(config.toml is the core owner's file: write the change as a patch.)")
+    fix = (
+        "Missed taps: lower [piano] press_velocity_deg_s in config.toml. Idle triggers: raise press_min_deg. "
+        "(config.toml is the core owner's file: write the change as a patch.)"
+    )
     if len(hit) >= PIANO_MIN_FINGERS and false_still <= PIANO_MAX_FALSE_WHEN_STILL:
         return Result("ok", s, d)
-    return Result("look" if ctx.dry else "bad", s + (" (fake hands do not tap)" if ctx.dry else ""), d, fix=fix)
+    return Result(
+        "look" if ctx.dry else "bad",
+        s + (" (fake hands do not tap)" if ctx.dry else ""),
+        d,
+        fix=fix,
+    )
 
 
 # --- step 7: robot twin flex direction ---------------------------------------------
 
-def _robot_hold(ctx: Ctx, core: CoreLink, robot: CoreLink, secs: float) -> dict[str, dict[str, float]]:
+
+def _robot_hold(
+    ctx: Ctx, core: CoreLink, robot: CoreLink, secs: float
+) -> dict[str, dict[str, float]]:
     """Mean q per joint for each hand: half the hold with source master (right), half with learner (left)."""
     out: dict[str, dict[str, float]] = {}
     for src in ("master", "learner"):
@@ -643,14 +954,19 @@ def _robot_hold(ctx: Ctx, core: CoreLink, robot: CoreLink, secs: float) -> dict[
             continue
         side = msgs[-1].get("hand")
         keys = msgs[-1].get("q", {}).keys()
-        out[side] = {k: sum(m["q"][k] for m in msgs if k in m.get("q", {})) / len(msgs) for k in keys}
+        out[side] = {
+            k: sum(m["q"][k] for m in msgs if k in m.get("q", {})) / len(msgs)
+            for k in keys
+        }
     return out
 
 
 def step_robot_flex(ctx: Ctx) -> Result:
     c = ctx.console
     hs = max(2.0, ctx.opts.hold_seconds)
-    c.say("Open the robot twin beside you: http://localhost:5173/robot (the frontend), so you can watch it.")
+    c.say(
+        "Open the robot twin beside you: http://localhost:5173/robot (the frontend), so you can watch it."
+    )
     with link(ctx) as core, link(ctx, path="/ws/robot") as robot:
         hello = robot.latest("hello")
         for _ in range(20):
@@ -662,7 +978,11 @@ def step_robot_flex(ctx: Ctx) -> Result:
         core.cmd("set_roles", {"left": "learner", "right": "master"})
         hold(ctx, "Both hands open and flat, palms down.", hs)
         flat = _robot_hold(ctx, core, robot, hs)
-        hold(ctx, "Both hands: make a slow fist, thumb folded across. Watch the twin curl.", hs)
+        hold(
+            ctx,
+            "Both hands: make a slow fist, thumb folded across. Watch the twin curl.",
+            hs,
+        )
         fist = _robot_hold(ctx, core, robot, hs)
         core.cmd("set_robot_source", {"source": "off"})
         core.cmd("set_roles", {"left": "free", "right": "free"})
@@ -673,45 +993,96 @@ def step_robot_flex(ctx: Ctx) -> Result:
             q0, q1 = flat.get(side, {}).get(name), fist[side][name]
             if q0 is None:
                 continue
-            lim = (limits.get(side) or {}).get(name) if isinstance(limits.get(side), dict) else None
-            lo, hi = (lim or [None, None])[:2] if isinstance(lim, list) else ((lim or {}).get("lower"), (lim or {}).get("upper"))
+            lim = (
+                (limits.get(side) or {}).get(name)
+                if isinstance(limits.get(side), dict)
+                else None
+            )
+            lo, hi = (
+                (lim or [None, None])[:2]
+                if isinstance(lim, list)
+                else ((lim or {}).get("lower"), (lim or {}).get("upper"))
+            )
             flex_dir = None if lo is None else (1.0 if abs(hi) >= abs(lo) else -1.0)
             delta = q1 - q0
-            toward = None if flex_dir is None or abs(delta) < 0.02 else (delta * flex_dir > 0)
-            table.append({"side": side, "joint": name, "flat": round(q0, 3), "fist": round(q1, 3),
-                          "delta": round(delta, 3), "toward_flex_limit": toward})
+            toward = (
+                None
+                if flex_dir is None or abs(delta) < 0.02
+                else (delta * flex_dir > 0)
+            )
+            table.append(
+                {
+                    "side": side,
+                    "joint": name,
+                    "flat": round(q0, 3),
+                    "fist": round(q1, 3),
+                    "delta": round(delta, 3),
+                    "toward_flex_limit": toward,
+                }
+            )
             if toward is False and "thumb_0" not in name:
                 wrong.append(name)
     c.say("Joint targets, radians (flat, fist, change, moves toward its flex limit):")
     for r in table:
-        c.say(f"   {r['side']:5} {r['joint']:28} {r['flat']:7.3f} {r['fist']:7.3f} {r['delta']:7.3f}  {r['toward_flex_limit']}")
+        c.say(
+            f"   {r['side']:5} {r['joint']:28} {r['flat']:7.3f} {r['fist']:7.3f} {r['delta']:7.3f}  {r['toward_flex_limit']}"
+        )
     d = {"table": table, "numbers_wrong_way": wrong, "limits_seen": bool(limits)}
-    seen = c.yes("On the twin, did every finger curl INTO the palm when you made a fist?", default=True)
+    seen = c.yes(
+        "On the twin, did every finger curl INTO the palm when you made a fist?",
+        default=True,
+    )
     d["twin_curls_in"] = seen
     patch = ""
     if not seen:
-        name = "" if ctx.console.auto else input("Which joints bent backwards? (e.g. right_hand_index_0_joint): ").strip()
+        name = (
+            ""
+            if ctx.console.auto
+            else input(
+                "Which joints bent backwards? (e.g. right_hand_index_0_joint): "
+            ).strip()
+        )
         d["reported_backwards"] = name
-        patch = ("Flip the sign for that joint in config.toml (core owner's file), for example:\n"
-                 "[robot.retarget.index_0]\nsign_right = -1.0   # was the auto sign from the URDF limits")
+        patch = (
+            "Flip the sign for that joint in config.toml (core owner's file), for example:\n"
+            "[robot.retarget.index_0]\nsign_right = -1.0   # was the auto sign from the URDF limits"
+        )
     s = f"{len(table)} joints compared; numbers move the wrong way on {wrong or 'none'}; twin curls in: {seen}"
     if not table:
-        return Result("error", "no robot messages on /ws/robot", d, fix="Check /health robot block and the URDFs in models/robots/dex3_1/.")
+        return Result(
+            "error",
+            "no robot messages on /ws/robot",
+            d,
+            fix="Check /health robot block and the URDFs in models/robots/dex3_1/.",
+        )
     if not seen or wrong:
-        return Result(_bad(ctx), s + _fake_note(ctx), d, fix=patch or "Flip sign_left or sign_right for the listed joints in config.toml [robot.retarget.*].")
+        return Result(
+            _bad(ctx),
+            s + _fake_note(ctx),
+            d,
+            fix=patch
+            or "Flip sign_left or sign_right for the listed joints in config.toml [robot.retarget.*].",
+        )
     return Result("look" if ctx.dry else "ok", s, d)
 
 
 # --- step 8: demo lessons -----------------------------------------------------------
 
+
 def step_demo_lessons(ctx: Ctx) -> Result:
     c = ctx.console
     o = ctx.opts
     lessons, takes = o.lessons, o.takes
-    c.say(f"Record the demo lessons: {len(lessons)} lessons, {takes} takes each, right hand.")
-    c.say("Each take is timed, so the gloved hands stay free. The script calls each phase:")
-    c.say(f"POSE ({o.pose_seconds:.0f} s), FREEZE ({o.freeze_seconds:.0f} s, the held step), "
-          f"MOVE ({o.move_seconds:.0f} s, the moving step). Then it saves the take.")
+    c.say(
+        f"Record the demo lessons: {len(lessons)} lessons, {takes} takes each, right hand."
+    )
+    c.say(
+        "Each take is timed, so the gloved hands stay free. The script calls each phase:"
+    )
+    c.say(
+        f"POSE ({o.pose_seconds:.0f} s), FREEZE ({o.freeze_seconds:.0f} s, the held step), "
+        f"MOVE ({o.move_seconds:.0f} s, the moving step). Then it saves the take."
+    )
     for i, t in enumerate(lessons, 1):
         c.say(f"   {i}. {t}")
     made: list[dict] = []
@@ -723,7 +1094,9 @@ def step_demo_lessons(ctx: Ctx) -> Result:
             for k in range(1, takes + 1):
                 name = f"{title} (take {k})"
                 c.say(f"--- {name} ---")
-                c.enter("Press Enter (with the left hand) to start. The script then calls each phase.")
+                c.enter(
+                    "Press Enter (with the left hand) to start. The script then calls each phase."
+                )
                 core.cmd("record_start", {"title": name})
                 c.say(f"   POSE: get into the pose ({o.pose_seconds:.0f} s)")
                 time.sleep(o.pose_seconds)
@@ -739,7 +1112,9 @@ def step_demo_lessons(ctx: Ctx) -> Result:
                     c.say(f"Not saved: {ack.get('error')}. Retry this take.")
                     continue
                 lid = ack["result"]["lesson_id"]
-                lesson = http("GET", f"{ctx.core_http}/lessons/{lid}", timeout=5, trace=ctx.trace)
+                lesson = http(
+                    "GET", f"{ctx.core_http}/lessons/{lid}", timeout=5, trace=ctx.trace
+                )
                 kinds = [s.get("kind") for s in lesson.get("steps", [])]
                 made.append({"title": name, "lesson_id": lid, "steps": kinds})
                 c.say(f"Saved {lid}: steps {kinds}")
@@ -750,18 +1125,27 @@ def step_demo_lessons(ctx: Ctx) -> Result:
     with_hold = [m for m in saved if "hold" in m["steps"]]
     with_both = [m for m in saved if "hold" in m["steps"] and "move" in m["steps"]]
     d = {"takes": made}
-    s = (f"{len(saved)}/{len(lessons) * takes} takes saved; {len(with_hold)} have a hold step; "
-         f"{len(with_both)} have a hold and a move step")
+    s = (
+        f"{len(saved)}/{len(lessons) * takes} takes saved; {len(with_hold)} have a hold step; "
+        f"{len(with_both)} have a hold and a move step"
+    )
     if len(saved) < len(lessons) * takes:
-        return Result("bad", s, d, fix="Retry the takes that did not save (too short?).")
+        return Result(
+            "bad", s, d, fix="Retry the takes that did not save (too short?)."
+        )
     if len(with_both) < len(saved):
-        return Result(_bad(ctx), s + _fake_note(ctx), d,
-                      fix="A take is not hold then move: keep fully still in FREEZE and move clearly in MOVE "
-                          "(a step is a hold when it stays still; core/recorder.py).")
+        return Result(
+            _bad(ctx),
+            s + _fake_note(ctx),
+            d,
+            fix="A take is not hold then move: keep fully still in FREEZE and move clearly in MOVE "
+            "(a step is a hold when it stays still; core/recorder.py).",
+        )
     return Result("ok", s, d)
 
 
 # --- step 9: fingerspelling letters into a pack ----------------------------------------
+
 
 def step_pack_letters(ctx: Ctx) -> Result:
     """A person holds each letter from the official chart; the core records a hold take; the pack stores it."""
@@ -774,13 +1158,26 @@ def step_pack_letters(ctx: Ctx) -> Result:
     pack = L.find_pack(data, o.pack)
     todo = L.letters_to_record(pack, o.pack_letters or None)
     if not todo:
-        return Result("ok", f"every slot of {pack['name']} is recorded; nothing to do", {"pack": o.pack})
+        return Result(
+            "ok",
+            f"every slot of {pack['name']} is recorded; nothing to do",
+            {"pack": o.pack},
+        )
     # The dry run never touches the repo's pack: fake hands are not a person holding the chart.
     target = [ctx.run_dir / "fingerspelling_packs.json"] if ctx.dry else files
-    c.say(f"Record {pack['name']}: {', '.join(todo)}. Right hand, one hold take per letter.")
-    c.say("Hold each letter exactly as the official chart shows it. Nothing is generated or guessed.")
-    by = o.recorded_by or c.text("Your name (stored with each letter as recorded_by)", ctx.wearer)
-    ref = o.reference or c.text("The reference you hold the letters against (URL or document)", pack["default_reference"]["url"])
+    c.say(
+        f"Record {pack['name']}: {', '.join(todo)}. Right hand, one hold take per letter."
+    )
+    c.say(
+        "Hold each letter exactly as the official chart shows it. Nothing is generated or guessed."
+    )
+    by = o.recorded_by or c.text(
+        "Your name (stored with each letter as recorded_by)", ctx.wearer
+    )
+    ref = o.reference or c.text(
+        "The reference you hold the letters against (URL or document)",
+        pack["default_reference"]["url"],
+    )
     c.say(f"Open the chart now: {ref}")
     made: list[dict] = []
     with link(ctx) as core:
@@ -789,10 +1186,26 @@ def step_pack_letters(ctx: Ctx) -> Result:
         core.cmd("set_mode", {"mode": "record"})
         for letter in todo:
             c.say(f"--- the letter {letter} ---")
-            c.enter(f"Find {letter} on the chart. Press Enter (with the left hand), then make it with the right hand.")
-            t = L.record_take(core, lambda lid: http("GET", f"{ctx.core_http}/lessons/{lid}", timeout=5, trace=ctx.trace),
-                              letter, L.take_title(pack, letter), o.pose_seconds, o.freeze_seconds * 1.5, c.say)
-            row = {"letter": letter, "lesson_id": t.lesson_id, "pose": t.pose, "error": t.error}
+            c.enter(
+                f"Find {letter} on the chart. Press Enter (with the left hand), then make it with the right hand."
+            )
+            t = L.record_take(
+                core,
+                lambda lid: http(
+                    "GET", f"{ctx.core_http}/lessons/{lid}", timeout=5, trace=ctx.trace
+                ),
+                letter,
+                L.take_title(pack, letter),
+                o.pose_seconds,
+                o.freeze_seconds * 1.5,
+                c.say,
+            )
+            row = {
+                "letter": letter,
+                "lesson_id": t.lesson_id,
+                "pose": t.pose,
+                "error": t.error,
+            }
             if t.error or not t.pose:
                 c.say(f"Not stored: {t.error}. Retry this step for {letter}.")
             else:
@@ -803,14 +1216,38 @@ def step_pack_letters(ctx: Ctx) -> Result:
         core.cmd("set_mode", {"mode": "idle"})
         core.cmd("set_roles", {"left": "free", "right": "free"})
     stored = [m for m in made if m["pose"] and not m["error"]]
-    d = {"pack": o.pack, "recorded_by": by, "reference": ref, "letters": made, "written": [str(p) for p in target]}
-    where = f"the dry run's copy {target[0]}" if ctx.dry else "the pack file and its frontend copy"
+    d = {
+        "pack": o.pack,
+        "recorded_by": by,
+        "reference": ref,
+        "letters": made,
+        "written": [str(p) for p in target],
+    }
+    where = (
+        f"the dry run's copy {target[0]}"
+        if ctx.dry
+        else "the pack file and its frontend copy"
+    )
     s = f"{len(stored)}/{len(todo)} letters stored into {where}"
     if len(stored) < len(todo):
-        return Result("bad", s, d, fix="Retry the step for the letters that did not save (hold still for the whole take).")
+        return Result(
+            "bad",
+            s,
+            d,
+            fix="Retry the step for the letters that did not save (hold still for the whole take).",
+        )
     if ctx.dry:
-        return Result("look", s + " (fake hands do not make the letters; the repo pack is unchanged)", d)
-    return Result("ok", s + ". Commit backend/app/data/fingerspelling_packs.json and its frontend copy.", d)
+        return Result(
+            "look",
+            s + " (fake hands do not make the letters; the repo pack is unchanged)",
+            d,
+        )
+    return Result(
+        "ok",
+        s
+        + ". Commit backend/app/data/fingerspelling_packs.json and its frontend copy.",
+        d,
+    )
 
 
 STEPS = [
@@ -818,10 +1255,20 @@ STEPS = [
     (1, "depth", "Depth clip from the phone, 40 s", step_depth),
     (2, "right_thumb", "Right thumb recalibration, thumb folded", step_right_thumb),
     (3, "left_glove", "Left glove recalibration", step_left_glove),
-    (4, "button_led_mirror_duel", "Button, LED, mirror and duel", step_button_led_mirror_duel),
+    (
+        4,
+        "button_led_mirror_duel",
+        "Button, LED, mirror and duel",
+        step_button_led_mirror_duel,
+    ),
     (5, "yaw", "Yaw calibration", step_yaw),
     (6, "piano", "Piano press", step_piano),
     (7, "robot_flex", "Robot twin flex direction", step_robot_flex),
     (8, "demo_lessons", "Record the demo lessons", step_demo_lessons),
-    (9, "pack_letters", "Fingerspelling letters into a pack, from the official chart", step_pack_letters),
+    (
+        9,
+        "pack_letters",
+        "Fingerspelling letters into a pack, from the official chart",
+        step_pack_letters,
+    ),
 ]

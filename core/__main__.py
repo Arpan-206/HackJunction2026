@@ -239,11 +239,18 @@ def main(argv: list[str] | None = None) -> int:
 
             if args.depth_host:
                 h, p = args.depth_host.rsplit(":", 1)
-                cfg.camera.geppetto_depth.host, cfg.camera.geppetto_depth.port = h, int(p)
+                cfg.camera.geppetto_depth.host, cfg.camera.geppetto_depth.port = (
+                    h,
+                    int(p),
+                )
             src = FakeDepthSource(clock=core.clock) if args.depth_fake else None
             core.session.depth = DepthTracking.from_config(cfg, core.clock, source=src)
-            log.info("depth step on (%s)", "fake scene" if args.depth_fake else
-                     f"{cfg.camera.geppetto_depth.host}:{cfg.camera.geppetto_depth.port}")
+            log.info(
+                "depth step on (%s)",
+                "fake scene"
+                if args.depth_fake
+                else f"{cfg.camera.geppetto_depth.host}:{cfg.camera.geppetto_depth.port}",
+            )
         except Exception as e:  # depth must never stop the server
             log.error("depth step unavailable: %s", e)
     if want_root and core.session.depth is not None:
@@ -274,7 +281,9 @@ def main(argv: list[str] | None = None) -> int:
         "  FAKE MODE" if args.fake else "",
     )
     # bounded graceful shutdown: open sockets are closed by the lifespan; anything left is cut after 3 s
-    uvicorn.run(app, host=host, port=port, log_level=args.log_level, timeout_graceful_shutdown=3)
+    uvicorn.run(
+        app, host=host, port=port, log_level=args.log_level, timeout_graceful_shutdown=3
+    )
     return 0
 
 

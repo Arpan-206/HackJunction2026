@@ -57,7 +57,9 @@ def split_capture(data: bytes) -> list[tuple[int, int | None, bytes]]:
     return out
 
 
-def iter_messages(path: Path, chunk: int = 8 << 20) -> Iterator[tuple[int, int | None, int | None, bytes]]:
+def iter_messages(
+    path: Path, chunk: int = 8 << 20
+) -> Iterator[tuple[int, int | None, int | None, bytes]]:
     """(prefix, device_id, timestamp_us, raw message) for every complete message, read in chunks."""
     buf = bytearray()
     with open(path, "rb") as f:
@@ -114,8 +116,9 @@ class CaptureClock:
         return t
 
 
-def cut_window(path: Path, start_s: float = 0.0, seconds: float | None = None
-               ) -> tuple[list[bytes], list[tuple[int, int | None, bytes]]]:
+def cut_window(
+    path: Path, start_s: float = 0.0, seconds: float | None = None
+) -> tuple[list[bytes], list[tuple[int, int | None, bytes]]]:
     """Stream the file once -> (every definition before the window end, [(prefix, ts, raw)] inside the window).
 
     Disconnect messages inside the window are kept; data frames are kept when their capture time is in
@@ -140,8 +143,10 @@ def cut_window(path: Path, start_s: float = 0.0, seconds: float | None = None
         if t >= lo:
             window.append((prefix, ts, raw))
     if not any(p == PREFIX_DATA for p, _, _ in window):
-        raise ValueError(f"{path}: no data frames between {start_s} s and "
-                         f"{'the end' if seconds is None else f'{start_s + seconds} s'}")
+        raise ValueError(
+            f"{path}: no data frames between {start_s} s and "
+            f"{'the end' if seconds is None else f'{start_s + seconds} s'}"
+        )
     return defs, window
 
 
@@ -174,7 +179,9 @@ class ReplayServer:
         self.continuous = bool(continuous)
         self.stream = False
         if start_s is not None or seconds is not None:
-            self.definitions, self.messages = cut_window(self.path, start_s or 0.0, seconds)
+            self.definitions, self.messages = cut_window(
+                self.path, start_s or 0.0, seconds
+            )
         elif stream:
             self.stream = True
             self.messages = []
@@ -184,7 +191,9 @@ class ReplayServer:
                     self.definitions.append(raw)
         else:
             self.messages = split_capture(self.path.read_bytes())
-            self.definitions = [m for p, _, m in self.messages if p == PREFIX_DEFINITION]
+            self.definitions = [
+                m for p, _, m in self.messages if p == PREFIX_DEFINITION
+            ]
         self.server = None
         self.finished = False
         self.frames_sent = 0
@@ -222,7 +231,9 @@ class ReplayServer:
     async def handle(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
-        shift: dict[int, int] = {}  # per device: added to timestamp_us on this pass (--continuous)
+        shift: dict[
+            int, int
+        ] = {}  # per device: added to timestamp_us on this pass (--continuous)
         try:
             while True:
                 for m in self.definitions:
@@ -273,7 +284,9 @@ class ReplayServer:
                 if self.continuous:
                     # next pass starts one frame after this pass ended, per device
                     for dev, t_last in last_ts.items():
-                        shift[dev] = shift.get(dev, 0) + (t_last - first_ts[dev]) + FRAME_GAP_US
+                        shift[dev] = (
+                            shift.get(dev, 0) + (t_last - first_ts[dev]) + FRAME_GAP_US
+                        )
             self.finished = True
         except (ConnectionResetError, BrokenPipeError, asyncio.CancelledError):
             pass
@@ -282,9 +295,17 @@ class ReplayServer:
 
 
 async def _main(args) -> None:
-    srv = ReplayServer(Path(args.capture), args.host, args.port, args.loop, args.speed,
-                       start_s=args.start, seconds=args.seconds, stream=args.stream,
-                       continuous=args.continuous)
+    srv = ReplayServer(
+        Path(args.capture),
+        args.host,
+        args.port,
+        args.loop,
+        args.speed,
+        start_s=args.start,
+        seconds=args.seconds,
+        stream=args.stream,
+        continuous=args.continuous,
+    )
     await srv.start()
     print(f"replaying {args.capture} on {srv.host}:{srv.port}", flush=True)
     await asyncio.Event().wait()
@@ -297,9 +318,17 @@ if __name__ == "__main__":
     ap.add_argument("--port", type=int, default=12277)
     ap.add_argument("--loop", action="store_true")
     ap.add_argument("--speed", type=float, default=1.0)
-    ap.add_argument("--start", type=float, default=None, help="window start, capture seconds")
+    ap.add_argument(
+        "--start", type=float, default=None, help="window start, capture seconds"
+    )
     ap.add_argument("--seconds", type=float, default=None, help="window length")
-    ap.add_argument("--stream", action="store_true", help="read from disk each pass (no window)")
-    ap.add_argument("--continuous", action="store_true", help="with --loop: no timestamp jump at the seam")
+    ap.add_argument(
+        "--stream", action="store_true", help="read from disk each pass (no window)"
+    )
+    ap.add_argument(
+        "--continuous",
+        action="store_true",
+        help="with --loop: no timestamp jump at the seam",
+    )
     logging.basicConfig(level="INFO")
     asyncio.run(_main(ap.parse_args()))

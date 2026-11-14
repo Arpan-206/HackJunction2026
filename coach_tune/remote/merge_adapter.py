@@ -12,7 +12,7 @@ from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 sys.path.insert(0, "/w")
-from train_lora import MODEL_ID, fill_shared_kv  # noqa: E402
+from train_lora import MODEL_ID, fill_shared_kv
 
 ADAPTER, MERGED = Path("/w/adapter"), Path("/w/merged")
 base = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.bfloat16)

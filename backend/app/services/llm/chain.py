@@ -54,13 +54,19 @@ def reset_answered() -> None:
 class ChainLLM:
     """Calls each provider in turn until one answers. Its name is the first link's name."""
 
-    def __init__(self, links: list[LLMClient], on_answer: Callable[[str, str], None] | None = None) -> None:
+    def __init__(
+        self,
+        links: list[LLMClient],
+        on_answer: Callable[[str, str], None] | None = None,
+    ) -> None:
         """Keep the links in order; at least one is required. on_answer(role, provider) hears every outcome."""
         if not links:
             raise ValueError("a chain needs at least one provider")
         self.links = links
         self.name = links[0].name
-        self.supports_video = any(getattr(link, "supports_video", False) for link in links)
+        self.supports_video = any(
+            getattr(link, "supports_video", False) for link in links
+        )
         self.last_answered: str | None = None
         self.last_errors: list[str] = []
         self._on_answer = on_answer
@@ -90,7 +96,9 @@ class ChainLLM:
             return HINT_TIMEOUT_S
         return OPENAI_TIMEOUT_S if link.name == "openai" else CALL_TIMEOUT_S
 
-    async def _run(self, method: Literal["generate_json", "generate_text"], request: LLMRequest) -> str:
+    async def _run(
+        self, method: Literal["generate_json", "generate_text"], request: LLMRequest
+    ) -> str:
         """Try every usable link in order and return the first answer."""
         reset_answered()
         errors: list[str] = []
@@ -104,14 +112,31 @@ class ChainLLM:
             try:
                 text = await asyncio.wait_for(call, timeout=limit)
             except TimeoutError:
-                first_failure = first_failure or (link.name, f"timeout after {limit:g} s", time.perf_counter() - start)
+                first_failure = first_failure or (
+                    link.name,
+                    f"timeout after {limit:g} s",
+                    time.perf_counter() - start,
+                )
                 errors.append(f"{link.name}: timeout after {limit:g} s")
-                log.warning("LLM chain: %s timed out on %s; trying the next provider", link.name, request.task)
+                log.warning(
+                    "LLM chain: %s timed out on %s; trying the next provider",
+                    link.name,
+                    request.task,
+                )
                 continue
             except Exception as exc:  # noqa: BLE001 - any failure moves to the next link
-                first_failure = first_failure or (link.name, f"{type(exc).__name__}: {exc}", time.perf_counter() - start)
+                first_failure = first_failure or (
+                    link.name,
+                    f"{type(exc).__name__}: {exc}",
+                    time.perf_counter() - start,
+                )
                 errors.append(f"{link.name}: {type(exc).__name__}: {exc}")
-                log.warning("LLM chain: %s failed on %s (%s); trying the next provider", link.name, request.task, exc)
+                log.warning(
+                    "LLM chain: %s failed on %s (%s); trying the next provider",
+                    link.name,
+                    request.task,
+                    exc,
+                )
                 continue
             self._note(request.task, link.name)
             self.last_errors = errors
@@ -120,12 +145,20 @@ class ChainLLM:
                 failed, reason, failed_s = first_failure
                 log.warning(
                     "LLM fallback: role=%s from=%s to=%s reason=%s failed_after=%.2fs answered_in=%.2fs",
-                    request.task, failed, link.name, reason, failed_s, time.perf_counter() - start,
+                    request.task,
+                    failed,
+                    link.name,
+                    reason,
+                    failed_s,
+                    time.perf_counter() - start,
                 )
             return text
         self._note(request.task, OFFLINE)
         self.last_errors = errors
-        raise LLMOfflineError("no model answered: " + ("; ".join(errors) or "no provider can serve this request"))
+        raise LLMOfflineError(
+            "no model answered: "
+            + ("; ".join(errors) or "no provider can serve this request")
+        )
 
     def _note(self, role: str, provider: str) -> None:
         """Remember who answered and tell the listener."""

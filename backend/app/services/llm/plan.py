@@ -84,7 +84,9 @@ class PlanService:
                 errors = f"{type(exc).__name__}: {exc}"
                 log.warning("Plan LLM call failed on attempt %d: %s", attempt, exc)
             else:
-                return CoachPlanResponse(**draft.model_dump(), provider=answered_by(client.name))
+                return CoachPlanResponse(
+                    **draft.model_dump(), provider=answered_by(client.name)
+                )
         log.warning("Falling back to the fake plan after failed attempts")
         return CoachPlanResponse(
             **template_plan(request).model_dump(), provider=fallback_provider

@@ -14,9 +14,7 @@ FINGERS = ("thumb", "index", "middle", "ring", "little")
 
 def _cmp(errors: dict[str, float]) -> scoring.Comparison:
     dev = {f: -errors.get(f, 0.0) for f in FINGERS}
-    return scoring.Comparison(
-        {f: errors.get(f, 0.0) for f in FINGERS}, dev, 0.0, 0.0
-    )
+    return scoring.Comparison({f: errors.get(f, 0.0) for f in FINGERS}, dev, 0.0, 0.0)
 
 
 def test_no_weights_changes_nothing() -> None:
@@ -30,12 +28,18 @@ def test_the_one_to_fix_is_only_a_weighted_finger() -> None:
     cmp = _cmp({"ring": 40.0, "middle": 12.0})
     plain = scoring.to_result(cmp, Tolerance())
     assert plain.worst_finger == "ring" and "ring" in plain.hint
-    light = scoring.to_result(cmp, Tolerance(), weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.1})
+    light = scoring.to_result(
+        cmp, Tolerance(), weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.1}
+    )
     assert light.worst_finger == "middle"
     assert "ring" not in light.hint
     assert light.overall > plain.overall
     # a zero-weight finger never breaks within_tolerance
-    zero = scoring.to_result(cmp, Tolerance(angle_deg=15), weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.0})
+    zero = scoring.to_result(
+        cmp,
+        Tolerance(angle_deg=15),
+        weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.0},
+    )
     assert zero.within_tolerance is True
 
 
@@ -43,15 +47,21 @@ def test_focus_falls_back_to_the_heaviest_fingers() -> None:
     w = {**dict.fromkeys(FINGERS, 0.1), "index": 0.2}
     assert scoring.focus_fingers(w) == ["index"]
     assert scoring.focus_fingers(dict.fromkeys(FINGERS, 0.0)) == []
-    r = scoring.to_result(_cmp({"ring": 40.0}), Tolerance(), weights=dict.fromkeys(FINGERS, 0.0))
-    assert r.worst_finger == "ring"  # nothing weighted: fall back to every finger, never crash
+    r = scoring.to_result(
+        _cmp({"ring": 40.0}), Tolerance(), weights=dict.fromkeys(FINGERS, 0.0)
+    )
+    assert (
+        r.worst_finger == "ring"
+    )  # nothing weighted: fall back to every finger, never crash
 
 
 def test_score_request_weights_over_the_api(client: TestClient) -> None:
     frames = _clumsy_frames()
     plain = _post(client, frames)
     assert plain["worst_finger"] == "ring"
-    weighted = _post(client, frames, weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.0})
+    weighted = _post(
+        client, frames, weights={**dict.fromkeys(FINGERS, 1.0), "ring": 0.0}
+    )
     assert weighted["worst_finger"] != "ring"
     assert "ring" not in weighted["hint"]
     assert weighted["overall"] > plain["overall"]
@@ -61,7 +71,19 @@ def test_score_request_weights_over_the_api(client: TestClient) -> None:
 def test_step_weights_are_optional_and_additive() -> None:
     s = Step(title="t", instruction="i")
     assert s.weights is None
-    s2 = Step.model_validate({"title": "t", "instruction": "i", "weights": {"thumb": 0.0, "index": 1.0, "middle": 1.0, "ring": 0.2, "little": 1.0}})
+    s2 = Step.model_validate(
+        {
+            "title": "t",
+            "instruction": "i",
+            "weights": {
+                "thumb": 0.0,
+                "index": 1.0,
+                "middle": 1.0,
+                "ring": 0.2,
+                "little": 1.0,
+            },
+        }
+    )
     assert s2.weights is not None and s2.weights.ring == 0.2
 
 
@@ -84,7 +106,9 @@ def test_real_calibration_masks_the_unreadable_thumb_joints() -> None:
     assert weights == dict.fromkeys(FINGERS, 1.0)
     assert joints[0].tolist() == [1.0, 0.0, 0.0]
     assert joints[1:].all()
-    dead = REAL_RIGHT.model_copy(update={"fist": {**REAL_RIGHT.fist, "thumb": (0.5, 0.4, 0.1)}})
+    dead = REAL_RIGHT.model_copy(
+        update={"fist": {**REAL_RIGHT.fist, "thumb": (0.5, 0.4, 0.1)}}
+    )
     assert scoring.calibration_masks(dead)[1]["thumb"] == 0.0
 
 

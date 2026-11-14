@@ -29,7 +29,9 @@ from core.config import load_config
 from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, PREFIX_DEFINITION, GloveSource
 
 
-def messages(path: Path, chunk: int = 8 << 20) -> Iterator[tuple[int, int | None, int | None, bytes]]:
+def messages(
+    path: Path, chunk: int = 8 << 20
+) -> Iterator[tuple[int, int | None, int | None, bytes]]:
     """(prefix, device_id, timestamp_us, raw message) for every complete message, streamed."""
     buf = bytearray()
     with open(path, "rb") as f:
@@ -54,12 +56,19 @@ def messages(path: Path, chunk: int = 8 << 20) -> Iterator[tuple[int, int | None
 
 def yaw_deg(q: np.ndarray) -> float:
     from core import geom
+
     fwd = geom.rotate(q, np.array([0.0, 0.0, -1.0]))
     return math.degrees(math.atan2(-fwd[0], -fwd[2]))
 
 
-def walk(path: Path, side: str, start_s: float = 0.0, seconds: float = float("inf"), every: int = 1,
-         rgmp_out: Path | None = None) -> dict:
+def walk(
+    path: Path,
+    side: str,
+    start_s: float = 0.0,
+    seconds: float = float("inf"),
+    every: int = 1,
+    rgmp_out: Path | None = None,
+) -> dict:
     cfg = load_config(None)
     clock = FakeClock()
     src = GloveSource(cfg, clock, host="x", port=1)
@@ -102,11 +111,17 @@ def walk(path: Path, side: str, start_s: float = 0.0, seconds: float = float("in
         if out is not None:
             out.close()
     qa = np.array(q) if q else np.zeros((0, 4))
-    return {"t_us": np.array(t, dtype=np.int64), "wrist_q": qa,
-            "yaw_deg": np.array([yaw_deg(x) for x in qa]), "heading_reliable": np.array(rel, dtype=bool)}
+    return {
+        "t_us": np.array(t, dtype=np.int64),
+        "wrist_q": qa,
+        "yaw_deg": np.array([yaw_deg(x) for x in qa]),
+        "heading_reliable": np.array(rel, dtype=bool),
+    }
 
 
-def survey(path: Path, side: str, bucket_s: float = 30.0, every: int = 20) -> list[dict]:
+def survey(
+    path: Path, side: str, bucket_s: float = 30.0, every: int = 20
+) -> list[dict]:
     w = walk(path, side, every=every)
     rows = []
     if not len(w["t_us"]):
@@ -118,18 +133,40 @@ def survey(path: Path, side: str, bucket_s: float = 30.0, every: int = 20) -> li
         if m.sum() < 10:
             continue
         yy = np.degrees(y[m])
-        rows.append({"start_s": round(float(b0), 1), "samples": int(m.sum()),
-                     "yaw_mean": round(float(np.degrees(math.atan2(np.sin(np.radians(yy)).mean(), np.cos(np.radians(yy)).mean()))), 1),
-                     "yaw_range": round(float(yy.max() - yy.min()), 1), "yaw_std": round(float(yy.std()), 1),
-                     "reliable": round(float(w["heading_reliable"][m].mean()), 2)})
+        rows.append(
+            {
+                "start_s": round(float(b0), 1),
+                "samples": int(m.sum()),
+                "yaw_mean": round(
+                    float(
+                        np.degrees(
+                            math.atan2(
+                                np.sin(np.radians(yy)).mean(),
+                                np.cos(np.radians(yy)).mean(),
+                            )
+                        )
+                    ),
+                    1,
+                ),
+                "yaw_range": round(float(yy.max() - yy.min()), 1),
+                "yaw_std": round(float(yy.std()), 1),
+                "reliable": round(float(w["heading_reliable"][m].mean()), 2),
+            }
+        )
     return rows
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("capture", type=Path)
     ap.add_argument("--side", default="right")
-    ap.add_argument("--survey", action="store_true", help="yaw spread per 30 s bucket over the whole capture")
+    ap.add_argument(
+        "--survey",
+        action="store_true",
+        help="yaw spread per 30 s bucket over the whole capture",
+    )
     ap.add_argument("--start", type=float, default=0.0)
     ap.add_argument("--seconds", type=float, default=20.0)
     ap.add_argument("--out", type=Path)
@@ -141,12 +178,21 @@ def main() -> int:
         return 0
     w = walk(a.capture, a.side, a.start, a.seconds, rgmp_out=a.rgmp_out)
     n = len(w["t_us"])
-    print(json.dumps({"samples": n, "seconds": round(float(w["t_us"][-1]) / 1e6, 2) if n else 0,
-                      "yaw_min": round(float(w["yaw_deg"].min()), 1) if n else None,
-                      "yaw_max": round(float(w["yaw_deg"].max()), 1) if n else None}))
+    print(
+        json.dumps(
+            {
+                "samples": n,
+                "seconds": round(float(w["t_us"][-1]) / 1e6, 2) if n else 0,
+                "yaw_min": round(float(w["yaw_deg"].min()), 1) if n else None,
+                "yaw_max": round(float(w["yaw_deg"].max()), 1) if n else None,
+            }
+        )
+    )
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(a.out, **w, source=str(a.capture.name), side=a.side, start_s=a.start)
+        np.savez_compressed(
+            a.out, **w, source=str(a.capture.name), side=a.side, start_s=a.start
+        )
         print(f"wrote {a.out}")
     return 0
 

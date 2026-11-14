@@ -19,12 +19,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-
 import paths
 
 paths.add_repo_paths()
 
-from core import hand as H  # noqa: E402
+from core import hand as H
 
 CURL_FULL_DEG = 90.0
 CURL_FULL_THUMB_DEG = 60.0
@@ -58,7 +57,11 @@ def load_recording(folder: str | Path) -> Recording:
     folder = Path(folder)
     lesson = json.loads((folder / "lesson.json").read_text(encoding="utf-8"))
     frames_dir = folder / "frames"
-    frames = sorted(p for p in frames_dir.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES) if frames_dir.is_dir() else []
+    frames = (
+        sorted(p for p in frames_dir.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
+        if frames_dir.is_dir()
+        else []
+    )
     trace = None
     npz = folder / "trace.npz"
     if npz.exists():
@@ -69,10 +72,18 @@ def load_recording(folder: str | Path) -> Recording:
 
 def finger_words(key_angles: list[float] | np.ndarray) -> dict[str, str]:
     """Straight, half bent or curled per finger, with the same thresholds as the core's step digest."""
-    curl = H.curl_from_angles(np.asarray(key_angles, dtype=float), CURL_FULL_DEG, CURL_FULL_THUMB_DEG)
+    curl = H.curl_from_angles(
+        np.asarray(key_angles, dtype=float), CURL_FULL_DEG, CURL_FULL_THUMB_DEG
+    )
     words = {}
     for finger, value in curl.items():
-        words[finger] = "straight" if value < WORD_STRAIGHT_BELOW else "half bent" if value < WORD_HALF_BELOW else "curled"
+        words[finger] = (
+            "straight"
+            if value < WORD_STRAIGHT_BELOW
+            else "half bent"
+            if value < WORD_HALF_BELOW
+            else "curled"
+        )
     return words
 
 
@@ -98,7 +109,11 @@ def trace_summary(rec: Recording) -> str:
     master = lesson.get("master", {})
     duration_s = float(lesson.get("duration_us", 0)) / 1e6
     steps = rec.steps
-    samples = len(rec.trace["t_us"]) if rec.trace is not None and "t_us" in rec.trace else None
+    samples = (
+        len(rec.trace["t_us"])
+        if rec.trace is not None and "t_us" in rec.trace
+        else None
+    )
     sampled = f", {samples} glove samples" if samples else ""
     lines = [
         f"Recording title: {rec.title}.",
@@ -152,14 +167,20 @@ def image_data_url(path: Path, max_width: int = IMAGE_MAX_WIDTH) -> str:
         raise ValueError(f"not an image: {path}")
     h, w = img.shape[:2]
     if w > max_width:
-        img = cv2.resize(img, (max_width, int(round(h * max_width / w))), interpolation=cv2.INTER_AREA)
+        img = cv2.resize(
+            img,
+            (max_width, int(round(h * max_width / w))),
+            interpolation=cv2.INTER_AREA,
+        )
     ok, buf = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     if not ok:
         raise ValueError(f"could not encode {path}")
     return "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode("ascii")
 
 
-def video_frames(video: str | Path, out_dir: str | Path, count: int = DEFAULT_MAX_FRAMES) -> list[Path]:
+def video_frames(
+    video: str | Path, out_dir: str | Path, count: int = DEFAULT_MAX_FRAMES
+) -> list[Path]:
     """Pull `count` frames, evenly spread, out of a video file into out_dir as frame_XX.jpg."""
     import cv2
 
@@ -170,7 +191,9 @@ def video_frames(video: str | Path, out_dir: str | Path, count: int = DEFAULT_MA
     if total <= 0:
         cap.release()
         raise ValueError(f"no frames in {video}")
-    wanted = sorted(set(np.linspace(0, total - 1, num=count).round().astype(int).tolist()))
+    wanted = sorted(
+        set(np.linspace(0, total - 1, num=count).round().astype(int).tolist())
+    )
     written: list[Path] = []
     for n, frame_no in enumerate(wanted):
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_no)
@@ -212,16 +235,30 @@ def recording_from_capture(
         hands = hands_from_capture(cfg, raw)
     frames = hands[side]
     if len(frames) < 10:
-        raise ValueError(f"only {len(frames)} tracked frames for the {side} hand in {capture.name}")
+        raise ValueError(
+            f"only {len(frames)} tracked frames for the {side} hand in {capture.name}"
+        )
     rec = Recorder(cfg.record, cfg.score.hold_ms_default)
     t0 = frames[0].t_us
-    rec.start(t0, title or f"Glove capture, {side} hand", "general", {}, side, source="glove", master_name="capture")
+    rec.start(
+        t0,
+        title or f"Glove capture, {side} hand",
+        "general",
+        {},
+        side,
+        source="glove",
+        master_name="capture",
+    )
     for h in frames:
         rec.add(h)
     span = frames[-1].t_us - t0
     for k in range(1, marks):
         rec.mark(t0 + span * k // marks)
-    lesson = rec.stop(frames[-1].t_us, save=True, lesson_id=lesson_id or f"{capture.name.split('.')[0]}-{side}")
+    lesson = rec.stop(
+        frames[-1].t_us,
+        save=True,
+        lesson_id=lesson_id or f"{capture.name.split('.')[0]}-{side}",
+    )
     assert lesson is not None
     target = out_dir / lesson.id
     if target.exists():

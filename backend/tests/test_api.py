@@ -230,7 +230,13 @@ def test_calibration_thumb_phase(client: TestClient) -> None:
         json={
             "simulator_motion": {
                 "preset": "hold_pose",
-                "pose": {"thumb": 1.0, "index": 0.0, "middle": 0.0, "ring": 0.0, "little": 0.0},
+                "pose": {
+                    "thumb": 1.0,
+                    "index": 0.0,
+                    "middle": 0.0,
+                    "ring": 0.0,
+                    "little": 0.0,
+                },
             }
         },
     )

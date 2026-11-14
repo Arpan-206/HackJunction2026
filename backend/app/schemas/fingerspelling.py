@@ -42,13 +42,33 @@ class PackLetter(BaseModel):
         if self.letter != self.letter.upper():
             raise ValueError(f"letter {self.letter!r} must be upper case")
         if self.status == "recorded":
-            missing = [k for k in ("recorded_by", "reference", "recorded_at") if not getattr(self, k)]
+            missing = [
+                k
+                for k in ("recorded_by", "reference", "recorded_at")
+                if not getattr(self, k)
+            ]
             if missing:
-                raise ValueError(f"recorded letter {self.letter} needs {', '.join(missing)}")
+                raise ValueError(
+                    f"recorded letter {self.letter} needs {', '.join(missing)}"
+                )
             if not (self.move_id or self.lesson_id or self.pose):
-                raise ValueError(f"recorded letter {self.letter} needs a move_id, lesson_id or pose")
-        elif any(getattr(self, k) is not None for k in ("recorded_by", "reference", "recorded_at", "move_id", "lesson_id", "pose")):
-            raise ValueError(f"letter {self.letter} is not recorded yet, so it must carry no pose and no recording fields")
+                raise ValueError(
+                    f"recorded letter {self.letter} needs a move_id, lesson_id or pose"
+                )
+        elif any(
+            getattr(self, k) is not None
+            for k in (
+                "recorded_by",
+                "reference",
+                "recorded_at",
+                "move_id",
+                "lesson_id",
+                "pose",
+            )
+        ):
+            raise ValueError(
+                f"letter {self.letter} is not recorded yet, so it must carry no pose and no recording fields"
+            )
         return self
 
 

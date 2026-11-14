@@ -46,7 +46,9 @@ CHART_ROWS: dict[tuple[str, str], str] = {
 }
 SPACE = " "
 
-CHART: dict[str, list[tuple[str, str]]] = {SPACE: [("left", "thumb"), ("right", "thumb")]}
+CHART: dict[str, list[tuple[str, str]]] = {
+    SPACE: [("left", "thumb"), ("right", "thumb")]
+}
 for _who, _keys in CHART_ROWS.items():
     for _k in _keys:
         CHART[_k] = [_who]
@@ -139,7 +141,13 @@ class _SimPress:
         return t_us - self.t0_us > 2 * self.rise_us + self.hold_us
 
 
-NEIGHBOUR = {"thumb": "index", "index": "middle", "middle": "index", "ring": "middle", "little": "ring"}
+NEIGHBOUR = {
+    "thumb": "index",
+    "index": "middle",
+    "middle": "index",
+    "ring": "middle",
+    "little": "ring",
+}
 
 
 DETECTOR_KEYS = ("press_velocity_deg_s", "press_min_deg", "release_deg", "rest_tau_ms")
@@ -154,7 +162,11 @@ class TypingTask:
     fake: bool = False
 
     def __post_init__(self) -> None:
-        base = dict(self.press_cfg) if isinstance(self.press_cfg, dict) else vars(self.press_cfg)
+        base = (
+            dict(self.press_cfg)
+            if isinstance(self.press_cfg, dict)
+            else vars(self.press_cfg)
+        )
         merged = {**base, **self.config}
         self.p = {**DEFAULTS, **{k: v for k, v in merged.items() if k in DEFAULTS}}
         det = SimpleNamespace(**{k: merged[k] for k in DETECTOR_KEYS})
@@ -166,7 +178,9 @@ class TypingTask:
         self.pending: list[Keystroke] = []
         self.next_id = 1
         self.last: dict | None = None
-        self.tally = {r: {"good": 0, "wrong_finger": 0, "unclear": 0} for r in TALLY_ROWS}
+        self.tally = {
+            r: {"good": 0, "wrong_finger": 0, "unclear": 0} for r in TALLY_ROWS
+        }
         self.simulate = bool(self.p["simulate"]) and self.fake
         self.rng = random.Random(int(self.p["sim_seed"]))
         self.sim: list[_SimPress] = []
@@ -193,7 +207,9 @@ class TypingTask:
         # the finger starts moving a little before the key bottoms
         self.sim.append(_SimPress(side, finger, ks.t_us - 40_000))
 
-    def feed(self, t_us: int, side: str, angles: np.ndarray | None) -> list[tuple[str, str]]:
+    def feed(
+        self, t_us: int, side: str, angles: np.ndarray | None
+    ) -> list[tuple[str, str]]:
         """One hand's angles for this tick (None when untracked). Returns detector events."""
         if self.simulate:
             # The --fake hands sway and curl through the fake lesson; that motion is not
@@ -233,8 +249,7 @@ class TypingTask:
                     dt = max(1e-4, (t - prev[0]) / 1e6)
                     for f in H.FINGERS:
                         v = (curls[f] - prev[1][f]) / dt
-                        if v > best[f]:
-                            best[f] = v
+                        best[f] = max(best[f], v)
                 prev = (t, curls)
             for f in H.FINGERS:
                 out[(side, f)] = best[f]
@@ -320,5 +335,11 @@ class TypingTask:
 def state(session) -> dict:
     tt = getattr(session, "typing", None)
     if tt is None:
-        return {"pending": 0, "last": None, "tally": {}, "totals": {}, "simulated": False}
+        return {
+            "pending": 0,
+            "last": None,
+            "tally": {},
+            "totals": {},
+            "simulated": False,
+        }
     return tt.state()

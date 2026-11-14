@@ -21,10 +21,16 @@ def _frames(motion: dict, seconds: float, side: str = "right") -> list[dict]:
     return [f.model_dump() for f in synthesiser.synthesise(spec, side, seconds, 30)]
 
 
-def _score(client: TestClient, reference: dict, attempt: dict, seconds: float = 3.0) -> float:
+def _score(
+    client: TestClient, reference: dict, attempt: dict, seconds: float = 3.0
+) -> float:
     res = client.post(
         "/api/score",
-        json={"reference_motion": reference, "attempt_frames": _frames(attempt, seconds), "side": "right"},
+        json={
+            "reference_motion": reference,
+            "attempt_frames": _frames(attempt, seconds),
+            "side": "right",
+        },
     )
     assert res.status_code == 200, res.text
     return res.json()["overall"]
@@ -33,10 +39,17 @@ def _score(client: TestClient, reference: dict, attempt: dict, seconds: float = 
 def test_every_letter_is_a_right_hand_move_with_no_prop() -> None:
     moves = _moves()
     letters = [moves[f"fs_{c.lower()}"] for c in LETTERS]
-    assert all(m.skill == "fingerspelling" and m.hands == "right" and m.prop == "none" for m in letters)
+    assert all(
+        m.skill == "fingerspelling" and m.hands == "right" and m.prop == "none"
+        for m in letters
+    )
     assert all("estimates" in m.description for m in letters)
     # Static letters hold; P and Q turn down; J and Z carry their motion.
-    moving = {c for c in LETTERS if isinstance(moves[f"fs_{c.lower()}"].default_motion, Keyframes)}
+    moving = {
+        c
+        for c in LETTERS
+        if isinstance(moves[f"fs_{c.lower()}"].default_motion, Keyframes)
+    }
     assert moving == {"J", "P", "Q", "Z"}
     assert isinstance(moves["fs_a"].default_motion, HoldPose)
     j = moves["fs_j"].default_motion
@@ -59,10 +72,15 @@ def test_seed_courses_cover_the_alphabet(client: TestClient) -> None:
     a_m = lessons["seed-fingerspelling-a-m"]["steps"]
     n_z = lessons["seed-fingerspelling-n-z"]["steps"]
     assert [s["move_id"] for s in a_m + n_z] == [f"fs_{c.lower()}" for c in LETTERS]
-    assert all(lessons[i]["skill"] == "fingerspelling" for i in ("seed-fingerspelling-a-m", "seed-fingerspelling-words"))
+    assert all(
+        lessons[i]["skill"] == "fingerspelling"
+        for i in ("seed-fingerspelling-a-m", "seed-fingerspelling-words")
+    )
     words = lessons["seed-fingerspelling-words"]["steps"]
     assert [s["move_id"] for s in words] == ["fs_word_junction", "fs_word_geppetto"]
-    assert len(client.get("/api/moves", params={"skill": "fingerspelling"}).json()) == 28
+    assert (
+        len(client.get("/api/moves", params={"skill": "fingerspelling"}).json()) == 28
+    )
 
 
 @pytest.mark.parametrize("letter", list("ABLSY"))
@@ -102,8 +120,14 @@ def test_the_rabbit_and_the_swan_carry_their_motion() -> None:
     moves = _moves()
     rabbit = moves["sp_rabbit"].default_motion
     swan = moves["sp_swan"].default_motion
-    assert isinstance(rabbit, Keyframes) and {k.pose.index for k in rabbit.keys} == {0.0, 0.3}
-    assert isinstance(swan, Keyframes) and {round(k.pitch, 2) for k in swan.keys} == {0.0, -0.35}
+    assert isinstance(rabbit, Keyframes) and {k.pose.index for k in rabbit.keys} == {
+        0.0,
+        0.3,
+    }
+    assert isinstance(swan, Keyframes) and {round(k.pitch, 2) for k in swan.keys} == {
+        0.0,
+        -0.35,
+    }
     # Each loop starts on the upright shape, so a still frame at t=0 shows the ears up and the neck level.
     assert synthesiser.pose_at(rabbit, 0.0).curls[1] == pytest.approx(0.0)
     assert synthesiser.pose_at(swan, 0.0).pitch == pytest.approx(0.0)

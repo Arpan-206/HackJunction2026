@@ -65,8 +65,12 @@ class Pose:
     def wrist_q(self) -> np.ndarray:
         """Wrist orientation in the wrist frame: yaw about +Y, pitch about +X, roll about the finger axis (-Z)."""
         q = geom.yaw_quat(self.yaw)
-        q = geom.quat_mul(q, geom.quat_from_axis_angle(np.array([1.0, 0.0, 0.0]), self.pitch))
-        return geom.quat_mul(q, geom.quat_from_axis_angle(np.array([0.0, 0.0, -1.0]), self.roll))
+        q = geom.quat_mul(
+            q, geom.quat_from_axis_angle(np.array([1.0, 0.0, 0.0]), self.pitch)
+        )
+        return geom.quat_mul(
+            q, geom.quat_from_axis_angle(np.array([0.0, 0.0, -1.0]), self.roll)
+        )
 
 
 def _blend(a: Pose, b: Pose, u: float) -> Pose:
@@ -144,7 +148,15 @@ def record_lesson(
     """Play the steps on the synthetic hand, record them and cut one step per PoseStep."""
     rec = Recorder(cfg.record, cfg.score.hold_ms_default)
     rate = float(cfg.record.rate_hz)
-    rec.start(0, title, "general", task_config, master_hand, source="fake", master_name="Demo expert")
+    rec.start(
+        0,
+        title,
+        "general",
+        task_config,
+        master_hand,
+        source="fake",
+        master_name="Demo expert",
+    )
     rest_p = np.asarray(cfg.rest_pose[master_hand].p, dtype=float)
     # Timeline: each step owns [start, start + MOVE_S + dur]; the first MOVE_S eases in from the previous shape.
     spans = []
@@ -160,11 +172,15 @@ def record_lesson(
     n = int(total * rate)
     for i in range(n + 1):
         ts = i / rate
-        k = next(j for j, (_, _, b) in enumerate(spans) if ts <= b or j == len(spans) - 1)
+        k = next(
+            j for j, (_, _, b) in enumerate(spans) if ts <= b or j == len(spans) - 1
+        )
         t0, a, _ = spans[k]
         prev_end = ends[k - 1] if k > 0 else pose_at(steps[0].motion, 0.0)
         if ts < a:
-            p = _blend(prev_end, pose_at(steps[k].motion, 0.0), _smoothstep((ts - t0) / MOVE_S))
+            p = _blend(
+                prev_end, pose_at(steps[k].motion, 0.0), _smoothstep((ts - t0) / MOVE_S)
+            )
         else:
             p = pose_at(steps[k].motion, ts - a)
         h = H.synth_hand(
@@ -180,7 +196,10 @@ def record_lesson(
     for t0, a, _ in spans[1:]:
         rec.mark(int(round((t0 + a) / 2 * 1e6)))
     lesson = rec.stop(int(round(total * 1e6)), save=True, lesson_id=lesson_id)
-    assert lesson is not None and len(lesson.steps) == len(steps), (lesson_id, lesson and len(lesson.steps))
+    assert lesson is not None and len(lesson.steps) == len(steps), (
+        lesson_id,
+        lesson and len(lesson.steps),
+    )
     for st, ps in zip(lesson.steps, steps):
         st.name = ps.name
         st.note = ps.note
@@ -189,7 +208,7 @@ def record_lesson(
 
 
 def _shape_name(title: str) -> str:
-    """"Lesson 2: The talking dog" -> "The talking dog"."""
+    """ "Lesson 2: The talking dog" -> "The talking dog"."""
     head, sep, tail = title.partition(":")
     return tail.strip() if sep and head.lower().startswith("lesson") else title
 
@@ -214,7 +233,12 @@ def load_packs(path: Path = PACKS_FILE) -> list[dict]:
 
 def recorded_letter_moves(packs: list[dict]) -> set[str]:
     """Move ids of letters a pack marks recorded. A letter move outside this set is never emitted."""
-    return {x["move_id"] for p in packs for x in p["letters"] if x["status"] == "recorded" and x.get("move_id")}
+    return {
+        x["move_id"]
+        for p in packs
+        for x in p["letters"]
+        if x["status"] == "recorded" and x.get("move_id")
+    }
 
 
 def _is_letter_move(move_id: str) -> bool:
@@ -234,7 +258,9 @@ def course_steps(course: dict, recorded: set[str] | None = None) -> list[PoseSte
     return out
 
 
-def word_steps(word: str, moves: dict[str, dict], recorded: set[str] | None = None) -> list[PoseStep]:
+def word_steps(
+    word: str, moves: dict[str, dict], recorded: set[str] | None = None
+) -> list[PoseStep]:
     """One step per letter of an ASL word. A letter with no move, or not recorded in the pack, raises ValueError."""
     recorded = recorded_letter_moves(load_packs()) if recorded is None else recorded
     steps = []
@@ -249,9 +275,11 @@ def word_steps(word: str, moves: dict[str, dict], recorded: set[str] | None = No
 
 
 def pack_short_name(pack: dict) -> str:
-    """"Finnish fingerspelling (sormiaakkoset)" -> "Sormiaakkoset". The same rule as the slot kit's take titles."""
+    """ "Finnish fingerspelling (sormiaakkoset)" -> "Sormiaakkoset". The same rule as the slot kit's take titles."""
     name = pack["name"]
-    return name.split("(", 1)[1].rstrip(")").strip().capitalize() if "(" in name else name
+    return (
+        name.split("(", 1)[1].rstrip(")").strip().capitalize() if "(" in name else name
+    )
 
 
 def pack_pose_steps(pack: dict) -> list[PoseStep]:
@@ -265,13 +293,17 @@ def pack_pose_steps(pack: dict) -> list[PoseStep]:
         if x["status"] != "recorded" or x.get("move_id") or not x.get("pose"):
             continue
         note = f"Recorded by {x['recorded_by']} on {str(x['recorded_at'])[:10]} against {x['reference']}."
-        out.append(PoseStep(x["letter"], note, {"preset": "hold_pose", "pose": dict(x["pose"])}))
+        out.append(
+            PoseStep(
+                x["letter"], note, {"preset": "hold_pose", "pose": dict(x["pose"])}
+            )
+        )
     return out
 
 
 def course_lesson_id(course: dict) -> str:
     cid = str(course["id"])
-    return LESSON_PREFIX + (cid[len("seed-"):] if cid.startswith("seed-") else cid)
+    return LESSON_PREFIX + (cid.removeprefix("seed-"))
 
 
 def build_all(
@@ -296,7 +328,11 @@ def build_all(
             lid,
             course["title"],
             steps,
-            {"skill": course["skill"], "seed": course["id"], "made_by": "tools/make_pose_lessons.py"},
+            {
+                "skill": course["skill"],
+                "seed": course["id"],
+                "made_by": "tools/make_pose_lessons.py",
+            },
             hold_s,
         )
         lesson.save(out_dir, keyframes=False, overwrite=True)
@@ -315,7 +351,11 @@ def build_all(
                 lid,
                 f"ASL fingerspelling alphabet: spell {w.upper()}",
                 steps,
-                {"skill": "fingerspelling", "word": w.upper(), "made_by": "tools/make_pose_lessons.py"},
+                {
+                    "skill": "fingerspelling",
+                    "word": w.upper(),
+                    "made_by": "tools/make_pose_lessons.py",
+                },
                 hold_s,
             )
             lesson.save(out_dir, keyframes=False, overwrite=True)
@@ -329,7 +369,11 @@ def build_all(
                 f"{LESSON_PREFIX}pack-{pack['id']}",
                 f"{pack_short_name(pack)}: the recorded letters",
                 steps,
-                {"skill": "fingerspelling", "pack": pack["id"], "made_by": "tools/make_pose_lessons.py"},
+                {
+                    "skill": "fingerspelling",
+                    "pack": pack["id"],
+                    "made_by": "tools/make_pose_lessons.py",
+                },
                 hold_s,
             )
             lesson.save(out_dir, keyframes=False, overwrite=True)
@@ -340,11 +384,30 @@ def build_all(
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--config", default=str(ROOT / "config.toml"))
-    ap.add_argument("--out", default=None, help="lessons folder (default: [server] lessons_dir in the config)")
-    ap.add_argument("--skill", action="append", choices=SKILLS, help="only these skills (repeatable)")
-    ap.add_argument("--word", action="append", help=f"words to spell (repeatable; default {' '.join(WORDS)})")
-    ap.add_argument("--hold-s", type=float, default=HOLD_S, help="seconds each held shape lasts")
-    ap.add_argument("--list", action="store_true", help="print the lessons and steps it would write, write nothing")
+    ap.add_argument(
+        "--out",
+        default=None,
+        help="lessons folder (default: [server] lessons_dir in the config)",
+    )
+    ap.add_argument(
+        "--skill",
+        action="append",
+        choices=SKILLS,
+        help="only these skills (repeatable)",
+    )
+    ap.add_argument(
+        "--word",
+        action="append",
+        help=f"words to spell (repeatable; default {' '.join(WORDS)})",
+    )
+    ap.add_argument(
+        "--hold-s", type=float, default=HOLD_S, help="seconds each held shape lasts"
+    )
+    ap.add_argument(
+        "--list",
+        action="store_true",
+        help="print the lessons and steps it would write, write nothing",
+    )
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
     skills = tuple(args.skill or SKILLS)
@@ -360,17 +423,29 @@ def main(argv: list[str] | None = None) -> int:
             for pack in load_packs():
                 steps = pack_pose_steps(pack)
                 if steps:
-                    print(f"{LESSON_PREFIX}pack-{pack['id']}", "|", ", ".join(x.name for x in steps))
+                    print(
+                        f"{LESSON_PREFIX}pack-{pack['id']}",
+                        "|",
+                        ", ".join(x.name for x in steps),
+                    )
                 else:
-                    missing = [x["letter"] for x in pack["letters"] if x["status"] != "recorded"]
+                    missing = [
+                        x["letter"]
+                        for x in pack["letters"]
+                        if x["status"] != "recorded"
+                    ]
                     if missing:
-                        print(f"(no lesson for {pack['id']}: not recorded yet: {', '.join(missing)})")
+                        print(
+                            f"(no lesson for {pack['id']}: not recorded yet: {', '.join(missing)})"
+                        )
         return 0
     out = Path(args.out) if args.out else ROOT / cfg.server.lessons_dir
     out.mkdir(parents=True, exist_ok=True)
     for lesson in build_all(cfg, out, skills, words, args.hold_s):
         kinds = "".join("H" if s.kind == "hold" else "M" for s in lesson.steps)
-        print(f"{out / lesson.id}  {len(lesson.steps)} steps [{kinds}]  {lesson.duration_us / 1e6:.1f} s")
+        print(
+            f"{out / lesson.id}  {len(lesson.steps)} steps [{kinds}]  {lesson.duration_us / 1e6:.1f} s"
+        )
     return 0
 
 

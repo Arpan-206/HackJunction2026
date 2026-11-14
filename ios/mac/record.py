@@ -5,6 +5,7 @@
 
 The note is stored in the file. Say there if the source was the fake sender.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,8 +16,16 @@ from .geppetto_depth import DEFAULT_PORT, GeppettoDepthCamera
 from .recording import RecordingWriter
 
 
-def record(path: Path, host: str = "127.0.0.1", port: int = DEFAULT_PORT, seconds: float = 0.0,
-           frames: int = 0, note: dict | None = None, clock=None, quiet: bool = False) -> dict:
+def record(
+    path: Path,
+    host: str = "127.0.0.1",
+    port: int = DEFAULT_PORT,
+    seconds: float = 0.0,
+    frames: int = 0,
+    note: dict | None = None,
+    clock=None,
+    quiet: bool = False,
+) -> dict:
     """Record until seconds pass or frames packets arrive (0 means no limit, stop with Ctrl-C)."""
     w = RecordingWriter(path, {"host": host, "port": port, **(note or {})})
     cam = GeppettoDepthCamera(host, port, clock=clock, on_packet=w.write)
@@ -33,7 +42,10 @@ def record(path: Path, host: str = "127.0.0.1", port: int = DEFAULT_PORT, second
             if not quiet and time.monotonic() - last_print >= 1.0:
                 last_print = time.monotonic()
                 s = cam.status()
-                print(f"\rpackets {w.packets}  fps {s['fps']}  connected {s['connected']}  error {s['error']}", end="")
+                print(
+                    f"\rpackets {w.packets}  fps {s['fps']}  connected {s['connected']}  error {s['error']}",
+                    end="",
+                )
     except KeyboardInterrupt:
         pass
     finally:
@@ -46,7 +58,9 @@ def record(path: Path, host: str = "127.0.0.1", port: int = DEFAULT_PORT, second
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("out", type=Path, help="output file, .gdrec or .gdrec.gz")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -54,7 +68,9 @@ def main() -> None:
     p.add_argument("--frames", type=int, default=0)
     p.add_argument("--note", default="", help="free text stored in the file")
     a = p.parse_args()
-    record(a.out, a.host, a.port, a.seconds, a.frames, {"note": a.note} if a.note else None)
+    record(
+        a.out, a.host, a.port, a.seconds, a.frames, {"note": a.note} if a.note else None
+    )
 
 
 if __name__ == "__main__":

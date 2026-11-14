@@ -1,6 +1,6 @@
 """Replica state and container logs of the Gemma deployment, for debugging a start that does not become healthy.
 
-    uv run python logs.py [--name geppetto-gemma] [--lines 80]
+uv run python logs.py [--name geppetto-gemma] [--lines 80]
 """
 
 from __future__ import annotations
@@ -9,10 +9,10 @@ import argparse
 import json
 import sys
 
-from verda import VerdaClient
-
 import paths
 from deploy import DEFAULT_NAME, ENDPOINT_FILE, raw_status
+
+from verda import VerdaClient
 
 DEPLOYMENTS = "/container-deployments"
 
@@ -22,7 +22,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--name", default=None)
     ap.add_argument("--lines", type=int, default=80)
     a = ap.parse_args(argv)
-    info = json.loads(ENDPOINT_FILE.read_text(encoding="utf-8")) if ENDPOINT_FILE.exists() else {}
+    info = (
+        json.loads(ENDPOINT_FILE.read_text(encoding="utf-8"))
+        if ENDPOINT_FILE.exists()
+        else {}
+    )
     name = a.name or info.get("name") or DEFAULT_NAME
     secrets = paths.load_secrets()
     paths.require(secrets, "VERDA_CLOUD_CLIENT_ID", "VERDA_CLOUD")
@@ -42,8 +46,14 @@ def main(argv: list[str] | None = None) -> int:
             data = response.json()
             if isinstance(data, list):
                 # The API returns the newest entry first; show them oldest to newest, compactly.
-                entries = sorted((x for x in data if isinstance(x, dict)), key=lambda x: str(x.get("timestamp", "")))
-                text = "\n".join(f"{x.get('timestamp', '')[11:19]} {x.get('message') or x.get('reason', '')}" for x in entries)
+                entries = sorted(
+                    (x for x in data if isinstance(x, dict)),
+                    key=lambda x: str(x.get("timestamp", "")),
+                )
+                text = "\n".join(
+                    f"{x.get('timestamp', '')[11:19]} {x.get('message') or x.get('reason', '')}"
+                    for x in entries
+                )
             elif isinstance(data, dict):
                 text = json.dumps(data, indent=1)
         except ValueError:

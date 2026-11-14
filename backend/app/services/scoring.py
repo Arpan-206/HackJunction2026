@@ -194,7 +194,10 @@ def to_result(
         within_tolerance=within,
         worst_finger=max(focus, key=lambda f: cmp.error_deg[f] / band[f]),  # type: ignore[arg-type]
         hint=hints.build_hint(
-            {f: cmp.deviation_deg[f] for f in focus}, cmp.timing_signed_ms, limits, finger_limits
+            {f: cmp.deviation_deg[f] for f in focus},
+            cmp.timing_signed_ms,
+            limits,
+            finger_limits,
         ),
         margin=margin,
     )

@@ -38,7 +38,7 @@ import numpy as np
 from . import asl as A
 from . import piano as P
 
-LETTER_RE = re.compile(r"\bletter\s+([a-z])\b", re.I)
+LETTER_RE = re.compile(r"\bletter\s+([a-z])\b", re.IGNORECASE)
 MAX_PIANO_ITEMS = 3
 # Real-capture check (core/priors/out/real_check.json): the glove solver bends
 # each end joint (DIP) about as much as the middle joint, pianists about half
@@ -63,7 +63,9 @@ def _piano_ranges() -> P.PianoRanges | None:
 
 
 def is_fingerspelling(summary: dict) -> bool:
-    text = f"{summary.get('lesson', '')} {summary.get('step', {}).get('name', '')}".lower()
+    text = (
+        f"{summary.get('lesson', '')} {summary.get('step', {}).get('name', '')}".lower()
+    )
     return "fingerspell" in text or bool(LETTER_RE.search(text))
 
 
@@ -77,7 +79,9 @@ def target_letter(summary: dict) -> str | None:
     return m.group(1).lower() if m else None
 
 
-def asl_fact(learner: np.ndarray, target_angles: np.ndarray | None, letter: str | None) -> dict | None:
+def asl_fact(
+    learner: np.ndarray, target_angles: np.ndarray | None, letter: str | None
+) -> dict | None:
     model = _letter_model()
     if model is None:
         return None
@@ -98,12 +102,15 @@ def asl_fact(learner: np.ndarray, target_angles: np.ndarray | None, letter: str 
     }
 
 
-def piano_fact(learner: np.ndarray, pressing: bool | None, slot_weights: np.ndarray | None) -> dict | None:
+def piano_fact(
+    learner: np.ndarray, pressing: bool | None, slot_weights: np.ndarray | None
+) -> dict | None:
     ranges = _piano_ranges()
     if ranges is None:
         return None
     items = [
-        i for i in ranges.check(learner, pressing, slot_weights)
+        i
+        for i in ranges.check(learner, pressing, slot_weights)
         if i["joint"] not in PIANO_SKIP_JOINTS and i["by_deg"] >= PIANO_MIN_BY_DEG
     ]
     return {"pressing": pressing, "outside": items[:MAX_PIANO_ITEMS]}

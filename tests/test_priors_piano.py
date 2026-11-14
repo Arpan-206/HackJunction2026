@@ -10,7 +10,9 @@ from core import hand as H
 from core.priors import piano
 from core.priors.provenance import DATA_DIR
 
-pytestmark = pytest.mark.skipif(not piano.RANGES_FILE.exists(), reason="piano ranges not built")
+pytestmark = pytest.mark.skipif(
+    not piano.RANGES_FILE.exists(), reason="piano ranges not built"
+)
 
 
 def _ranges():

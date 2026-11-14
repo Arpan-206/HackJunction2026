@@ -80,8 +80,12 @@ DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"
 4. `backend/app/services/llm/registry.py`, in `_build`, before the `return FakeLLM()` line:
 
 ```python
-        if name == "openai":
-            return OpenAICompatLLM(self._settings.openai_base_url, self._settings.openai_api_key, self._settings.openai_model)
+if name == "openai":
+    return OpenAICompatLLM(
+        self._settings.openai_base_url,
+        self._settings.openai_api_key,
+        self._settings.openai_model,
+    )
 ```
 
    with `from app.services.llm.openai_compat import OpenAICompatLLM` among the imports.

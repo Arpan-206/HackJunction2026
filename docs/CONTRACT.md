@@ -327,6 +327,8 @@ Added 14 Nov 2026 at the user's request (additive; nothing above changed). The c
 type Connection = 'usb' | 'wifi' | 'emulated' | 'unknown';  // RCSP Serial, UDP, Emulated, Unknown
 type GloveIssueCode = 'studio_running' | 'device_busy' | 'driver_not_running' | 'solver_not_running' | 'no_usb_devices'
   | 'glove_missing' | 'not_streaming' | 'no_frames' | 'low_frame_rate' | 'saturation' | 'heading_unreliable';
+  // 'saturation' and 'heading_unreliable' are kept in the union for old clients but are no longer raised (14 Nov):
+  // the glove compass settles once the wearer moves, so it never shows as an issue or downgrades a calibration.
 
 interface GloveRigStatus {
   checked_at: string;        // ISO 8601
@@ -391,7 +393,7 @@ interface DriftCheckResult {
 
 - Saturation and heading flags are looked up by name in each STATUS_FLAGS stream's `bit_mapping` (`is_magnetometer_saturated`, `is_accelerometer_saturated`, `is_gyroscope_saturated`, `is_emf_saturated`, `is_heading_reliable`), never by bit position. Coil Pro streams are ignored. A flag counts for 5 s after it was last set, and RCSP `EmfSaturated`, `GyrSaturated` and `AccSaturated` events mark the hub. `driver_fps` counts only the first group (`default`); the driver also sends `emf_only` at the same rate.
 - The driver (1.9.7) sends a glove's RGMP definition to any client but data frames only while some RCSP client holds `SubscribeToData` for it (the core does this when it runs with `--rcsp`). A glove whose definition arrived but no data for `ROKOKO_SUBSCRIBE_GRACE_S` (2 s) has `streaming: false` and gives one `not_streaming` step that says so; it never shows as `no_frames` or `low_frame_rate`. The backend never subscribes itself.
-- Neutral pose: hands flat on the table, thumbs together, still. `offsets` are the mean joint flexion (radians, the `/ws/gloves` joints), `yaw_zero_deg` the circular mean wrist heading (rotation about +y of the fingers' -z), `noise_deg` the mean per-joint standard deviation in degrees. Quality bands are in `backend/app/constants.py` (`QUALITY_*`). Smartgloves have no calibrate command over RCSP; `reinit: true` sends the documented `ReinitAlgo` first and waits `REINIT_SETTLE_S`.
+- Neutral pose: hands flat on the table, thumbs together, still. `offsets` are the mean joint flexion (radians, the `/ws/gloves` joints), `yaw_zero_deg` the circular mean wrist heading (rotation about +y of the fingers' -z), `noise_deg` the mean per-joint standard deviation in degrees. Quality grades noise and bias by the bands in `backend/app/constants.py` (`QUALITY_*`); `heading_reliable` is reported but not graded. Smartgloves have no calibrate command over RCSP; `reinit: true` sends the documented `ReinitAlgo` first and waits `REINIT_SETTLE_S`.
 - Drift check: mean absolute joint flexion change per hand against the saved offsets, and the wrist heading change; `ok` when every streaming hand is within both thresholds.
 
 ## Fingerspelling packs

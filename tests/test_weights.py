@@ -93,8 +93,13 @@ def test_typing_chart_names_the_finger_per_key():
     assert chart_fingers("typing", cfgk, 2, "right") == ["thumb"]
     assert chart_fingers("typing", cfgk, 3, "right") == ["little"]
     assert chart_fingers("typing", {"text": "ok"}, 1, "right") == ["middle"]
-    assert chart_fingers("piano", {"notes": [{"beat": 0, "finger": "ring"}]}, 0, "right") == ["ring"]
-    assert chart_fingers("general", {"fingers": [["thumb", "index"]]}, 0, "left") == ["thumb", "index"]
+    assert chart_fingers(
+        "piano", {"notes": [{"beat": 0, "finger": "ring"}]}, 0, "right"
+    ) == ["ring"]
+    assert chart_fingers("general", {"fingers": [["thumb", "index"]]}, 0, "left") == [
+        "thumb",
+        "index",
+    ]
     assert chart_fingers("general", {}, 0, "left") is None
 
 
@@ -110,7 +115,9 @@ def test_step_weights_multiply_static_consistency_chart_and_calibration(cfg):
     steps = [S(0, a), S(1, b)]
     static = {f: 1.0 for f in H.FINGERS} | {"little": 0.5}
     usable = {f: 1.0 for f in H.FINGERS} | {"thumb": 0.0}
-    out = step_weights(steps, "typing", {"keys": ["j", "k"]}, "right", static, rec.cfg, usable)
+    out = step_weights(
+        steps, "typing", {"keys": ["j", "k"]}, "right", static, rec.cfg, usable
+    )
     w0, src0 = out[0]
     assert w0 == {"thumb": 0.0, "index": 1.0, "middle": 0.2, "ring": 0.2, "little": 0.1}
     assert src0["chart"] == ["index"] and src0["takes"] == 1
@@ -122,14 +129,37 @@ def test_step_weights_multiply_static_consistency_chart_and_calibration(cfg):
 
 def test_real_calibration_zeroes_unusable_joints_and_fingers(ccfg, tmp_path):
     d = tmp_path / "data"
-    write_range(d, "c8713cacaff6", "right", REAL_RIGHT["flat"], REAL_RIGHT["fist"], "2026-11-14T11:34:24Z")
-    write_range(d, "50462cbe80bd", "left", REAL_LEFT["flat"], REAL_LEFT["fist"], "2026-11-14T11:34:24Z")
+    write_range(
+        d,
+        "c8713cacaff6",
+        "right",
+        REAL_RIGHT["flat"],
+        REAL_RIGHT["fist"],
+        "2026-11-14T11:34:24Z",
+    )
+    write_range(
+        d,
+        "50462cbe80bd",
+        "left",
+        REAL_LEFT["flat"],
+        REAL_LEFT["fist"],
+        "2026-11-14T11:34:24Z",
+    )
     right = load_hand(d, "right", "", ccfg.calibration, ccfg.hand)
     left = load_hand(d, "left", "", ccfg.calibration, ccfg.hand)
-    assert right.finger_weights() == {"thumb": 0.0, "index": 1.0, "middle": 1.0, "ring": 1.0, "little": 1.0}
+    assert right.finger_weights() == {
+        "thumb": 0.0,
+        "index": 1.0,
+        "middle": 1.0,
+        "ring": 1.0,
+        "little": 1.0,
+    }
     assert left.finger_weights() == ONES
     sw = left.slot_weights()
-    assert sw[H.ANGLE_NAMES.index("ring_mcp")] == 0 and sw[H.ANGLE_NAMES.index("little_mcp")] == 0
+    assert (
+        sw[H.ANGLE_NAMES.index("ring_mcp")] == 0
+        and sw[H.ANGLE_NAMES.index("little_mcp")] == 0
+    )
     assert sw[H.ANGLE_NAMES.index("ring_pip")] == 1 and sw[14:].tolist() == [1, 1, 1, 1]
     assert "thumb_mcp" in right.summary()["unusable"]
 
@@ -150,38 +180,68 @@ def test_unusable_joint_error_is_ignored(cfg):
 
 
 def test_the_one_to_fix_is_only_ever_a_weighted_finger(cfg):
-    master = pose({"thumb": 0.3, "index": 0.8, "middle": 0.8, "ring": 0.5, "little": 0.5})
-    learner = pose({"thumb": 0.3, "index": 0.8, "middle": 0.7, "ring": 0.0, "little": 0.5})
+    master = pose(
+        {"thumb": 0.3, "index": 0.8, "middle": 0.8, "ring": 0.5, "little": 0.5}
+    )
+    learner = pose(
+        {"thumb": 0.3, "index": 0.8, "middle": 0.7, "ring": 0.0, "little": 0.5}
+    )
     light_ring = ONES | {"ring": 0.2}
-    fs, _, _ = score_frame("right", learner, master, light_ring, tol(cfg), focus_min_weight=0.3)
+    fs, _, _ = score_frame(
+        "right", learner, master, light_ring, tol(cfg), focus_min_weight=0.3
+    )
     assert fs.worst != "ring"
-    fs_all, _, _ = score_frame("right", learner, master, ONES, tol(cfg), focus_min_weight=0.3)
+    fs_all, _, _ = score_frame(
+        "right", learner, master, ONES, tol(cfg), focus_min_weight=0.3
+    )
     assert fs_all.worst == "ring"
     assert fs.overall > fs_all.overall  # a light finger costs less
     # zero weight: the finger does not count at all
-    fs0, _, _ = score_frame("right", learner, master, ONES | {"ring": 0.0, "middle": 0.0}, tol(cfg))
+    fs0, _, _ = score_frame(
+        "right", learner, master, ONES | {"ring": 0.0, "middle": 0.0}, tol(cfg)
+    )
     assert fs0.overall == pytest.approx(1.0) and fs0.worst not in ("ring", "middle")
 
 
 def test_focus_fingers_falls_back_to_the_heaviest():
-    assert focus_fingers(ONES | {"ring": 0.2}, 0.3) == ["thumb", "index", "middle", "little"]
+    assert focus_fingers(ONES | {"ring": 0.2}, 0.3) == [
+        "thumb",
+        "index",
+        "middle",
+        "little",
+    ]
     light = {f: 0.1 for f in H.FINGERS} | {"index": 0.2}
     assert focus_fingers(light, 0.3) == ["index"]
     assert focus_fingers({f: 0.0 for f in H.FINGERS}, 0.3) == []
 
 
 def test_step_scorer_summary_lists_only_weighted_fingers(cfg):
-    master = pose({"thumb": 0.3, "index": 0.8, "middle": 0.8, "ring": 0.5, "little": 0.5})
-    learner = pose({"thumb": 0.9, "index": 0.8, "middle": 0.8, "ring": 0.0, "little": 0.5})
+    master = pose(
+        {"thumb": 0.3, "index": 0.8, "middle": 0.8, "ring": 0.5, "little": 0.5}
+    )
+    learner = pose(
+        {"thumb": 0.9, "index": 0.8, "middle": 0.8, "ring": 0.0, "little": 0.5}
+    )
     rec = Recorder(cfg.record, 500)
     rec.start(0, "t", "general", {}, "right")
     for i in range(30):
-        h = H.synth_hand(side="right", curl={"thumb": 0.3, "index": 0.8, "middle": 0.8, "ring": 0.5, "little": 0.5})
+        h = H.synth_hand(
+            side="right",
+            curl={
+                "thumb": 0.3,
+                "index": 0.8,
+                "middle": 0.8,
+                "ring": 0.5,
+                "little": 0.5,
+            },
+        )
         h.t_us = i * 33_333
         rec.add(h)
     lesson = rec.stop(30 * 33_333, save=True)
     step = lesson.steps[0]
-    sc = StepScorer("right", lesson, step, cfg.score, tol(cfg), weights=ONES | {"ring": 0.2})
+    sc = StepScorer(
+        "right", lesson, step, cfg.score, tol(cfg), weights=ONES | {"ring": 0.2}
+    )
     for i in range(10):
         fs = sc.update(i * 33_333, learner)
     assert fs.worst == "thumb"
@@ -200,7 +260,16 @@ def test_repeated_poses_in_a_lesson_are_takes_and_round_trip(cfg, tmp_path, sche
     marks = []
     for ring in (0.9, 0.3, 0.9):  # three fists; the ring differs in the middle take
         for _ in range(30):
-            h = H.synth_hand(side="right", curl={"thumb": 0.6, "index": 0.9, "middle": 0.9, "ring": ring, "little": 0.9})
+            h = H.synth_hand(
+                side="right",
+                curl={
+                    "thumb": 0.6,
+                    "index": 0.9,
+                    "middle": 0.9,
+                    "ring": ring,
+                    "little": 0.9,
+                },
+            )
             h.t_us = t
             rec.add(h)
             t += 33_333
@@ -225,9 +294,28 @@ def test_repeated_poses_in_a_lesson_are_takes_and_round_trip(cfg, tmp_path, sche
 
 def test_session_drops_a_finger_the_learner_calibration_cannot_read(ccfg, tmp_path):
     d = tmp_path / "data"
-    write_range(d, "c8713cacaff6", "right", REAL_RIGHT["flat"], REAL_RIGHT["fist"], "2026-11-14T11:34:24Z")
-    write_range(d, "l1", "left", angles_to_triples(raw_angles(FLAT, "left")), angles_to_triples(raw_angles(FIST, "left")), "2026-11-14T11:34:24Z")
-    s = Session(ccfg, FakeClock(), tmp_path / "lessons", Coach(None, ccfg.coach, ccfg.score.timing_hint_ms))
+    write_range(
+        d,
+        "c8713cacaff6",
+        "right",
+        REAL_RIGHT["flat"],
+        REAL_RIGHT["fist"],
+        "2026-11-14T11:34:24Z",
+    )
+    write_range(
+        d,
+        "l1",
+        "left",
+        angles_to_triples(raw_angles(FLAT, "left")),
+        angles_to_triples(raw_angles(FIST, "left")),
+        "2026-11-14T11:34:24Z",
+    )
+    s = Session(
+        ccfg,
+        FakeClock(),
+        tmp_path / "lessons",
+        Coach(None, ccfg.coach, ccfg.score.timing_hint_ms),
+    )
     w, slots = s._weights_for("right", ONES)
     assert w["thumb"] == 0.0 and w["index"] == 1.0
     assert slots is not None and slots[H.ANGLE_NAMES.index("thumb_mcp")] == 0

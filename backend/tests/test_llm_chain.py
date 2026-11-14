@@ -21,13 +21,26 @@ from fastapi.testclient import TestClient
 HINT_BODY = {"deviations": {"index": 25}}
 GOOD_HINT = '{"hint": "Lift your index finger a little.", "focus_finger": "index", "cue_type": "extend", "severity": "medium"}'
 PLAN_BODY = {"lesson_title": "Pinch", "steps": [], "attempts": []}
-GOOD_PLAN = json.dumps({"summary": "Slow down.", "drills": [{"step_id": "a", "exercise": "Pinch slowly."}], "master_note": "Fine."})
+GOOD_PLAN = json.dumps(
+    {
+        "summary": "Slow down.",
+        "drills": [{"step_id": "a", "exercise": "Pinch slowly."}],
+        "master_note": "Fine.",
+    }
+)
 
 
 class Stub:
     """A named provider that raises, sleeps or answers, and records what it was asked."""
 
-    def __init__(self, name: str, answer: str = "{}", error: Exception | None = None, delay: float = 0.0, video: bool = False) -> None:
+    def __init__(
+        self,
+        name: str,
+        answer: str = "{}",
+        error: Exception | None = None,
+        delay: float = 0.0,
+        video: bool = False,
+    ) -> None:
         """Remember the behaviour."""
         self.name = name
         self.answer = answer
@@ -50,9 +63,13 @@ class Stub:
         return await self.generate_json(request)
 
 
-def _request(task: str = "hint", model: str | None = None, video: str | None = None) -> LLMRequest:
+def _request(
+    task: str = "hint", model: str | None = None, video: str | None = None
+) -> LLMRequest:
     """A minimal request."""
-    return LLMRequest("system", "prompt", "{}", task=task, model=model, video_path=video)  # type: ignore[arg-type]
+    return LLMRequest(
+        "system", "prompt", "{}", task=task, model=model, video_path=video
+    )  # type: ignore[arg-type]
 
 
 def _run(chain: ChainLLM, request: LLMRequest) -> tuple[str, str]:
@@ -67,13 +84,20 @@ def _run(chain: ChainLLM, request: LLMRequest) -> tuple[str, str]:
 
 @pytest.mark.parametrize(
     "error",
-    [RateLimitedError("budget spent"), LLMTimeoutError("slow"), ServiceUnavailableError("no key"), RuntimeError("boom")],
+    [
+        RateLimitedError("budget spent"),
+        LLMTimeoutError("slow"),
+        ServiceUnavailableError("no key"),
+        RuntimeError("boom"),
+    ],
 )
 def test_any_failure_moves_to_the_next_link(error: Exception) -> None:
     """Rate limit, timeout, missing key or any other exception hands the call to the next provider."""
     chain = ChainLLM([Stub("gemini", error=error), Stub("openai", answer="from verda")])
     assert _run(chain, _request("plan")) == ("from verda", "openai")
-    assert chain.last_answered == "openai" and chain.last_errors[0].startswith("gemini:")
+    assert chain.last_answered == "openai" and chain.last_errors[0].startswith(
+        "gemini:"
+    )
 
 
 def test_first_link_answers_when_healthy() -> None:
@@ -84,7 +108,9 @@ def test_first_link_answers_when_healthy() -> None:
     assert not backup.requests
 
 
-def test_slow_verda_falls_back_to_gemini_and_logs_it(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_slow_verda_falls_back_to_gemini_and_logs_it(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """Gemma on Verda past its cap: the same request goes to Gemini, and one log line names role, reason and latencies."""
     monkeypatch.setattr(chain_mod, "OPENAI_TIMEOUT_S", 0.05)
     verda = Stub("openai", delay=1.0)
@@ -93,8 +119,19 @@ def test_slow_verda_falls_back_to_gemini_and_logs_it(monkeypatch: pytest.MonkeyP
     with caplog.at_level(logging.WARNING, logger="app.services.llm.chain"):
         assert _run(chain, _request("lesson")) == ("lesson json", "gemini")
     assert gemini.requests[0].prompt == verda.requests[0].prompt
-    line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("LLM fallback:"))
-    for part in ("role=lesson", "from=openai", "to=gemini", "reason=timeout after 0.05 s", "failed_after=", "answered_in="):
+    line = next(
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("LLM fallback:")
+    )
+    for part in (
+        "role=lesson",
+        "from=openai",
+        "to=gemini",
+        "reason=timeout after 0.05 s",
+        "failed_after=",
+        "answered_in=",
+    ):
         assert part in line
 
 
@@ -104,7 +141,9 @@ def test_verda_cap_is_twenty_seconds_and_hints_are_short() -> None:
     assert chain_mod.HINT_TIMEOUT_S <= 5.0
 
 
-def test_every_link_down_raises_offline_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_every_link_down_raises_offline_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Two hanging providers on a hint: the chain gives up after the short caps, not the providers' own."""
     monkeypatch.setattr(chain_mod, "HINT_TIMEOUT_S", 0.05)
     chain = ChainLLM([Stub("gemini", delay=5.0), Stub("openai", delay=5.0)])
@@ -128,20 +167,30 @@ def test_video_skips_providers_that_cannot_watch() -> None:
     verda = Stub("openai", answer="never")
     chain = ChainLLM([verda, Stub("gemini", answer="from video", video=True)])
     assert chain.supports_video
-    assert _run(chain, _request("lesson", video="/tmp/v.mp4")) == ("from video", "gemini")
+    assert _run(chain, _request("lesson", video="/tmp/v.mp4")) == (
+        "from video",
+        "gemini",
+    )
     assert not verda.requests
 
 
 def test_real_providers_go_offline_without_network() -> None:
     """Gemini with no key and Verda on a closed port both fail fast."""
-    chain = ChainLLM([GeminiLLM(None, "gemini-x"), OpenAICompatLLM("http://127.0.0.1:9", None, "gemma")])
+    chain = ChainLLM(
+        [
+            GeminiLLM(None, "gemini-x"),
+            OpenAICompatLLM("http://127.0.0.1:9", None, "gemma"),
+        ]
+    )
     with pytest.raises(LLMOfflineError):
         _run(chain, _request("hint"))
 
 
 def _state(tmp_path: Path, **kw: object) -> LLMState:
     """An LLMState that never reads a .env file."""
-    return LLMState(Settings(_env_file=None, data_dir=tmp_path, gemini_api_key=None, **kw))  # type: ignore[call-arg]
+    return LLMState(
+        Settings(_env_file=None, data_dir=tmp_path, gemini_api_key=None, **kw)
+    )  # type: ignore[call-arg]
 
 
 VERDA = {"openai_base_url": "https://verda.example"}
@@ -156,18 +205,28 @@ VERDA = {"openai_base_url": "https://verda.example"}
         ({"llm_provider": "gemini", "llm_fallback": "none", **VERDA}, ["gemini"]),
         ({"llm_provider": "gemini", "llm_fallback": "bogus", **VERDA}, ["gemini"]),
         ({"llm_provider": "fake", **VERDA}, ["fake"]),
-        ({"llm_provider": "gemini", "openai_base_url": "http://localhost:8000"}, ["gemini"]),
+        (
+            {"llm_provider": "gemini", "openai_base_url": "http://localhost:8000"},
+            ["gemini"],
+        ),
         ({"llm_provider": "gemini", "openai_base_url": ""}, ["gemini"]),
     ],
 )
-def test_registry_builds_the_chain_from_settings(tmp_path: Path, kw: dict, expected: list[str]) -> None:
+def test_registry_builds_the_chain_from_settings(
+    tmp_path: Path, kw: dict, expected: list[str]
+) -> None:
     """Verda joins only when OPENAI_BASE_URL is set; fake has no chain."""
     assert _state(tmp_path, **kw).chain == expected
 
 
 def test_routes_send_a_role_to_verda_first(tmp_path: Path) -> None:
     """LLM_ROUTES moves lesson generation to Gemma on Verda with Gemini behind it; other roles keep the default."""
-    state = _state(tmp_path, llm_provider="gemini", llm_routes="lesson=openai, plan=openai, bogus=gemini", **VERDA)
+    state = _state(
+        tmp_path,
+        llm_provider="gemini",
+        llm_routes="lesson=openai, plan=openai, bogus=gemini",
+        **VERDA,
+    )
     assert state.chain_for("lesson") == ["openai", "gemini"]
     assert state.chain_for("plan") == ["openai", "gemini"]
     assert state.chain_for("hint") == ["gemini", "openai"]
@@ -180,19 +239,39 @@ def test_coach_reports_the_fallback_that_answered(client: TestClient) -> None:
     """When Gemini is rate limited the hint comes from Verda and says so."""
     verda = Stub("openai", answer=GOOD_HINT)
     llm = client.app.state.services.llm
-    llm.use(ChainLLM([Stub("gemini", error=RateLimitedError("spent")), verda], on_answer=llm.record))
+    llm.use(
+        ChainLLM(
+            [Stub("gemini", error=RateLimitedError("spent")), verda],
+            on_answer=llm.record,
+        )
+    )
     body = client.post("/api/coach/hint", json=HINT_BODY).json()
-    assert body["provider"] == "openai" and body["hint"] == "Lift your index finger a little."
+    assert (
+        body["provider"] == "openai"
+        and body["hint"] == "Lift your index finger a little."
+    )
     assert llm.last_answered == "openai"
     again = client.post("/api/coach/hint", json=HINT_BODY).json()
-    assert again["provider"] == "openai" and len(verda.requests) == 1  # cached with its provider
+    assert (
+        again["provider"] == "openai" and len(verda.requests) == 1
+    )  # cached with its provider
 
 
-def test_coach_shows_the_offline_note(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_coach_shows_the_offline_note(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Gemini and Verda both hang: the coach answers quickly with the offline note, provider offline."""
     monkeypatch.setattr(chain_mod, "HINT_TIMEOUT_S", 0.05)
     llm = client.app.state.services.llm
-    llm.use(ChainLLM([Stub("gemini", delay=5.0), Stub("openai", error=ServiceUnavailableError("down"))], on_answer=llm.record))
+    llm.use(
+        ChainLLM(
+            [
+                Stub("gemini", delay=5.0),
+                Stub("openai", error=ServiceUnavailableError("down")),
+            ],
+            on_answer=llm.record,
+        )
+    )
     start = time.perf_counter()
     body = client.post("/api/coach/hint", json=HINT_BODY).json()
     assert time.perf_counter() - start < 1.0
@@ -215,12 +294,20 @@ def test_plan_offline_uses_the_template_without_retrying(client: TestClient) -> 
     verda = Stub("openai", error=ServiceUnavailableError("down"))
     client.app.state.services.llm.use(ChainLLM([gemini, verda]))
     body = client.post("/api/coach/plan", json=PLAN_BODY).json()
-    assert body["provider"] == "fake" and len(gemini.requests) == 1 and len(verda.requests) == 1
+    assert (
+        body["provider"] == "fake"
+        and len(gemini.requests) == 1
+        and len(verda.requests) == 1
+    )
 
 
 def test_plan_reports_the_fallback_that_answered(client: TestClient) -> None:
     """The practice plan names Verda when Gemini failed and Verda wrote it."""
-    client.app.state.services.llm.use(ChainLLM([Stub("gemini", error=RuntimeError("x")), Stub("openai", answer=GOOD_PLAN)]))
+    client.app.state.services.llm.use(
+        ChainLLM(
+            [Stub("gemini", error=RuntimeError("x")), Stub("openai", answer=GOOD_PLAN)]
+        )
+    )
     body = client.post("/api/coach/plan", json=PLAN_BODY)
     assert body.status_code == 200, body.text
     assert body.json()["provider"] == "openai"

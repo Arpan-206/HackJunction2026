@@ -51,8 +51,8 @@ const expectVisible = async (locator, what, timeout = 20000) => {
 /** One rep in the training room, from the watch stage to the score card. Returns the overall score's label. */
 async function repToScore(url, what) {
   await page.goto(url);
-  await expectVisible(page.getByRole('button', { name: /Start with the strings/ }), `${what}: start button`);
-  await page.getByRole('button', { name: /Start with the strings/ }).click();
+  await expectVisible(page.getByRole('button', { name: /Try it out/ }), `${what}: start button`);
+  await page.getByRole('button', { name: /Try it out/ }).click();
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), `${what}: begin rep`);
   await page.getByRole('button', { name: /Begin (rep|attempt) 1/ }).click();
   await expectVisible(page.getByRole('region', { name: /Score for (attempt|rep) 1/ }), `${what}: score card`, 60000);
