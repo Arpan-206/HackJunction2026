@@ -1,0 +1,171 @@
+/* ---------- /typing: touch typing with the gloves ---------- */
+.ty-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .ty-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.ty-main,
+.ty-side {
+  padding: 1.25rem 1.5rem;
+}
+.ty-drill__title {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  margin: 0;
+}
+.ty-drill__about {
+  font: italic var(--step-0) / 1.4 var(--font-note);
+  color: var(--text-2);
+  margin: 0.35rem 0 1rem;
+}
+.ty-text {
+  font: 500 var(--step-2) / 1.6 ui-monospace, 'SF Mono', Menlo, monospace;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.75rem;
+  word-break: break-word;
+}
+.ty-ch {
+  color: var(--text-2);
+}
+.ty-ch--done {
+  color: var(--ok);
+}
+.ty-ch--now {
+  color: var(--text);
+  border-bottom: 3px solid var(--lapis);
+}
+.ty-line {
+  font: var(--step-0) / 1.4 var(--font-ui);
+  min-height: 2.8em;
+  margin: 0 0 1rem;
+}
+.ty-line--ok {
+  color: var(--ok);
+}
+.ty-line--fix {
+  color: var(--danger);
+}
+.ty-line--plain {
+  color: var(--text);
+}
+
+/* keyboard */
+.ty-kb {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  user-select: none;
+}
+.ty-kb__row {
+  display: flex;
+  gap: 0.35rem;
+}
+.ty-kb__row--1 {
+  padding-left: 1.4rem;
+}
+.ty-kb__row--2 {
+  padding-left: 2rem;
+}
+.ty-kb__row--3 {
+  padding-left: 3rem;
+}
+.ty-kb__row--space {
+  padding-left: 9rem;
+}
+.ty-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-strong);
+  color: var(--walnut-ink, var(--text));
+  font: 600 var(--step-0) / 1 var(--font-ui);
+  background: var(--surface-2);
+}
+.ty-kb__row--space .ty-key {
+  width: 16rem;
+}
+.ty-key--home {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.ty-key--next {
+  outline: 3px solid var(--lapis-deep, var(--lapis));
+  outline-offset: 2px;
+}
+.ty-key--fix {
+  box-shadow: inset 0 0 0 3px var(--danger);
+}
+.ty-engine {
+  margin: 1rem 0 0.75rem;
+}
+.ty-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* side panel */
+.ty-h2 {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  margin: 0 0 0.5rem;
+}
+.ty-drills {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ty-drillbtn {
+  width: 100%;
+  text-align: left;
+  font: var(--step-0) / 1.3 var(--font-ui);
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+}
+.ty-drillbtn:hover {
+  border-color: var(--line);
+}
+.ty-drillbtn--on {
+  border-color: var(--lapis);
+  font-weight: 600;
+}
+.ty-tally {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--step-0) / 1.3 var(--font-ui);
+}
+.ty-tally th,
+.ty-tally td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.ty-tally th[scope='row'],
+.ty-tally thead th:first-child {
+  text-align: left;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ty-swatch {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  margin-right: 0.45rem;
+  vertical-align: -0.1rem;
+  border: 1px solid var(--line-strong);
+}
