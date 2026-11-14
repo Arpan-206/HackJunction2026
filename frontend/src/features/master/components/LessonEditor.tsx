@@ -71,7 +71,8 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
         <TextArea label="Summary" rows={2} value={draft.summary} onChange={(e) => d.patch({ summary: e.target.value })} />
         <div className="mst-details__meta">
           <span className="note">
-            {skillLabel(draft.skill)}, {draft.source === 'seed' ? 'from the pattern book' : draft.source === 'generated' ? 'drafted for you' : 'recorded by hand'}.
+            {draft.skill === 'general' && draft.source === 'scratch' ? 'A new skill' : skillLabel(draft.skill)},{' '}
+            {draft.source === 'seed' ? 'from the pattern book' : draft.source === 'generated' ? 'drafted with the AI Assistant' : 'recorded by hand'}.
           </span>
           <span className={allRecorded ? 'mst-ok' : 'note'}>
             {recorded === 0 ? 'None' : recorded} of {draft.steps.length} steps in your own hand

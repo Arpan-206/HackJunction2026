@@ -1,0 +1,562 @@
+/*
+ * "Start from scratch" as a step-by-step flow (Record, Replay, Publish). Semantic tokens only. Ink on paper for
+ * everything; vermilion (--danger) only for a take that strays; gold is never used here (it is kept for mastery).
+ */
+
+.scr .page-head {
+  margin-bottom: 1.25rem;
+}
+.scr .page-head h1 {
+  font-size: var(--step-2);
+}
+
+/* ---------- Progress: three words, the current one underlined ---------- */
+.scr-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font: 700 var(--step-0) var(--font-ui);
+  letter-spacing: 0.03em;
+}
+.scr-progress__item {
+  display: flex;
+  align-items: center;
+  color: var(--text-2);
+}
+.scr-progress__item + .scr-progress__item::before {
+  content: '';
+  width: clamp(0.9rem, 2vw, 1.75rem);
+  height: 1px;
+  margin: 0 0.6rem;
+  background: var(--line-strong);
+  opacity: 0.45;
+}
+.scr-progress__item > span,
+.scr-progress__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 0.15rem;
+  border-bottom: 3px solid transparent;
+}
+.scr-progress__item--current > span {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.scr-progress__item--todo > span {
+  opacity: 0.8;
+}
+.scr-progress__link {
+  background: none;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--text-2);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+.scr-progress__link:hover {
+  color: var(--text);
+}
+
+.scr-h2 {
+  font-size: var(--step-2);
+}
+
+/* ---------- The bar under every screen: Back, then the one primary action ---------- */
+.scr-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-top: 1.5rem;
+  padding: 0.7rem 0.9rem;
+  /* A lighter leaf of the same paper pinned to the foot of the screen, so Back and Next are always in reach. */
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  box-shadow: 0 -10px 24px -18px color-mix(in srgb, var(--text) 55%, transparent);
+}
+.scr-nav__start,
+.scr-nav__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+.scr-nav__end {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+.scr-nav__summary {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.scr-nav__arrow {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  margin-right: 0.1rem;
+}
+.scr-quiet {
+  min-height: var(--target);
+  padding: 0;
+  background: none;
+  border: 0;
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  cursor: pointer;
+}
+.scr-quiet:hover {
+  color: var(--text);
+}
+
+/* ---------- Record ---------- */
+.scr-rec__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.scr-rec__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.9rem;
+}
+.scr-rec__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+.scr-hands__fixed {
+  font-weight: 700;
+  color: var(--text-2);
+}
+.scr-rec__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(19rem, 24rem);
+  gap: clamp(1rem, 2vw, 1.75rem);
+  align-items: start;
+}
+.scr-rec__stage .mst-stage {
+  height: clamp(20rem, calc(100vh - 20rem), 42rem);
+}
+.scr-rec__side {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  min-width: 0;
+}
+
+/* The hands question, asked once before the first take. */
+.scr-ask {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0 0 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+.scr-ask__q {
+  padding: 0;
+  font: italic 500 var(--step-1) / 1.2 var(--font-note);
+  color: var(--text);
+}
+
+.scr-count {
+  display: grid;
+  gap: 0.45rem;
+}
+.scr-count__line {
+  margin: 0;
+  font: 500 var(--step-2) / 1.1 var(--font-display);
+  letter-spacing: 0.03em;
+}
+.scr-count__dots {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.scr-dot {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  box-sizing: border-box;
+}
+.scr-dot.is-on {
+  background: var(--text);
+}
+/* The fourth and fifth takes are optional: smaller, with a dashed ring until they are recorded. */
+.scr-dot--extra {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-style: dashed;
+}
+.scr-dot--extra.is-on {
+  border-style: solid;
+}
+.scr-count .note {
+  margin: 0;
+}
+.scr-rec__button .rec,
+.scr-rec__button .btn {
+  width: 100%;
+}
+.scr-rec__button .rec {
+  justify-content: flex-start;
+}
+
+.scr-takes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.scr-take {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.scr-take__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.scr-take__actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.scr-take__n {
+  font-weight: 700;
+}
+.scr-take__len {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+}
+.scr-take__word {
+  font: italic 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
+  line-height: 1.2;
+}
+.scr-take__word--reference {
+  font: 700 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.scr-take__word--strays {
+  color: var(--danger);
+}
+.scr-take__actions,
+.scr-take__confirm {
+  display: flex;
+  gap: 0.15rem;
+  justify-self: end;
+}
+.scr-take__actions .btn {
+  padding: 0.4em 0.65em;
+  font-weight: 600;
+}
+
+.scr-model {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem;
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+}
+.scr-model p {
+  margin: 0;
+}
+.scr-model__ref {
+  font: 700 var(--step-1) / 1.2 var(--font-ui);
+  letter-spacing: 0;
+}
+.scr-model__redo {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.scr-more {
+  margin-top: 1.25rem;
+}
+.scr-more .disclosure__body {
+  max-width: 60rem;
+}
+
+/* ---------- Gloves: one line that opens a small panel ---------- */
+.scr-gloves {
+  position: relative;
+}
+.scr-gloves__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: var(--target);
+  padding: 0 0.25rem;
+  list-style: none;
+  cursor: pointer;
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.scr-gloves__summary::-webkit-details-marker {
+  display: none;
+}
+.scr-gloves__summary::after {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.15rem) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.scr-gloves[open] > .scr-gloves__summary::after {
+  transform: translateY(0.1rem) rotate(-135deg);
+}
+.scr-gloves__summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.scr-gloves__summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.scr-gloves__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+.scr-gloves__dot--on {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.scr-gloves__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 30;
+  width: min(26rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow);
+}
+.scr-gloves__panel .note {
+  margin: 0;
+}
+/* The calibration card sits flat inside the panel: one leaf of paper, not a card in a card. */
+.scr-gloves__panel .card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* ---------- Replay ---------- */
+.scr-replay__col {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.scr-replay__stage {
+  position: relative;
+  height: clamp(20rem, calc(100vh - 25rem), 40rem);
+  background: var(--stage-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.scr-replay__notes p {
+  margin: 0;
+  max-width: 60ch;
+}
+.scr-replay__lead {
+  font: italic 400 var(--step-1) / 1.3 var(--font-note);
+}
+
+/* ---------- Publish ---------- */
+.scr-pub {
+  display: grid;
+  gap: 2rem;
+  max-width: 56rem;
+}
+.scr-pub__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: start;
+}
+.scr-pub__summary {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+.scr-pub__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  border-top: 1px solid var(--line);
+}
+.scr-pub__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 1rem;
+  align-items: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.scr-pub__move {
+  font: 700 var(--step-1) / 1.2 var(--font-ui);
+}
+/* A catalogue skill's name, fixed: read as plain text where the field would be. */
+.scr-pub__skill {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  font: 700 var(--step-1) / 1.2 var(--font-ui);
+}
+.scr-pub__detail {
+  grid-column: 1;
+  font: italic 400 var(--step-0) / 1.4 var(--font-note);
+  color: var(--text-2);
+}
+.scr-pub__item > .field {
+  max-width: 28rem;
+}
+.scr-pub__item > .scr-pub__drop {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+/* ---------- Narrow screens: one column, the bar flows with the page (the phone's own nav bar sits at the bottom) ---------- */
+@media (max-width: 760px) {
+  .scr .page-head > div {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .scr .page-head__rule {
+    display: none;
+  }
+  .scr-progress {
+    font-size: 1rem;
+  }
+  .scr-rec__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .scr-rec__stage .mst-stage,
+  .scr-replay__stage {
+    height: clamp(16rem, 52vh, 24rem);
+  }
+  .scr-nav {
+    position: static;
+    padding: 0.85rem 0 0;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .scr-pub__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scr-gloves__summary::after {
+    transition: none;
+  }
+}
+
+/* ---------- Watching a take on the Record stage ---------- */
+.scr-rec__stage {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.scr-take--watching {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  box-shadow: inset 3px 0 0 var(--text);
+  padding-left: 0.5rem;
+}
+/* Ink caption on the stage, so it is plain this is a recorded take and not the live hand. */
+.scr-watch__caption {
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  font: italic 500 1.05rem var(--font-note);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border-radius: var(--radius-s);
+}
+.scr-watch {
+  display: grid;
+  gap: 0.6rem;
+}
+.scr-watch__verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+}
+.scr-watch__verdict p {
+  margin: 0;
+}
+.scr-watch__word {
+  font-weight: 600;
+}
+.scr-watch__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+@media (max-width: 720px) {
+  .scr-watch__acts {
+    margin-left: 0;
+  }
+}
+/* Room for the transport under the stage while a take plays. */
+.scr-rec__stage:has(.scr-watch) .mst-stage {
+  height: clamp(18rem, calc(100vh - 27rem), 38rem);
+}
+/* Keep the stage caption clear of the camera buttons in the top-right corner. */
+.scr-rec__stage .mst-stage__overlay {
+  right: calc(var(--target) + 1.4rem);
+}

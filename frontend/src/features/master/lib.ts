@@ -3,10 +3,8 @@ import type { MotionSpec, MoveKind, Prop, Side, Skill, Step, Tolerance } from '.
 export const SKILLS: { id: Skill; label: string }[] = [
   { id: 'table_tennis', label: 'Table Tennis' },
   { id: 'piano', label: 'Piano' },
+  { id: 'finnish_fingerspelling', label: 'Finnish fingerspelling' },
   { id: 'shadow_puppets', label: 'Shadow puppets' },
-  { id: 'surgical_grips', label: 'Surgical grips' },
-  { id: 'crochet', label: 'Crochet' },
-  { id: 'touch_typing', label: 'Touch typing' },
   { id: 'general', label: 'General' },
 ];
 

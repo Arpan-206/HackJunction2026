@@ -3,6 +3,7 @@ import { api, useLesson } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { LessonEditor } from '../components/LessonEditor';
+import { SaveToFile } from '../files/SaveToFile';
 import { formatWhen } from '../lib';
 import { useStoredPlan } from '../../shared/practiceLog';
 import { useAssistant } from '../../shared/assistant';
@@ -40,9 +41,12 @@ export function LessonStudio() {
           saveLabel="Save changes"
           onSave={api.updateLesson}
           extraActions={
-            <ButtonLink variant="secondary" large to={`/apprentice/lessons/${lesson.id}`}>
-              Preview as apprentice
-            </ButtonLink>
+            <>
+              <ButtonLink variant="secondary" large to={`/apprentice/lessons/${lesson.id}`}>
+                Preview as apprentice
+              </ButtonLink>
+              <SaveToFile lessonIds={[lesson.id]} name={lesson.title} />
+            </>
           }
         />
       )}
