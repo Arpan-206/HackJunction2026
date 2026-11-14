@@ -87,3 +87,17 @@
   font-style: italic;
 }
 
+.dev__link {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--paper);
+  border-radius: var(--radius-s);
+  color: var(--paper);
+  font: 700 1rem var(--font-ui);
+  text-decoration: none;
+}
+.dev__link:hover {
+  background: var(--ink-sea);
+}
