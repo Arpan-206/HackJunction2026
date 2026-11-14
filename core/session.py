@@ -729,7 +729,9 @@ class Session:
             else None
         )
         self.typing = (
-            TypingTask(self.cfg.piano, self.task_config, self.fake)
+            TypingTask(
+                self.cfg.get_path("typing", self.cfg.piano), self.task_config, self.fake
+            )
             if self.task == "typing"
             else None
         )

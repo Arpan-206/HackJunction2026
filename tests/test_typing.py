@@ -66,7 +66,7 @@ def test_chart_covers_the_home_row_and_space():
 
 
 def test_right_finger_is_good(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(tt, [("right", "index", 500_000)], [("j", 560_000)])
     assert [v["verdict"] for v in out] == ["good"]
     assert out[0]["detected"] == {"hand": "right", "finger": "index"}
@@ -75,7 +75,7 @@ def test_right_finger_is_good(cfg):
 
 
 def test_wrong_finger(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(tt, [("right", "middle", 500_000)], [("j", 560_000)])
     assert out[0]["verdict"] == "wrong_finger"
     assert out[0]["detected"] == {"hand": "right", "finger": "middle"}
@@ -83,14 +83,14 @@ def test_wrong_finger(cfg):
 
 
 def test_wrong_hand_is_wrong_finger(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(tt, [("left", "index", 500_000)], [("j", 560_000)])
     assert out[0]["verdict"] == "wrong_finger"
     assert out[0]["detected"]["hand"] == "left"
 
 
 def test_no_motion_is_unclear(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(tt, [], [("f", 560_000)])
     assert out[0]["verdict"] == "unclear"
     assert out[0]["reason"] == "no_press"
@@ -98,7 +98,7 @@ def test_no_motion_is_unclear(cfg):
 
 
 def test_two_fingers_alike_is_unclear(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(
         tt,
         [("left", "index", 500_000), ("left", "middle", 500_000)],
@@ -109,7 +109,7 @@ def test_two_fingers_alike_is_unclear(cfg):
 
 
 def test_sympathetic_neighbour_does_not_spoil_a_clear_press(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     presses = [("left", "index", 500_000), ("left", "middle", 500_000)]
     out = run(
         tt, presses, [("f", 560_000)], scale={("left", "middle", 500_000): 0.4}
@@ -118,13 +118,13 @@ def test_sympathetic_neighbour_does_not_spoil_a_clear_press(cfg):
 
 
 def test_press_outside_the_window_does_not_count(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(tt, [("left", "index", 100_000)], [("f", 900_000)])
     assert out[0]["verdict"] == "unclear"
 
 
 def test_space_takes_either_thumb(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     out = run(
         tt,
         [("left", "thumb", 300_000), ("right", "thumb", 900_000)],
@@ -135,7 +135,7 @@ def test_space_takes_either_thumb(cfg):
 
 
 def test_a_sequence_of_words(cfg):
-    tt = TypingTask(cfg.piano)
+    tt = TypingTask(cfg.typing)
     text = "sad lads"
     presses, keys = [], []
     for i, ch in enumerate(text):
@@ -147,6 +147,19 @@ def test_a_sequence_of_words(cfg):
     assert [v["key"] for v in out] == list(text)
     assert all(v["verdict"] == "good" for v in out), out
     assert tt.state()["totals"] == {"good": len(text), "wrong_finger": 0, "unclear": 0}
+
+
+def test_fast_typing_keeps_neighbours_apart(cfg):
+    """60 words a minute: a key every 200 ms. The previous key's press must not take the next key."""
+    tt = TypingTask(cfg.typing)
+    text = "fjdksl"
+    presses, keys = [], []
+    for i, ch in enumerate(text):
+        tp = 300_000 + i * 200_000
+        presses.append((*CHART[ch][0], tp))
+        keys.append((ch, tp + 60_000))
+    out = run(tt, presses, keys, t_end=300_000 + len(text) * 200_000 + 500_000)
+    assert [v["verdict"] for v in out] == ["good"] * len(text), out
 
 
 @pytest.fixture
@@ -218,7 +231,7 @@ def test_fake_simulation_drives_the_screen(sess, schemas):
 
 
 def test_simulate_is_ignored_without_fake(cfg):
-    tt = TypingTask(cfg.piano, {"simulate": True}, fake=False)
+    tt = TypingTask(cfg.typing, {"simulate": True}, fake=False)
     assert tt.simulate is False
 
 
@@ -286,7 +299,7 @@ def test_accuracy_tool_with_a_key_log(tmp_path, monkeypatch):
                 if s == side:
                     a[H.FLEXION_SLOTS[f]] += bump(i, tp)
             hands[side].append(FakeHand(t0 + i, a))
-    monkeypatch.setattr(ta, "load_hands", lambda cfg, path: hands)
+    monkeypatch.setattr(ta, "load_hands", lambda cfg, path, *a: hands)
     log = tmp_path / "keys.jsonl"
     log.write_text('{"t_ms": 360, "key": "f"}\n{"t_ms": 860, "key": "j"}\n{"t_ms": 1360, "key": "j"}\n')
     out = tmp_path / "rep.json"
