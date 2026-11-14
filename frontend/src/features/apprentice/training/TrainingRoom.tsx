@@ -10,6 +10,7 @@ import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { useCalibration } from '../../shared/useCalibration';
 import { PropSwitch } from '../../shared/PropSwitch';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
+import { MARGIN_INFO, roomFor, useMargin } from '../../shared/settings';
 import { combineHandScores } from './coach/twoHands';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import { useGuidance } from '../hooks/useGuidanceMode';
@@ -33,6 +34,7 @@ import { Shadow } from './modes/Shadow';
 import { SideBySide } from './modes/SideBySide';
 import { Segmented } from './Segmented';
 import { ScoreCard } from './ScoreCard';
+import { preloadScoreScene } from './score/preload';
 
 type Phase = 'ready' | 'countdown' | 'running' | 'scoring' | 'result';
 
@@ -47,6 +49,8 @@ const PRACTICE_OPTIONS: { id: PracticeMode; label: string; hint: string }[] = [
 ];
 
 const MAX_ATTEMPT_S = 14;
+/** Where in the motion cycle the 3D score takes the hand's pose: past the middle, near a swing's contact. */
+const SCORE_POSE_AT = 0.55;
 /** Longest a Follow attempt may run once recording has started. */
 const FOLLOW_CAP_MS = 60000;
 /** Slack on top of one motion period before an attempt that never recorded a frame is ended. */
@@ -58,7 +62,7 @@ function attemptLength(period: number): number {
 
 /**
  * The training room, the heart of the apprentice side: the master reference plays while the live glove hand follows it, in one
- * of four guidance modes. Guidance fades attempt by attempt, every attempt ends with a score, and the assistant (when on) adds
+ * of four guidance modes. Guidance fades attempt by attempt, every attempt ends with a score, and the AI Assistant (when on) adds
  * a handwritten hint when one finger keeps missing.
  */
 export function TrainingRoom() {
@@ -115,7 +119,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const [coached, setCoached] = useState<Side>(stepSide(step));
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
-  const config = useMemo(() => configFromTolerance(step.tolerance), [step.tolerance]);
+  const [margin] = useMargin();
+  const config = useMemo(() => configFromTolerance(step.tolerance, margin), [step.tolerance, margin]);
+  const room = roomFor(step.tolerance, margin);
   const { track, loading: refLoading, notice } = useReferenceTrack(step, side);
   const calibration = useCalibration(side);
   const calibrated = calibration.latest !== null;
@@ -160,6 +166,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     if (step.motion) gloves.setMotion(step.motion);
   }, [step.motion, gloves, gloves.status]);
 
+  useEffect(preloadScoreScene, []);
+
   // Watch: two loops at half speed, then full speed. Nothing is scored.
   const period = Math.max(1, track?.period ?? 1);
   useEffect(() => {
@@ -174,7 +182,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     endTimer.current = null;
     setPhase('scoring');
     const stats = coach.end();
-    const local = localScore(stats, config);
+    const local: ScoreResult = { ...localScore(stats, config), margin };
     let score = local;
     let source: 'backend' | 'local' = 'local';
     const id = recordingId.current;
@@ -194,9 +202,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       const sideField = step.hands === 'left' || step.hands === 'right' ? { side: step.hands } : {};
       const req: ScoreRequest | null =
         attempt && step.reference_recording_id
-          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
           : attempt && step.motion
-            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
             : null;
       if (req && twoHanded) {
         // The scorer judges one hand per call: score each hand, then keep the weaker hand's result (see combineHandScores).
@@ -217,7 +225,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     if (outcome.event === 'mastered') void planRequest.current();
     setResult({ score, source, outcome });
     setPhase('result');
-  }, [coach, config, lessonId, step, calibrated, pipe, mode, track, twoHanded]);
+  }, [coach, config, lessonId, step, calibrated, pipe, mode, track, twoHanded, margin]);
   finishRef.current = () => {
     if (phase === 'running') void finish();
   };
@@ -298,6 +306,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           <ScoreCard
             result={result.score}
             source={result.source}
+            pose={track ? track.handAt(track.period * SCORE_POSE_AT) : null}
+            side={side}
+            tolerance={step.tolerance}
             attempt={pipe.reps}
             lines={{ rep: repLine(result.score), stage: pipe.lines.stage, set: pipe.lines.set }}
             clean={result.outcome.clean}
@@ -356,7 +367,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
               </div>
             )}
             <p className="ap-tolerance">
-              Room for error: <span className="ap-num">{config.toleranceDeg}&deg;</span> per finger, <span className="ap-num">{config.timingMs}</span> ms of timing.
+              Room for error: <span className="ap-num">{room.angle}&deg;</span> per finger, <span className="ap-num">{room.timing}</span> ms of timing
+              {MARGIN_INFO[margin].room}
             </p>
             <div className="ap-actions">
               {phase === 'running' ? (

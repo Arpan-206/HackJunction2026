@@ -1,8 +1,14 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { FINGERS, type Finger, type ScoreResult } from '../../../api/types';
+import { MARGIN_QUIET } from '../../../api/margin';
+import type { Finger, HandFrame, ScoreResult, Side, Tolerance } from '../../../api/types';
 import { Button } from '../../../components/ui';
+import { marginSentence } from '../../shared/settings';
 import { FINGER_LABEL } from './coach/tips';
+import { isMastery, MASTERY, OK_FROM, weakestFinger } from './score/scoreRules';
+import { ScoreView } from './score/ScoreView';
+
+export { weakestFinger };
 
 interface ScoreCardProps {
   result: ScoreResult;
@@ -24,21 +30,14 @@ interface ScoreCardProps {
   restartLabel?: string;
   /** Extra content under the buttons, such as the plan for tomorrow. */
   footer?: ReactNode;
+  /** The hand drawn in the 3D score, and its side. */
+  pose?: HandFrame | null;
+  side?: Side;
+  /** The step's own tolerance, so the margin line can say what the margin allowed. */
+  tolerance?: Tolerance;
 }
 
-/** Overall score from which the numeral turns gold, provided every finger was also inside the tolerance. */
-const MASTERY = 90;
-const OK_FROM = 70;
 const NAMED_FINGER = /\b(thumb|(?:index|middle|ring|little) finger)\b/gi;
-
-/** The finger with the lowest displayed score; the backend's own pick only breaks a tie. */
-export function weakestFinger(result: ScoreResult): Finger {
-  let worst = result.worst_finger;
-  for (const f of FINGERS) {
-    if (Math.round(result.per_finger[f]) < Math.round(result.per_finger[worst])) worst = f;
-  }
-  return worst;
-}
 
 /** The scorer's hint, kept only when it does not name a finger other than the weakest one (so the card never contradicts itself). */
 function consistentHint(hint: string, weakest: Finger): string | null {
@@ -48,12 +47,16 @@ function consistentHint(hint: string, weakest: Finger): string | null {
 }
 
 /**
- * The terminal result of an attempt, shown as the full-width state of the stage: a large Cinzel numeral (gold only at
- * mastery), per-finger bars, timing and one line about the weakest finger, all derived from the displayed scores.
+ * The terminal result of an attempt, shown as the full-width state of the stage: the score as a 3D scene or a flat chart
+ * (Settings, or click to flip), a large Cinzel numeral (gold only at mastery), the margin of error it was judged with, and
+ * one line about the weakest finger, all derived from the displayed scores.
  */
-export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer }: ScoreCardProps) {
+export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer, pose, side = 'right', tolerance }: ScoreCardProps) {
   const overall = Math.round(result.overall);
-  const mastery = overall >= MASTERY && result.within_tolerance;
+  const mastery = isMastery(result);
+  const margin = result.margin ?? 'standard';
+  // A high rep under a widened margin is good work, but gold stays for the standard or strict margin.
+  const goldKept = !mastery && overall >= MASTERY && result.within_tolerance && MARGIN_QUIET.includes(margin);
   const weakest = weakestFinger(result);
   const weakScore = Math.round(result.per_finger[weakest]);
   const allGood = weakScore >= OK_FROM;
@@ -65,39 +68,25 @@ export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLab
   const verdict = result.within_tolerance ? 'Within the tolerance.' : allGood && timingWeak ? 'Timing was outside the tolerance.' : 'Outside the tolerance.';
   return (
     <section className="ap-score" aria-label={`Score for attempt ${attempt}`}>
-      <div className="ap-score__numeral">
-        <p className={`ap-score__big ${mastery ? 'ap-score__big--gold' : ''}`} aria-label={`Overall score ${overall} out of 100`}>
-          {overall}
-        </p>
-        <p className="ap-score__of">out of 100, attempt {attempt}</p>
-        <p className="ap-score__verdict">
-          {verdict}
-          {source === 'local' && ' Estimated on this device.'}
-        </p>
-      </div>
+      <ScoreView result={result} weakest={weakest} allGood={allGood} mastery={mastery} pose={pose} side={side} attempt={attempt} />
 
       <div className="ap-score__detail">
-        <ul className="ap-bars" aria-label="Score per finger">
-          {FINGERS.map((f) => {
-            const v = Math.round(result.per_finger[f]);
-            return (
-              <li key={f} className="ap-bar">
-                <span className="ap-bar__name">{FINGER_LABEL[f]}</span>
-                <span className="ap-bar__track" role="presentation">
-                  <span className={`ap-bar__fill ${v >= OK_FROM ? 'ap-bar__fill--ok' : 'ap-bar__fill--off'}`} style={{ width: `${v}%` }} />
-                </span>
-                <span className={`ap-bar__val ${f === weakest && !allGood ? 'ap-bar__val--off' : ''}`}>{v}</span>
-              </li>
-            );
-          })}
-          <li className="ap-bar ap-bar--timing">
-            <span className="ap-bar__name">Timing</span>
-            <span className="ap-bar__track" role="presentation">
-              <span className={`ap-bar__fill ${result.timing >= OK_FROM ? 'ap-bar__fill--ok' : 'ap-bar__fill--off'}`} style={{ width: `${Math.round(result.timing)}%` }} />
-            </span>
-            <span className="ap-bar__val">{Math.round(result.timing)}</span>
-          </li>
-        </ul>
+        <div className="ap-score__numeral">
+          <p className={`ap-score__big ${mastery ? 'ap-score__big--gold' : ''}`} aria-label={`Overall score ${overall} out of 100`}>
+            {overall}
+          </p>
+          <div className="ap-score__head">
+            <p className="ap-score__of">out of 100, attempt {attempt}</p>
+            <p className="ap-score__verdict">
+              {verdict}
+              {source === 'local' && ' Estimated on this device.'}
+            </p>
+          </div>
+        </div>
+        <p className="ap-score__margin">
+          {marginSentence(margin, tolerance)}
+          {goldKept && ' Gold is kept for the standard or strict margin.'}
+        </p>
         <p className="ap-score__hint">{lines?.rep ?? `${summary} ${hint ?? ''}`}</p>
         {clean !== undefined && combo && (
           <p className={`ap-score__combo ${clean ? 'ap-score__combo--clean' : ''}`}>

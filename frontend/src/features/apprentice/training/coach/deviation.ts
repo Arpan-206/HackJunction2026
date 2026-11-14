@@ -1,4 +1,5 @@
-import { FINGERS, type Finger, type HandFrame } from '../../../../api/types';
+import { DEFAULT_MARGIN, MARGIN_MULTIPLIERS } from '../../../../api/margin';
+import { FINGERS, type Finger, type HandFrame, type Margin } from '../../../../api/types';
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -18,9 +19,14 @@ export interface CoachConfig {
 /** Dead zone used when the step does not say otherwise: a few degrees of natural tremor. */
 export const DEFAULT_DEAD_ZONE_DEG = 4;
 
-/** Builds a coach configuration from a step's tolerance, with defaults of 18 degrees and 250 ms. */
-export function configFromTolerance(tol: { angle_deg?: number; timing_ms?: number } | undefined): CoachConfig {
-  return { toleranceDeg: tol?.angle_deg ?? 18, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: tol?.timing_ms ?? 250 };
+/**
+ * Builds a coach configuration from a step's tolerance (defaults 18 degrees and 250 ms) widened by the learner's margin of
+ * error, the same multiplier the scorer applies. Every live correction (strings, rings, finger tints, tips, the match
+ * meter and the local score) reads its band from here, so a relaxed margin stops marking a slightly-off finger.
+ */
+export function configFromTolerance(tol: { angle_deg?: number; timing_ms?: number } | undefined, margin: Margin = DEFAULT_MARGIN): CoachConfig {
+  const k = MARGIN_MULTIPLIERS[margin];
+  return { toleranceDeg: (tol?.angle_deg ?? 18) * k, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: (tol?.timing_ms ?? 250) * k };
 }
 
 /** Total flexion of one finger (sum of its three joints) in degrees. */

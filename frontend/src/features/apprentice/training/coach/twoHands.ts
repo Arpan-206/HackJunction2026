@@ -32,5 +32,6 @@ export function combineHandScores(scores: Partial<Record<Side, ScoreResult>>): S
     worst_finger: w.worst_finger,
     hint: `${left.within_tolerance && right.within_tolerance ? 'Both hands' : SIDE_WORD[weak]}: ${w.hint}`,
     warnings: [...new Set([...left.warnings, ...right.warnings])],
+    ...(w.margin ? { margin: w.margin } : {}),
   };
 }
