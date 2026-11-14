@@ -36,7 +36,7 @@ Chart sources (`core/recorder.py` `chart_fingers`):
 | piano | `notes`, one note per step, each with `finger` | `{"notes": [{"beat": 0, "finger": "ring"}]}` |
 | any | `fingers`, one finger name or a list per step | `{"fingers": [["thumb", "index"]]}` |
 
-The typing chart is a copy of `CHART_ROWS` from `core/tasks/typing.py` on the unmerged branch `typing`. When that file is merged, `core/recorder.py` imports its `CHART` instead of the copy.
+The typing chart is `CHART` from `core/tasks/typing.py`. The typing lane merged into `main` during this lane's work, and `weights` merged `main` at `001e8ae`, so there is one chart and no copy.
 
 ## Where the weights are honoured
 
@@ -57,9 +57,11 @@ Behaviour change to note: with an attempt calibration that has unusable joints a
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| core | `python -m pytest -q` (repo root, `.venv`) | 120 passed (11 new in `tests/test_weights.py`) |
+| core | `python -m pytest -q` (repo root, `.venv`) | 139 passed (11 new in `tests/test_weights.py`) |
 | backend | `uv run pytest -q` (in `backend/`) | 255 passed, 13 skipped (8 new in `backend/tests/test_weights.py`) |
-| frontend | `npm test`, `npm run lint`, `npm run build` (in `frontend/`) | 291 passed (14 new in `mock-weights.test.ts` and `practice-weights.test.ts`); lint and build pass |
+| frontend | `npm test`, `npm run lint`, `npm run build` (in `frontend/`) | 296 passed (14 new in `mock-weights.test.ts` and `practice-weights.test.ts`); lint and build pass |
+
+These counts are after the merge of `main` at `001e8ae` (typing lane).
 
 The core and backend tests use Arpan's real range calibrations from the glove slot (`c8713cacaff6` right, `50462cbe80bd` left).
 
@@ -144,6 +146,6 @@ Outside the lane, as the lane note allows: `core/recorder.py`, `core/scorer.py`,
 
    A cleaner home is a backend endpoint that takes recording ids and returns `take_weights`. That would be a CONTRACT.md addition.
 2. **Core lessons into the frontend.** A core lesson's step `weights` reach the frontend only through `core/compat.py` (route A), which is not in this lane. If route A serves core lessons, add `"weights": step.weights` to each step it builds.
-3. **Merge order with `typing`.** When `typing` merges, `core/recorder.py` uses its `CHART` automatically. Delete `TYPING_CHART_ROWS` from `core/recorder.py` then.
+3. **Merge `weights` into `main`.** The branch already contains `main` at `001e8ae` and merges with no conflict. Ask before pushing to `main`.
 4. **Tune on a deliberate take set.** Ask the expert to record one pose five times with `task_config.takes = 5`, then run `check_lessons.py`. Move `consistent_deg` and `inconsistent_deg` (config.toml `[record]`) if the spread is far from the 3 to 4 degrees seen here.
 5. **Right thumb calibration.** Arpan's right range `c8713cacaff6` reads the thumb less bent in the fist than flat. Recapture the fist with the thumb folded over the fingers, or the thumb stays at weight 0 for that wearer.
