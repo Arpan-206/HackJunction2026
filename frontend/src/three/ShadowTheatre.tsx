@@ -88,7 +88,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
     }
     case 'snail':
       return [
-        { side: 'right', tilt: -0.3, position: [reach, -0.35 * s, 0], rotation: [0, QUARTER, 0], scale: s },
+        { side: 'right', tilt: -0.3, position: [reach + 0.04, -0.35 * s, 0], rotation: [0, QUARTER, 0], scale: s },
         { side: 'left', tilt: -0.7, position: [1.3 * s, 0.35 * s, 0.08], rotation: [0, QUARTER, 0], scale: s * 0.9 },
       ];
     default:
@@ -97,7 +97,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
 }
 
 /** How far each one-handed puppet is raised: the dog's snout stays near level, the swan's neck stands tall. */
-const RAISE_BY_MOVE: Record<string, number> = { sp_rabbit: 1.25, sp_talking_dog: 0.55, sp_swan: 1.5 };
+const RAISE_BY_MOVE: Record<string, number> = { sp_rabbit: 1.25, sp_talking_dog: 0.55, sp_swan: 1.6 };
 
 /** The lift a move's one-handed puppet needs. */
 export const raiseFor = (moveId: string | null | undefined): number => (moveId ? RAISE_BY_MOVE[moveId] : undefined) ?? RAISE;
