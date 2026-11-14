@@ -66,14 +66,15 @@ reads the backend):
 
 **Decisions taken today**: route B, one owner per capability, both contracts
 frozen (`RECONCILE.md` section 0). The product name is Geppetto; the rename
-checklist in `CLAUDE.md` is still open. Thresholds: start pose lessons at
-`perfect_deg = 15`, `wrong_deg = 60` (patch in `STATUS-core.md`, not applied).
+checklist in `CLAUDE.md` is still open. Thresholds: pose lessons score at
+`perfect_deg = 15`, `wrong_deg = 60` on calibrated angles (applied in `4785ddd`).
 
-**Patches written by lanes for a human, not applied**: expert takes to
-`Step.weights` in the expert screens (`STATUS-weights.md`, six lines);
-`backend/app/constants.py` uses `.exe` names so `/gloves` reports the SDK as
-missing on the Mac (`STATUS-rokoko-setup.md`); the decisions rubric into the
-scorer and `/health` counters (`decisions/STATUS-decisions.md`, optional).
+**Lane patches applied on main in `4785ddd`**: expert takes set
+`Step.weights` in the expert screens; the `openai` provider (Gemma on Verda)
+is registered in the backend; Rokoko binary names and the SDK path are right
+on macOS; coach model calls run off the tick and land on a later poll. Still
+not applied, optional: the decisions rubric into the scorer and `/health`
+counters (`decisions/STATUS-decisions.md`).
 
 **Running on this Mac at handover**: nothing. The gloves were returned at
 14:30 and `scripts/stop.sh` took the live stack down at 14:33: every part
