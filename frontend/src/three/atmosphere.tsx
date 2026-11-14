@@ -1,10 +1,10 @@
 import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Environment, useGLTF } from '@react-three/drei';
-import { Color, DoubleSide, Mesh, MeshStandardMaterial, type Object3D } from 'three';
-import { createGoldLeafMaterial, getPlasterTextures, getWalnutTextures } from './surfaces';
+import { Color, Mesh, MeshStandardMaterial, type Object3D } from 'three';
+import { createGoldLeafMaterial, getWalnutTextures } from './surfaces';
 import type { StageColors } from '../theme/themes';
 
-/** Render budget for the set dressing. 'low' skips the model props and live contact shadows; 'high' adds the full set. */
+/** Render budget for the set dressing. 'low' skips the still-life props; 'high' adds them. */
 export type StageQuality = 'low' | 'high';
 
 /** Renders nothing if any child (a model or texture) fails to load, so decoration can never break a scene. */
@@ -38,13 +38,23 @@ export function WorkshopLight({ stage }: { stage: StageColors }) {
   );
 }
 
-/** Dark walnut bench top whose top face sits at `y`, centred at (cx, cz), with a front lip. */
+/**
+ * Pale limed oak bench top (walnut grain washed light) whose top face sits at `y`, centred at (cx, cz), with a front lip.
+ * The shadow theatre stands its lamp on it; the hand stages draw on the sketchbook sheet instead (sketchbook.tsx).
+ */
 export function Workbench({ y, cx, cz, width, depth }: { y: number; cx: number; cz: number; width: number; depth: number }) {
   const tex = getWalnutTextures([width / 2.2, depth / 2.2]);
-  const mat = useMemo(
-    () => new MeshStandardMaterial({ color: '#7c6b5e', map: tex.map, normalMap: tex.normalMap, roughnessMap: tex.roughnessMap, roughness: 1, metalness: 0 }),
-    [tex],
-  );
+  const mat = useMemo(() => {
+    const m = new MeshStandardMaterial({ color: '#ffffff', map: tex.map, normalMap: tex.normalMap, roughnessMap: tex.roughnessMap, roughness: 1, metalness: 0 });
+    const lime = new Color('#efe4d0');
+    m.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${lime.r}, ${lime.g}, ${lime.b}), 0.42);`,
+      );
+    };
+    return m;
+  }, [tex]);
   useEffect(() => () => mat.dispose(), [mat]);
   return (
     <group position={[cx, y, cz]}>
@@ -58,27 +68,9 @@ export function Workbench({ y, cx, cz, width, depth }: { y: number; cx: number; 
   );
 }
 
-/** Back wall of lime plaster tinted towards the carta azzurra of the active theme. */
-export function PlasterWall({ stage, y, z, width }: { stage: StageColors; y: number; z: number; width: number }) {
-  const tex = getPlasterTextures([width / 3, 1.4]);
-  const mat = useMemo(() => {
-    const tint = new Color(stage.background).lerp(new Color('#ffffff'), 0.1);
-    const m = new MeshStandardMaterial({ color: tint, normalMap: tex.normalMap, roughnessMap: tex.roughnessMap, roughness: 1, metalness: 0, side: DoubleSide });
-    m.normalScale.set(0.35, 0.35);
-    return m;
-  }, [stage.background, tex]);
-  useEffect(() => () => mat.dispose(), [mat]);
-  return (
-    <mesh position={[0, y + 2.2, z]} material={mat}>
-      <planeGeometry args={[width, 4.4]} />
-    </mesh>
-  );
-}
-
 const MODELS = {
   bust: '/models/marble_bust_01/marble_bust_01.gltf',
   lamp: '/models/vintage_oil_lamp/vintage_oil_lamp.gltf',
-  frame: '/models/fancy_picture_frame_01/fancy_picture_frame_01.gltf',
 } as const;
 
 interface PropProps {
@@ -115,8 +107,9 @@ function Prop({ url, position, rotationY = 0, scale = 1, dim = 1 }: PropProps) {
 }
 
 /**
- * Out-of-focus bottega dressing along the back of the bench: a marble bust (left), an oil lamp (right) and a framed
- * picture on the wall. Each prop loads lazily and independently, and silently drops out if its model fails.
+ * Still-life models at the back of the study sheet: a marble bust (left) and an oil lamp (right), the things a
+ * Renaissance notebook page would be drawn from. Each loads lazily and independently, and silently drops out if its
+ * model fails.
  */
 export function BackdropProps({ y, cx, backZ, halfWidth }: { y: number; cx: number; backZ: number; halfWidth: number }) {
   const x = Math.min(halfWidth, 2.6);
@@ -130,11 +123,6 @@ export function BackdropProps({ y, cx, backZ, halfWidth }: { y: number; cx: numb
       <Optional>
         <Suspense fallback={null}>
           <Prop url={MODELS.lamp} position={[cx + x, y, backZ + 0.3]} rotationY={-0.4} scale={1.3} dim={0.9} />
-        </Suspense>
-      </Optional>
-      <Optional>
-        <Suspense fallback={null}>
-          <Prop url={MODELS.frame} position={[cx + 1.4, y + 2.1, backZ - 0.02]} scale={1.5} dim={0.6} />
         </Suspense>
       </Optional>
     </>

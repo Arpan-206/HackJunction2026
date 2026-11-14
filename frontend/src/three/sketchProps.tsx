@@ -7,12 +7,13 @@ import { useStageColors } from './stageContext';
 import { RACKET_GRIP } from './props';
 
 /**
- * Chalk sketches that stand in for a prop when props are off: the racket's outline in the hand, the keys drawn on the bench
+ * Ink sketches that stand in for a prop when props are off: the racket's outline in the hand, the keys drawn on the bench
  * and a ring for the ball. They show where the real thing would be without a solid model for the fingers to clip through,
  * so every skill is learnt and played the same with or without "Add a prop". Nothing here affects scoring.
  */
 
-const LINE = 0.014;
+/** Stroke radius of the sketches: a fine pen line, so the hand stays the subject. */
+const LINE = 0.0075;
 
 /** A hand-drawn closed loop: the radius wobbles a little and the stroke overshoots its start, as chalk does. */
 function wobblyLoop(radius: number, seed: number, cx = 0, cy = 0): CatmullRomCurve3 {
@@ -31,7 +32,7 @@ function stroke(a: [number, number, number], b: [number, number, number], wobble
   return new CatmullRomCurve3([new Vector3(...a), mid, new Vector3(...b)]);
 }
 
-function useChalk(opacity = 0.9): MeshBasicMaterial {
+function useChalk(opacity = 0.65): MeshBasicMaterial {
   const stage = useStageColors();
   const mat = useMemo(() => new MeshBasicMaterial({ color: stage.chalk, transparent: true, opacity, depthWrite: false }), [stage.chalk, opacity]);
   useEffect(() => () => mat.dispose(), [mat]);
@@ -57,7 +58,7 @@ export function RacketSketch({ weight = 1 }: { weight?: number }) {
   }, [weight]);
   useDisposeAll(geos);
   return (
-    <group position={RACKET_GRIP.position} rotation={RACKET_GRIP.rotation}>
+    <group position={RACKET_GRIP.position} rotation={RACKET_GRIP.rotation} scale={RACKET_GRIP.scale}>
       {geos.map((g, i) => (
         <mesh key={i} geometry={g} material={mat} renderOrder={5} userData={{ noCast: true }} />
       ))}
@@ -81,8 +82,8 @@ const BLACK_AFTER = [0, 1, 3, 4, 5, 7, 8, 10, 11];
 
 /** The keyboard drawn in chalk on the bench where <Keyboard /> would lie; a pressed key fills in. */
 export function KeysSketch({ keys = 11, y = -0.49, handRef }: KeysSketchProps) {
-  const mat = useChalk(0.85);
-  const fillMat = useChalk(0.38);
+  const mat = useChalk(0.6);
+  const fillMat = useChalk(0.22);
   const built = useMemo(() => {
     const geos: BufferGeometry[] = [];
     const lines: Mesh[] = [];

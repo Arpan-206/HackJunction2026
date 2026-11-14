@@ -23,11 +23,13 @@ import { PADDLE_Z, type RallyGame } from './rally';
 /** Hand size on the court: a little larger than life so the grip reads from the back of the room. */
 const HAND_SCALE = 0.2;
 /**
- * How the near player's right hand turns, seen from behind them: palm down, fingers towards the net and a little to the
- * left, thumb side raised, so the blade stands up and to the left of the hand, facing the net, and the hand and wrist sit
- * below and to the right of it, clear of the ball's path. The far player's left hand is the mirror image, turned round.
+ * How the near player's right hand turns, seen from behind them: the blade stands up and to the left of the hand, facing
+ * the net, and the hand and wrist sit below and to the right of it, clear of the ball's path. The blade lies parallel to
+ * the palm (RACKET_GRIP), so the palm faces the net as in a forehand. Derived from the racket's pose so the blade keeps
+ * the same place on court whatever the grip: re-derive it if RACKET_GRIP turns. The far player's left hand is the mirror
+ * image, turned round.
  */
-const TURN = { pitch: 0.35, yaw: 0.3, roll: -1.05 };
+const TURN = { pitch: -0.211, yaw: 1.646, roll: -1.66 };
 const TURN_A = new Euler(TURN.pitch, TURN.yaw, TURN.roll, 'YXZ');
 const TURN_B = new Euler(TURN.pitch, Math.PI - TURN.yaw, -TURN.roll, 'YXZ');
 const LAPIS = '#1f2e78';

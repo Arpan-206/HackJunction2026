@@ -278,11 +278,11 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
   }
 
   if (style === 'sketch') {
-    const base = new Color(tint ?? stage.chalk);
+    const base = new Color(tint ?? stage.hand);
     const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.0 });
     return finish(fill, outlineMaterial(stage.ink, 0.022), base, CAVITY.sketch, EDGE.sketch);
   }
 
-  const base = new Color(tint ?? stage.chalk);
+  const base = new Color(tint ?? stage.hand);
   return finish(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), outlineMaterial(stage.ink, 0.016), base, CAVITY.chalk, EDGE.chalk);
 }

@@ -11,3 +11,14 @@ export const StageColorsContext = createContext<StageColors>(THEMES[DEFAULT_THEM
 export function useStageColors(): StageColors {
   return useContext(StageColorsContext);
 }
+
+/**
+ * The point on the table a hand is centred on: the ring's centre (x, z). HandCanvas and the still renderer provide it on
+ * the hand-only layouts, and <Hand> places itself so that its visual centre lands here (plus its position prop). Null
+ * (no provider, or a layout that registers hands to props by the wrist) leaves the hand's origin, the wrist, at position.
+ */
+export const StageAnchorContext = createContext<readonly [number, number] | null>(null);
+
+export function useStageAnchor(): readonly [number, number] | null {
+  return useContext(StageAnchorContext);
+}

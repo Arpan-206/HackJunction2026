@@ -41,13 +41,21 @@ function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: 
  * of <Hand> so it follows the wrist: `<Hand><Racket /></Hand>`.
  */
 /**
- * Where the racket sits in hand space: the handle lies in the tunnel the curled fingers make in the grip pose,
- * diagonally across the palm from under the index knuckle to the base of the little finger, as a shakehand grip holds
- * it. Shared by <Racket /> and its chalk outline.
+ * Where the racket sits in hand space, measured against the skinned hand in the shakehand grip curls
+ * ([0.62, 0.8, 0.84, 0.86, 0.88]). The handle runs through the tunnel the curled fingers make, about 0.2 from every
+ * finger bone, diagonally from the V between thumb and index finger (the throat, pinched by the thumb tip) to the heel
+ * of the hand, where the butt comes out past the little finger. The blade lies flat, parallel to the palm, and reaches
+ * forward beyond the index finger side, so the thumb rests on one face and the index finger on the other. The scale
+ * brings the racket close to its real size against the hand (12 units per metre: a 12 cm blade, an 11 cm handle).
+ * Shared by <Racket /> and its chalk outline; re-measure if the hand model or the grip curls change.
  */
-export const RACKET_GRIP = { position: [0, -0.4, -0.92] as [number, number, number], rotation: [0, -0.45, 0.05, 'YXZ'] as [number, number, number, 'YXZ'] };
+export const RACKET_GRIP = {
+  position: [0.114, -0.326, -0.791] as [number, number, number],
+  rotation: [1.523, 1.244, 1.571, 'YXZ'] as [number, number, number, 'YXZ'],
+  scale: 1.15,
+};
 /** The blade's centre in hand space (the blade is a disc at x = -1.2 along the racket's own axis). */
-export const RACKET_BLADE = new Vector3(-1.2, 0, 0).applyEuler(new Euler(...RACKET_GRIP.rotation)).add(new Vector3(...RACKET_GRIP.position));
+export const RACKET_BLADE = new Vector3(-1.2 * RACKET_GRIP.scale, 0, 0).applyEuler(new Euler(...RACKET_GRIP.rotation)).add(new Vector3(...RACKET_GRIP.position));
 
 export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
   const stage = useStageColors();
@@ -94,6 +102,7 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
 
     g.position.set(...RACKET_GRIP.position);
     g.rotation.set(...RACKET_GRIP.rotation);
+    g.scale.setScalar(RACKET_GRIP.scale);
     return g;
   }, [stage.ink, rubber]);
 

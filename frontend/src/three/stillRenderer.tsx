@@ -5,11 +5,25 @@ import { Material, Mesh, Texture, type Object3D, type Scene } from 'three';
 import type { StageColors } from '../theme/themes';
 import { loadHandTemplate } from './handModel';
 import { PRESETS, Stage, type CameraPreset } from './Stage';
-import { StageColorsContext } from './stageContext';
+import { StageAnchorContext, StageColorsContext } from './stageContext';
 import { createStillQueue, stillDpr, stillKey, type StillQueue } from './stillQueue';
 
 // <Canvas> registers the three.js classes as JSX elements itself; a root made with createRoot has to do it too.
 extend(THREE);
+
+/**
+ * Overrides of the preset's camera and bench for one still, so a picture can frame its own scene (the skill cards look
+ * down over the back of the hand). Anything left out comes from the preset.
+ */
+export interface StillStage {
+  cameraPosition?: [number, number, number];
+  target?: [number, number, number];
+  groundY?: number;
+  circleCenter?: [number, number];
+  circleRadius?: number;
+  showCircle?: boolean;
+  shadowSize?: [number, number];
+}
 
 /** What the renderer needs to draw one still. */
 export interface StillJob {
@@ -20,6 +34,7 @@ export interface StillJob {
   decor: boolean;
   colors: StageColors;
   content: ReactNode;
+  stage?: StillStage;
 }
 
 export interface StillPicture {
@@ -36,18 +51,19 @@ const READY_TIMEOUT_AFTER_MISS_MS = 1200;
 /** The renderer and its WebGL context are released after this long with nothing to draw. */
 const IDLE_RELEASE_MS = 20000;
 
-function Aim({ preset }: { preset: CameraPreset }) {
+function Aim({ position, target }: { position: [number, number, number]; target: [number, number, number] }) {
   const camera = useThree((s) => s.camera);
-  const p = PRESETS[preset];
+  const [px, py, pz] = position;
+  const [tx, ty, tz] = target;
   useLayoutEffect(() => {
-    camera.position.set(...p.position);
+    camera.position.set(px, py, pz);
     camera.near = 0.1;
     camera.far = 80;
     if ('fov' in camera) (camera as { fov: number }).fov = 30;
-    camera.lookAt(...p.target);
+    camera.lookAt(tx, ty, tz);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
-  }, [camera, p]);
+  }, [camera, px, py, pz, tx, ty, tz]);
   return null;
 }
 
@@ -61,18 +77,23 @@ function Mounted({ onMounted }: { onMounted: () => void }) {
 /** Same set as a live preview: the carta azzurra, light, bench and the hand, from the preset's camera. */
 function StillScene({ job, onMounted }: { job: StillJob; onMounted: () => void }) {
   const p = PRESETS[job.preset];
+  const o = job.stage ?? {};
+  const position = o.cameraPosition ?? p.position;
+  const target = o.target ?? p.target;
   return (
     <StageColorsContext.Provider value={job.colors}>
-      <Aim preset={job.preset} />
+      <StageAnchorContext.Provider value={p.centreHands ? (o.circleCenter ?? p.circleCenter) : null}>
+      <Aim position={position} target={target} />
       <Stage
-        groundY={p.groundY}
+        groundY={o.groundY ?? p.groundY}
         showGrid={false}
-        circleRadius={p.circle}
-        circleCenter={p.circleCenter}
-        shadowSize={p.shadow}
+        showCircle={o.showCircle ?? true}
+        circleRadius={o.circleRadius ?? p.circle}
+        circleCenter={o.circleCenter ?? p.circleCenter}
+        shadowSize={o.shadowSize ?? p.shadow}
         controls="none"
-        target={p.target}
-        cameraPosition={p.position}
+        target={target}
+        cameraPosition={position}
         decor={job.decor}
         quality="low"
       />
@@ -80,6 +101,7 @@ function StillScene({ job, onMounted }: { job: StillJob; onMounted: () => void }
         {job.content}
         <Mounted onMounted={onMounted} />
       </Suspense>
+      </StageAnchorContext.Provider>
     </StageColorsContext.Provider>
   );
 }
@@ -229,7 +251,8 @@ export function requestStill(id: string, job: StillJob) {
 
 /** The cache key of a still: its id plus everything about the job that changes the pixels. */
 export function keyOf(id: string, job: Omit<StillJob, 'content'>): string {
-  return stillKey({ id, preset: job.preset, decor: job.decor, colors: job.colors, width: job.width, height: job.height, dpr: job.dpr });
+  const scene = job.stage ? `${id}|stage:${JSON.stringify(job.stage)}` : id;
+  return stillKey({ id: scene, preset: job.preset, decor: job.decor, colors: job.colors, width: job.width, height: job.height, dpr: job.dpr });
 }
 
 export { stillDpr };

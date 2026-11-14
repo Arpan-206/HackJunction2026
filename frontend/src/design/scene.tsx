@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Vector3 } from 'three';
 import type { Finger, HandFrame, MotionSpec, Side } from '../api/types';
-import { CODEX_STAGE, CastShadows, CodexSet, KeyLight, Stage, synthFrame, type CodexSetProps, type HandHandle } from '../three';
+import { CODEX_STAGE, CastShadows, CodexSet, Stage, synthFrame, type CodexSetProps, type HandHandle } from '../three';
 import { FINGER_ORDER } from '../three/anatomy';
 import { StageColorsContext } from '../three/stageContext';
 import { THEMES } from '../theme/themes';
@@ -72,7 +72,7 @@ export interface SceneProps {
 
 /**
  * One WebGL canvas for a design frame. codex: transparent canvas over the page parchment with the study sheet, warm key
- * light and hatched shadows. bench: the learner's walnut bench and plaster wall from the app Stage, plus a shadow light.
+ * light and hatched shadows. bench: the app Stage (sketchbook sheet, key light, hatched shadows).
  */
 export function SceneCanvas({ world, position, target, fov = 30, board, codex, bench, orbit = true, label, className, children }: SceneProps) {
   const colors = world === 'codex' ? CODEX_STAGE : THEMES.bottega.stage;
@@ -117,7 +117,7 @@ export function SceneCanvas({ world, position, target, fov = 30, board, codex, b
                 decor
                 quality={bench?.props === false ? 'low' : 'high'}
               />
-              <KeyLight position={[-2.2, 6, 3.4]} intensity={0.9} color="#FFE9CC" span={5} />
+              {/* The Stage brings its own shadow-casting key light and the hatched catcher on the paper. */}
               <CastShadows />
             </>
           )}

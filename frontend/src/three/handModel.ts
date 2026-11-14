@@ -35,6 +35,39 @@ export interface HandTemplate {
   layout: HandLayout;
   /** A point on the back of the wrist (hand space), for leader lines. */
   wristBack: Vector3;
+  /** The hand's visual centre on the table (hand space x, z, right hand; a left hand mirrors x): between the palm centre and the open footprint. */
+  centre: readonly [number, number];
+}
+
+/**
+ * The open hand's footprint centre: the area-weighted centroid of the skin's triangles seen from above (hand space x and z,
+ * right hand; a left hand mirrors x). The hand's origin is the wrist, which is not where the eye puts the middle of the
+ * hand: the palm, fingers and thumb lie mostly towards -z and the thumb pulls it towards -x. Placing a hand by this
+ * point (see <Hand>) centres it on the stage's ring.
+ */
+export function handCentre(geo: BufferGeometry): readonly [number, number] {
+  const pos = geo.attributes.position;
+  const idx = geo.index;
+  const n = idx ? idx.count : pos.count;
+  let area = 0;
+  let cx = 0;
+  let cz = 0;
+  for (let i = 0; i < n; i += 3) {
+    const a = idx ? idx.getX(i) : i;
+    const b = idx ? idx.getX(i + 1) : i + 1;
+    const c = idx ? idx.getX(i + 2) : i + 2;
+    const ax = pos.getX(a);
+    const az = pos.getZ(a);
+    const bx = pos.getX(b);
+    const bz = pos.getZ(b);
+    const ccx = pos.getX(c);
+    const ccz = pos.getZ(c);
+    const w = Math.abs((bx - ax) * (ccz - az) - (ccx - ax) * (bz - az)) / 2;
+    area += w;
+    cx += (w * (ax + bx + ccx)) / 3;
+    cz += (w * (az + bz + ccz)) / 3;
+  }
+  return area > 0 ? [cx / area, cz / area] : [0, -1];
 }
 
 /** Converts the loaded glTF scene into a hand-space template. */
@@ -119,7 +152,12 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
 
   const bb = geo.boundingBox as NonNullable<BufferGeometry['boundingBox']>;
   const wristBack = new Vector3(wrist.x, bb.max.y * 0.8, wrist.z);
-  return { geometry: geo, layout, wristBack };
+  const fp = handCentre(geo);
+  const pc = layout.palm.centre;
+  // Midway between the open hand's footprint centroid and the palm centre: the palm holds still as the fingers curl,
+  // the footprint does not, so an open hand and a fist both sit within about 0.15 of the ring centre.
+  const centre = [(fp[0] + pc.x) / 2, (fp[1] + pc.z) / 2] as const;
+  return { geometry: geo, layout, wristBack, centre };
 }
 
 /** Concentric rings laid across each hole when it is capped, so the wrist dome has rows to bend. */

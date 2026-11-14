@@ -97,7 +97,7 @@ export function RobotTwin({ robot, human: given, className, label }: RobotTwinPr
         stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'limited' }}
       >
         <CameraTo position={camera} />
-        {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} />}
+        {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} centred={false} />}
         <RobotHand ref={robotRef} side={side} live={robot.latest} position={[showHuman ? ROBOT_X : 0, LIFT, 0]} rotation={robotRoll(side)} />
         {showHuman && <RobotStrings human={humanRef} robot={robotRef} />}
       </HandCanvas>

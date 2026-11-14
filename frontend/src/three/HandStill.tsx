@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTheme } from '../theme';
 import type { CameraPreset } from './Stage';
-import { getStillQueue, keyOf, requestStill, stillDpr, type StillPicture } from './stillRenderer';
+import { getStillQueue, keyOf, requestStill, stillDpr, type StillPicture, type StillStage } from './stillRenderer';
 
 interface HandStillProps {
   className?: string;
@@ -17,6 +17,8 @@ interface HandStillProps {
   children: ReactNode;
   /** Bench and wall behind the hand. Default: on when the box is at least 300 px wide. */
   decor?: boolean;
+  /** Camera and bench overrides for this picture; the rest comes from the preset. Part of the picture's key. */
+  stage?: StillStage;
 }
 
 /** How near the viewport (in px) a still starts to draw, so the picture is ready before it scrolls in. */
@@ -30,7 +32,7 @@ const RESIZE_SETTLE_MS = 150;
  * slide out of its box. Until it is ready the box shows the stage colour at its final size (no layout shift); a new theme
  * or size draws a new picture while the old one stays up.
  */
-export function HandStill({ className, preset = 'closeup', label, stillId, children, decor }: HandStillProps) {
+export function HandStill({ className, preset = 'closeup', label, stillId, children, decor, stage }: HandStillProps) {
   const { stage: colors } = useTheme();
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<[number, number] | null>(null);
@@ -75,10 +77,11 @@ export function HandStill({ className, preset = 'closeup', label, stillId, child
 
   const withDecor = decor ?? (size !== null && size[0] >= 300);
   const colorsKey = JSON.stringify(colors);
+  const stageKey = stage ? JSON.stringify(stage) : '';
   useEffect(() => {
     if (!size || !near) return;
     const dpr = stillDpr(window.devicePixelRatio);
-    const { req } = requestStill(stillId, { width: size[0], height: size[1], dpr, preset, decor: withDecor, colors, content: content.current });
+    const { req } = requestStill(stillId, { width: size[0], height: size[1], dpr, preset, decor: withDecor, colors, content: content.current, stage });
     let live = true;
     void req.promise.then((p) => {
       if (live && p) setPic(p);
@@ -87,14 +90,14 @@ export function HandStill({ className, preset = 'closeup', label, stillId, child
       live = false;
       req.cancel();
     };
-    // colors is represented by colorsKey: the theme object may be a fresh reference with the same values.
+    // colors is represented by colorsKey and stage by stageKey: either may be a fresh reference with the same values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, near, stillId, preset, withDecor, colorsKey]);
+  }, [size, near, stillId, preset, withDecor, colorsKey, stageKey]);
 
   // A picture already drawn for this exact key shows on the first paint (coming back to a page, no blank frame); otherwise
   // the previous picture stays up until the new one is ready. Pictures are revoked only when the cache is cleared, never
   // here: another card may share the same one.
-  const cached = size ? getStillQueue().get(keyOf(stillId, { width: size[0], height: size[1], dpr: stillDpr(window.devicePixelRatio), preset, decor: withDecor, colors })) : undefined;
+  const cached = size ? getStillQueue().get(keyOf(stillId, { width: size[0], height: size[1], dpr: stillDpr(window.devicePixelRatio), preset, decor: withDecor, colors, stage })) : undefined;
   const shown = cached ?? pic;
   return (
     <div ref={box} className={`hand-still${className ? ` ${className}` : ''}`} role="img" aria-label={label} data-ready={shown ? 'true' : 'false'}>

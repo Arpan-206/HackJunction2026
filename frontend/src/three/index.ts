@@ -10,6 +10,7 @@ export type { HandStyle } from './materials';
 export type { HandRig } from './handRig';
 export { handModelSettled, loadHandTemplate } from './handModel';
 export { HandStill, clearStills } from './HandStill';
+export type { StillStage } from './stillRenderer';
 export { createGoldLeafMaterial, createMarbleMaterial, getWalnutTextures, getMarbleTextures, getPlasterTextures } from './surfaces';
 export { GoldSeal, type StageQuality } from './atmosphere';
 export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';

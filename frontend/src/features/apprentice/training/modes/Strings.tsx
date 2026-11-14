@@ -45,7 +45,7 @@ interface StringsProps {
 export function Strings({ master, learner, coach, policy, combo }: StringsProps) {
   const stage = useStageColors();
   const size = useThree((s) => s.size);
-  const colours = useMemo(() => ({ slack: new Color(stage.chalk), taut: new Color(stage.vermilion), mix: new Color() }), [stage.chalk, stage.vermilion]);
+  const colours = useMemo(() => ({ slack: new Color(stage.thread), taut: new Color(stage.vermilion), mix: new Color() }), [stage.thread, stage.vermilion]);
   const strings = useMemo(() => {
     const group = new Group();
     const lines = FINGERS.map(() => {
@@ -56,12 +56,12 @@ export function Strings({ master, learner, coach, policy, combo }: StringsProps)
     });
     const eyeGeo = new SphereGeometry(0.05, 14, 10);
     const beads = FINGERS.map(() => {
-      const m = new Mesh(eyeGeo, new MeshToonMaterial({ color: stage.chalk, gradientMap: toonGradient() }));
+      const m = new Mesh(eyeGeo, new MeshToonMaterial({ color: stage.thread, gradientMap: toonGradient() }));
       group.add(m);
       return m;
     });
     return { group, lines, beads, eyeGeo };
-  }, [colours.slack, stage.chalk]);
+  }, [colours.slack, stage.thread]);
 
   useEffect(
     () => () => {
@@ -170,11 +170,11 @@ export function Crossbar({ master, height }: CrossbarProps) {
     ring.position.y = 0.26;
     group.add(ring);
     const lines = FINGERS.map(() => {
-      const l = makeLine(1.8, new Color(stage.ink));
+      const l = makeLine(1.8, new Color(stage.thread));
       return l;
     });
     return { group, lines, geos: [barGeo, crossGeo, capGeo, ringGeo], mats: [wood, dark] };
-  }, [stage.ink]);
+  }, [stage.thread]);
 
   useEffect(
     () => () => {
