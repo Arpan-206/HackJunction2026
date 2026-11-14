@@ -1,6 +1,6 @@
 # Hardware integration: connecting real gloves and your own pipeline
 
-For whoever wires the Rokoko Smartgloves II or an ML/positioning pipeline into the Apprentice app. Background and sources: [research/09_rokoko.md](../research/09_rokoko.md). Shared data shapes: [CONTRACT.md](CONTRACT.md).
+For whoever wires the Rokoko Smartgloves II or an ML/positioning pipeline into the Geppetto app. Background and sources: [research/09_rokoko.md](../research/09_rokoko.md). Shared data shapes: [CONTRACT.md](CONTRACT.md).
 
 ## 1. Architecture
 

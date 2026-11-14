@@ -18,11 +18,11 @@ React + Three.js web app (Vite, React, react-three-fiber). A Python backend (Fas
 
 ## Product Purpose
 
-Apprentice is a platform for teaching any hand skill from an expert. Hand skills are normally taught in person, one learner at a time. Apprentice lets a master record a skill once and lets anyone train against it with feedback on exactly which finger is wrong. Success: a learner measurably improves across attempts, and a master can publish a verified lesson and earn from it.
+Geppetto is a platform for teaching any hand skill from an expert. Hand skills are normally taught in person, one learner at a time. Geppetto lets a master record a skill once and lets anyone train against it with feedback on exactly which finger is wrong. Success: a learner measurably improves across attempts, and a master can publish a verified lesson and earn from it.
 
 ## Positioning
 
-Cameras see a hand and microphones hear notes; neither knows which finger did what, how hard, or at what angle, especially when the hand is hidden (a racket grip). Apprentice is built on glove data, so it scores fingering, grip, wrist angle and timing. It is a platform with one generic teaching workflow (capture, verify, publish, learn, score, progress) and pluggable skill modules, not a single-skill app.
+Cameras see a hand and microphones hear notes; neither knows which finger did what, how hard, or at what angle, especially when the hand is hidden (a racket grip). Geppetto is built on glove data, so it scores fingering, grip, wrist angle and timing. It is a platform with one generic teaching workflow (capture, verify, publish, learn, score, progress) and pluggable skill modules, not a single-skill app.
 
 ## Operating Context
 

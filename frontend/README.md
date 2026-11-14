@@ -1,4 +1,4 @@
-# Apprentice frontend
+# Geppetto frontend
 
 Vite + React 18 + TypeScript (strict), react-router-dom, three + @react-three/fiber + drei, zod. Renaissance bottega design language (lapis, lime plaster, carta azzurra, gold leaf).
 

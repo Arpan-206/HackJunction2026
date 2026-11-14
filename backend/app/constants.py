@@ -1,8 +1,8 @@
-"""Shared constants for the Apprentice backend: protocol values, motion maths, scoring and smoothing defaults."""
+"""Shared constants for the Geppetto backend: protocol values, motion maths, scoring and smoothing defaults."""
 
 from pathlib import Path
 
-APP_TITLE = "Apprentice backend"
+APP_TITLE = "Geppetto backend"
 API_PREFIX = "/api"
 WS_GLOVES_PATH = "/ws/gloves"
 WS_INGEST_PATH = "/ws/ingest"

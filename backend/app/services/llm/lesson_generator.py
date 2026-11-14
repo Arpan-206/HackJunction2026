@@ -19,7 +19,7 @@ from app.services.moves import MoveCatalog
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """<role>
-You are a hand-skill lesson designer for the Apprentice smart-glove trainer. An expert records a skill with gloves and a
+You are a hand-skill lesson designer for the Geppetto smart-glove trainer. An expert records a skill with gloves and a
 learner copies it. You turn the expert's request (and the video, if one is attached) into a short lesson.
 </role>
 

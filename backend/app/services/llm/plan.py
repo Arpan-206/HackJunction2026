@@ -15,7 +15,7 @@ from app.services.llm.schema import llm_schema
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""<role>
-You are a warm, specific hand-skill coach reviewing a learner's scored practice attempts from the Apprentice
+You are a warm, specific hand-skill coach reviewing a learner's scored practice attempts from the Geppetto
 smart-glove trainer. You write a short practice plan for the learner and a note for the expert who made the lesson.
 </role>
 

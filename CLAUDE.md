@@ -37,18 +37,8 @@ Geppetto (working name in code and older docs: Apprentice): experts record hand 
 5. Design: Renaissance bottega theme. Gold only for mastery. Vermilion only for corrections. Malachite for correct. No status pills, no kicker labels. Text at least 16px, readable from 3 m.
 6. User-facing copy says "expert", not "master" (the top rank is "Sealed", and the seal reads "Sealed by {expert name}"). Wire fields such as `master_name` and code paths under `features/master` keep their names. Any language model in the UI is named openly as "the AI Assistant" (the switch reads "Enable AI Assistant"): never "Gemini", "Gemma" or "coach" in user copy (provider names only in the dev panel). The algorithmic scorer and the live finger corrections are not the AI Assistant.
 7. Commit only when asked; then push to the branch remote, authored as the user only, no Claude trailers. Ask before force push or push to main.
-8. Naming: the product is **Geppetto**. "Apprentice" was the working name. Titles, headings, page `<title>`, package descriptions, prompts and pitch copy say Geppetto. The learner role and rank keep the word "apprentice" (routes `/apprentice`, "I am an apprentice", ranks Apprentice, Journeyman, Sealed), and code paths, localStorage keys and wire fields keep their names. The rename is not done yet; see the checklist below.
+8. Naming: the product is **Geppetto**. "Apprentice" was the working name. Titles, headings, page `<title>`, package descriptions, prompts and pitch copy say Geppetto. The learner role and rank keep the word "apprentice" (routes `/apprentice`, "I am an apprentice", ranks Apprentice, Journeyman, Sealed), and code paths, localStorage keys and wire fields keep their names (also the internal `X-Apprentice-Mock` header and the DevPanel "Apprentice guidance default", which is the role). `research/` keeps the old name as history.
 9. The root-level `core/`, `schema/`, `tools/`, `tests/`, `lessons/`, `config.toml`, `SPEC.md`, `RECONCILE.md`, `STATUS.md` and `DECISIONS.md` are the teammate's real glove, scoring and ML pipeline (PR #1). Never edit, replace or overwrite them from `frontend/` or `backend/` work, and never add a competing glove or ML path. If a change seems to need them, stop and ask. Exception (the user, 14 Nov): formatting-only changes from ruff (the end-of-turn hook) may be committed anywhere, these folders included, as long as tests still pass; commit them in their own commit, never mixed with real changes.
-
-## Rename checklist (Apprentice to Geppetto, product name only)
-
-Do these in one pass, then delete this section. Leave the learner role, ranks, routes, keys and code paths alone.
-
-- [ ] `README.md` line 1 and 3 (done), `frontend/README.md` line 1, `backend/README.md` lines 1 and 3, `docs/CONTRACT.md` line 1, `docs/ideas/PITCH.md` (title and the close line), `docs/ideas/VIDEO_SCRIPT.md` title, `docs/ideas/DEMO_RUNBOOK.md` step wording, `PRODUCT.md` lines 21 and 25.
-- [ ] `frontend/index.html` `<title>`; `frontend/src/app/RoleSelect.tsx` `roles__brand` heading; `frontend/src/app/AppShell.tsx` `aria-label="Apprentice home"` (the rail entry labelled "Apprentice" is the role, keep it); `frontend/package.json` `name`.
-- [ ] `backend/app/constants.py` `APP_TITLE` and the module docstring; `backend/pyproject.toml` `description`; the three prompts in `backend/app/services/llm/lesson_generator.py`, `motion_text.py`, `plan.py` ("the Apprentice smart-glove trainer" and similar).
-- [ ] `frontend/src/mock/install.ts` header `X-Apprentice-Mock` can stay (internal); `frontend/src/dev/DevPanel.tsx` "Apprentice guidance default" is the role, keep it.
-- [ ] `research/` files keep history as written; do not edit.
 
 ## Unverified
 

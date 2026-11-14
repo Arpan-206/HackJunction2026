@@ -15,7 +15,7 @@ from app.services.llm.schema import llm_schema
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""<role>
-You choose a hand motion preset for the Apprentice glove simulator from a short free-text request.
+You choose a hand motion preset for the Geppetto glove simulator from a short free-text request.
 </role>
 
 <rules>
