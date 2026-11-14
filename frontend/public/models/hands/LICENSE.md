@@ -9,9 +9,9 @@ tracking viewers.
 - Licence: MIT, reproduced below (https://github.com/immersive-web/webxr-input-profiles/blob/main/packages/assets/LICENSE.md)
 
 The file is shipped unchanged. At load time `src/three/handModel.ts` modifies the mesh: it welds the UV seams,
-reorients and rescales it into hand space, rebuilds the 25 joints as a bone chain, lengthens the wrist into a short
-forearm, subdivides and smooths it, and adds per-finger and forearm vertex attributes. Left hands are drawn by
-mirroring the right one.
+reorients and rescales it into hand space, rebuilds the 25 joints as a bone chain, closes the wrist in a tapered
+rounded end, subdivides and smooths it, raises the knuckles on the back of the hand, and adds per-finger, wrist and
+wood-grain vertex attributes. Left hands are drawn by mirroring the right one.
 
 ---
 

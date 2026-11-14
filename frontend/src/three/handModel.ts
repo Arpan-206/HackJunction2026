@@ -14,9 +14,12 @@ export const HAND_MODEL_URL = '/models/hands/right.glb';
 export const HAND_SCALE = 12;
 /** Hand-space z of the knuckle line; the old rig's knuckles sat at about -1. */
 const KNUCKLE_Z = -1.0;
-/** How far the wrist is drawn out into a short forearm (scene units), and how much it widens on the way. */
-const FOREARM_LENGTH = 0.16;
-const FOREARM_WIDEN = 0.03;
+/**
+ * Where the wrist starts to close, past the wrist joint, and how long the closing dome is (scene units, 12 per metre):
+ * the hand closes from just before the wrist joint and ends about 2 cm past it.
+ */
+const WRIST_CREASE = -0.06;
+const WRIST_END = 0.32;
 /** One Loop subdivision pass: 2.3k triangles become 9.3k, enough for smooth close-up silhouettes. */
 const SUBDIVIDE = true;
 
@@ -85,12 +88,14 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   for (let i = 0; i < si.count; i++) for (let c = 0; c < 4; c++) si.setComponent(i, c, Math.max(0, remap[si.getComponent(i, c)]));
 
   const wrist = layout.bones[0].worldPosition;
-  stretchForearm(geo, wrist);
+  taperWrist(geo, wrist);
   if (SUBDIVIDE) {
     const sub = loopSubdivide(geo);
     geo.dispose();
     geo = sub;
   }
+  geo.computeVertexNormals();
+  raiseKnuckles(geo, layout);
   geo.computeVertexNormals();
   addHandAttributes(geo, layout, wrist);
   geo.computeBoundingSphere();
@@ -102,19 +107,85 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
 }
 
 /**
- * The model ends just past the wrist in a rounded cap. Everything beyond the wrist crease slides back along +z by
- * FOREARM_LENGTH and widens slightly, so the wrist runs smoothly into a short forearm with the cap at its end.
+ * The model's wrist ends in a short tube with a flat cap, which reads as a blunt stump from behind the hand. Everything
+ * past the wrist crease is re-laid as a half egg: the tube and its cap are unrolled by surface distance from the crease
+ * and wrapped onto an elliptical dome WRIST_END long, so the hand closes in a soft, tapered end a few centimetres past
+ * the wrist (the cut a tracked hand makes), with no edge or cap facing any camera.
  */
-function stretchForearm(geo: BufferGeometry, wrist: Vector3): void {
+function taperWrist(geo: BufferGeometry, wrist: Vector3): void {
   const p = geo.attributes.position;
-  const z0 = wrist.z - 0.06 * (HAND_SCALE / 12);
-  const z1 = wrist.z + 0.16 * (HAND_SCALE / 12);
+  const zs = wrist.z + WRIST_CREASE;
+  // The wrist's cross-section at the crease: centre and semi-axes of the ellipse the tube follows.
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  let zMax = zs;
   for (let i = 0; i < p.count; i++) {
     const z = p.getZ(i);
-    if (z <= z0) continue;
-    const t = smoothstep(z0, z1, z);
-    const k = 1 + FOREARM_WIDEN * t;
-    p.setXYZ(i, wrist.x + (p.getX(i) - wrist.x) * k, wrist.y + (p.getY(i) - wrist.y) * k, z + FOREARM_LENGTH * t);
+    zMax = Math.max(zMax, z);
+    if (Math.abs(z - zs) > 0.06) continue;
+    x0 = Math.min(x0, p.getX(i));
+    x1 = Math.max(x1, p.getX(i));
+    y0 = Math.min(y0, p.getY(i));
+    y1 = Math.max(y1, p.getY(i));
+  }
+  if (!Number.isFinite(x0) || zMax <= zs) return;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const a = (x1 - x0) / 2;
+  const b = (y1 - y0) / 2;
+  const tube = zMax - zs;
+  const total = tube + (a + b) / 2;
+  for (let i = 0; i < p.count; i++) {
+    const z = p.getZ(i);
+    if (z <= zs) continue;
+    const dx = p.getX(i) - cx;
+    const dy = p.getY(i) - cy;
+    const rho = Math.min(1, Math.hypot(dx / a, dy / b));
+    // Surface distance from the crease: along the tube, then in across the cap towards its centre.
+    const u = Math.min(z - zs, tube) + (1 - rho) * (total - tube);
+    const th = (Math.PI / 2) * Math.min(1, u / total);
+    const k = rho > 1e-6 ? Math.cos(th) / rho : 0;
+    p.setXYZ(i, cx + dx * k, cy + dy * k, zs + WRIST_END * Math.sin(th));
+  }
+  p.needsUpdate = true;
+}
+
+/**
+ * Knuckle relief. The model's back of the hand is smooth, so a curled hand seen from above reads as one rounded lump.
+ * The heads of the metacarpals (the knuckles of a fist) and, smaller, the finger joints are raised on the back of the
+ * hand only, where they show; the skin weights carry each bump with its joint as the fingers bend.
+ */
+const KNUCKLE_RELIEF: readonly { joint: number; height: number; radius: number }[] = [
+  { joint: 1, height: 0.055, radius: 0.13 },
+  { joint: 2, height: 0.03, radius: 0.09 },
+  { joint: 3, height: 0.018, radius: 0.07 },
+];
+
+function raiseKnuckles(geo: BufferGeometry, layout: HandLayout): void {
+  const p = geo.attributes.position;
+  const nrm = geo.attributes.normal;
+  const bumps: { at: Vector3; height: number; r2: number }[] = [];
+  for (let f = 1; f < 5; f++)
+    for (const k of KNUCKLE_RELIEF) {
+      const at = layout.bones.find((b) => b.name === CHAINS[f][k.joint])?.worldPosition;
+      if (at) bumps.push({ at, height: k.height, r2: k.radius * k.radius });
+    }
+  const v = new Vector3();
+  for (let i = 0; i < p.count; i++) {
+    const dorsal = smoothstep(0.15, 0.7, nrm.getY(i));
+    if (dorsal <= 0) continue;
+    v.set(p.getX(i), p.getY(i), p.getZ(i));
+    let lift = 0;
+    for (const b of bumps) {
+      // Distance in the plane of the hand: the joint centre sits mid-finger, the skin above it.
+      const dx = v.x - b.at.x;
+      const dz = v.z - b.at.z;
+      lift += b.height * Math.exp(-(dx * dx + dz * dz) / b.r2);
+    }
+    lift *= dorsal;
+    p.setXYZ(i, v.x + nrm.getX(i) * lift, v.y + nrm.getY(i) * lift, v.z + nrm.getZ(i) * lift);
   }
   p.needsUpdate = true;
 }
@@ -128,14 +199,16 @@ function smoothstep(a: number, b: number, x: number): number {
  * Adds the attributes the hand materials read:
  * - aFingerA (thumb, index, middle, ring) and aFingerB (little): how much a vertex belongs to each finger, from its skin
  *   weights on that finger's phalanges (and the thumb metacarpal), sharpened so a tint stops at the knuckle crease.
- * - aForearm: 0 at the wrist crease to 1 at the end of the forearm, for the translucent styles' wrist fade.
- * - uv: a planar projection with the grain running along the fingers, for the wood maps.
+ * - aForearm: 0 just before the wrist crease to 1 at the closed end, for the translucent styles' wrist fade.
+ * - uv: the grain running along the fingers and wrapping down their sides, for the wood maps.
  */
 function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vector3): void {
   const n = geo.attributes.position.count;
   const pos = geo.attributes.position;
   const si = geo.attributes.skinIndex;
   const sw = geo.attributes.skinWeight;
+  const nrm = geo.attributes.normal;
+  const boneY = layout.bones.map((d) => d.worldPosition.y);
   const fingerOf = new Int8Array(layout.bones.length).fill(-1);
   CHAINS.forEach((chain, f) =>
     chain.forEach((name, k) => {
@@ -148,8 +221,8 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
   const fore = new Float32Array(n);
   const uv = new Float32Array(n * 2);
   const w = [0, 0, 0, 0, 0];
-  const zA = wrist.z - 0.06;
-  const zB = wrist.z + 0.16 + FOREARM_LENGTH + 0.12;
+  const zA = wrist.z + WRIST_CREASE - 0.08;
+  const zB = wrist.z + WRIST_CREASE + WRIST_END;
   for (let i = 0; i < n; i++) {
     w.fill(0);
     for (let c = 0; c < 4; c++) {
@@ -160,7 +233,12 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
     a.set([w[0], w[1], w[2], w[3]], i * 4);
     b[i] = w[4];
     fore[i] = Math.min(1, Math.max(0, (pos.getZ(i) - zA) / (zB - zA)));
-    uv[i * 2] = pos.getX(i) * 0.55;
+    // Grain along the fingers (v follows z). Across them, u is x on the back and the palm, and on the sides of a finger
+    // it keeps unrolling down the side (by the height below the bone's centre line, weighted by how sideways the
+    // surface faces), so the sides carry grain too instead of one colour smeared along the finger. No seams.
+    let yc = 0;
+    for (let c = 0; c < 4; c++) yc += sw.getComponent(i, c) * boneY[si.getComponent(i, c)];
+    uv[i * 2] = (pos.getX(i) + nrm.getX(i) * (yc - pos.getY(i))) * 0.55;
     uv[i * 2 + 1] = pos.getZ(i) * 0.3;
   }
   geo.setAttribute('aFingerA', new BufferAttribute(a, 4));
