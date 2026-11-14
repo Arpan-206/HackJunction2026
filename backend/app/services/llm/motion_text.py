@@ -57,7 +57,7 @@ class MotionTextService:
 
     async def from_text(self, request: MotionFromTextRequest) -> MotionFromTextResponse:
         """Return a motion, a short explanation and the provider that chose it."""
-        client = self._llm.client
+        client = self._llm.client_for("motion")
         errors: str | None = None
         fallback_provider = "fake"
         for attempt in range(1, 2 + c.LLM_MAX_RETRIES):

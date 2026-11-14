@@ -26,8 +26,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = c.DEFAULT_OPENAI_MODEL
     llm_provider: Literal["fake", "gemini", "ollama", "openai"] = "fake"
-    # Providers tried after llm_provider fails, comma separated, then fake rule lines. "none" turns the chain off.
-    llm_fallback: str = "ollama"
+    # Providers tried after the first one fails, comma separated (gemini, openai); the first one is skipped.
+    # openai joins only when OPENAI_BASE_URL is set. After the last one the coach shows its offline note.
+    # "none" keeps one provider.
+    llm_fallback: str = "gemini,openai"
+    # Per-role first provider, for example "lesson=openai,plan=openai" sends those roles to Gemma on Verda first.
+    llm_routes: str = ""
     glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
         "simulator"
     )

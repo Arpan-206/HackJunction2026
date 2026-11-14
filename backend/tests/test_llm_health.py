@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from app.core.config import Settings
+from app.services.llm.registry import LLMState
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "llm_health.py"
 spec = importlib.util.spec_from_file_location("llm_health", SCRIPT)
@@ -26,12 +27,6 @@ def test_gemini_without_a_key_makes_no_call(tmp_path: Path) -> None:
     assert (row.reachable, row.answered, row.words) == ("no", "no", "GEMINI_API_KEY is not set")
 
 
-def test_ollama_down_says_how_to_start_it(tmp_path: Path) -> None:
-    """A closed port reads as no server, with the start command."""
-    row = asyncio.run(health.check_ollama(_settings(tmp_path, ollama_url="http://127.0.0.1:9"), []))
-    assert row.reachable == "no" and "ollama serve" in row.words
-
-
 def test_openai_unreachable_is_reported_not_deployed(tmp_path: Path) -> None:
     """An explicit endpoint on a closed port is unreachable; the script never deploys."""
     settings = _settings(tmp_path, openai_base_url="http://127.0.0.1:9")
@@ -48,8 +43,35 @@ def test_secrets_are_scrubbed_from_errors() -> None:
 
 def test_table_has_every_column() -> None:
     """The header names provider, reachable, answered, latency and first words."""
-    table = health.render([health.Row("ollama", "gemma4:e4b", "yes", "yes", "0.40 s", "Ready to coach.")])
+    table = health.render([health.Row("openai", "google/gemma-4-31B-it", "yes", "yes", "0.40 s", "Ready to coach.")])
     header = table.splitlines()[0]
     for name in ("provider", "model", "reachable", "answered", "latency", "first words"):
         assert name in header
-    assert "gemma4:e4b" in table
+    assert "google/gemma-4-31B-it" in table
+
+
+def _state(tmp_path: Path, **kw: object) -> LLMState:
+    """An LLMState that never reads a .env file."""
+    return LLMState(_settings(tmp_path, gemini_api_key=None, **kw))
+
+
+def test_roles_follow_the_fallback_rules(tmp_path: Path) -> None:
+    """Lesson routed to Verda, Verda down, Gemini up: lesson generation answers with Gemini."""
+    state = _state(tmp_path, llm_provider="gemini", openai_base_url="https://verda.example", llm_routes="lesson=openai")
+    rows = [health.Row("gemini", "g", "yes", "yes"), health.Row("openai", "o", "no", "no")]
+    table = {role: (chain, now) for role, chain, now in health.role_table(state, rows)}
+    assert table["lesson generation"] == ("openai then gemini then template", "gemini")
+    assert table["coach hint"] == ("gemini then openai then offline note", "gemini")
+    assert "ollama" not in health.render_roles(health.role_table(state, rows))
+
+
+def test_roles_go_offline_when_nothing_answers(tmp_path: Path) -> None:
+    """No model answers: the coach shows the offline note and the others use templates."""
+    rows = [health.Row("gemini", "g"), health.Row("openai", "o")]
+    table = {role: now for role, _, now in health.role_table(_state(tmp_path, llm_provider="gemini"), rows)}
+    assert table == {
+        "coach hint": "offline (offline note)",
+        "plan": "offline (template)",
+        "lesson generation": "offline (template)",
+        "motion from text": "offline (template)",
+    }

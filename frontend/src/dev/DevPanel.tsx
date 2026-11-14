@@ -151,9 +151,14 @@ function Body() {
           {!state && <option value="">unknown</option>}
           <option value="fake">fake</option>
           <option value="gemini">gemini</option>
-          <option value="ollama">ollama</option>
+          <option value="openai">openai (Gemma on Verda)</option>
         </select>
       </label>
+      {state?.llm_chain && state.llm_chain.length > 0 && (
+        <p>
+          Chain: {state.llm_chain.join(' then ')}. Last answer: {state.llm_answered_by ?? 'none yet'}.
+        </p>
+      )}
 
       <label>
         Theme

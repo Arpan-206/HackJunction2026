@@ -167,7 +167,7 @@ export interface GenerateLessonRequest {
 
 export interface GenerateLessonResponse {
   lesson: Lesson;
-  provider: string;
+  provider: ModelProvider;
   attempts: number;
 }
 
@@ -231,8 +231,9 @@ export interface CoachHintRequest {
 }
 
 export interface CoachHintResponse {
+  /** With provider 'offline' this is the one-sentence offline note. */
   hint: string;
-  provider: string;
+  provider: ModelProvider;
 }
 
 export interface CoachPlanRequest {
@@ -256,7 +257,7 @@ export interface CoachPlanResponse {
   drills: Drill[];
   /** Where this learner struggles, written for the master. */
   master_note: string;
-  provider: string;
+  provider: ModelProvider;
 }
 
 export interface MotionFromTextRequest {
@@ -269,7 +270,7 @@ export interface MotionFromTextResponse {
   motion: MotionSpec;
   explanation: string;
   /** 'fake' when the keyword rules answered. */
-  provider: string;
+  provider: ModelProvider;
 }
 
 /** Optional fields of POST /api/lessons/generate_from_video next to the video itself. */
@@ -282,7 +283,14 @@ export interface VisionHandsResponse {
   hands: { side: Side; wrist_pos: [number, number, number] | null; landmarks: [number, number, number][] }[];
 }
 
-export type LlmProvider = 'fake' | 'gemini' | 'ollama';
+export type LlmProvider = 'fake' | 'gemini' | 'ollama' | 'openai';
+
+/**
+ * Who answered a model call (the `provider` field): 'gemini', 'openai' (Gemma on Verda), 'fake' or 'fake (rate limited)'
+ * (a template after every model failed), 'offline' (the coach's offline note), 'algorithmic' (the rule-based cue) or
+ * 'mock'. Show it with features/shared/ModelLabel, never as raw text in user copy.
+ */
+export type ModelProvider = 'gemini' | 'openai' | 'ollama' | 'fake' | 'fake (rate limited)' | 'offline' | 'algorithmic' | 'mock' | (string & {});
 
 export interface SmoothingState {
   enabled: boolean;
@@ -295,6 +303,9 @@ export interface DevState {
   smoothing: SmoothingState;
   llm_provider: LlmProvider;
   simulator_motion: MotionSpec;
+  /** Read-only: the providers the default role tries, in order, and who answered last (a provider name or 'offline'). */
+  llm_chain?: string[];
+  llm_answered_by?: string | null;
 }
 
 export type DevStatePatch = Partial<Omit<DevState, 'smoothing'>> & { smoothing?: Partial<SmoothingState> };
