@@ -40,6 +40,12 @@ from . import piano as P
 
 LETTER_RE = re.compile(r"\bletter\s+([a-z])\b", re.I)
 MAX_PIANO_ITEMS = 3
+# Real-capture check (core/priors/out/real_check.json): the glove solver bends
+# each end joint (DIP) about as much as the middle joint, pianists about half
+# as much, so DIP facts would fire on every glove frame. They are left out,
+# and a joint must sit at least PIANO_MIN_BY_DEG outside the band to count.
+PIANO_SKIP_JOINTS = ("index_dip", "middle_dip", "ring_dip", "little_dip")
+PIANO_MIN_BY_DEG = 10.0
 
 
 def flag(name: str) -> bool:
@@ -96,7 +102,11 @@ def piano_fact(learner: np.ndarray, pressing: bool | None, slot_weights: np.ndar
     ranges = _piano_ranges()
     if ranges is None:
         return None
-    return {"pressing": pressing, "outside": ranges.check(learner, pressing, slot_weights)[:MAX_PIANO_ITEMS]}
+    items = [
+        i for i in ranges.check(learner, pressing, slot_weights)
+        if i["joint"] not in PIANO_SKIP_JOINTS and i["by_deg"] >= PIANO_MIN_BY_DEG
+    ]
+    return {"pressing": pressing, "outside": items[:MAX_PIANO_ITEMS]}
 
 
 def _upper(c: str) -> str:
