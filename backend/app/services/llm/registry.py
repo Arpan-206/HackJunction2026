@@ -11,6 +11,7 @@ from app.services.llm.openai_compat import OpenAICompatLLM
 from app.services.llm.rate_limit import RateLimiter
 
 FALLBACKS = ("gemini", "openai")  # providers LLM_FALLBACK and LLM_ROUTES may name
+UNSET_OPENAI_URL = "http://localhost:8000"  # the Settings default: this backend, not a model server
 ROLES = ("hint", "plan", "lesson", "motion")  # LLMRequest.task values
 
 
@@ -58,7 +59,8 @@ class LLMState:
 
     def openai_configured(self) -> bool:
         """True when OPENAI_BASE_URL was set, in the environment or a .env file (the default is this backend itself)."""
-        return "openai_base_url" in self._settings.model_fields_set
+        url = self._settings.openai_base_url.rstrip("/")
+        return "openai_base_url" in self._settings.model_fields_set and bool(url) and url != UNSET_OPENAI_URL
 
     def fallback_names(self, primary: str) -> list[str]:
         """The providers tried after primary: the ones LLM_FALLBACK names that are configured. Empty for fake or none."""

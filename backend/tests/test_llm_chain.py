@@ -156,6 +156,8 @@ VERDA = {"openai_base_url": "https://verda.example"}
         ({"llm_provider": "gemini", "llm_fallback": "none", **VERDA}, ["gemini"]),
         ({"llm_provider": "gemini", "llm_fallback": "ollama", **VERDA}, ["gemini"]),
         ({"llm_provider": "fake", **VERDA}, ["fake"]),
+        ({"llm_provider": "gemini", "openai_base_url": "http://localhost:8000"}, ["gemini"]),
+        ({"llm_provider": "gemini", "openai_base_url": ""}, ["gemini"]),
     ],
 )
 def test_registry_builds_the_chain_from_settings(tmp_path: Path, kw: dict, expected: list[str]) -> None:
