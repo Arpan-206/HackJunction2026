@@ -134,3 +134,29 @@ Read errors with `await ws.recv()` if you want them; for one-off pushes use `htt
 | Frontend shows "closed" status | Backend not on :8000 or proxy not running | Start backend; `npm run dev` proxies `/ws` to :8000 |
 | `POST /api/ingest/frames` 400 "not active" | Source is not `external` | Switch with `/api/dev/state` first |
 | Scores look wrong on real gloves but fine on simulator | Calibration missing; rest pose offset | Do the flat/fist calibration in the app |
+
+## Proving the gloves and their connections work (Smartgloves II over the Rokoko Device SDK)
+
+This is the USB path: `rokoko-sdk.exe` (RGMP 127.0.0.1:12276, RCSP 45451) and `rkk-hand-solver` (RGMP 12277), not Studio.
+
+Offline, always on (no hardware): `cd backend; uv run pytest -q tests/test_glove_rgmp_replay.py`. It replays trimmed real captures from `backend/tests/fixtures/rgmp/` (about 330 KB, rebuilt by `scripts/make_rgmp_fixture.py`) and checks device ids and hands, 49 streams per glove, frame rate against the definition, unit quaternions, monotonic time without gaps, status flags decoded by bit name, finger isolation in scripted poses, and the solver's flexion direction.
+
+Live, opt-in (gloves plugged in, driver and solver running, Studio closed, gloves resting on a table):
+
+```
+cd backend
+set GLOVES_LIVE=1            (PowerShell: $env:GLOVES_LIVE=1)
+uv run pytest -m hardware -v -s
+```
+
+It checks the three ports, the RCSP device list (both gloves, sides match RGMP), definitions within 3 s, at least 90 percent of the expected rate per glove for 5 s, frame lag under 100 ms, no `coil_pro` dependency, no `Rokoko Studio.exe`, and low gyro noise while still. Without `GLOVES_LIVE=1` the tests are skipped.
+
+Guided check: `uv run python scripts/glove_check.py` asks for flat hands, a fist, then open hands, and prints per finger sensor rotation, the solver's local flexion axis and sign, and PASS or FAIL. It only reports; it never edits `constants.py`.
+
+Findings from the real gloves (firmware 3.4.0, driver 1.9.7):
+
+- The driver sends RGMP definitions as soon as a client connects, but no data frames until some RCSP client has sent `SubscribeToData` for the device, and it stops when that client disconnects. A plain RGMP reader sees nothing otherwise. The live tests hold their own subscription.
+- Each glove has two groups at 83.3 Hz each (`default` 31 streams, `emf_only` 18 streams, 49 in all). Device clocks are the device boot clock, not the host clock. RCSP has no battery command in this driver version.
+- The driver's `arm_sensor` transform in `default` is relative to `coil_pro`; finger sensors are relative to `hub`. Nothing in `backend/app` uses `coil_pro`.
+- Solver `joints_local` (quaternion x, y, z, w): a fist rotates every finger joint about local +X by a negative angle on both hands (medial about -60 to -90 degrees, proximal about -55 to -90 with some Y and Z). So the flexion axis is X (index 0, matching `ROKOKO_FLEX_AXIS`) and the sign in that frame is negative. This is the solver's frame, not the Studio JSON frame that `rokoko_mapper.py` reads, so `ROKOKO_FLEX_SIGN` itself is still unverified for Studio. In `joints_openxr` a fist moves every fingertip toward the wrist (+Z) and toward the palm (-Y), as it should.
+- The solver spreads one finger's flexion over its joints unevenly (an isolated left index shows almost only on the medial joint, an isolated right little reaches only about -40 degrees proximal while its sensor turns 100 degrees). Use the sum over joints, not one joint.
