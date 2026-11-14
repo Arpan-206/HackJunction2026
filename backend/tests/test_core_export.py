@@ -401,6 +401,25 @@ def test_verda_names_configure_the_openai_provider(
     assert state.chain_for("lesson") == ["openai", "gemini"]
 
 
+def test_empty_openai_lines_do_not_hide_the_verda_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A .env copied from .env.example has empty OPENAI_ lines; the Verda names below them still count."""
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("OPENAI_MODEL", "")
+    monkeypatch.setenv("VERDA_GEMMA_URL", "https://containers.example/geppetto-gemma")
+    monkeypatch.setenv("VERDA_INFERENCE_KEY", "test-key")
+    monkeypatch.setenv("VERDA_GEMMA_MODEL", "google/gemma-4-31B-it")
+    s = Settings(_env_file=None)
+    assert s.openai_base_url == "https://containers.example/geppetto-gemma"
+    assert s.openai_api_key == "test-key"
+    assert s.openai_model == "google/gemma-4-31B-it"
+    # an OPENAI_ value that is set wins
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://other.example")
+    assert Settings(_env_file=None).openai_base_url == "https://other.example"
+
+
 def _scripts():
     """The two Verda scripts, imported as modules."""
     sys.path.insert(0, str(c.BACKEND_ROOT / "scripts"))
