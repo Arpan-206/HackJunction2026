@@ -125,7 +125,7 @@ export function SkillPage() {
       <PageHeader title={skill.name} />
       {offline && <p className="note ap-banner">Backend offline: showing the built-in demo lessons.</p>}
       <div className={`sk-page${skill.live ? '' : ' sk-page--workshop'}`}>
-        <div className="sk-page__show">{skill.live && skill.courses[0] ? <SkillShowcase course={skill.courses[0]} /> : <WorkshopShowcase pose={skill.keyPose} name={skill.name} />}</div>
+        <div className="sk-page__show">{skill.live && skill.courses[0] ? <SkillShowcase course={skill.courses[0]} scene={skill.scene} /> : <WorkshopShowcase pose={skill.keyPose} name={skill.name} scene={skill.scene} />}</div>
         <div className="sk-page__info">
           <p className="sk-page__lede">{skill.description}</p>
           {skill.live && <PrimaryActions skill={skill} progress={progress} />}

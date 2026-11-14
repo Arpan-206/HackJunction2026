@@ -9,6 +9,7 @@ import {
   filterSkills,
   HANDS_LABEL,
   matchReason,
+  progressBar,
   skillPath,
   type Difficulty,
   type HandsNeeded,
@@ -16,6 +17,8 @@ import {
   type SkillView,
 } from './catalogue';
 import { DifficultyLine, SkillStill } from './SkillParts';
+import { SkillPreview, useLinger } from './SkillPreview';
+import { prefersReducedMotion } from '../../shared/settings';
 import { useSkills } from './useSkills';
 import './skills.css';
 
@@ -57,34 +60,51 @@ function typingIn(target: EventTarget | null): boolean {
 
 function SkillCard({ skill, progress, query }: { skill: SkillView; progress: SkillProgress; query: string }) {
   const reason = matchReason(skill, query);
-  const done = progress.total > 0 && progress.mastered === progress.total;
+  const bar = progressBar(progress);
+  // Hover (a mouse, not a tap) or keyboard focus plays the skill in the card; reduced motion keeps the still.
+  const [hot, setHot] = useState(false);
+  const preview = useLinger(hot && skill.live && !prefersReducedMotion());
   return (
     <li>
-      <Link to={skillPath(skill.id)} className={`sk-card${skill.live ? '' : ' sk-card--workshop'}`}>
+      <Link
+        to={skillPath(skill.id)}
+        className={`sk-card${skill.live ? '' : ' sk-card--workshop'}`}
+        onPointerEnter={(e) => e.pointerType === 'mouse' && setHot(true)}
+        onPointerLeave={() => setHot(false)}
+        onFocus={() => setHot(true)}
+        onBlur={() => setHot(false)}
+      >
         <div className="sk-card__media">
           {skill.still ? (
             <img className="sk-card__view sk-card__img" src={skill.still.src} alt={skill.still.alt} loading="lazy" />
           ) : (
-            <SkillStill className="sk-card__view" pose={skill.keyPose} label={`${skill.name}: the key pose on a chalk hand`} />
+            <SkillStill className="sk-card__view" pose={skill.keyPose} scene={skill.scene} label={`${skill.name}: the expert's hand, seen over the back of the hand`} />
           )}
+          {preview.mounted && <SkillPreview skill={skill} shown={preview.shown} />}
           {!skill.live && <span className="sk-card__veil" aria-hidden="true" />}
         </div>
         <div className="sk-card__body">
           <h2 className="sk-card__name">{skill.name}</h2>
-          <DifficultyLine difficulty={skill.difficulty} />
-          {skill.live ? (
-            <span className="sk-card__lessons">
-              <span>
-                {skill.lessonCount} {skill.lessonCount === 1 ? 'lesson' : 'lessons'}
-              </span>
-              {progress.started && (
-                <span className={done ? 'sk-card__done' : undefined}>
-                  {progress.mastered} of {progress.total} {progress.total === 1 ? 'lesson' : 'lessons'} mastered
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="sk-card__workshop">In the workshop</span>
+          <div className="sk-card__meta">
+            <DifficultyLine difficulty={skill.difficulty} />
+            {skill.live ? (
+              <span className={`sk-card__lessons${bar.complete ? ' sk-card__done' : ''}`}>{bar.label}</span>
+            ) : (
+              <span className="sk-card__workshop">In the workshop</span>
+            )}
+          </div>
+          {skill.live && (
+            <div
+              className={`sk-progress${bar.complete ? ' sk-progress--done' : ''}`}
+              role="progressbar"
+              aria-label={`${skill.name} progress`}
+              aria-valuemin={0}
+              aria-valuemax={progress.total}
+              aria-valuenow={Math.min(progress.mastered, progress.total)}
+              aria-valuetext={bar.label}
+            >
+              <span className="sk-progress__fill" style={{ width: `${bar.percent}%` }} />
+            </div>
           )}
           {reason && (
             <span className="sk-card__why">
@@ -154,7 +174,7 @@ export function Dashboard() {
   const ready = lessons !== null;
 
   return (
-    <>
+    <div className="sk-home">
       <PageHeader title="Choose a skill" />
       {offline && <p className="note ap-banner">Backend offline: showing the built-in demo lessons. Practice works locally; scores are estimated on this device.</p>}
       {loading && !ready && <p className="note ap-state">Consulting the ledger...</p>}
@@ -170,48 +190,50 @@ export function Dashboard() {
       {ready && courses.length === 0 && <p className="note ap-state">No lessons yet. Ask an expert to record one; until then, every skill below is still in the workshop.</p>}
       {ready && (
         <section className="sk-dash" aria-label="Skills">
-          <div className="sk-search" role="search">
-            <label className="ap-sr" htmlFor="skill-search">
-              Search skills
-            </label>
-            <svg className="sk-search__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-              <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M15.5 15.5L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            <input
-              ref={input}
-              id="skill-search"
-              className="sk-search__input"
-              type="search"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Search skills, e.g. grip, music, sign"
-              aria-keyshortcuts="/"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== 'Escape') return;
-                e.preventDefault();
-                if (query) setQuery('');
-                else e.currentTarget.blur();
-              }}
-            />
-            {!query && (
-              <kbd className="sk-search__key" aria-hidden="true" title="Press / to search">
-                /
-              </kbd>
-            )}
+          <div className="sk-bar">
+            <div className="sk-search" role="search">
+              <label className="ap-sr" htmlFor="skill-search">
+                Search skills
+              </label>
+              <svg className="sk-search__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M15.5 15.5L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              <input
+                ref={input}
+                id="skill-search"
+                className="sk-search__input"
+                type="search"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Search skills, e.g. grip, music, sign"
+                aria-keyshortcuts="/"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Escape') return;
+                  e.preventDefault();
+                  if (query) setQuery('');
+                  else e.currentTarget.blur();
+                }}
+              />
+              {!query && (
+                <kbd className="sk-search__key" aria-hidden="true" title="Press / to search">
+                  /
+                </kbd>
+              )}
+            </div>
+            <div className="sk-filters">
+              <ToggleGroup label="Level" value={difficulty} onChange={setDifficulty} options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABEL[d] }))} />
+              <ToggleGroup
+                label="Hands"
+                value={hands}
+                onChange={setHands}
+                options={(['one', 'two'] as HandsNeeded[]).map((h) => ({ value: h, label: HANDS_LABEL[h] }))}
+              />
+            </div>
           </div>
-          <div className="sk-filters">
-            <ToggleGroup label="Level" value={difficulty} onChange={setDifficulty} options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABEL[d] }))} />
-            <ToggleGroup
-              label="Hands"
-              value={hands}
-              onChange={setHands}
-              options={(['one', 'two'] as HandsNeeded[]).map((h) => ({ value: h, label: HANDS_LABEL[h] }))}
-            />
-          </div>
-          <div className="sk-count">
+          <div className="sk-count" hidden={!filtered}>
             <p aria-live="polite">{countLine(shown.length, skills.length, query.trim(), filtered)}</p>
             {query.trim() && shown.length > 0 && (
               <button
@@ -267,6 +289,6 @@ export function Dashboard() {
           )}
         </section>
       )}
-    </>
+    </div>
   );
 }

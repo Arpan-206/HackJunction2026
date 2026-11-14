@@ -46,7 +46,7 @@ describe('shadow theatre', () => {
     expect(layoutFor('sp_rabbit', 'right')).toBe('right');
     expect(layoutFor(null, 'left')).toBe('left');
     expect(layoutFor('sp_flapping_bird', 'both')).toBe('wings');
-    expect(layoutFor('cr_chain', 'both')).toBe('wings');
+    expect(layoutFor('free_two_hands', 'both')).toBe('wings');
     expect(layoutFor('sp_snail', 'both')).toBe('snail');
     expect(puppetLayout('right').map((p) => p.side)).toEqual(['right']);
     expect(puppetLayout('wings').map((p) => p.side).sort()).toEqual(['left', 'right']);
