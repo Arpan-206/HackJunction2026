@@ -1,0 +1,86 @@
+name: lane-audit
+
+# One CRACI build per lane branch, so CRACI records each lane's SBOM and
+# network trace. The workflow lives on the craci branch only: it checks out
+# each lane at its tip and runs the same installs and suites as ci.yml.
+# The job name carries the lane, and tools/agent_bom matches on it.
+# Caches stay off, so no lane inherits packages from another lane's cache.
+
+on:
+  push:
+    branches: [craci]
+    paths: [.github/workflows/lane-audit.yml]
+  workflow_dispatch:
+    inputs:
+      lanes:
+        description: "Space-separated lane branches (empty: every branch on origin)"
+        required: false
+        default: ""
+
+jobs:
+  lanes:
+    runs-on: craci
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: list
+        env:
+          LANES: ${{ inputs.lanes }}
+        run: |
+          if [ -n "$LANES" ]; then
+            names="$LANES"
+          else
+            names=$(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin | grep -v '^HEAD$')
+          fi
+          json=$(printf '%s\n' $names | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+          echo "matrix=$json" >> "$GITHUB_OUTPUT"
+          echo "$json"
+
+  audit:
+    needs: lanes
+    name: lane ${{ matrix.lane }}
+    runs-on: craci
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        lane: ${{ fromJSON(needs.lanes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.lane }}
+      - name: Lane commit
+        run: git rev-parse HEAD
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Core install and tests
+        if: ${{ hashFiles('requirements.txt') != '' }}
+        continue-on-error: true
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python -r requirements.txt
+          .venv/bin/python -m pytest -q
+      - name: Backend install and tests
+        if: ${{ hashFiles('backend/pyproject.toml') != '' }}
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          uv sync
+          uv run pytest -q
+      - name: Frontend install, lint, tests and build
+        if: ${{ hashFiles('frontend/package-lock.json') != '' }}
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
