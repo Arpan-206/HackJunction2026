@@ -67,7 +67,7 @@ def write_wearer(d, wid, wearer, ranges, neutral, created_at):
         },
         "range_calibration_ids": ranges,
         "reinit": False,
-        "verified": None,
+        "verified": False,
     }
     (d / "glove_calibrations" / f"{wid}.json").write_text(json.dumps(body))
 
@@ -81,6 +81,7 @@ def ccfg(tmp_path):
     c = load_config(ROOT / "config.toml")
     c.calibration.data_dir = str(tmp_path / "data")
     c.calibration.enabled = True
+    c.calibration.max_gain = 0.0  # exact maths here; the cap has its own test
     return c
 
 
@@ -304,3 +305,26 @@ def test_disabled_and_fake_sessions_skip_calibration(ccfg, tmp_path):
     ccfg.calibration.enabled = False
     cals = Calibrations(ccfg)
     assert cals.reload() == {"left": None, "right": None}
+
+
+def test_gain_cap_keeps_a_small_range_from_amplifying_noise(ccfg, tmp_path):
+    d = tmp_path / "data"
+    flat = raw_angles(FLAT)
+    fist = flat.copy()
+    fist[[0, 1]] += 14.0  # the real thumb: about 14 deg from flat to fist
+    fist[2:14] += 60.0
+    write_range(
+        d,
+        "t",
+        "right",
+        angles_to_triples(flat),
+        angles_to_triples(fist),
+        "2026-11-14T10:00:00Z",
+    )
+    ccfg.calibration.max_gain = 2.0
+    cal = load_hand(d, "right", "", ccfg.calibration, ccfg.hand)
+    out = cal.apply(flat + 7.0)
+    # thumb: 7 deg of movement reads 14 (gain 2), not 30 (gain 60 / 14)
+    assert out[0] == pytest.approx(14.0, abs=0.1)
+    # index: range 60 is above full / 2 = 45, so the gain is 90 / 60
+    assert out[2] == pytest.approx(7.0 * 90 / 60, abs=0.1)

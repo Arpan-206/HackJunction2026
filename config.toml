@@ -90,6 +90,10 @@ min_range_deg = 2.9
 # reads the same as it.
 clip_low = 0.0
 clip_high = 1.0
+# Cap on full / (fist - flat). The real thumb moves only about 14 deg between
+# flat and fist in the core's angles; without a cap its noise is multiplied
+# by 4 (STATUS.md "Calibrated angles"). 0 turns the cap off.
+max_gain = 2.0
 
 [camera]
 device = 0

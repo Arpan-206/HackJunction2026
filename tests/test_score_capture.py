@@ -44,3 +44,40 @@ def test_real_capture_records_and_scores(cfg, tmp_path):
         and 0.0 <= fs.overall <= 1.0
         and set(fs.err_deg) == {"thumb", "index", "middle", "ring", "little"}
     )
+
+
+@pytest.mark.skipif(not FIXTURE.exists(), reason="teammate fixture not present")
+def test_real_capture_calibrates_from_its_flat_and_fist_slices(cfg, tmp_path):
+    import json
+
+    import numpy as np
+
+    from core import hand as H
+    from tools.score_capture import (
+        PHASES,
+        aligned_phase_error,
+        calibrate_hands,
+        phase_segments,
+    )
+
+    raw = tmp_path / "worn_solver.rgmp"
+    raw.write_bytes(gzip.decompress(FIXTURE.read_bytes()))
+    from tools.score_capture import hands_from_capture
+
+    hands = hands_from_capture(cfg, raw)
+    assert all(len(phase_segments(hands[s])) == len(PHASES) for s in hands)
+    out = tmp_path / "cal"
+    summ = calibrate_hands(cfg, hands, "capture", out, "")
+    for side in ("left", "right"):
+        assert summ[side]["range"] == "measured"
+        body = json.loads((out / "calibrations" / f"capture-{side}.json").read_text())
+        assert body["side"] == side and set(body["flat"]) == set(H.FINGERS)
+        flat_slice = phase_segments(hands[side])[0]
+        # the wearer's own flat pose now reads close to 0 on every finger
+        for f in H.FINGERS:
+            flex = np.median([h.angles[H.FLEXION_SLOTS[f]].mean() for h in flat_slice])
+            assert flex < 8, f"{side} {f} reads {flex:.1f} deg in its own flat pose"
+
+        assert all(h.angles_raw is not None for h in hands[side])
+    res = aligned_phase_error(hands, use_raw=False)
+    assert set(res["per_phase_median"]) == set(PHASES[2:])

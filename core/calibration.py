@@ -91,6 +91,7 @@ class HandCalibration:
     min_range_deg: float = 2.9
     lo: float = 0.0
     hi: float = 1.0
+    max_gain: float = 0.0  # 0: no cap; else the span is at least full / max_gain
     origin: dict = field(default_factory=dict)
 
     @property
@@ -102,7 +103,13 @@ class HandCalibration:
     def apply(self, angles: np.ndarray) -> np.ndarray:
         a = np.asarray(angles, dtype=float)
         use = self.usable
-        span = np.where(use, self.fist - self.flat, 1.0)
+        span = self.fist - self.flat
+        if self.max_gain > 0:
+            # a joint that barely moves between flat and fist (the thumb: about
+            # 14 deg on the real gloves) would otherwise have its noise
+            # multiplied by full / range
+            span = np.maximum(span, self.full / self.max_gain)
+        span = np.where(use, span, 1.0)
         norm = np.clip((a - self.flat) / span, self.lo, self.hi)
         return np.where(use, norm * self.full, a)
 
@@ -156,6 +163,7 @@ def make_hand_calibration(
         min_range_deg=float(cal_cfg.min_range_deg),
         lo=float(cal_cfg.clip_low),
         hi=float(cal_cfg.clip_high),
+        max_gain=float(cal_cfg.get("max_gain", 0.0)),
         origin=origin,
     )
 
