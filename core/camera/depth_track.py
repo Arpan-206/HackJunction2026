@@ -718,3 +718,200 @@ class YawCorrector:
                                         self.cfg.max_correction_deg))
         self.updates += 1
         return True
+
+
+# ---------------------------------------------------------------------------------------------
+# Gloved hands from depth (riser position). Agreed with lane hand-root (FIELDS, Sat 14 Nov):
+# hand_blobs(frame, table=None, max_n=2) -> list[HandBlob], largest first. hand-root adds the
+# LED identity and the fusion into wrist_p; this part only finds the blobs.
+# ---------------------------------------------------------------------------------------------
+
+
+@dataclass
+class HandBlobConfig:
+    """[camera.depth] hand_* keys. Metres; pixels at the depth resolution."""
+
+    hand_min_confidence: int = 1
+    hand_h_min_m: float = 0.01           # above the work surface
+    hand_h_max_m: float = 0.28           # bench-gloves-1: hands at the chest 0.11 m, raised 0.19 m, the face 0.34 m and up
+    hand_max_range_m: float = 1.2
+    hand_body_gap_m: float = 0.06        # nearer to the lens than the body's main distance by this much
+    hand_body_h_min_m: float = 0.08      # points this high above the surface vote for the body distance
+    hand_area_min_m2: float = 0.004      # a hand, seen from above, is about 0.01 to 0.03 m2
+    hand_area_max_m2: float = 0.08
+    hand_open_px: int = 3
+
+    @classmethod
+    def from_section(cls, sec) -> "HandBlobConfig":
+        c = cls()
+        if sec is None:
+            return c
+        for k in c.__dataclass_fields__:
+            if k in sec:
+                setattr(c, k, type(getattr(c, k))(sec[k]))
+        return c
+
+
+@dataclass
+class HandBlob:
+    centre_world: np.ndarray             # (3,) ARKit world metres, mean of the blob's points
+    centre_uv: tuple[float, float]       # normalised 0..1 in the colour frame as streamed (not rotated)
+    axis_world: np.ndarray | None        # (3,) unit long axis on the table, pointing away from the body
+    height_m: float                      # centre height above the table
+    area_px: int                         # at the depth resolution
+    mask: np.ndarray                     # bool (depth H, W)
+    darkness: float                      # 0..1, mean colour darkness in the mask (1 = black)
+    area_m2: float = 0.0
+    elongation: float = 0.0
+    range_m: float = 0.0                 # centre distance from the lens
+    side_hint: str | None = None         # "left" / "right" from the bench x position (person's view)
+    centre_bench: np.ndarray | None = None
+
+
+def upright_turns(frame: DepthFrame) -> int:
+    """Quarter turns clockwise (cv2.rotate order: 0, 90 cw, 180, 90 ccw) that put world up at the
+    top of the image. The app streams in sensor orientation, so an upright phone gives 1 or 3."""
+    T = frame.transform
+    if T is None or np.allclose(T, np.eye(4)):
+        return 0
+    Rcv = (np.asarray(T, dtype=float) @ ARKIT_TO_OPENCV)[:3, :3]
+    up_cam = Rcv.T @ np.array([0.0, 1.0, 0.0])      # world up in camera axes (x right, y down)
+    ux, uy = float(up_cam[0]), float(up_cam[1])
+    # image direction of "up": (ux, uy) in (x right, y down); upright means it points to -y
+    if abs(uy) >= abs(ux):
+        return 0 if uy < 0 else 2
+    return 1 if ux < 0 else 3   # up points left: turn clockwise once; up points right: counter-clockwise
+
+
+def rotate_upright(img: np.ndarray, turns: int) -> np.ndarray:
+    import cv2
+    return img if turns % 4 == 0 else cv2.rotate(img, [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180,
+                                                       cv2.ROTATE_90_COUNTERCLOCKWISE][turns % 4])
+
+
+def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
+               cfg: HandBlobConfig | None = None, tracker_cfg: TrackerConfig | None = None,
+               camera_yaw_deg: float | None = None) -> list[HandBlob]:
+    """The max_n largest hand-sized blobs nearer than the body and above the work surface.
+
+    No fingers: ARKit depth is too smooth; fingers come from the gloves. With table=None the
+    table is the app's plane, else our RANSAC fit (as DepthTracker does).
+    """
+    import cv2
+    cfg = cfg or HandBlobConfig()
+    tcfg = tracker_cfg or TrackerConfig()
+    if frame.depth is None:
+        return []
+    H, W = frame.depth.shape
+    p, valid, in_world = backproject(frame)
+    cam, cam_fwd = camera_pose(frame, in_world)
+    conf = frame.confidence.reshape(-1) if frame.confidence is not None else np.full(H * W, 2, np.uint8)
+    if table is None:
+        table = app_table(frame, cam, in_world)
+        if table is None:
+            up = np.array([0.0, 1.0, 0.0]) if in_world else None
+            rng = np.random.default_rng(frame.frame_id)
+            table = fit_table(p[valid & (conf >= 2)], cam, up, tcfg, rng)
+    if table is None:
+        return []
+    h = table.height(p)
+    r = np.linalg.norm(p - cam, axis=1)
+    ok = valid & (conf >= cfg.hand_min_confidence) & (r <= cfg.hand_max_range_m)
+    # the body's main distance: the strongest peak among points well above the surface
+    body = ok & (h >= cfg.hand_body_h_min_m) & (h <= 0.8)
+    if body.sum() < 50:
+        return []
+    hist, edges = np.histogram(r[body], bins=np.arange(0.0, cfg.hand_max_range_m + 0.02, 0.02))
+    body_r = float(edges[int(np.argmax(hist))] + 0.01)
+    m = ok & (h >= cfg.hand_h_min_m) & (h <= cfg.hand_h_max_m) & (r <= body_r - cfg.hand_body_gap_m)
+    img = m.reshape(H, W).astype(np.uint8)
+    if cfg.hand_open_px > 1:
+        img = cv2.morphologyEx(img, cv2.MORPH_OPEN, np.ones((cfg.hand_open_px, cfg.hand_open_px), np.uint8))
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(img, connectivity=8)
+    if n <= 1:
+        return []
+    K = frame.depth_intrinsics()
+    pix_m2 = (r / K[0, 0]) * (r / K[1, 1])                 # approximate metric area per pixel
+    gray = cv2.cvtColor(cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+    yaw = tcfg.camera_yaw_deg if camera_yaw_deg is None else camera_yaw_deg
+    # bench axes: y up from the table, -z the camera's viewing direction on the table, turned by yaw
+    nrm = table.normal
+    f = cam_fwd - (cam_fwd @ nrm) * nrm
+    f = f / max(1e-9, np.linalg.norm(f))
+    R = rot_y(yaw) @ np.stack([np.cross(f, nrm), nrm, -f])
+    body_c = (p[body] - table.point) @ R.T
+    body_x = float(np.median(body_c[:, 0])) if len(body_c) else 0.0
+    out: list[HandBlob] = []
+    for k in np.argsort(-stats[1:, cv2.CC_STAT_AREA]) + 1:
+        bm = lab == k
+        flat = bm.reshape(-1)
+        area_m2 = float(pix_m2[flat].sum())
+        if not (cfg.hand_area_min_m2 <= area_m2 <= cfg.hand_area_max_m2):
+            continue
+        P = p[flat]
+        c = P.mean(axis=0)
+        q = (P - table.point) @ R.T
+        cb = q.mean(axis=0)
+        xz = q[:, [0, 2]] - cb[[0, 2]]
+        w, V = np.linalg.eigh(np.cov(xz.T)) if len(xz) > 3 else (np.array([1.0, 1.0]), np.eye(2))
+        a = V[:, 1]
+        # point away from the body: in the bench frame the person is at +z
+        if a[1] > 0:
+            a = -a
+        axis_world = np.array([a[0], 0.0, a[1]]) @ R
+        vv, uu = np.nonzero(bm)
+        out.append(HandBlob(
+            centre_world=c, centre_uv=(float((uu.mean() + 0.5) / W), float((vv.mean() + 0.5) / H)),
+            axis_world=axis_world / max(1e-9, np.linalg.norm(axis_world)),
+            height_m=float(table.height(c[None])[0]), area_px=int(bm.sum()), mask=bm,
+            darkness=float(1.0 - gray[bm].mean() / 255.0), area_m2=round(area_m2, 4),
+            elongation=float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12))),
+            range_m=float(np.linalg.norm(c - cam)), centre_bench=cb))
+        if len(out) >= max_n:
+            break
+    # side from the bench x (core world: x to the person's right): two blobs split by x,
+    # one blob compared with the body's middle
+    if len(out) == 2:
+        a, b = out
+        if a.centre_bench[0] >= b.centre_bench[0]:
+            a.side_hint, b.side_hint = "right", "left"
+        else:
+            a.side_hint, b.side_hint = "left", "right"
+    elif len(out) == 1:
+        out[0].side_hint = "right" if out[0].centre_bench[0] >= body_x else "left"
+    return out
+
+
+class HandBlobSides:
+    """Keeps left and right steady across frames for hand_blobs output (stateful, optional).
+
+    A blob followed from the last frames (nearest centre within gate_m) keeps its side. Two
+    blobs seen together are split by bench x, which can correct a wrong side. A new single blob
+    takes hand_blobs' side_hint. hand-root's LED identity overrides all of this when it exists.
+    """
+
+    def __init__(self, gate_m: float = 0.08, max_gap: int = 3) -> None:
+        self.gate_m, self.max_gap = gate_m, max_gap
+        self.tracks: dict[str, tuple[np.ndarray, int]] = {}
+        self.k = 0
+
+    def update(self, blobs: list[HandBlob]) -> list[HandBlob]:
+        self.k += 1
+        if len(blobs) == 2:
+            pass                                    # hand_blobs already split them by x
+        else:
+            for b in blobs:
+                best, bd = None, self.gate_m
+                for side, (c, k) in self.tracks.items():
+                    if self.k - k > self.max_gap:
+                        continue
+                    d = float(np.linalg.norm(b.centre_world - c))
+                    if d < bd:
+                        best, bd = side, d
+                if best is not None:
+                    b.side_hint = best
+        for b in blobs:
+            if b.side_hint:
+                self.tracks[b.side_hint] = (b.centre_world, self.k)
+        return blobs
+

@@ -353,6 +353,17 @@ colour_h_max_m = 0.20
 colour_max_range_m = 1.0
 colour_max_age_ms = 150.0
 cloud_fine_band_m = 0.004
+# Gloved hands from depth (core/camera/depth_track.py hand_blobs, used by lane hand-root):
+# confident points above the work surface and nearer to the lens than the body, hand-sized.
+# Tuned on captures/bench-gloves-1 (riser): both hands in 41 percent of frames, one in 37.
+hand_min_confidence = 1
+hand_h_min_m = 0.01
+hand_h_max_m = 0.28
+hand_max_range_m = 1.2
+hand_body_gap_m = 0.06
+hand_body_h_min_m = 0.08
+hand_area_min_m2 = 0.004
+hand_area_max_m2 = 0.08
 # Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
 correct_yaw = true
 side = "right"
