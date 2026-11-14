@@ -121,4 +121,4 @@ Do not run `rokoko-sdk` network configuration commands (GetNetworkConfiguration)
 - Core `/health`: `rgmp.connected true`, `devices {291175775: right, 3552246405: left}`, `rcsp.connected true`, both hands `tracked true`.
 - Captures: `solver_12277.rgmp` grew at about 160 KB/s, `driver_12276.rgmp` at about 60 KB/s; one hour is about 1.3 GB.
 - The frontend gloves screen and the core debug view both showed the hands. Calibration through the screen did not reach the backend on the first try; the API calls (`POST /api/calibrations` flat and fist per side, then `POST /api/gloves/calibrations/neutral` and `.../finish`) did, and the core loaded them on `calibrate`.
-- `scripts/stop.sh` has not yet been run against this glove run.
+- `scripts/stop.sh` ran against this glove run at 14:33: all seven parts stopped, ports free, no orphans; the core needed SIGKILL after SIGINT and SIGTERM.

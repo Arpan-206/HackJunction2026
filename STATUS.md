@@ -44,8 +44,12 @@ checklist in `CLAUDE.md` is still open. Thresholds: start pose lessons at
 missing on the Mac (`STATUS-rokoko-setup.md`); the decisions rubric into the
 scorer and `/health` counters (`decisions/STATUS-decisions.md`, optional).
 
-**Running on this Mac at handover**: the live stack from 13:19 is still up
-and capturing. Stop it with `scripts/stop.sh`. No lane session is running.
+**Running on this Mac at handover**: nothing. The gloves were returned at
+14:30 and `scripts/stop.sh` took the live stack down at 14:33: every part
+stopped in reverse order and all six ports came free; the core ignored SIGINT
+and SIGTERM and needed the script's SIGKILL after 9 s (a small core fix for
+later). The hour of raw captures is kept untracked in
+`logs/live/20261114-131952/` (1.5 GB). No lane session is running.
 Keys and tokens are in the git-ignored `.env` at the repo root.
 
 Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 10:55, on branch
