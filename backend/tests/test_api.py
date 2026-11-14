@@ -123,6 +123,19 @@ def test_recording_start_stop(client: TestClient) -> None:
     assert 30 < recording["fps"] < 90
     assert client.get(f"/api/recordings/{recording['id']}").json()["id"] == recording["id"]
     assert client.post("/api/recordings/missing/stop").status_code == 404
+    assert recording["hands"] == "both"
+    assert {h["side"] for h in recording["frames"][0]["hands"]} == {"left", "right"}
+
+
+def test_recording_keeps_only_the_chosen_hand(client: TestClient) -> None:
+    """A one-handed take stores only that hand, and says so on the recording."""
+    client.post("/api/dev/state", json={"simulator_motion": MOTION})
+    started = client.post("/api/recordings/start", json={"step_id": "s", "hands": "left"}).json()
+    time.sleep(0.4)
+    recording = client.post(f"/api/recordings/{started['recording_id']}/stop").json()
+    assert recording["hands"] == "left"
+    assert recording["frames"] and all([h["side"] for h in f["hands"]] == ["left"] for f in recording["frames"])
+    assert client.post("/api/recordings/start", json={"hands": "middle"}).status_code == 422
 
 
 def test_calibration_phases(client: TestClient) -> None:

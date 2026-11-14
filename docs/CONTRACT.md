@@ -12,6 +12,7 @@ type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
 type Skill = 'table_tennis' | 'piano' | 'general';
 type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
+type Hands = Side | 'both';   // one hand (left or right) or two
 
 // One hand at one instant. Flexion per joint: [MCP, PIP, DIP] for fingers, [CMC, MCP, IP] for the thumb.
 // 0 = straight, positive = curled. Spread (abduction) is optional, 0 = neutral, positive = away from the middle finger.
@@ -99,6 +100,7 @@ interface Recording {
   started_at: string;
   duration_s: number;
   fps: number;
+  hands: Side | 'both';      // what the take captured; a one-handed take holds only that hand. Default 'both'.
   frames: GloveFrame[];      // smoothed frames as streamed
 }
 
@@ -154,7 +156,7 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/lessons/generate_from_video` | multipart: `video` (mp4, webm or mov, max 50 MB), `prompt?`, `skill?` | `{lesson: Lesson, provider: string, attempts: number}` (413 too large, 415 wrong type; non-Gemini providers return the template with `provider: "fake"` and a summary note) |
 | POST | `/calibrations` | `{side, phase: 'flat' or 'fist', duration_s?: number}` | `Calibration` (partial until both phases captured) |
 | GET | `/calibrations/latest?side=right` | | `Calibration` or 404 |
-| POST | `/recordings/start` | `{lesson_id?, step_id?}` | `{recording_id}` |
+| POST | `/recordings/start` | `{lesson_id?, step_id?, hands?: 'left' or 'right' or 'both'}` (default `both`) | `{recording_id}` |
 | POST | `/recordings/{id}/stop` | | `Recording` |
 | GET | `/recordings/{id}` | | `Recording` |
 | POST | `/motion/preview` | `{motion: MotionSpec, side: Side, duration_s: number}` | `{frames: GloveFrame[]}` (synthesised guide hands) |
@@ -186,6 +188,7 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 ## Backend notes (clarifications added by the backend implementation)
 
 - `POST /score` scores one hand. `side` (optional) names it; clients should send the step's `hands` when it is `left` or `right`. Without `side` the scorer uses the first side present in the attempt (preferring one the reference also has) and reads the reference for that same side, so a two-handed reference never makes a one-handed attempt fail. A missing side in either recording gives 400.
+- Hands: `MoveKind.hands` is the catalogue default, `Step.hands` is what the expert chose for the step (one hand left or right, or two), and `POST /recordings/start` with `hands: 'left'` or `'right'` keeps only that hand's frames (others are dropped as they arrive); the stored `Recording.hands` says which. `both` keeps every hand, as before. The learner app scores a two-handed step with one `POST /score` per side and keeps the weaker hand's result (lower overall, timing and per-finger values; within tolerance only if both are; the hint is prefixed with the hand). The live coach on the stage follows one hand at a time, chosen by the learner.
 - `POST /score` with `attempt_frames` scores those frames instead of the stored recording (frames win if both are sent). The backend records the unmodified glove stream, so any client-side change (for example the clumsy apprentice simulation) only reaches the scorer through `attempt_frames`. Frame `t` is rebased by the scorer; start the frames at the beat the reference motion starts on, because a `reference_motion` is synthesised from `t = 0`.
 - Scoring metric: per finger, the error is the mean absolute difference of the finger's TOTAL flexion (sum of its 3 joints, in degrees) over the DTW-aligned path, the same quantity the frontend live coach compares with `tolerance.angle_deg`. A finger under-curled 25 degrees in total is therefore off at the default 18 degree tolerance, however the 25 is spread over joints. The error maps to 0..100 with `100 * exp(-0.5 * (err / (1.5 * angle_deg))^2)`; `within_tolerance` needs every finger error and the timing error inside tolerance. Hint degrees are the same total-flexion deviation. Calibration normalises per joint before the sum. Held poses: when the reference is a `hold_pose` or `idle` motion, or its total flexion moves less than 12 degrees peak to peak on every finger (`STATIC_REFERENCE_RANGE_DEG`), there is no beat to be early or late for, so the timing offset is taken as 0: `timing` is 100, `within_tolerance` ignores timing, `overall` keeps the same weights, and the hint never mentions early or late.
 - `POST /coach/hint`: `deviations` are signed degrees of TOTAL finger flexion per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late; `wrist_error_deg` is signed about `wrist_axis` (pitch positive = too high, yaw positive = turned too far right, roll positive = rolled clockwise). `hint` is one imperative sentence of at most 14 words naming one finger or the wrist and one direction, for example "Lift your index finger slightly." `cue_type` is `extend` when the finger is curled too much, `curl` when too straight. `provider` is `fake`, `algorithmic` (the model failed, was rejected or nothing needed fixing), `gemini`, `ollama`, or `fake (rate limited)` when the Gemini budget was spent. Identical requests within 60 s are served from a cache; pass the previous `hint` as `last_hint` so the wording changes.

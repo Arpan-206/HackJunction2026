@@ -205,4 +205,4 @@ VIDEO_SUFFIXES = {"video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime":
 VIDEO_DEFAULT_PROMPT = "Teach the hand skill shown in this video."
 VIDEO_PROCESSING_TIMEOUT_S = 60.0
 VIDEO_POLL_INTERVAL_S = 1.0
-VIDEO_FAKE_NOTE = "Video analysis needs the Gemini provider; this is a generic template based on your text and the file name."
+VIDEO_FAKE_NOTE = "The assistant could not watch the video, so this is a generic template based on your text and the file name."

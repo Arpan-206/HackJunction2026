@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app import constants as c
-from app.schemas.common import Finger, FingerValues, GloveSource, Side, Skill
+from app.schemas.common import Finger, FingerValues, GloveSource, Hands, Side, Skill
 from app.schemas.frames import GloveFrame
 from app.schemas.lesson import Lesson
 from app.schemas.motion import MotionSpec
@@ -48,6 +48,7 @@ class RecordingStartRequest(BaseModel):
 
     lesson_id: str | None = None
     step_id: str | None = None
+    hands: Hands = "both"
 
 
 class RecordingStartResponse(BaseModel):

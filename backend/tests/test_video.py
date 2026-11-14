@@ -18,9 +18,9 @@ def _post(client: TestClient, data: bytes = b"x" * 100, mime: str = "video/mp4",
 
 
 def test_fake_provider_returns_template_with_note(client: TestClient) -> None:
-    """Offline providers return the template lesson and say video analysis needs Gemini."""
+    """Offline providers return the template lesson and say the assistant could not watch the video."""
     body = _post(client, prompt="penhold table tennis grip").json()
-    assert body["provider"] == "fake" and "Gemini" in body["lesson"]["summary"]
+    assert body["provider"] == "fake" and "could not watch the video" in body["lesson"]["summary"]
     assert body["lesson"]["skill"] == "table_tennis"
 
 

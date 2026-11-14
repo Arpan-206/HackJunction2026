@@ -11,6 +11,7 @@ Finger = Literal["thumb", "index", "middle", "ring", "little"]
 GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"]
 Skill = Literal["table_tennis", "piano", "general"]
 Prop = Literal["none", "racket", "keyboard", "ball"]
+Hands = Literal["left", "right", "both"]
 Triple = tuple[float, float, float]
 
 

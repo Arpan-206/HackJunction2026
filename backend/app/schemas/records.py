@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app import constants as c
-from app.schemas.common import Finger, FingerValues, Side, Tolerance, Triple
+from app.schemas.common import Finger, FingerValues, Hands, Side, Tolerance, Triple
 from app.schemas.frames import GloveFrame
 from app.schemas.motion import MotionSpec
 
@@ -40,6 +40,7 @@ class Recording(BaseModel):
     started_at: str
     duration_s: float
     fps: float
+    hands: Hands = "both"
     frames: list[GloveFrame]
 
 

@@ -12,7 +12,7 @@ router = APIRouter(tags=["recordings"])
 @router.post("/recordings/start", response_model=RecordingStartResponse)
 async def start_recording(body: RecordingStartRequest, recorder: RecorderDep) -> RecordingStartResponse:
     """Begin capturing the live glove stream."""
-    return RecordingStartResponse(recording_id=recorder.start(body.lesson_id, body.step_id))
+    return RecordingStartResponse(recording_id=recorder.start(body.lesson_id, body.step_id, body.hands))
 
 
 @router.post("/recordings/{recording_id}/stop", response_model=Recording)
