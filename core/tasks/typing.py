@@ -4,8 +4,8 @@ The viewer sends each keydown as the `keystroke` command. The core keeps a short
 history of every finger's flexion on both hands and runs the piano PressDetector
 on each hand. A keystroke is judged once `post_ms` has passed after it: the finger
 with the sharpest flexion inside [t - pre_ms, t + post_ms] is the one that pressed.
-Fingers the PressDetector saw press in that window come first; with none, any
-finger whose peak flexion speed passes `min_peak_deg_s` may count.
+Candidates are the fingers the PressDetector saw press in that window plus any
+finger whose peak flexion speed there passes `min_peak_deg_s`.
 
 Verdicts:
   good          the detected finger is the chart finger for that key
@@ -24,6 +24,7 @@ from __future__ import annotations
 import random
 from collections import deque
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -57,10 +58,12 @@ SHIFTED = {
 }  # fmt: skip
 
 DEFAULTS = {
-    "pre_ms": 250,  # look this far before the keydown
-    "post_ms": 150,  # and this far after it (the flexion peak lands just after the key bottoms)
+    # Window around the keydown. At 60 words a minute keys come every ~200 ms, so the
+    # window stays under that or the previous key's press would compete.
+    "pre_ms": 150,  # look this far before the keydown
+    "post_ms": 120,  # and this far after it (the flexion peak lands just after the key bottoms)
     "lag_ms": 0,  # keydown to core arrival; subtracted from the arrival time
-    "min_peak_deg_s": 150.0,  # mean flexion speed of the finger's joints, without a detector press
+    "min_peak_deg_s": 40.0,  # mean flexion speed of the finger's joints, without a detector press
     "clear_ratio": 1.5,  # best finger must be this many times faster than any other finger
     "history_ms": 2000,
     # --fake only: simulate a press per keystroke so the screen works without gloves
@@ -139,15 +142,24 @@ class _SimPress:
 NEIGHBOUR = {"thumb": "index", "index": "middle", "middle": "index", "ring": "middle", "little": "ring"}
 
 
+DETECTOR_KEYS = ("press_velocity_deg_s", "press_min_deg", "release_deg", "rest_tau_ms")
+
+
 @dataclass
 class TypingTask:
-    piano_cfg: object
+    """press_cfg: the [typing] config section (or [piano] as a fallback). task_config overrides either."""
+
+    press_cfg: object
     config: dict = field(default_factory=dict)
     fake: bool = False
 
     def __post_init__(self) -> None:
-        self.p = {**DEFAULTS, **{k: v for k, v in self.config.items() if k in DEFAULTS}}
-        self.detectors = {s: PressDetector(self.piano_cfg) for s in SIDES}
+        base = dict(self.press_cfg) if isinstance(self.press_cfg, dict) else vars(self.press_cfg)
+        merged = {**base, **self.config}
+        self.p = {**DEFAULTS, **{k: v for k, v in merged.items() if k in DEFAULTS}}
+        det = SimpleNamespace(**{k: merged[k] for k in DETECTOR_KEYS})
+        self.p.update({k: getattr(det, k) for k in DETECTOR_KEYS})
+        self.detectors = {s: PressDetector(det) for s in SIDES}
         # per side: (t_us, {finger: curl})
         self.hist: dict[str, deque] = {s: deque() for s in SIDES}
         self.presses: deque[tuple[int, str, str]] = deque()
@@ -183,10 +195,12 @@ class TypingTask:
 
     def feed(self, t_us: int, side: str, angles: np.ndarray | None) -> list[tuple[str, str]]:
         """One hand's angles for this tick (None when untracked). Returns detector events."""
-        if angles is None:
-            if not self.simulate:
-                return []
+        if self.simulate:
+            # The --fake hands sway and curl through the fake lesson; that motion is not
+            # typing, so simulated presses ride on a still hand.
             angles = np.zeros(18)
+        elif angles is None:
+            return []
         a = np.array(angles, dtype=float)
         if self.sim:
             for sp in self.sim:
@@ -231,11 +245,8 @@ class TypingTask:
         t1 = ks.t_us + int(self.p["post_ms"]) * 1000
         peaks = self.peak_speeds(t0, t1)
         pressed = {(s, f) for t, s, f in self.presses if t0 <= t <= t1}
-        source = "press"
-        cands = pressed
-        if not cands:
-            source = "velocity"
-            cands = {k for k, v in peaks.items() if v >= float(self.p["min_peak_deg_s"])}
+        fast = {k for k, v in peaks.items() if v >= float(self.p["min_peak_deg_s"])}
+        cands = pressed | fast
         expected = CHART[ks.key]
         out = {
             "id": ks.id,
@@ -260,7 +271,7 @@ class TypingTask:
             detected={"hand": best[0], "finger": best[1]},
             confidence=round(min(ratio, 99.0), 2),
             peak_deg_s=round(bv, 1),
-            source=source,
+            source="press" if best in pressed else "velocity",
         )
         if ratio < float(self.p["clear_ratio"]):
             out["reason"] = "ambiguous"
