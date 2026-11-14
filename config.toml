@@ -26,8 +26,24 @@ reconnect_s = 2.0
 
 [rgmp]
 # The solver's stream definition drives the parser. These settings say how
-# to find joints inside it; the exact stream names are unverified until we
-# dump a real definition (see STATUS.md).
+# to find joints inside it.
+#
+# Verified layout (Sat 14 Nov, real Smartgloves II, rkk-hand-solver
+# --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277; capture in
+# backend/tests/fixtures/rgmp/worn_solver.rgmp.gz, STATUS.md "Verified on
+# real data"):
+# - device_type "solved_hand", timestamp_epoch "device_boot".
+# - Three groups per device at 83.33 Hz: joints_local (428 B), joints_world
+#   (728 B) and joints_openxr (728 B). With --emit both, joints_openxr is
+#   group 2.
+# - joints_openxr holds 26 TRANSFORM FLOAT[7] streams (position xyz, then a
+#   quaternion), target_frame xr_palm, xr_wrist, ... xr_little_tip,
+#   reference_frame xr_base. The xr_ prefix is stripped; 26 of 26 map by name.
+# - The hand is always in device_info.hand ("left" or "right").
+# - device_id is a hardware id (left 1572077328, right 2811174587), not a
+#   small index, so its parity says nothing about the side.
+# - No STATUS_FLAGS stream on 12277. "Heading reliable" is bit 11 of the hub
+#   STATUS_FLAGS on the driver port 12276 only.
 group = "joints_openxr"
 joint_name_field = "target_frame"
 position_measure_types = ["POSITION"]
@@ -36,7 +52,10 @@ pose_measure_types = ["POSE", "TRANSFORM"]
 hand_fields = ["device_info.hand", "device_info.Hand", "device_info.side", "static_data.hand"]
 left_values = ["left", "Left", "LEFT", "l", "L", "true"]
 # Fallback when no hand field is found: even device_id is left, odd is right.
-hand_from_device_id_parity = true
+# Off: real ids are hardware ids, so parity would be right only by chance.
+# The solver always sends device_info.hand; a device without it is refused
+# with a log line rather than given a guessed side.
+hand_from_device_id_parity = false
 
 [rgmp.joint_aliases]
 # stream joint name -> OpenXR joint name

@@ -102,6 +102,34 @@ the solver capture with no change to code or `config.toml`:
 | Parse result | 2 definitions, 268 data frames, 0 bad frames; wrist at the origin as SPEC says |
 | `python -m core --replay worn_solver.rgmp` | both hands tracked, curl and pinch values live in the debug view |
 
+`[rgmp] hand_from_device_id_parity` is now `false` (Sat 14 Nov,
+branch `core-calibration`): the ids above are hardware ids, and the solver
+always sends `device_info.hand`. `config.toml` records the verified layout
+beside the setting.
+
+### Szymon's glove measurements (two Smartgloves II, Sat 14 Nov)
+
+From `arpan_info.md` section 2, measured on Szymon's side with the live
+glove tests and `backend/scripts/glove_check.py`.
+
+| Measure | Value |
+| --- | --- |
+| Stream rate | 83.39 Hz per group per glove, over USB, zero gaps |
+| Device ids | left 1572077328, right 2811174587 |
+| Hub | both gloves report the same `HubSerialNumber` |
+| Driver | streams only after an RCSP `SubscribeToData`, or with `--auto-stream-usb` |
+| Heading reliable | bit 11 of the hub `STATUS_FLAGS` on 12276; not on the solver's 12277 |
+| Flexion direction | toward the palm is solver local X, negative |
+| Finger isolation | in the worn capture each finger moved on its own in its phase |
+| Flat hand, flexion read | index about 37 deg, middle 27, ring 26 to 33, little 59 to 79, thumb about 70 |
+| Live tests | 13 of 13 pass with both gloves and the solver running |
+| Core on real gloves | works unchanged through route B; the wrist orientation is wrong until the core's `calibrate` runs |
+| Solver command | `rkk-hand-solver.exe --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277` |
+
+The flat-hand row is why raw angles from two hands cannot be compared. The
+per-wearer calibration on this branch answers it (section "Calibrated
+angles" below).
+
 Unverified in the robot output: which rotation direction Unitree's hand
 model treats as "flex" for `thumb_0` (abduction) and `thumb_1`; the signs
 are set from the URDF limit ranges and can be flipped per joint with
