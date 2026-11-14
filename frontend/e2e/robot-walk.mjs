@@ -1,7 +1,7 @@
 // Walks the robot twin: the /robot screen, the training room with the robot pane, and the expert studio's robot fold.
 // Two modes:
 //   node e2e/robot-walk.mjs                 mock mode (?mock=1, no Python): the in-browser robot follows the sample glove.
-//   ROBOT_CORE=1 node e2e/robot-walk.mjs    against the core on ws://localhost:8765/ws/robot (python -m core --fake, or
+//   ROBOT_CORE=1 node e2e/robot-walk.mjs    against the core on ws://localhost:8765/ws/robot (ROBOT_CORE_PORT moves it) (python -m core --fake, or
 //                                           --replay on a capture): switches the source, waits for live joint targets.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/robot-*.png.
 // Playwright is taken from the repo's genui package, so no extra dependency is added to the frontend.
@@ -18,6 +18,10 @@ const PORT = Number(process.env.E2E_PORT ?? 5188);
 const BASE = `http://localhost:${PORT}`;
 const OUT = path.resolve(here, '../docs/screens') + path.sep;
 const CORE = process.env.ROBOT_CORE === '1';
+// The core's port. The walk hands Vite a VITE_ROBOT_WS so the store tries it first: the core in core mode, and this
+// origin (the in-browser mock) in mock mode, so a mock walk never switches the source of a core that happens to run.
+const CORE_PORT = Number(process.env.ROBOT_CORE_PORT ?? 8765);
+const ROBOT_WS = CORE ? `ws://localhost:${CORE_PORT}/ws/robot` : `ws://localhost:${PORT}/ws/robot`;
 const tag = CORE ? 'core' : 'mock';
 
 async function up(url) {
@@ -29,9 +33,9 @@ async function up(url) {
 }
 
 if (CORE) {
-  const health = await fetch('http://localhost:8765/health').then((r) => r.json()).catch(() => null);
+  const health = await fetch(`http://localhost:${CORE_PORT}/health`).then((r) => r.json()).catch(() => null);
   if (!health?.robot?.model) {
-    console.error(`ROBOT_CORE=1 but no core with a robot model answers on :8765 (got ${JSON.stringify(health)})`);
+    console.error(`ROBOT_CORE=1 but no core with a robot model answers on :${CORE_PORT} (got ${JSON.stringify(health)})`);
     process.exit(2);
   }
   console.log(`core: robot ${health.robot.model}, source ${health.robot.source}, hands ${JSON.stringify(health.hands)}`);
@@ -40,7 +44,7 @@ if (CORE) {
 let vite = null;
 if (!(await up(BASE))) {
   const bin = path.resolve(here, '../node_modules/vite/bin/vite.js');
-  vite = spawn(process.execPath, [bin, '--port', String(PORT), '--strictPort'], { cwd: path.resolve(here, '..'), stdio: 'ignore' });
+  vite = spawn(process.execPath, [bin, '--port', String(PORT), '--strictPort'], { cwd: path.resolve(here, '..'), stdio: 'ignore', env: { ...process.env, VITE_ROBOT_WS: ROBOT_WS } });
   for (let i = 0; i < 100 && !(await up(BASE)); i++) await new Promise((r) => setTimeout(r, 300));
 }
 

@@ -6,6 +6,7 @@ import { handWithRole, parseRobotIncoming, shortJointName, SOURCE_OPTIONS, waiti
 import { angleFeatures, autoSign, describeRobot, limitsOf, pickHand, retargetAngles, retargetHand, robotMessage } from '../src/mock/robot';
 import { fingerOfName, forwardKinematics, linkShapes, pointInRoot, restPose, URDF_TO_SCENE, urdfToHandMatrix } from '../src/three/robot/kinematics';
 import { movableJoints, parseUrdf } from '../src/three/robot/urdf';
+import { MAX_PULL, TWIN_CAMERA, TWIN_TARGET, twinCamera } from '../src/features/shared/robot/twinFraming';
 import { DEG, handWith } from './helpers';
 
 const dir = path.resolve(__dirname, '../public/models/robots/dex3_1');
@@ -259,5 +260,21 @@ describe('robot wire helpers', () => {
     expect(waitingLine('lesson', session)).toMatch(/lesson step/);
     expect(waitingLine('lesson', { lesson_id: null })).toMatch(/No lesson is loaded/);
     expect(waitingLine('off', null)).toBe('The robot rests.');
+  });
+});
+
+describe('robot twin framing', () => {
+  const dist = (p: number[]) => Math.hypot(p[0] - TWIN_TARGET[0], p[1] - TWIN_TARGET[1], p[2] - TWIN_TARGET[2]);
+  const dir = (p: number[]) => p.map((v, i) => (v - TWIN_TARGET[i]) / dist(p));
+
+  it('keeps the designed camera for a wide pane', () => {
+    expect(twinCamera(2)).toEqual(TWIN_CAMERA);
+  });
+
+  it('pulls back along the same line of sight for a tall pane, up to the cap', () => {
+    const tall = twinCamera(0.6);
+    expect(dist(tall)).toBeGreaterThan(dist(TWIN_CAMERA) * 1.5);
+    expect(dist(twinCamera(0.01))).toBeCloseTo(dist(TWIN_CAMERA) * MAX_PULL, 6);
+    dir(tall).forEach((v, i) => expect(v).toBeCloseTo(dir(TWIN_CAMERA)[i], 6));
   });
 });

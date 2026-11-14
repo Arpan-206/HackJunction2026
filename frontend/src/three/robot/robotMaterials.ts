@@ -5,13 +5,13 @@ import { toonGradient } from '../materials';
 import type { StageColors } from '../../theme/themes';
 
 /**
- * Materials for the robot twin: forged iron toon shading with the stage's ink outline, bronze joint rings, and a chalk
+ * Materials for the robot twin: light steel toon shading (dark iron vanished on the walnut bench) with the stage's ink outline, bronze joint rings, and a chalk
  * ghost for the fingers the robot lacks. No gold (mastery only), no vermilion (corrections only).
  */
 
-const IRON = '#2f3238';
-const IRON_PALM = '#3b3e46';
-const BRONZE = '#7a5a33';
+const IRON = '#8d949e';
+const IRON_PALM = '#6c737e';
+const BRONZE = '#a2733d';
 
 /**
  * Ink hull for an unskinned mesh: the same geometry pushed out along its vertex normals and drawn back faces only.

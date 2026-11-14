@@ -1,4 +1,6 @@
-import { useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useThree } from '@react-three/fiber';
+import { DESIGN_ASPECT, TWIN_TARGET as TARGET, twinCamera } from './twinFraming';
 import type { GloveFrame, HandFrame, Side } from '../../../api/types';
 import type { RobotStreamHandle } from '../../../api/useRobotStream';
 import { Hand, HandCanvas, RobotHand, RobotStrings, type HandHandle, type HandStyle, type RobotHandHandle } from '../../../three';
@@ -24,8 +26,49 @@ interface RobotTwinProps {
   label?: string;
 }
 
-const HUMAN_X = -1.0;
-const ROBOT_X = 1.0;
+const HUMAN_X = -1.35;
+const ROBOT_X = 1.35;
+/**
+ * Both hands float this far above their usual height. A curled fingertip sits near the bench, and the strings sag
+ * below their ends, so without the lift the bench top hides the strings.
+ */
+const LIFT = 0.6;
+
+/**
+ * The robot is shown in a handshake pose: palm turned towards the human hand, thumb across. The Dex3-1 thumb grows out
+ * of the palm face, so palm down would put it through the bench, and the curled fingers would hide under the palm.
+ * Turned on its side, the curl reads from above as a claw closing towards the human hand.
+ */
+function robotRoll(side: Side): [number, number, number] {
+  return [0, 0, side === 'right' ? -Math.PI / 2 : Math.PI / 2];
+}
+
+/** Width over height of an element, kept up to date. */
+function useAspect(ref: RefObject<HTMLElement | null>): number {
+  const [aspect, setAspect] = useState(DESIGN_ASPECT);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setAspect(Math.round((width / height) * 20) / 20);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return aspect;
+}
+
+/** Moves the canvas camera when the framing changes; the Canvas only reads its camera prop once. */
+function CameraTo({ position }: { position: [number, number, number] }) {
+  const camera = useThree((s) => s.camera);
+  const [x, y, z] = position;
+  useEffect(() => {
+    camera.position.set(x, y, z);
+    camera.lookAt(...TARGET);
+  }, [camera, x, y, z]);
+  return null;
+}
 
 /**
  * Geppetto and Pinocchio: the human hand on the left, the Dex3-1 twin on the right, a string from each human fingertip
@@ -36,15 +79,18 @@ export function RobotTwin({ robot, human, decoupled = false, className, label }:
   const robotRef = useRef<RobotHandHandle>(null);
   const showHuman = human !== null && !decoupled;
   const side: Side = robot.hand ?? human?.side ?? 'right';
+  const box = useRef<HTMLDivElement>(null);
+  const camera = twinCamera(useAspect(box));
   return (
-    <div className={`rb-twin ${className ?? ''}`}>
+    <div ref={box} className={`rb-twin ${className ?? ''}`}>
       <HandCanvas
         preset="pair"
         label={label ?? 'The robot hand beside the human hand that drives it, strings between their fingertips'}
-        stage={{ cameraPosition: [2.6, 3.6, 5.2], target: [0.1, -0.1, -0.7], circleCenter: [0, -0.5], controls: 'limited' }}
+        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'limited' }}
       >
-        {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, 0, 0]} />}
-        <RobotHand ref={robotRef} side={side} live={robot.latest} position={[showHuman ? ROBOT_X : 0, 0, 0]} />
+        <CameraTo position={camera} />
+        {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} />}
+        <RobotHand ref={robotRef} side={side} live={robot.latest} position={[showHuman ? ROBOT_X : 0, LIFT, 0]} rotation={robotRoll(side)} />
         {showHuman && <RobotStrings human={humanRef} robot={robotRef} />}
       </HandCanvas>
       <div className="rb-twin__caps" aria-hidden="true">

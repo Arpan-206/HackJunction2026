@@ -45,6 +45,8 @@ const Z = new Vector3(0, 0, 1);
 
 /** How much shorter the ghost ring and little fingers are than the middle, as on a human hand. */
 const GHOST_SCALE: Partial<Record<Finger, number>> = { ring: 0.92, little: 0.76 };
+/** Metres between neighbouring ghost fingers. */
+const GHOST_SPACING = 0.022;
 
 function capsule(from: Vec3, to: Vec3, radius: number, geos: BufferGeometry[]): { geo: BufferGeometry; position: Vector3; quaternion: Quaternion } {
   const a = new Vector3(...from);
@@ -157,7 +159,9 @@ export function buildRobotRig(model: UrdfModel, side: Side, stage: StageColors, 
     const index = bases.find((j) => fingerOfName(j.name) === 'index');
     const last = bases.find((j) => fingerOfName(j.name) === 'middle') ?? bases[bases.length - 1];
     if (index && last) {
-      const step = Math.sign(last.origin.xyz[2] - index.origin.xyz[2]) * Math.abs(last.origin.xyz[2] - index.origin.xyz[2]);
+      // Human finger spacing (about 2.2 cm), not the robot's wide 5.7 cm index-to-middle gap, so the ghosts sit by the
+      // middle finger like a hand's ring and little finger instead of floating off the palm.
+      const step = Math.sign(last.origin.xyz[2] - index.origin.xyz[2]) * GHOST_SPACING;
       const lastLength = fingerLength(model, last);
       missing.forEach((f, i) => {
         const k = GHOST_SCALE[f] ?? 0.8;
