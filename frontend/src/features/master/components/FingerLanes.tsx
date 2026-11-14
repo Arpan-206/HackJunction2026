@@ -71,6 +71,8 @@ export function FingerLanes({ getHand, windowS = 6, label = 'Live finger flexion
       const hand = getRef.current();
       if (hand) samples.push({ t: tNow, v: FINGERS.map((f) => Math.min(1, Math.max(0, (hand.flexion[f][0] + hand.flexion[f][1] + hand.flexion[f][2]) / FULL_FLEXION))) });
       while (samples.length && samples[0].t < tNow - windowS) samples.shift();
+      // A collapsed panel leaves the canvas 0 by 0: keep sampling, so the lanes are full when it opens, but draw nothing.
+      if (w <= 0 || h <= 0) return;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
