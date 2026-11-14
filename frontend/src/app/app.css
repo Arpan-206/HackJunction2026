@@ -297,7 +297,7 @@
   min-height: min(62vh, 640px);
 }
 .role:hover {
-  transform: translateY(-4px);
+  transform: translateY(-1px);
 }
 .role:focus-visible {
   outline: 4px solid var(--focus);
