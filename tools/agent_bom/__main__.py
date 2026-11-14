@@ -334,6 +334,50 @@ def cmd_steps(args) -> int:
     return 0
 
 
+def cmd_inventory(args) -> int:
+    """CRACI API: one row per lane build of the newest lane-audit run: raw SBOM and trace counts."""
+    client = _client()
+    if client is None:
+        print("not run: token missing (CRACI_API_TOKEN)", file=sys.stderr)
+        return 2
+    jobs = audit_jobs(args.repo)
+    print(
+        "| Lane | CRACI job | Run | SBOM components | Packages | PyPI | npm "
+        "| Vulnerability entries | High or critical | Hosts | Trace observations | Denied |"
+    )
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    order = [args.base] + sorted(lane for lane in jobs if lane != args.base)
+    for lane in order:
+        job = jobs.get(lane)
+        if job is None:
+            continue
+        sbom = (
+            _cached("sbom", job.job_id, lambda j=job: client.sbom(args.repo, j.job_id))
+            or {}
+        )
+        trace = (
+            _cached(
+                "trace",
+                job.job_id,
+                lambda j=job: client.network_trace(args.repo, j.job_id),
+            )
+            or {}
+        )
+        b = merge([(job.job_id, sbom, trace)])
+        eco: dict[str, int] = {}
+        for p in b.packages.values():
+            eco[p.ecosystem] = eco.get(p.ecosystem, 0) + 1
+        entries = {(v.id, v.package_key) for v in b.vulns}
+        bad = {(v.id, v.package_key) for v in b.vulns if v.severity in GATE_SEVERITIES}
+        print(
+            f"| `{lane}` | {job.job_id} | {job.run_id} | {len(sbom.get('components') or [])} "
+            f"| {len(b.packages)} | {eco.get('pypi', 0)} | {eco.get('npm', 0)} | {len(entries)} "
+            f"| {len(bad)} | {len(b.hosts)} | {len(trace.get('observations') or [])} "
+            f"| {len(b.denied_hosts)} |"
+        )
+    return 0
+
+
 def cmd_check(_args) -> int:
     print("CRACI_API_TOKEN: set" if _token() else "CRACI_API_TOKEN: missing")
     return 0
@@ -354,6 +398,7 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("gate")
     g.add_argument("lane")
     g.set_defaults(func=cmd_gate)
+    sub.add_parser("inventory").set_defaults(func=cmd_inventory)
     steps = sub.add_parser("steps")
     steps.add_argument("run_id")
     steps.set_defaults(func=cmd_steps)

@@ -1,0 +1,29 @@
+name: policy-check
+
+# Proof that CRACI applies the Monitored policy (`default: deny`) from the
+# setup action. CRACI reads the action's inputs when it schedules the job, so
+# the step does not appear in the GitHub step list. This job requests a host
+# that no preset covers (example.com) and passes only if the request fails.
+# The CRACI network trace of this job should then show a denied observation.
+
+on:
+  push:
+    branches: [craci]
+    paths: [.github/workflows/policy-check.yml]
+  workflow_dispatch:
+
+jobs:
+  deny:
+    runs-on: craci
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+      - name: Unmatched host must be blocked
+        run: |
+          if curl -sS -m 20 -o /dev/null -w '%{http_code}\n' https://example.com/; then
+            echo "example.com was reachable: the deny policy is NOT applied"
+            exit 1
+          fi
+          echo "example.com was blocked: the deny policy is applied"
