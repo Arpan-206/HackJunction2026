@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     ollama_url: str = c.DEFAULT_OLLAMA_URL
     ollama_model: str = c.DEFAULT_OLLAMA_MODEL
     llm_provider: Literal["fake", "gemini", "ollama"] = "fake"
-    glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk"] = "simulator"
+    glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = "simulator"
     rokoko_udp_port: int = c.ROKOKO_DEFAULT_PORT
     data_dir: Path = c.DEFAULT_DATA_DIR
     cors_origins: list[str] = Field(default_factory=lambda: list(c.DEFAULT_CORS_ORIGINS))

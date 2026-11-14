@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import constants as c
 from app.api import ws
+from app.api.routes import ingest
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_error_handlers(app)
     app.include_router(api_router)
     app.include_router(ws.router)
+    app.include_router(ingest.ws_router)
     return app
 
 

@@ -8,7 +8,7 @@ from app import constants as c
 
 Side = Literal["left", "right"]
 Finger = Literal["thumb", "index", "middle", "ring", "little"]
-GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk"]
+GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"]
 Skill = Literal["table_tennis", "piano", "general"]
 Prop = Literal["none", "racket", "keyboard", "ball"]
 Triple = tuple[float, float, float]

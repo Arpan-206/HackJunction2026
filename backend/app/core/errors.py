@@ -33,6 +33,16 @@ class BadRequestError(AppError):
     status_code = 400
 
 
+class InvalidFrameError(BadRequestError):
+    """A pushed frame failed validation (HTTP 422)."""
+
+    status_code = 422
+
+
+class SourceInactiveError(ConflictError):
+    """Frames were pushed while the external glove source is not the active source."""
+
+
 class ServiceUnavailableError(AppError):
     """An optional dependency or upstream service is unavailable."""
 

@@ -28,7 +28,7 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model name |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `OLLAMA_MODEL` | `gemma4:e4b` | Use `gemma4:12b` with 12 to 16 GB of VRAM |
-| `GLOVE_SOURCE` | `simulator` | `simulator`, `rokoko_udp` or `rokoko_sdk` (stub) |
+| `GLOVE_SOURCE` | `simulator` | `simulator`, `rokoko_udp`, `rokoko_sdk` (stub) or `external` |
 | `ROKOKO_UDP_PORT` | `14043` | Studio Custom Streaming port |
 | `DATA_DIR` | `./data` | Lessons, recordings and calibrations (JSON files) |
 
@@ -51,7 +51,16 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 
 ## Rokoko Studio setup
 
-In Studio: Livestreaming, Custom, UDP, JSON v3 (or v4), port 14043, target the laptop. Then switch the source live with `POST /api/dev/state {"glove_source": "rokoko_udp"}`. The JSON field names are unverified; all payload-shape logic is in `app/services/gloves/rokoko_mapper.py` and the flexion axis and sign are in `app/constants.py` (`ROKOKO_FLEX_AXIS`, `ROKOKO_FLEX_SIGN`). The first unrecognised frame shape is logged once.
+In Studio: Livestreaming, Custom, UDP, JSON v3 (or v4), port 14043, target the laptop. Then switch the source live with `POST /api/dev/state {"glove_source": "rokoko_udp"}`. The JSON field names are verified (see `../research/09_rokoko.md`); the flexion axis and sign are still to be probed with `scripts/probe_flexion.py` while someone wears a glove. All payload-shape logic is in `app/services/gloves/rokoko_mapper.py` and the axis and sign are in `app/constants.py` (`ROKOKO_FLEX_AXIS`, `ROKOKO_FLEX_SIGN`). The first unrecognised frame shape is logged once.
+
+## External source (ML or positioning pipeline)
+
+`POST /api/dev/state {"glove_source": "external"}`, then push frames:
+
+- `POST /api/ingest/frames`: one `GloveFrame`, one `HandFrame` or `{"frames": [...]}` (max 600). Add `?activate=1` to switch the source in the same call. 409 when the source is not `external`, 422 for an invalid frame.
+- `WS /ws/ingest` (also `?activate=1`): the same JSON shapes as text messages. Only failures are answered, as `{"type": "error", "status", "detail"}`; the socket stays open.
+
+Frames go through the normal smoothing and out of `/ws/gloves` as `source: "replay"`. Logic is in `app/services/gloves/external.py`; see `../docs/HARDWARE_INTEGRATION.md` section 5.
 
 ## Notes
 

@@ -5,6 +5,7 @@ from pathlib import Path
 APP_TITLE = "Apprentice backend"
 API_PREFIX = "/api"
 WS_GLOVES_PATH = "/ws/gloves"
+WS_INGEST_PATH = "/ws/ingest"
 DEFAULT_CORS_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SEED_DIR = Path(__file__).resolve().parent / "data" / "seed"
@@ -95,11 +96,11 @@ SCORE_SIGMA_FACTOR = 1.5
 FINGER_WEIGHT = 0.8
 TIMING_WEIGHT = 0.2
 MIN_SCORE_FRAMES = 2
-
 # A reference whose every finger moves less than this much total flexion (peak to peak) is a held pose: its timing is
 # not scored, since aligning two near-constant series says nothing about when the learner moved.
 STATIC_REFERENCE_RANGE_DEG = 12.0
 STATIC_PRESETS = ("hold_pose", "idle")
+
 # Hint wording thresholds.
 HINT_MIN_DEVIATION_DEG = 4.0
 HINT_TIMING_MS = 120.0
@@ -109,6 +110,20 @@ ROKOKO_DEFAULT_PORT = 14043
 LZ4_FRAME_MAGIC = b"\x04\x22\x4d\x18"
 ROKOKO_FLEX_AXIS = 0
 ROKOKO_FLEX_SIGN = 1.0
+# Joint names, verified against the Studio JSON v3 and v4 specs (research/09_rokoko.md). Finger order matches FINGERS.
+ROKOKO_V3_FINGER_NAMES = ("Thumb", "Index", "Middle", "Ring", "Little")
+ROKOKO_V3_SEGMENTS = ("Proximal", "Medial", "Distal")
+ROKOKO_V4_SEGMENTS = ("Proximal", "Medial", "Distal")
+ROKOKO_V4_THUMB_SEGMENTS = ("Metacarpal", "Proximal", "Distal")
+ROKOKO_V3_META_GLOVE_KEYS = {"left": "hasLeftGlove", "right": "hasRightGlove"}
+ROKOKO_V4_META_HAND_KEYS = {"left": "hasLeftHand", "right": "hasRightHand"}
+
+# Studio Command API (HTTP, Pro and Enterprise plans). Request shape: http://host:port/{version}/{key}/{command}.
+ROKOKO_COMMAND_PORT = 14053
+ROKOKO_COMMAND_DEFAULT_KEY = "1234"
+ROKOKO_COMMAND_TIMEOUT_S = 3.0
+ROKOKO_COMMAND_OK_CODE = 0
+ROKOKO_CALIBRATE_POSES = ("tpose", "straight-arms-down", "straight-arms-forward")
 FLEXION_MIN_RAD = -0.5
 FLEXION_MAX_RAD = 2.2
 

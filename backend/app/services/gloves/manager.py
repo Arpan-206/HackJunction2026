@@ -9,6 +9,7 @@ from app.schemas.common import GloveSource
 from app.schemas.frames import GloveFrame
 from app.schemas.motion import MotionSpec
 from app.services.gloves.base import FrameSink, GloveSourceProtocol
+from app.services.gloves.external import ExternalSource
 from app.services.gloves.rokoko_sdk import RokokoSdkSource
 from app.services.gloves.rokoko_udp import RokokoUdpSource
 from app.services.gloves.simulator import SimulatorSource
@@ -25,6 +26,7 @@ class GloveManager:
         self._settings = settings
         self.smoother = smoother
         self.simulator = SimulatorSource()
+        self.external = ExternalSource()
         self._source: GloveSourceProtocol | None = None
         self._subscribers: set[asyncio.Queue[GloveFrame]] = set()
         self._sinks: list[FrameSink] = []
@@ -44,6 +46,16 @@ class GloveManager:
         """Change the simulator motion."""
         self.simulator.set_motion(motion)
 
+    def ingest(self, payload: dict) -> int:
+        """Feed frames from an external pipeline; only valid while the external source is active."""
+        return self.external.push(payload)
+
+    async def ingest_async(self, payload: dict, activate: bool = False) -> int:
+        """Like ingest(), but with activate=True first switches to the external source if it is not active."""
+        if activate and not self.external.active:
+            await self.switch_source("external")
+        return self.external.push(payload)
+
     def add_sink(self, sink: FrameSink) -> None:
         """Register a callback that receives every smoothed frame (for example the recorder)."""
         self._sinks.append(sink)
@@ -62,6 +74,8 @@ class GloveManager:
         """Create the source object for a name."""
         if name == "simulator":
             return self.simulator
+        if name == "external":
+            return self.external
         if name == "rokoko_udp":
             return RokokoUdpSource(self._settings.rokoko_udp_port)
         return RokokoSdkSource()

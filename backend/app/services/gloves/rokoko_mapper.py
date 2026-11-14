@@ -1,9 +1,15 @@
-"""Map a Rokoko Studio Custom Streaming JSON payload to HandFrames.
+"""Map a Rokoko Studio Custom Streaming JSON payload (v3 or v4) to HandFrames.
 
-The field names below follow the public documentation (v3 names such as leftIndexProximal, v4 names such as
-LeftFinger2Proximal) but have NOT been verified against a live stream. Everything that depends on the payload
-shape lives in this module so it is quick to correct on site: adjust BONE_NAME_CANDIDATES, find_bone_table,
-or the flexion sign and axis in app.constants.
+Verified against the published specs and the Rokoko Unity and Blender plugin sources (see research/09_rokoko.md):
+
+* JSON v3: scene.actors[].body is an object keyed by joint, for example "leftIndexProximal": {position, rotation}.
+* JSON v4: scene.newtons[].joints is a flat list of {name, parent, position, rotation} with names such as
+  "LeftFinger2Proximal". The version field reads "3,0" for both formats, so the format is detected from the payload.
+* Every rotation is a WORLD space quaternion (x, y, z, w) in a left-handed, Y-up, Z-forward system.
+
+Because rotations are world space, the local bend of a joint is conj(parent_world) * child_world. Which local axis is
+the flexion axis is NOT documented by Rokoko; it is set in app.constants (ROKOKO_FLEX_AXIS, ROKOKO_FLEX_SIGN) and
+can be measured on site with scripts/probe_flexion.py.
 """
 
 import logging
@@ -16,25 +22,25 @@ from app.services import geometry
 
 log = logging.getLogger(__name__)
 
-_FINGER_V3 = ("Thumb", "Index", "Middle", "Ring", "Little")
-_SEGMENTS_V3 = ("Proximal", "Medial", "Distal")
-_SEGMENTS_V4 = ("Proximal", "Intermediate", "Distal")
+Bones = dict[str, geometry.Quat]
 _warned_shapes: set[str] = set()
 
 
-def bone_name_candidates(side: Side, finger_index: int, segment: int) -> list[str]:
-    """Return lower-cased bone names to try for a finger segment, v3 first then v4."""
-    s = side.capitalize()
-    return [
-        f"{s}{_FINGER_V3[finger_index]}{_SEGMENTS_V3[segment]}".lower(),
-        f"{s}Finger{finger_index + 1}{_SEGMENTS_V4[segment]}".lower(),
-    ]
+def v3_chain(side: Side, finger_index: int) -> list[str]:
+    """Return the lower-cased v3 joint names of a finger, base to tip, for example leftindexproximal."""
+    name = c.ROKOKO_V3_FINGER_NAMES[finger_index]
+    return [f"{side}{name}{seg}".lower() for seg in c.ROKOKO_V3_SEGMENTS]
 
 
-def hand_name_candidates(side: Side) -> list[str]:
-    """Return lower-cased bone names to try for the hand joint."""
-    s = side.capitalize()
-    return [f"{s}Hand".lower()]
+def v4_chain(side: Side, finger_index: int) -> list[str]:
+    """Return the lower-cased v4 joint names of a finger, base to tip. The thumb is Finger1 and has no Medial."""
+    segments = c.ROKOKO_V4_THUMB_SEGMENTS if finger_index == 0 else c.ROKOKO_V4_SEGMENTS
+    return [f"{side}Finger{finger_index + 1}{seg}".lower() for seg in segments]
+
+
+def hand_name(side: Side) -> str:
+    """Return the lower-cased hand joint name, identical in v3 and v4 once lower-cased."""
+    return f"{side}hand"
 
 
 def _quat(value: Any) -> geometry.Quat | None:
@@ -49,36 +55,34 @@ def _quat(value: Any) -> geometry.Quat | None:
     return None
 
 
-def _is_bone_table(candidate: Any) -> bool:
-    """Return whether a dict looks like a name to bone-with-rotation table."""
-    return isinstance(candidate, dict) and any(isinstance(v, dict) and "rotation" in v for v in candidate.values())
+def _warn_once(shape: str, message: str) -> None:
+    """Log a warning the first time a given shape is seen."""
+    if shape not in _warned_shapes:
+        _warned_shapes.add(shape)
+        log.warning(message, shape)
 
 
-def find_bone_table(actor: dict[str, Any]) -> dict[str, geometry.Quat]:
-    """Return lower-cased bone name to world rotation for one actor, trying the likely containers."""
-    for candidate in (actor.get("body"), actor.get("gloves"), actor.get("joints"), actor):
-        if _is_bone_table(candidate):
+def bones_v3(actor: dict[str, Any]) -> Bones:
+    """Return lower-cased joint name to world rotation for a v3 actor (body object keyed by joint)."""
+    for candidate in (actor.get("body"), actor.get("gloves"), actor):
+        if isinstance(candidate, dict) and any(isinstance(v, dict) and "rotation" in v for v in candidate.values()):
             return {k.lower(): q for k, v in candidate.items()
                     if isinstance(v, dict) and (q := _quat(v.get("rotation"))) is not None}
     return {}
 
 
-def find_actors(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return the actor dicts in a payload, logging the first shape that has none."""
-    scene = payload.get("scene", payload)
-    actors = scene.get("actors") if isinstance(scene, dict) else None
-    if isinstance(actors, list):
-        return [a for a in actors if isinstance(a, dict)]
-    shape = ",".join(sorted(payload)) if isinstance(payload, dict) else type(payload).__name__
-    if shape not in _warned_shapes:
-        _warned_shapes.add(shape)
-        log.warning("Unrecognised Rokoko frame shape (top-level keys: %s); fix app/services/gloves/rokoko_mapper.py", shape)
-    return []
+def bones_v4(newton: dict[str, Any]) -> Bones:
+    """Return lower-cased joint name to world rotation for a v4 newton (flat joints list)."""
+    joints = newton.get("joints")
+    if not isinstance(joints, list):
+        return {}
+    return {str(j["name"]).lower(): q for j in joints
+            if isinstance(j, dict) and "name" in j and (q := _quat(j.get("rotation"))) is not None}
 
 
-def _lookup(bones: dict[str, geometry.Quat], names: list[str]) -> geometry.Quat | None:
-    """Return the first bone rotation found among the candidate names."""
-    return next((bones[n] for n in names if n in bones), None)
+def _has_side(meta: Any, keys: dict[str, str], side: Side) -> bool:
+    """Return False only when the actor meta explicitly says this hand is not controlled."""
+    return not (isinstance(meta, dict) and meta.get(keys[side]) is False)
 
 
 def _flexion_between(parent: geometry.Quat, child: geometry.Quat) -> float:
@@ -88,38 +92,59 @@ def _flexion_between(parent: geometry.Quat, child: geometry.Quat) -> float:
     return max(c.FLEXION_MIN_RAD, min(c.FLEXION_MAX_RAD, angle))
 
 
-def map_hand(bones: dict[str, geometry.Quat], side: Side) -> HandFrame | None:
-    """Convert one side's bone rotations to a HandFrame, or None when the hand joint is missing."""
-    wrist = _lookup(bones, hand_name_candidates(side))
+def map_hand(bones: Bones, side: Side, chain_for: Any = v3_chain) -> HandFrame | None:
+    """Convert one side's world rotations to a HandFrame, or None when the hand joint is missing.
+
+    chain_for(side, finger_index) gives the three joint names per finger; a missing joint contributes zero bend.
+    """
+    wrist = bones.get(hand_name(side))
     if wrist is None:
         return None
     flexion: dict[str, tuple[float, float, float]] = {}
     for fi, finger in enumerate(c.FINGERS):
-        chain = [wrist]
-        for seg in range(c.JOINTS_PER_FINGER):
-            rot = _lookup(bones, bone_name_candidates(side, fi, seg))
-            chain.append(rot if rot is not None else chain[-1])
-        angles = [round(_flexion_between(chain[i], chain[i + 1]), c.FRAME_DECIMALS) for i in range(c.JOINTS_PER_FINGER)]
+        parents = [wrist]
+        for name in chain_for(side, fi):
+            parents.append(bones.get(name, parents[-1]))
+        angles = [round(_flexion_between(parents[i], parents[i + 1]), c.FRAME_DECIMALS) for i in range(c.JOINTS_PER_FINGER)]
         flexion[finger] = (angles[0], angles[1], angles[2])
     return HandFrame(side=side, wrist_quat=wrist, wrist_pos=None, flexion=flexion, spread=FingerValues())
 
 
+def _scene(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the scene object of a payload (tolerating a payload that is the scene itself)."""
+    scene = payload.get("scene", payload)
+    return scene if isinstance(scene, dict) else {}
+
+
+def entities(payload: dict[str, Any]) -> list[tuple[Bones, dict[str, str], Any, Any]]:
+    """Return (bones, meta keys, meta, chain function) per streamed actor, v4 newtons first, then v3 actors."""
+    scene = _scene(payload)
+    found: list[tuple[Bones, dict[str, str], Any, Any]] = []
+    for newton in scene.get("newtons") or []:
+        if isinstance(newton, dict):
+            found.append((bones_v4(newton), c.ROKOKO_V4_META_HAND_KEYS, newton.get("meta"), v4_chain))
+    for actor in scene.get("actors") or []:
+        if isinstance(actor, dict):
+            found.append((bones_v3(actor), c.ROKOKO_V3_META_GLOVE_KEYS, actor.get("meta"), v3_chain))
+    if not found:
+        _warn_once(",".join(sorted(payload)), "Unrecognised Rokoko frame (top-level keys: %s); expected scene.actors or scene.newtons")
+    return found
+
+
 def map_payload(payload: dict[str, Any]) -> list[HandFrame]:
-    """Convert a decoded Studio payload to the hands it contains."""
-    hands: list[HandFrame] = []
-    for actor in find_actors(payload):
-        bones = find_bone_table(actor)
+    """Convert a decoded Studio payload to the hands it contains, at most one per side (first actor wins)."""
+    hands: dict[str, HandFrame] = {}
+    for bones, meta_keys, meta, chain_for in entities(payload):
         if not bones:
-            shape = "actor:" + ",".join(sorted(actor))
-            if shape not in _warned_shapes:
-                _warned_shapes.add(shape)
-                log.warning("Rokoko actor has no bone table (keys: %s); fix rokoko_mapper.find_bone_table", shape)
+            _warn_once("empty-actor", "Rokoko actor with no joints (%s); is the glove paired to an actor in Studio?")
             continue
         for side in c.SIDES:
-            hand = map_hand(bones, side)  # type: ignore[arg-type]
+            if side in hands or not _has_side(meta, meta_keys, side):  # type: ignore[arg-type]
+                continue
+            hand = map_hand(bones, side, chain_for)  # type: ignore[arg-type]
             if hand is not None:
-                hands.append(hand)
-    return hands
+                hands[side] = hand
+    return list(hands.values())
 
 
 def angle_to_quat(angle: float) -> geometry.Quat:
