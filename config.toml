@@ -288,5 +288,8 @@ weights = { middle_pip = 0.7, middle_dip = 0.5 }
 host = "10.0.34.248"
 port = 8888
 timeout_s = 5.0
+# true: connect over the USB cable through iproxy (libimobiledevice) instead of WiFi;
+# host is then ignored and the same port is used on both ends
+usb = false
 # depth pixels with confidence below this count as missing (0 low, 1 medium, 2 high)
 min_confidence = 1

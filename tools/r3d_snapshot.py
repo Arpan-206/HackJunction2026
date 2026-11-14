@@ -26,10 +26,13 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=5.0)
     ap.add_argument("--out", default=None)
     ap.add_argument("--config", default=None)
+    ap.add_argument("--usb", action="store_true", help="override config: go over the USB cable through iproxy")
     a = ap.parse_args()
     cfg = load_config(a.config)
     cam = Record3DStreamCamera(cfg, Clock())
-    print(f"connecting to {cam.host}:{cam.port} (from config.toml [camera.record3dstream])")
+    if a.usb:
+        cam.usb = True
+    print(f"connecting to {'usb (iproxy localhost)' if cam.usb else cam.host}:{cam.port} (from config.toml [camera.record3dstream])")
     cam.start()
     t0 = time.monotonic()
     seen: list[tuple[int, float, int]] = []   # (frame_id, stream_t, arrival_us)

@@ -18,6 +18,7 @@ import json
 import logging
 import socket
 import struct
+import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -161,6 +162,8 @@ class Record3DStreamCamera:
         self.timeout = float(r.timeout_s)
         self.latency_us = int(cfg.camera.latency_us)
         self.min_confidence = int(r.get("min_confidence", 1))
+        self.usb = bool(r.get("usb", False))
+        self._iproxy: subprocess.Popen | None = None
         self.clock = clock
         self._latest: DepthFrame | None = None
         self._lock = threading.Lock()
@@ -173,6 +176,13 @@ class Record3DStreamCamera:
         self._arrivals: list[float] = []
 
     def start(self) -> None:
+        if self.usb:
+            # USB: iproxy (libimobiledevice, brew install libimobiledevice) forwards
+            # localhost:port to the phone's port over the cable, no WiFi involved.
+            self._iproxy = subprocess.Popen(["iproxy", f"{self.port}:{self.port}"],
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.host = "127.0.0.1"
+            time.sleep(0.5)
         self._thread = threading.Thread(target=self._run, name="record3dstream", daemon=True)
         self._thread.start()
 
@@ -180,6 +190,9 @@ class Record3DStreamCamera:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=2.0)
+        if self._iproxy is not None:
+            self._iproxy.terminate()
+            self._iproxy = None
 
     def _run(self) -> None:
         reader = PacketReader()
@@ -224,7 +237,7 @@ class Record3DStreamCamera:
 
     def status(self) -> dict:
         f = self.read()
-        return {"host": self.host, "port": self.port, "connected": self.connected, "frames": self.frames,
+        return {"host": self.host, "port": self.port, "usb": self.usb, "connected": self.connected, "frames": self.frames,
                 "fps": None if self.fps() is None else round(self.fps(), 1), "error": self.error,
                 "rgb": None if f is None else [f.bgr.shape[1], f.bgr.shape[0]],
                 "depth": None if f is None or f.depth is None else [f.depth.shape[1], f.depth.shape[0]]}
