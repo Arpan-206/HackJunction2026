@@ -29,7 +29,9 @@ import numpy as np
 
 from .remote_zip import open_remote_zip
 
-DATASET_URL = "https://huggingface.co/datasets/rcwang/for_elise/resolve/main/dataset.zip"
+DATASET_URL = (
+    "https://huggingface.co/datasets/rcwang/for_elise/resolve/main/dataset.zip"
+)
 FPS = 59.94
 N_KEYS = 88
 
@@ -51,15 +53,23 @@ def first_array(buf: bytes, inner: tuple[int, ...]) -> np.ndarray | None:
     per = int(np.prod(inner)) * 4
     try:
         for op, arg, _pos in pickletools.genops(io.BytesIO(buf)):
-            if op.name in ("BINBYTES", "BINBYTES8") and isinstance(arg, (bytes, bytearray)):
+            if op.name in ("BINBYTES", "BINBYTES8") and isinstance(
+                arg, (bytes, bytearray)
+            ):
                 if len(arg) >= per and len(arg) % per == 0:
-                    return np.frombuffer(bytes(arg), dtype="<f4").reshape((-1, *inner)).copy()
+                    return (
+                        np.frombuffer(bytes(arg), dtype="<f4")
+                        .reshape((-1, *inner))
+                        .copy()
+                    )
     except ValueError:
         return None
     return None
 
 
-def _read_until_array(stream, inner: tuple[int, ...], step: int = 1 << 20) -> tuple[np.ndarray, int]:
+def _read_until_array(
+    stream, inner: tuple[int, ...], step: int = 1 << 20
+) -> tuple[np.ndarray, int]:
     buf = bytearray()
     while True:
         chunk = stream.read(step)

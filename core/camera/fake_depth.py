@@ -29,6 +29,7 @@ Core yaw convention (core/rgmp.py _yaw_of): yaw 0 is the fingers pointing away f
 person (core world -z). With this scene and [camera.depth] camera_yaw_deg = 180, the core
 yaw of the hand equals FakeDepthScene.yaw_deg(t).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -51,14 +52,18 @@ CAM_W, CAM_H = 1920, 1440
 FX = FY = 1450.0
 K_CAM = np.array([[FX, 0, CAM_W / 2], [0, FY, CAM_H / 2], [0, 0, 1]])
 
-SIGMA_HIGH_M = 0.0018     # measured, bench capture
-SIGMA_MEDIUM_M = 0.012    # guess
-SIGMA_LOW_M = 0.059       # measured, bench capture
-SIGMA_DARK_M = 0.003      # black fabric: filled and smooth (bench capture), small ripple
+SIGMA_HIGH_M = 0.0018  # measured, bench capture
+SIGMA_MEDIUM_M = 0.012  # guess
+SIGMA_LOW_M = 0.059  # measured, bench capture
+SIGMA_DARK_M = 0.003  # black fabric: filled and smooth (bench capture), small ripple
 
 LABEL_BG, LABEL_TABLE, LABEL_ARM, LABEL_HAND = 0, 1, 2, 3
-COLOURS = {LABEL_BG: (45, 45, 50), LABEL_TABLE: (60, 110, 160), LABEL_ARM: (120, 95, 70),
-           LABEL_HAND: (120, 160, 220)}
+COLOURS = {
+    LABEL_BG: (45, 45, 50),
+    LABEL_TABLE: (60, 110, 160),
+    LABEL_ARM: (120, 95, 70),
+    LABEL_HAND: (120, 160, 220),
+}
 BLACK_GLOVE = (22, 22, 24)
 
 TABLE_CENTRE_Z = -0.35
@@ -81,7 +86,9 @@ def rot_y(deg: float) -> np.ndarray:
 
 def default_yaw(t: float) -> float:
     """The arm's swing in degrees: two slow sines, about +-23 degrees."""
-    return 17.0 * math.sin(2 * math.pi * t / 6.0) + 6.0 * math.sin(2 * math.pi * t / 2.3)
+    return 17.0 * math.sin(2 * math.pi * t / 6.0) + 6.0 * math.sin(
+        2 * math.pi * t / 2.3
+    )
 
 
 @dataclass
@@ -92,10 +99,10 @@ class FakeDepthScene:
     pitch_deg: float = 30.0
     dark_hand: bool = False
     with_plane: bool = True
-    plane_after_s: float = 0.0              # ARKit finds the plane only after a moment
+    plane_after_s: float = 0.0  # ARKit finds the plane only after a moment
     yaw_fn: Callable[[float], float] = default_yaw
     seed: int = 0
-    no_arm: bool = False                     # an empty bench
+    no_arm: bool = False  # an empty bench
     _rays: np.ndarray = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -106,13 +113,15 @@ class FakeDepthScene:
         v, u = np.mgrid[0:DEPTH_H, 0:DEPTH_W]
         x = (u + 0.5 - K_d[0, 2]) / K_d[0, 0]
         y = (v + 0.5 - K_d[1, 2]) / K_d[1, 1]
-        r_cv = np.stack([x, y, np.ones_like(x)], -1).reshape(-1, 3)     # OpenCV camera rays, z = 1
-        self.R_arkit = rot_x(-self.pitch_deg)                             # camera to world, ARKit axes
+        r_cv = np.stack([x, y, np.ones_like(x)], -1).reshape(
+            -1, 3
+        )  # OpenCV camera rays, z = 1
+        self.R_arkit = rot_x(-self.pitch_deg)  # camera to world, ARKit axes
         R_cv = self.R_arkit @ np.diag([1.0, -1.0, -1.0])
         d = r_cv @ R_cv.T
         n = np.linalg.norm(d, axis=1, keepdims=True)
-        self._rays = d / n                                                # unit rays in the world
-        self._zscale = (1.0 / n[:, 0])                                    # depth along the axis per metre of ray
+        self._rays = d / n  # unit rays in the world
+        self._zscale = 1.0 / n[:, 0]  # depth along the axis per metre of ray
         self.origin = np.array([0.0, self.cam_height_m, 0.0])
 
     # -- poses ---------------------------------------------------------------
@@ -154,14 +163,26 @@ class FakeDepthScene:
         caps = [(elbow, wrist - 0.01 * fwd, 0.034, LABEL_ARM)]
         palm_end = wrist + 0.09 * fwd + 0.008 * down
         for k in (-0.024, 0.0, 0.024):
-            caps.append((wrist + k * side * 0.8, palm_end + k * side, 0.014, LABEL_HAND))
-        for k, length in zip((-0.027, -0.009, 0.009, 0.027), (0.065, 0.08, 0.075, 0.06)):
+            caps.append(
+                (wrist + k * side * 0.8, palm_end + k * side, 0.014, LABEL_HAND)
+            )
+        for k, length in zip(
+            (-0.027, -0.009, 0.009, 0.027), (0.065, 0.08, 0.075, 0.06)
+        ):
             base = palm_end + k * side
             tip = base + length * fwd + 0.025 * down
             caps.append((base, tip, 0.0085, LABEL_HAND))
         tb = wrist + 0.03 * fwd + 0.035 * side
-        caps.append((tb, tb + 0.05 * (fwd + 0.6 * side) / np.linalg.norm(fwd + 0.6 * side) + 0.02 * down,
-                     0.010, LABEL_HAND))
+        caps.append(
+            (
+                tb,
+                tb
+                + 0.05 * (fwd + 0.6 * side) / np.linalg.norm(fwd + 0.6 * side)
+                + 0.02 * down,
+                0.010,
+                LABEL_HAND,
+            )
+        )
         return caps
 
     # -- rendering -----------------------------------------------------------
@@ -178,8 +199,11 @@ class FakeDepthScene:
         with np.errstate(divide="ignore", invalid="ignore"):
             tt = -o[1] / d[:, 1]
             p = o + tt[:, None] * d
-            on_table = (tt > 0) & (np.abs(p[:, 0]) <= TABLE_EXTENT[0] / 2) \
+            on_table = (
+                (tt > 0)
+                & (np.abs(p[:, 0]) <= TABLE_EXTENT[0] / 2)
                 & (np.abs(p[:, 2] - TABLE_CENTRE_Z) <= TABLE_EXTENT[1] / 2)
+            )
             t[on_table] = tt[on_table]
             lab[on_table] = LABEL_TABLE
             tf = (FLOOR_Y - o[1]) / d[:, 1]
@@ -204,7 +228,9 @@ class FakeDepthScene:
             out[idx] = self._capsule_rays(self._rays[idx], a, b, r)
         return out
 
-    def _capsule_rays(self, rd: np.ndarray, a: np.ndarray, b: np.ndarray, r: float) -> np.ndarray:
+    def _capsule_rays(
+        self, rd: np.ndarray, a: np.ndarray, b: np.ndarray, r: float
+    ) -> np.ndarray:
         """Inigo Quilez's closed-form ray-capsule intersection, vectorised over unit rays rd."""
         ro = self.origin
         ba, oa = b - a, ro - a
@@ -238,12 +264,13 @@ class FakeDepthScene:
     def render(self, t: float, frame_index: int = 0) -> dict:
         """Depth (float32 metres), confidence (uint8), labels and colour (BGR, 640x480) at time t."""
         import cv2
+
         rng = np.random.default_rng(self.seed * 1_000_003 + frame_index)
         tl, lab = self._background()
         tl_behind = None
         for a, b, r, label in self.capsules(t):
             if label == LABEL_HAND and tl_behind is None:
-                tl_behind = tl.copy()          # what lies behind the hand: table and forearm
+                tl_behind = tl.copy()  # what lies behind the hand: table and forearm
             tc = self._capsule(a, b, r)
             closer = tc < tl
             tl[closer] = tc[closer]
@@ -254,11 +281,19 @@ class FakeDepthScene:
 
         # confidence: depth edges and far range are less sure, as ARKit reports
         pad = np.pad(depth, 1, mode="edge")
-        jump = np.max(np.abs(np.stack([pad[1:-1, :-2], pad[1:-1, 2:], pad[:-2, 1:-1], pad[2:, 1:-1]]) - depth), axis=0)
+        jump = np.max(
+            np.abs(
+                np.stack([pad[1:-1, :-2], pad[1:-1, 2:], pad[:-2, 1:-1], pad[2:, 1:-1]])
+                - depth
+            ),
+            axis=0,
+        )
         conf = np.full(depth.shape, 2, np.uint8)
         conf[(jump > 0.01) | (depth > 1.5)] = 1
         strong = (jump > 0.03) | (depth > 2.5) | (depth <= 0)
-        strong = cv2.dilate(strong.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+        strong = cv2.dilate(strong.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(
+            bool
+        )
         conf[strong] = 0
         conf[rng.random(depth.shape) < 0.005] = 0
 
@@ -267,7 +302,9 @@ class FakeDepthScene:
         noisy = depth + rng.normal(0.0, 1.0, depth.shape) * sigma
         if self.dark_hand and hand.any() and tl_behind is not None:
             m = cv2.dilate(hand.astype(np.uint8), np.ones((3, 3), np.uint8))
-            behind = (tl_behind * self._zscale).reshape(DEPTH_H, DEPTH_W).astype(np.float32)
+            behind = (
+                (tl_behind * self._zscale).reshape(DEPTH_H, DEPTH_W).astype(np.float32)
+            )
             behind[~np.isfinite(behind)] = 0.0
             filled = cv2.GaussianBlur(behind, (15, 15), 4.0)
             mb = m.astype(bool)
@@ -285,36 +322,70 @@ class FakeDepthScene:
         shade = cv2.resize(np.clip(1.2 - 0.6 * depth, 0.4, 1.1), (JPEG_W, JPEG_H))
         bgr = np.clip(bgr * shade[..., None], 0, 255).astype(np.uint8)
         bgr = cv2.GaussianBlur(bgr, (3, 3), 0.8)
-        return {"depth": noisy, "confidence": conf, "labels": labels, "bgr": bgr, "truth_depth": depth}
+        return {
+            "depth": noisy,
+            "confidence": conf,
+            "labels": labels,
+            "bgr": bgr,
+            "truth_depth": depth,
+        }
 
     def packet(self, i: int, fps: float = 30.0) -> bytes:
         """Frame i as the phone sends it."""
         t = i / fps
         r = self.render(t, i)
         plane = self.plane_pose if self.with_plane and t >= self.plane_after_s else None
-        return build_packet(r["bgr"], r["depth"], K_CAM, r["confidence"], frame_id=i + 1,
-                            timestamp=1000.0 + t, transform=self.transform, plane=plane,
-                            plane_extent=TABLE_EXTENT if plane is not None else (0.0, 0.0),
-                            cam_wh=(CAM_W, CAM_H), tracking=2)
+        return build_packet(
+            r["bgr"],
+            r["depth"],
+            K_CAM,
+            r["confidence"],
+            frame_id=i + 1,
+            timestamp=1000.0 + t,
+            transform=self.transform,
+            plane=plane,
+            plane_extent=TABLE_EXTENT if plane is not None else (0.0, 0.0),
+            cam_wh=(CAM_W, CAM_H),
+            tracking=2,
+        )
 
 
-def write_recording(path: Path, scene: FakeDepthScene, seconds: float = 10.0, fps: float = 30.0,
-                    t0_us: int = 1_700_000_000_000_000, note: str = "") -> int:
+def write_recording(
+    path: Path,
+    scene: FakeDepthScene,
+    seconds: float = 10.0,
+    fps: float = 30.0,
+    t0_us: int = 1_700_000_000_000_000,
+    note: str = "",
+) -> int:
     """Write a .gdrec(.gz) of the scene without a socket. Arrival times are t0 plus 1/fps steps."""
     n = int(round(seconds * fps))
-    meta = {"source": "FAKE core.camera.fake_depth", "dark_hand": scene.dark_hand,
-            "with_plane": scene.with_plane, "fps": fps, "note": note or "synthetic bench scene, not a phone"}
+    meta = {
+        "source": "FAKE core.camera.fake_depth",
+        "dark_hand": scene.dark_hand,
+        "with_plane": scene.with_plane,
+        "fps": fps,
+        "note": note or "synthetic bench scene, not a phone",
+    }
     with RecordingWriter(Path(path), meta) as w:
         for i in range(n):
             w.write(t0_us + int(i * 1e6 / fps), scene.packet(i, fps))
     return n
 
 
-def serve(scene: FakeDepthScene, port: int = DEFAULT_PORT, fps: float = 30.0, seconds: float = 0.0,
-          host: str = "127.0.0.1", server: PacketServer | None = None) -> int:
+def serve(
+    scene: FakeDepthScene,
+    port: int = DEFAULT_PORT,
+    fps: float = 30.0,
+    seconds: float = 0.0,
+    host: str = "127.0.0.1",
+    server: PacketServer | None = None,
+) -> int:
     """Serve the scene like the phone: one client, frames dropped while nobody listens."""
     srv = server or PacketServer(host, port)
-    print(f"FAKE depth phone on {host}:{srv.port} at {fps:g} Hz, dark_hand={scene.dark_hand} (synthetic, not a phone)")
+    print(
+        f"FAKE depth phone on {host}:{srv.port} at {fps:g} Hz, dark_hand={scene.dark_hand} (synthetic, not a phone)"
+    )
     t0 = time.monotonic()
     i = 0
     try:
@@ -332,13 +403,28 @@ def serve(scene: FakeDepthScene, port: int = DEFAULT_PORT, fps: float = 30.0, se
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
     p.add_argument("--fps", type=float, default=30.0)
-    p.add_argument("--seconds", type=float, default=0.0, help="stop after this long (0 runs until Ctrl-C)")
-    p.add_argument("--dark-hand", action="store_true", help="black gloves: no usable depth on the hand")
-    p.add_argument("--no-plane", action="store_true", help="send no table plane (the core must fit its own)")
+    p.add_argument(
+        "--seconds",
+        type=float,
+        default=0.0,
+        help="stop after this long (0 runs until Ctrl-C)",
+    )
+    p.add_argument(
+        "--dark-hand",
+        action="store_true",
+        help="black gloves: no usable depth on the hand",
+    )
+    p.add_argument(
+        "--no-plane",
+        action="store_true",
+        help="send no table plane (the core must fit its own)",
+    )
     p.add_argument("--record", type=Path, help="write a .gdrec.gz instead of serving")
     a = p.parse_args()
     logging.basicConfig(level=logging.INFO)

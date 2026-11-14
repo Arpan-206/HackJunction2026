@@ -22,8 +22,8 @@ from pathlib import Path
 import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import oai  # noqa: E402
-import prompt  # noqa: E402
+import oai
+import prompt
 
 LANE = Path(__file__).resolve().parent
 TEST = LANE / "out" / "dataset" / "test.jsonl"
@@ -45,8 +45,15 @@ async def run(system: str, latency_n: int, concurrency: int) -> dict:
     model = await oai.served_model()
 
     async def one(client, ex):
-        line, dt = await oai.complete(client, model, prompt.messages(ex), temperature=0.0)
-        return {"id": ex["id"], "raw": line, "batched_s": round(dt, 3), **prompt.check(line, ex["top_finger"], ex["top_hint"], ex["lang"])}
+        line, dt = await oai.complete(
+            client, model, prompt.messages(ex), temperature=0.0
+        )
+        return {
+            "id": ex["id"],
+            "raw": line,
+            "batched_s": round(dt, 3),
+            **prompt.check(line, ex["top_finger"], ex["top_hint"], ex["lang"]),
+        }
 
     t0 = time.time()
     results = await oai.run_all(rows, one, concurrency)
@@ -82,22 +89,54 @@ async def run(system: str, latency_n: int, concurrency: int) -> dict:
 
 
 def report() -> str:
-    rows = {json.loads(x)["id"]: json.loads(x) for x in TEST.read_text().splitlines() if x.strip()}
-    sums = {s: json.loads((OUT / f"{s}.summary.json").read_text()) for s in SYSTEMS if (OUT / f"{s}.summary.json").exists()}
-    outs = {s: {json.loads(x)["id"]: json.loads(x) for x in (OUT / f"{s}.jsonl").read_text().splitlines()} for s in sums}
+    rows = {
+        json.loads(x)["id"]: json.loads(x)
+        for x in TEST.read_text().splitlines()
+        if x.strip()
+    }
+    sums = {
+        s: json.loads((OUT / f"{s}.summary.json").read_text())
+        for s in SYSTEMS
+        if (OUT / f"{s}.summary.json").exists()
+    }
+    outs = {
+        s: {
+            json.loads(x)["id"]: json.loads(x)
+            for x in (OUT / f"{s}.jsonl").read_text().splitlines()
+        }
+        for s in sums
+    }
     lessons = sorted({r["unit"] for r in rows.values()})
-    lines = ["# Coach model evaluation", "", f"Held-out units ({len(lessons)}), never seen in training: {', '.join(lessons)}.",
-             f"{len(rows)} test examples. Quality at temperature 0. Latency: single requests in a row from the laptop through the Verda container gateway (each system on its own 1x H100 serverless container), so it includes the internet round trip.", "",
-             "| System | Model | Right finger % | Right direction % | Style % | All three % | Latency p50 s | Latency p95 s |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    lines = [
+        "# Coach model evaluation",
+        "",
+        f"Held-out units ({len(lessons)}), never seen in training: {', '.join(lessons)}.",
+        f"{len(rows)} test examples. Quality at temperature 0. Latency: single requests in a row from the laptop through the Verda container gateway (each system on its own 1x H100 serverless container), so it includes the internet round trip.",
+        "",
+        "| System | Model | Right finger % | Right direction % | Style % | All three % | Latency p50 s | Latency p95 s |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
     for s, m in sums.items():
-        lines.append(f"| {s} | {m['model']} | {m['finger_pct']} | {m['direction_pct']} | {m['style_pct']} | {m['all_pct']} | {m['latency_p50_s']} | {m['latency_p95_s']} |")
+        lines.append(
+            f"| {s} | {m['model']} | {m['finger_pct']} | {m['direction_pct']} | {m['style_pct']} | {m['all_pct']} | {m['latency_p50_s']} | {m['latency_p95_s']} |"
+        )
     if "tuned" in sums and "untuned" in sums:
         better = sums["tuned"]["all_pct"] > sums["untuned"]["all_pct"]
-        lines += ["", "The tuned model is " + ("better" if better else "NOT better") + f" than the untuned one on the all-three measure "
-                  f"({sums['tuned']['all_pct']}% against {sums['untuned']['all_pct']}%)."]
+        lines += [
+            "",
+            "The tuned model is "
+            + ("better" if better else "NOT better")
+            + f" than the untuned one on the all-three measure "
+            f"({sums['tuned']['all_pct']}% against {sums['untuned']['all_pct']}%).",
+        ]
     ids = random.Random(7).sample(sorted(rows), min(20, len(rows)))
-    lines += ["", "## 20 side-by-side samples", "", "| Input | " + " | ".join(sums) + " |", "| --- |" + " --- |" * len(sums)]
+    lines += [
+        "",
+        "## 20 side-by-side samples",
+        "",
+        "| Input | " + " | ".join(sums) + " |",
+        "| --- |" + " --- |" * len(sums),
+    ]
     for i in ids:
         ex = rows[i]
         cue = f"{ex['lang']}: {ex['top_finger']} {ex['top_hint'].replace('_', ' ')} ({ex['task']}, {ex['step_name']})"

@@ -18,7 +18,11 @@ from pathlib import Path
 
 import torch
 from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, get_cosine_schedule_with_warmup
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    get_cosine_schedule_with_warmup,
+)
 
 MODEL_ID = "google/gemma-4-E2B-it"
 TARGETS = r"^(?!.*(vision|audio)).*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"
@@ -29,9 +33,13 @@ def load_rows(path: Path) -> list[dict]:
 
 
 def encode(tok, row: dict, max_len: int) -> tuple[list[int], list[int]]:
-    prompt = tok.apply_chat_template(row["messages"], tokenize=False, add_generation_prompt=True)
+    prompt = tok.apply_chat_template(
+        row["messages"], tokenize=False, add_generation_prompt=True
+    )
     p_ids = tok(prompt, add_special_tokens=False)["input_ids"]
-    end = "<end_of_turn>" if "<end_of_turn>" in tok.get_vocab() else (tok.eos_token or "")
+    end = (
+        "<end_of_turn>" if "<end_of_turn>" in tok.get_vocab() else (tok.eos_token or "")
+    )
     c_ids = tok(row["completion"] + end, add_special_tokens=False)["input_ids"]
     ids = (p_ids + c_ids)[:max_len]
     labels = ([-100] * len(p_ids) + c_ids)[:max_len]
@@ -76,10 +84,14 @@ def samples(model, tok, rows: list[dict], device) -> list[dict]:
     model.eval()
     out = []
     for r in rows:
-        prompt = tok.apply_chat_template(r["messages"], tokenize=False, add_generation_prompt=True)
+        prompt = tok.apply_chat_template(
+            r["messages"], tokenize=False, add_generation_prompt=True
+        )
         ids = tok(prompt, add_special_tokens=False, return_tensors="pt").to(device)
         gen = model.generate(**ids, max_new_tokens=40, do_sample=False)
-        text = tok.decode(gen[0, ids["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+        text = tok.decode(
+            gen[0, ids["input_ids"].shape[1] :], skip_special_tokens=True
+        ).strip()
         out.append({"expected": r["completion"], "generated": text})
         print(json.dumps(out[-1], ensure_ascii=False), flush=True)
     model.train()
@@ -127,8 +139,15 @@ def main() -> int:
     ap.add_argument("--dropout", type=float, default=0.05)
     ap.add_argument("--max-len", type=int, default=512)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--max-steps", type=int, default=0, help="stop after N steps (smoke test); 0 runs every epoch")
-    ap.add_argument("--no-merge", action="store_true", help="skip the merge (smoke test)")
+    ap.add_argument(
+        "--max-steps",
+        type=int,
+        default=0,
+        help="stop after N steps (smoke test); 0 runs every epoch",
+    )
+    ap.add_argument(
+        "--no-merge", action="store_true", help="skip the merge (smoke test)"
+    )
     a = ap.parse_args()
 
     random.seed(a.seed)
@@ -136,20 +155,36 @@ def main() -> int:
     device = torch.device("cuda")
     tok = AutoTokenizer.from_pretrained(a.model)
     pad_id = tok.pad_token_id if tok.pad_token_id is not None else 0
-    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.bfloat16).to(device)
-    lora = LoraConfig(r=a.r, lora_alpha=a.alpha, lora_dropout=a.dropout, target_modules=TARGETS, task_type="CAUSAL_LM")
+    model = AutoModelForCausalLM.from_pretrained(
+        a.model, torch_dtype=torch.bfloat16
+    ).to(device)
+    lora = LoraConfig(
+        r=a.r,
+        lora_alpha=a.alpha,
+        lora_dropout=a.dropout,
+        target_modules=TARGETS,
+        task_type="CAUSAL_LM",
+    )
     model = get_peft_model(model, lora)
     model.print_trainable_parameters()
 
     train = [encode(tok, r, a.max_len) for r in load_rows(a.data / "train.jsonl")]
     val = [encode(tok, r, a.max_len) for r in load_rows(a.data / "val.jsonl")]
     steps = math.ceil(len(train) / a.bs) * math.ceil(a.epochs)
-    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr, weight_decay=0.0)
+    opt = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad], lr=a.lr, weight_decay=0.0
+    )
     sched = get_cosine_schedule_with_warmup(opt, int(0.05 * steps), steps)
     rng = random.Random(a.seed)
     curve, step, t0 = [], 0, time.time()
-    config = {**{k: (str(v) if isinstance(v, Path) else v) for k, v in vars(a).items()}, "targets": TARGETS,
-              "n_train": len(train), "n_val": len(val), "steps": steps, "torch": torch.__version__}
+    config = {
+        **{k: (str(v) if isinstance(v, Path) else v) for k, v in vars(a).items()},
+        "targets": TARGETS,
+        "n_train": len(train),
+        "n_val": len(val),
+        "steps": steps,
+        "torch": torch.__version__,
+    }
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "config.json").write_text(json.dumps(config, indent=2))
     model.train()
@@ -168,22 +203,51 @@ def main() -> int:
             if a.max_steps and step >= a.max_steps:
                 break
             if step % 10 == 0:
-                curve.append({"step": step, "loss": round(loss.item(), 4), "t_s": round(time.time() - t0)})
+                curve.append(
+                    {
+                        "step": step,
+                        "loss": round(loss.item(), 4),
+                        "t_s": round(time.time() - t0),
+                    }
+                )
                 print(json.dumps(curve[-1]), flush=True)
         if a.max_steps and step >= a.max_steps:
-            curve.append({"step": step, "loss": round(loss.item(), 4), "t_s": round(time.time() - t0), "smoke": True})
+            curve.append(
+                {
+                    "step": step,
+                    "loss": round(loss.item(), 4),
+                    "t_s": round(time.time() - t0),
+                    "smoke": True,
+                }
+            )
             print(json.dumps(curve[-1]), flush=True)
             break
         v = val_loss(model, val, a.bs, pad_id, device)
-        curve.append({"epoch": epoch + 1, "val_loss": round(v, 4), "t_s": round(time.time() - t0)})
+        curve.append(
+            {
+                "epoch": epoch + 1,
+                "val_loss": round(v, 4),
+                "t_s": round(time.time() - t0),
+            }
+        )
         print(json.dumps(curve[-1]), flush=True)
-    (a.out / "samples.json").write_text(json.dumps(samples(model, tok, load_rows(a.data / "val.jsonl")[:5], device), indent=2,
-                                                   ensure_ascii=False))
+    (a.out / "samples.json").write_text(
+        json.dumps(
+            samples(model, tok, load_rows(a.data / "val.jsonl")[:5], device),
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     model.save_pretrained(a.out)
     tok.save_pretrained(a.out)
-    (a.out / "metrics.json").write_text(json.dumps({"curve": curve, "train_s": round(time.time() - t0)}, indent=2))
+    (a.out / "metrics.json").write_text(
+        json.dumps({"curve": curve, "train_s": round(time.time() - t0)}, indent=2)
+    )
     if a.no_merge:
-        print("done (no merge)", json.dumps({"train_s": round(time.time() - t0), "steps": step}))
+        print(
+            "done (no merge)",
+            json.dumps({"train_s": round(time.time() - t0), "steps": step}),
+        )
         return 0
     merged = model.merge_and_unload()
     merged.save_pretrained(a.merged, safe_serialization=True)
@@ -191,9 +255,14 @@ def main() -> int:
     # vLLM needs the processor and generation files of the base model too.
     from huggingface_hub import snapshot_download
 
-    base = Path(snapshot_download(a.model, allow_patterns=["*.json", "*.model", "*.jinja"]))
+    base = Path(
+        snapshot_download(a.model, allow_patterns=["*.json", "*.model", "*.jinja"])
+    )
     for f in base.iterdir():
-        if f.suffix in (".json", ".model", ".jinja") and not (a.merged / f.name).exists():
+        if (
+            f.suffix in (".json", ".model", ".jinja")
+            and not (a.merged / f.name).exists()
+        ):
             (a.merged / f.name).write_bytes(f.read_bytes())
     fill_shared_kv(a.merged, a.model)
     print("done", json.dumps({"train_s": round(time.time() - t0), "steps": step}))

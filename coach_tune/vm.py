@@ -22,7 +22,9 @@ LANE_BUDGET_USD = 80.0
 
 def secrets() -> dict[str, str]:
     path = Path(os.environ.get("GEPPETTO_ENV_FILE", MAIN_CHECKOUT / ".env"))
-    values = {k: v for k, v in dotenv_values(path).items() if v} if path.is_file() else {}
+    values = (
+        {k: v for k, v in dotenv_values(path).items() if v} if path.is_file() else {}
+    )
     values.update({k: v for k, v in os.environ.items() if k.startswith("VERDA_")})
     return values
 
@@ -39,7 +41,10 @@ def client():
 
 def balance(c) -> dict[str, Any]:
     b = c.balance.get()
-    return {"amount": getattr(b, "amount", None), "currency": getattr(b, "currency", None)}
+    return {
+        "amount": getattr(b, "amount", None),
+        "currency": getattr(b, "currency", None),
+    }
 
 
 def now_iso() -> str:

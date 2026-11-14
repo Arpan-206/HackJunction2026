@@ -8,6 +8,7 @@
 While it serves, anything that reads the phone (GeppettoDepthCamera, the core) reads the
 recording instead, with no change.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,16 +32,31 @@ def info(path: Path) -> dict:
     out = {"file": str(path), "note": read_note(path), "frames": n}
     if n:
         dur = (last.arrival_us - first.arrival_us) / 1e6
-        out.update({"seconds": round(dur, 3), "fps": round((n - 1) / dur, 1) if dur > 0 else None,
-                    "frame_ids": [ids[0], ids[-1]], "gaps": sum(1 for a, b in zip(ids, ids[1:]) if b != a + 1),
-                    "rgb": [first.bgr.shape[1], first.bgr.shape[0]],
-                    "depth": None if first.depth is None else [first.depth.shape[1], first.depth.shape[0]],
-                    "with_plane": planes})
+        out.update(
+            {
+                "seconds": round(dur, 3),
+                "fps": round((n - 1) / dur, 1) if dur > 0 else None,
+                "frame_ids": [ids[0], ids[-1]],
+                "gaps": sum(1 for a, b in zip(ids, ids[1:]) if b != a + 1),
+                "rgb": [first.bgr.shape[1], first.bgr.shape[0]],
+                "depth": None
+                if first.depth is None
+                else [first.depth.shape[1], first.depth.shape[0]],
+                "with_plane": planes,
+            }
+        )
     return out
 
 
-def serve(path: Path, host: str = "127.0.0.1", port: int = DEFAULT_PORT, speed: float = 1.0, loop: bool = False,
-          wait_client: bool = True, server: PacketServer | None = None) -> int:
+def serve(
+    path: Path,
+    host: str = "127.0.0.1",
+    port: int = DEFAULT_PORT,
+    speed: float = 1.0,
+    loop: bool = False,
+    wait_client: bool = True,
+    server: PacketServer | None = None,
+) -> int:
     """Send the recording at its recorded pace (times speed). Returns the number of packets sent."""
     srv = server or PacketServer(host, port)
     print(f"replaying {path} on {host}:{srv.port}")
@@ -65,14 +81,20 @@ def serve(path: Path, host: str = "127.0.0.1", port: int = DEFAULT_PORT, speed: 
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("recording", type=Path)
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
     p.add_argument("--speed", type=float, default=1.0)
     p.add_argument("--loop", action="store_true")
     p.add_argument("--info", action="store_true", help="print a summary and exit")
-    p.add_argument("--snapshot", type=Path, help="write the first frame's images and intrinsics to this folder")
+    p.add_argument(
+        "--snapshot",
+        type=Path,
+        help="write the first frame's images and intrinsics to this folder",
+    )
     a = p.parse_args()
     if a.info:
         print(json.dumps(info(a.recording), indent=2))

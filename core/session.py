@@ -793,7 +793,9 @@ class Session:
             return
         for side in SIDES:
             h = self.hands.get(side)
-            self.typing.feed(t_us, side, h.angles if (h is not None and h.tracked) else None)
+            self.typing.feed(
+                t_us, side, h.angles if (h is not None and h.tracked) else None
+            )
         for v in self.typing.due(t_us):
             hand = v["detected"]["hand"] if v["detected"] else None
             self.emit_event("keystroke", hand, v)

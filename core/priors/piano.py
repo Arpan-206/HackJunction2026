@@ -93,7 +93,9 @@ def press_mask(j21: np.ndarray, pressed: np.ndarray) -> tuple[np.ndarray, float]
     n = len(j21)
     # Some pieces store key presses at a multiple of the motion rate (piece
     # 000: twice): resample to the motion frames by nearest index.
-    src = np.minimum(np.round(np.arange(n) * len(pressed) / n).astype(int), len(pressed) - 1)
+    src = np.minimum(
+        np.round(np.arange(n) * len(pressed) / n).astype(int), len(pressed) - 1
+    )
     pressed = pressed[src]
     down = pressed > 0.5
     any_down = down.any(axis=1)
@@ -126,7 +128,9 @@ class PieceFeatures:
     bytes_read: int
 
 
-def piece_features(piece_id: str, subject_id: int, j21: np.ndarray, pressed: np.ndarray, nbytes: int) -> PieceFeatures:
+def piece_features(
+    piece_id: str, subject_id: int, j21: np.ndarray, pressed: np.ndarray, nbytes: int
+) -> PieceFeatures:
     mask, r = press_mask(j21, pressed)
     n = len(mask)
     idx = np.arange(0, n, DOWNSAMPLE)
@@ -141,7 +145,10 @@ PCTS = (5, 25, 50, 75, 95)
 
 def ranges_from(angles: np.ndarray) -> dict:
     q = np.percentile(angles, PCTS, axis=0)
-    return {name: {f"p{p}": round(float(q[i, j]), 1) for i, p in enumerate(PCTS)} for j, name in enumerate(H.ANGLE_NAMES)}
+    return {
+        name: {f"p{p}": round(float(q[i, j]), 1) for i, p in enumerate(PCTS)}
+        for j, name in enumerate(H.ANGLE_NAMES)
+    }
 
 
 def suggested_tolerances(angles: np.ndarray) -> dict:
@@ -172,13 +179,24 @@ def suggested_tolerances(angles: np.ndarray) -> dict:
 # The checker
 # ---------------------------------------------------------------------------
 
-FINGER_WORD = {"thumb": "thumb", "index": "index", "middle": "middle", "ring": "ring", "little": "little"}
-JOINT_WORD = {"mcp": "knuckle", "pip": "middle joint", "dip": "end joint", "ip": "end joint"}
+FINGER_WORD = {
+    "thumb": "thumb",
+    "index": "index",
+    "middle": "middle",
+    "ring": "ring",
+    "little": "little",
+}
+JOINT_WORD = {
+    "mcp": "knuckle",
+    "pip": "middle joint",
+    "dip": "end joint",
+    "ip": "end joint",
+}
 
 
 def joint_phrase(name: str) -> str:
     if name.startswith("spread_"):
-        a, b = name[len("spread_"):].split("_")
+        a, b = name[len("spread_") :].split("_")
         return f"gap between {a} and {b}"
     f, j = name.split("_")
     return f"{FINGER_WORD[f]} {JOINT_WORD[j]}"
@@ -195,7 +213,9 @@ class PianoRanges:
     band: tuple[int, int]
 
     @classmethod
-    def load(cls, path: Path = RANGES_FILE, band: tuple[int, int] = (5, 95)) -> PianoRanges:
+    def load(
+        cls, path: Path = RANGES_FILE, band: tuple[int, int] = (5, 95)
+    ) -> PianoRanges:
         d = json.loads(path.read_text(encoding="utf-8"))
 
         def pick(key: str) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
@@ -211,7 +231,12 @@ class PianoRanges:
         lf, hf = pick("not_pressing")
         return cls(lo, hi, lp, hp, lf, hf, band)
 
-    def check(self, angles: np.ndarray, pressing: bool | None = None, slot_weights: np.ndarray | None = None) -> list[dict]:
+    def check(
+        self,
+        angles: np.ndarray,
+        pressing: bool | None = None,
+        slot_weights: np.ndarray | None = None,
+    ) -> list[dict]:
         """Joints outside the expert band, worst first.
 
         Each item: joint (ANGLE_NAMES), value, lo, hi, by_deg (how far
@@ -238,19 +263,26 @@ class PianoRanges:
                 by = a[j] - hi[j]
             else:
                 continue
-            out.append({
-                "joint": name,
-                "value": round(float(a[j]), 1),
-                "lo": round(float(lo[j]), 1),
-                "hi": round(float(hi[j]), 1),
-                "by_deg": round(float(by), 1),
-                "direction": d,
-            })
+            out.append(
+                {
+                    "joint": name,
+                    "value": round(float(a[j]), 1),
+                    "lo": round(float(lo[j]), 1),
+                    "hi": round(float(hi[j]), 1),
+                    "by_deg": round(float(by), 1),
+                    "direction": d,
+                }
+            )
         out.sort(key=lambda x: -x["by_deg"])
         return out
 
 
 def describe(item: dict) -> str:
     """'index knuckle flatter than the expert range (by 12 deg)'."""
-    words = {"flatter": "flatter", "more_curled": "more curled", "narrower": "narrower", "wider": "wider"}
+    words = {
+        "flatter": "flatter",
+        "more_curled": "more curled",
+        "narrower": "narrower",
+        "wider": "wider",
+    }
     return f"{joint_phrase(item['joint'])} {words[item['direction']]} than the expert range (by {item['by_deg']:.0f} deg)"

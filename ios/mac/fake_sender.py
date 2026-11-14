@@ -9,6 +9,7 @@ Depth is in metres along the optical axis, as ARKit gives it.
     python -m ios.mac.fake_sender                # serve on 127.0.0.1:7700 at 30 Hz
     python -m ios.mac.fake_sender --port 7701 --seconds 10
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,9 @@ HAND_M = 0.45
 K_CAM = np.array([[FX, 0, CAM_W / 2], [0, FY, CAM_H / 2], [0, 0, 1]])
 
 # ARKit camera axes in world: x right = world x, y up (image up) = world -z, z back = world +y.
-CAMERA_POSE = np.array([[1, 0, 0, 0], [0, 0, 1, TABLE_M], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float)
+CAMERA_POSE = np.array(
+    [[1, 0, 0, 0], [0, 0, 1, TABLE_M], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float
+)
 PLANE_POSE = np.eye(4)
 PLANE_EXTENT = (1.2, 0.8)
 
@@ -52,31 +55,50 @@ def hand_mask(w: int, h: int, t: float) -> np.ndarray:
 def make_frame(i: int, fps: float = 30.0):
     """(bgr, depth, confidence) for frame i."""
     import cv2
+
     t = i / fps
     depth = np.full((DEPTH_H, DEPTH_W), TABLE_M, np.float32)
     mask_d = hand_mask(DEPTH_W, DEPTH_H, t)
     depth[mask_d] = HAND_M
     conf = np.full((DEPTH_H, DEPTH_W), 2, np.uint8)
-    edge = mask_d ^ cv2.erode(mask_d.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    edge = mask_d ^ cv2.erode(
+        mask_d.astype(np.uint8), np.ones((3, 3), np.uint8)
+    ).astype(bool)
     conf[edge] = 1
     conf[:8, :8] = 0
     depth[:8, :8] = 0.0
     bgr = np.empty((JPEG_H, JPEG_W, 3), np.uint8)
-    bgr[:] = (60, 110, 160)                      # wood, BGR
+    bgr[:] = (60, 110, 160)  # wood, BGR
     bgr[hand_mask(JPEG_W, JPEG_H, t)] = (120, 160, 220)  # skin, BGR
     return bgr, depth, conf
 
 
 def make_packet(i: int, fps: float = 30.0) -> bytes:
     bgr, depth, conf = make_frame(i, fps)
-    return build_packet(bgr, depth, K_CAM, conf, frame_id=i + 1, timestamp=1000.0 + i / fps,
-                        transform=CAMERA_POSE, plane=PLANE_POSE, plane_extent=PLANE_EXTENT,
-                        cam_wh=(CAM_W, CAM_H))
+    return build_packet(
+        bgr,
+        depth,
+        K_CAM,
+        conf,
+        frame_id=i + 1,
+        timestamp=1000.0 + i / fps,
+        transform=CAMERA_POSE,
+        plane=PLANE_POSE,
+        plane_extent=PLANE_EXTENT,
+        cam_wh=(CAM_W, CAM_H),
+    )
 
 
-def run(port: int = DEFAULT_PORT, fps: float = 30.0, seconds: float = 0.0, host: str = "127.0.0.1") -> None:
+def run(
+    port: int = DEFAULT_PORT,
+    fps: float = 30.0,
+    seconds: float = 0.0,
+    host: str = "127.0.0.1",
+) -> None:
     srv = PacketServer(host, port)
-    print(f"FAKE GeppettoDepth sender on {host}:{srv.port} at {fps:g} Hz (synthetic scene, not a phone)")
+    print(
+        f"FAKE GeppettoDepth sender on {host}:{srv.port} at {fps:g} Hz (synthetic scene, not a phone)"
+    )
     t0 = time.monotonic()
     i = 0
     try:
@@ -93,11 +115,18 @@ def run(port: int = DEFAULT_PORT, fps: float = 30.0, seconds: float = 0.0, host:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
     p.add_argument("--fps", type=float, default=30.0)
-    p.add_argument("--seconds", type=float, default=0.0, help="stop after this long (0 runs until Ctrl-C)")
+    p.add_argument(
+        "--seconds",
+        type=float,
+        default=0.0,
+        help="stop after this long (0 runs until Ctrl-C)",
+    )
     a = p.parse_args()
     logging.basicConfig(level=logging.INFO)
     run(a.port, a.fps, a.seconds, a.host)

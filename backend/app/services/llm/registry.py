@@ -11,7 +11,9 @@ from app.services.llm.rate_limit import RateLimiter
 from app.services.llm.tuned import TunedCoachLLM
 
 FALLBACKS = ("gemini", "openai")  # providers LLM_FALLBACK and LLM_ROUTES may name
-UNSET_OPENAI_URL = "http://localhost:8000"  # the Settings default: this backend, not a model server
+UNSET_OPENAI_URL = (
+    "http://localhost:8000"  # the Settings default: this backend, not a model server
+)
 ROLES = ("hint", "plan", "lesson", "motion")  # LLMRequest.task values
 
 
@@ -34,7 +36,11 @@ class LLMState:
     @property
     def hint_model(self) -> str | None:
         """The model for live coach hints: the Gemini hint model, or None so other providers use their own."""
-        return self._settings.gemini_hint_model if self.primary_for("hint") == "gemini" else None
+        return (
+            self._settings.gemini_hint_model
+            if self.primary_for("hint") == "gemini"
+            else None
+        )
 
     def budgets(self) -> list[dict]:
         """Remaining Gemini budget for the models in use (main and hint), for GET /dev/state."""
@@ -51,21 +57,31 @@ class LLMState:
             )
         if name == "openai":
             return OpenAICompatLLM(
-                self._settings.openai_base_url, self._settings.openai_api_key, self._settings.openai_model
+                self._settings.openai_base_url,
+                self._settings.openai_api_key,
+                self._settings.openai_model,
             )
         if name == "tuned":
             s = self._settings
-            return TunedCoachLLM(s.tuned_base_url, s.tuned_api_key, s.tuned_model, s.tuned_lang)
+            return TunedCoachLLM(
+                s.tuned_base_url, s.tuned_api_key, s.tuned_model, s.tuned_lang
+            )
         return FakeLLM()
 
     def tuned_on(self) -> bool:
         """True when COACH_MODEL=tuned and TUNED_BASE_URL is set: live hints try the tuned coach first."""
-        return self._settings.coach_model == "tuned" and bool(self._settings.tuned_base_url.strip())
+        return self._settings.coach_model == "tuned" and bool(
+            self._settings.tuned_base_url.strip()
+        )
 
     def openai_configured(self) -> bool:
         """True when OPENAI_BASE_URL was set, in the environment or a .env file (the default is this backend itself)."""
         url = self._settings.openai_base_url.rstrip("/")
-        return "openai_base_url" in self._settings.model_fields_set and bool(url) and url != UNSET_OPENAI_URL
+        return (
+            "openai_base_url" in self._settings.model_fields_set
+            and bool(url)
+            and url != UNSET_OPENAI_URL
+        )
 
     def fallback_names(self, primary: str) -> list[str]:
         """The providers tried after primary: the ones LLM_FALLBACK names that are configured. Empty for fake or none."""
@@ -104,7 +120,9 @@ class LLMState:
     def chain_for(self, role: str | None) -> list[str]:
         """The provider names a role tries, in order, after the fallback rules."""
         primary = self.primary_for(role)
-        names = [primary] if primary == "fake" else [primary, *self.fallback_names(primary)]
+        names = (
+            [primary] if primary == "fake" else [primary, *self.fallback_names(primary)]
+        )
         if role == "hint" and self.tuned_on():
             names = ["tuned", *names]
         return names
@@ -117,7 +135,11 @@ class LLMState:
         key = "chain:" + ",".join(names)
         if key not in self._clients:
             links = [self._provider(n) for n in names]
-            self._clients[key] = links[0] if names == ["fake"] else ChainLLM(links, on_answer=self.record)
+            self._clients[key] = (
+                links[0]
+                if names == ["fake"]
+                else ChainLLM(links, on_answer=self.record)
+            )
         return self._clients[key]
 
     @property

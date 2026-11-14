@@ -40,10 +40,16 @@ def _target(curls: list[float]) -> np.ndarray:
 def _held(spec: MotionSpec, side: str) -> list[tuple[float, list[float]]]:
     """(time, curls) pairs at which the motion holds a known pose, read from the spec itself."""
     if isinstance(spec, HoldPose):
-        pose = spec.left_pose if side == "left" and spec.left_pose is not None else spec.pose
+        pose = (
+            spec.left_pose
+            if side == "left" and spec.left_pose is not None
+            else spec.pose
+        )
         return [(t, pose.as_list()) for t in (0.0, 0.4, 1.1, 2.3)]
     assert isinstance(spec, Keyframes)
-    keys: list[Keyframe] = spec.left_keys if side == "left" and spec.left_keys else spec.keys
+    keys: list[Keyframe] = (
+        spec.left_keys if side == "left" and spec.left_keys else spec.keys
+    )
     stretch = sum(k.ms for k in spec.keys) / sum(k.ms for k in keys)
     out, start = [], 0.0
     for key in keys:
@@ -65,18 +71,30 @@ def _cases() -> list[tuple[str, str]]:
 def test_the_set_is_every_letter_and_every_puppet() -> None:
     ids = {m.id for m in _moves()}
     assert {f"fs_{x}" for x in "abcdefghijklmnopqrstuvwxyz"} <= ids
-    assert {i for i in ids if i.startswith("sp_")} == {"sp_rabbit", "sp_talking_dog", "sp_swan", "sp_flapping_bird", "sp_snail"}
+    assert {i for i in ids if i.startswith("sp_")} == {
+        "sp_rabbit",
+        "sp_talking_dog",
+        "sp_swan",
+        "sp_flapping_bird",
+        "sp_snail",
+    }
 
 
 @pytest.mark.parametrize(("move_id", "side"), _cases())
-def test_every_joint_is_within_5_degrees_of_the_scorer_target(move_id: str, side: str) -> None:
+def test_every_joint_is_within_5_degrees_of_the_scorer_target(
+    move_id: str, side: str
+) -> None:
     spec = next(m for m in _moves() if m.id == move_id).default_motion
     for t, curls in _held(spec, side):
         gap = np.degrees(np.abs(_flexion(spec, side, t) - _target(curls)))
         worst = np.unravel_index(int(gap.argmax()), gap.shape)
-        assert gap.max() < MAX_JOINT_DEG, f"{move_id} {side} t={t:.2f}: {c.FINGERS[worst[0]]}[{worst[1]}] off by {gap.max():.1f} deg"
+        assert gap.max() < MAX_JOINT_DEG, (
+            f"{move_id} {side} t={t:.2f}: {c.FINGERS[worst[0]]}[{worst[1]}] off by {gap.max():.1f} deg"
+        )
         # The thumb carries no breathing, so it must match exactly.
-        assert gap[0].max() < 0.01, f"{move_id} {side}: thumb off by {gap[0].max():.2f} deg"
+        assert gap[0].max() < 0.01, (
+            f"{move_id} {side}: thumb off by {gap[0].max():.2f} deg"
+        )
 
 
 def _copied_frames(spec: MotionSpec, side: str, seconds: float) -> list[dict]:
@@ -94,8 +112,13 @@ def _copied_frames(spec: MotionSpec, side: str, seconds: float) -> list[dict]:
                 "hands": [
                     {
                         "side": side,
-                        "wrist_quat": list(synthesiser.hand_frame(spec, side, t).wrist_quat),  # type: ignore[arg-type]
-                        "flexion": {f: [float(v) for v in target[j]] for j, f in enumerate(c.FINGERS)},
+                        "wrist_quat": list(
+                            synthesiser.hand_frame(spec, side, t).wrist_quat
+                        ),  # type: ignore[arg-type]
+                        "flexion": {
+                            f: [float(v) for v in target[j]]
+                            for j, f in enumerate(c.FINGERS)
+                        },
                     }
                 ],
             }
@@ -104,13 +127,19 @@ def _copied_frames(spec: MotionSpec, side: str, seconds: float) -> list[dict]:
 
 
 @pytest.mark.parametrize(("move_id", "side"), _cases())
-def test_a_pose_copied_from_the_target_scores_as_perfect(client: TestClient, move_id: str, side: str) -> None:
+def test_a_pose_copied_from_the_target_scores_as_perfect(
+    client: TestClient, move_id: str, side: str
+) -> None:
     spec = next(m for m in _moves() if m.id == move_id).default_motion
     period = synthesiser.motion_period(spec) or 2.0
     seconds = max(2.0, period)
     res = client.post(
         "/api/score",
-        json={"reference_motion": spec.model_dump(), "attempt_frames": _copied_frames(spec, side, seconds), "side": side},
+        json={
+            "reference_motion": spec.model_dump(),
+            "attempt_frames": _copied_frames(spec, side, seconds),
+            "side": side,
+        },
     )
     assert res.status_code == 200, res.text
     assert res.json()["overall"] >= 99, f"{move_id} {side}: {res.json()['overall']}"

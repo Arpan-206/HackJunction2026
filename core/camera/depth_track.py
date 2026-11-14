@@ -27,6 +27,7 @@ The dark-hand case (black gloves, no hand depth) needs no special path: the hand
 carry confidence 0, so the blob is the forearm alone, and the direction still comes out.
 hand_depth says whether the blob looks like more than a forearm.
 """
+
 from __future__ import annotations
 
 import math
@@ -46,35 +47,53 @@ LABEL_OTHER, LABEL_TABLE, LABEL_ARM, LABEL_DARK = 0, 1, 2, 3
 class TrackerConfig:
     """[camera.depth] in config.toml. Units: metres, degrees, pixels at the depth resolution."""
 
-    min_confidence: int = 1          # arm pixels need at least this (0 low, 1 medium, 2 high)
-    band_min_m: float = 0.012        # an arm point is this far above the table at least
-    band_max_m: float = 0.35         # and at most this
-    max_range_m: float = 1.0         # ignore points farther than this from the camera
-    min_blob_px: int = 150           # smallest arm blob
-    forearm_len_m: float = 0.15      # the stretch from the entry used for the direction
-    min_elongation: float = 1.8      # sqrt of the PCA eigenvalue ratio, below this the direction is unsure
+    min_confidence: int = 1  # arm pixels need at least this (0 low, 1 medium, 2 high)
+    band_min_m: float = 0.012  # an arm point is this far above the table at least
+    band_max_m: float = 0.35  # and at most this
+    max_range_m: float = 1.0  # ignore points farther than this from the camera
+    min_blob_px: int = 150  # smallest arm blob
+    forearm_len_m: float = 0.15  # the stretch from the entry used for the direction
+    min_elongation: float = (
+        1.8  # sqrt of the PCA eigenvalue ratio, below this the direction is unsure
+    )
     min_forearm_points: int = 40
     ransac_iters: int = 60
     ransac_tol_m: float = 0.006
     ransac_points: int = 2500
-    max_tilt_deg: float = 25.0       # with gravity known, the fitted table normal is this close to up
-    table_band_m: float = 0.01       # cloud points this close to the table are labelled table
-    camera_yaw_deg: float = 180.0    # core yaw of the camera's viewing direction on the table
+    max_tilt_deg: float = (
+        25.0  # with gravity known, the fitted table normal is this close to up
+    )
+    table_band_m: float = (
+        0.01  # cloud points this close to the table are labelled table
+    )
+    camera_yaw_deg: float = (
+        180.0  # core yaw of the camera's viewing direction on the table
+    )
     cloud_points: int = 2000
-    dark_min_px: int = 120           # a conf-0 patch at least this big at the arm's far end means a dark hand
-    cylinder: bool = True            # refine the direction with a 3D cylinder fit (see _cylinder_axis)
+    dark_min_px: int = (
+        120  # a conf-0 patch at least this big at the arm's far end means a dark hand
+    )
+    cylinder: bool = (
+        True  # refine the direction with a 3D cylinder fit (see _cylinder_axis)
+    )
     # Shape gates: a blob is an arm only if its forearm stretch is arm-wide and, with the
     # cylinder fit on, fits a cylinder of arm radius. They reject bags and boxes on the bench.
-    arm_width_min_m: float = 0.01        # the visible half of a 7 cm arm measures 2 to 5 cm here
+    arm_width_min_m: float = (
+        0.01  # the visible half of a 7 cm arm measures 2 to 5 cm here
+    )
     arm_width_max_m: float = 0.16
     arm_radius_min_m: float = 0.015
     arm_radius_max_m: float = 0.07
     cylinder_max_rms_m: float = 0.012
-    require_entry: bool = True           # an arm comes from outside the view, so it crosses the image border
-    arm_max_tilt_deg: float = 40.0       # the cylinder axis lies along the table, not standing up from it
+    require_entry: bool = (
+        True  # an arm comes from outside the view, so it crosses the image border
+    )
+    arm_max_tilt_deg: float = (
+        40.0  # the cylinder axis lies along the table, not standing up from it
+    )
 
     @classmethod
-    def from_section(cls, sec) -> "TrackerConfig":
+    def from_section(cls, sec) -> TrackerConfig:
         c = cls()
         if sec is None:
             return c
@@ -86,10 +105,10 @@ class TrackerConfig:
 
 @dataclass
 class Table:
-    point: np.ndarray        # (3,) on the plane, world (or camera) frame
-    normal: np.ndarray       # (3,) unit, pointing to the camera's side
-    source: str              # "app" or "fit"
-    inliers: float = 0.0     # fraction of sampled points within ransac_tol_m (fit only)
+    point: np.ndarray  # (3,) on the plane, world (or camera) frame
+    normal: np.ndarray  # (3,) unit, pointing to the camera's side
+    source: str  # "app" or "fit"
+    inliers: float = 0.0  # fraction of sampled points within ransac_tol_m (fit only)
     rms_m: float = 0.0
     camera_height_m: float = 0.0
 
@@ -105,31 +124,37 @@ class DepthObs:
     frame_id: int
     table: Table | None = None
     table_fit: Table | None = None
-    agree_deg: float | None = None       # angle between app and fitted normals
-    agree_mm: float | None = None        # distance of the app plane's centre from the fitted plane
-    blob_found: bool = False             # something stands above the table
-    arm_found: bool = False              # and it has an arm's shape (the gates in TrackerConfig)
+    agree_deg: float | None = None  # angle between app and fitted normals
+    agree_mm: float | None = (
+        None  # distance of the app plane's centre from the fitted plane
+    )
+    blob_found: bool = False  # something stands above the table
+    arm_found: bool = False  # and it has an arm's shape (the gates in TrackerConfig)
     width_m: float = 0.0
     cyl_radius_m: float | None = None
     cyl_rms_m: float | None = None
-    axis_tilt_deg: float | None = None   # the cylinder axis's angle above the table
+    axis_tilt_deg: float | None = None  # the cylinder axis's angle above the table
     hand_depth: bool = False
     forearm_yaw_deg: float | None = None
-    forearm_ok: bool = False             # direction good enough to correct a glove with
+    forearm_ok: bool = False  # direction good enough to correct a glove with
     elongation: float = 0.0
     forearm_points: int = 0
     blob_px: int = 0
     dark_px: int = 0
-    entry: str = ""                      # which image border the arm crosses: top, bottom, left, right, or ""
+    entry: str = (
+        ""  # which image border the arm crosses: top, bottom, left, right, or ""
+    )
     length_m: float = 0.0
     dir_bench: np.ndarray | None = None  # (3,) unit forearm direction, bench frame
     entry_bench: np.ndarray | None = None
     process_ms: float = 0.0
-    cloud: dict | None = None            # points (n,3) bench frame, labels (n,), rgb (n,3)
-    bench_R: np.ndarray | None = None    # rows: bench axes in the points' frame
+    cloud: dict | None = None  # points (n,3) bench frame, labels (n,), rgb (n,3)
+    bench_R: np.ndarray | None = None  # rows: bench axes in the points' frame
     bench_origin: np.ndarray | None = None
     in_world: bool = False
-    masks: dict = field(default_factory=dict)  # arm, dark, table, valid at depth resolution (for images)
+    masks: dict = field(
+        default_factory=dict
+    )  # arm, dark, table, valid at depth resolution (for images)
 
 
 def wrap_deg(a: float) -> float:
@@ -181,8 +206,13 @@ def fit_plane_svd(p: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return c, vt[2]
 
 
-def fit_table(p: np.ndarray, cam: np.ndarray, up: np.ndarray | None, cfg: TrackerConfig,
-              rng: np.random.Generator) -> Table | None:
+def fit_table(
+    p: np.ndarray,
+    cam: np.ndarray,
+    up: np.ndarray | None,
+    cfg: TrackerConfig,
+    rng: np.random.Generator,
+) -> Table | None:
     """RANSAC plane on the given points (already confidence-masked). up: gravity, if known."""
     n_all = len(p)
     if n_all < 50:
@@ -213,7 +243,13 @@ def fit_table(p: np.ndarray, cam: np.ndarray, up: np.ndarray | None, cfg: Tracke
     if nrm @ (cam - c) < 0:
         nrm = -nrm
     res = (p[inl] - c) @ nrm
-    t = Table(point=c, normal=nrm, source="fit", inliers=float(inl.mean()), rms_m=float(np.sqrt((res ** 2).mean())))
+    t = Table(
+        point=c,
+        normal=nrm,
+        source="fit",
+        inliers=float(inl.mean()),
+        rms_m=float(np.sqrt((res**2).mean())),
+    )
     t.camera_height_m = float((cam - c) @ nrm)
     return t
 
@@ -236,13 +272,17 @@ class DepthTracker:
     def __init__(self, cfg: TrackerConfig | None = None, seed: int = 0) -> None:
         self.cfg = cfg or TrackerConfig()
         self.rng = np.random.default_rng(seed)
-        self.ref_fwd: np.ndarray | None = None   # camera's first viewing direction on the table (world)
+        self.ref_fwd: np.ndarray | None = (
+            None  # camera's first viewing direction on the table (world)
+        )
         self._ref_in_world: bool | None = None
         self.last_dir: np.ndarray | None = None
         self.frames = 0
 
     # -- bench frame -----------------------------------------------------------
-    def bench_axes(self, table: Table, cam_fwd: np.ndarray, in_world: bool) -> np.ndarray:
+    def bench_axes(
+        self, table: Table, cam_fwd: np.ndarray, in_world: bool
+    ) -> np.ndarray:
         """3x3 rows X, Y, Z of the bench frame (core orientation) in the points' frame."""
         n = table.normal
         if self.ref_fwd is None or self._ref_in_world != in_world or not in_world:
@@ -255,12 +295,17 @@ class DepthTracker:
         f /= np.linalg.norm(f)
         X = np.cross(f, n)
         Z = -f
-        R = np.stack([X, n, Z])                  # H frame: -Z = camera forward
-        return rot_y(self.cfg.camera_yaw_deg) @ R  # turn to the core's world orientation
+        R = np.stack([X, n, Z])  # H frame: -Z = camera forward
+        return (
+            rot_y(self.cfg.camera_yaw_deg) @ R
+        )  # turn to the core's world orientation
 
     # -- main ------------------------------------------------------------------
-    def process(self, frame: DepthFrame, want_cloud: bool = False, want_masks: bool = False) -> DepthObs:
+    def process(
+        self, frame: DepthFrame, want_cloud: bool = False, want_masks: bool = False
+    ) -> DepthObs:
         import cv2
+
         t0 = time.perf_counter()
         cfg = self.cfg
         obs = DepthObs(t_us=frame.t_us, frame_id=frame.frame_id)
@@ -271,7 +316,11 @@ class DepthTracker:
         H, W = frame.depth.shape
         p, valid, in_world = backproject(frame)
         cam, cam_fwd = camera_pose(frame, in_world)
-        conf = frame.confidence.reshape(-1) if frame.confidence is not None else np.full(H * W, 2, np.uint8)
+        conf = (
+            frame.confidence.reshape(-1)
+            if frame.confidence is not None
+            else np.full(H * W, 2, np.uint8)
+        )
         dist = np.linalg.norm(p - cam, axis=1)
         near = valid & (dist <= cfg.max_range_m * 2.0)
 
@@ -282,7 +331,10 @@ class DepthTracker:
         obs.table_fit = fit
         obs.table = app or fit
         if app is not None and fit is not None:
-            obs.agree_deg = round(math.degrees(math.acos(min(1.0, abs(float(app.normal @ fit.normal))))), 2)
+            obs.agree_deg = round(
+                math.degrees(math.acos(min(1.0, abs(float(app.normal @ fit.normal))))),
+                2,
+            )
             obs.agree_mm = round(float(fit.height(app.point[None])[0]) * 1000, 1)
         table = obs.table
         if table is None:
@@ -290,8 +342,13 @@ class DepthTracker:
             return obs
 
         h = table.height(p)
-        arm = valid & (conf >= cfg.min_confidence) & (h >= cfg.band_min_m) & (h <= cfg.band_max_m) \
+        arm = (
+            valid
+            & (conf >= cfg.min_confidence)
+            & (h >= cfg.band_min_m)
+            & (h <= cfg.band_max_m)
             & (dist <= cfg.max_range_m)
+        )
         arm_img = arm.reshape(H, W).astype(np.uint8)
         arm_img = cv2.morphologyEx(arm_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n_lab, lab, stats, _ = cv2.connectedComponentsWithStats(arm_img, connectivity=8)
@@ -309,23 +366,44 @@ class DepthTracker:
             obs.blob_found = True
             obs.blob_px = int(blob.sum())
             self._forearm(obs, blob, rel, R, H, W, dist, R @ (cam - table.point))
-            dark_img = self._dark_patch(obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W))
+            dark_img = self._dark_patch(
+                obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W)
+            )
         if want_cloud:
-            obs.cloud = self._cloud(frame, rel @ R.T, valid & (dist <= cfg.max_range_m * 1.5), h,
-                                    None if blob is None else blob.reshape(-1), dark_img.reshape(-1))
+            obs.cloud = self._cloud(
+                frame,
+                rel @ R.T,
+                valid & (dist <= cfg.max_range_m * 1.5),
+                h,
+                None if blob is None else blob.reshape(-1),
+                dark_img.reshape(-1),
+            )
         if want_masks:
-            obs.masks = {"arm": blob if blob is not None else np.zeros((H, W), bool), "dark": dark_img,
-                         "table": (valid & (np.abs(h) < cfg.table_band_m)).reshape(H, W),
-                         "valid": valid.reshape(H, W)}
+            obs.masks = {
+                "arm": blob if blob is not None else np.zeros((H, W), bool),
+                "dark": dark_img,
+                "table": (valid & (np.abs(h) < cfg.table_band_m)).reshape(H, W),
+                "valid": valid.reshape(H, W),
+            }
         obs.process_ms = (time.perf_counter() - t0) * 1000
         return obs
 
-    def _forearm(self, obs: DepthObs, blob: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int,
-                 dist: np.ndarray, cam_bench: np.ndarray) -> None:
+    def _forearm(
+        self,
+        obs: DepthObs,
+        blob: np.ndarray,
+        rel: np.ndarray,
+        R: np.ndarray,
+        H: int,
+        W: int,
+        dist: np.ndarray,
+        cam_bench: np.ndarray,
+    ) -> None:
         import cv2
+
         cfg = self.cfg
         flat = blob.reshape(-1)
-        q = rel[flat] @ R.T                 # bench frame
+        q = rel[flat] @ R.T  # bench frame
         xz = q[:, [0, 2]]
         centre = xz.mean(axis=0)
         border = np.zeros((H, W), bool)
@@ -337,7 +415,11 @@ class DepthTracker:
             # The arm may touch the border in several places (fingers can leave the image too).
             # Each contiguous run of border contact is a candidate; the arm comes from the person,
             # so take the run farthest from the camera, and keep with the last direction if it flips.
-            n_runs, runs = cv2.connectedComponents(cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)) & edge.astype(np.uint8), connectivity=8)
+            n_runs, runs = cv2.connectedComponents(
+                cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8))
+                & edge.astype(np.uint8),
+                connectivity=8,
+            )
             runs_flat = runs.reshape(-1)[flat]
             dist_blob = dist[flat]
             best, best_score = None, -1.0
@@ -349,22 +431,29 @@ class DepthTracker:
                 score = float(np.median(dist_blob[m]))
                 if self.last_dir is not None:
                     v = centre - e
-                    if np.linalg.norm(v) > 1e-6 and (v / np.linalg.norm(v)) @ self.last_dir[[0, 2]] < -0.3:
+                    if (
+                        np.linalg.norm(v) > 1e-6
+                        and (v / np.linalg.norm(v)) @ self.last_dir[[0, 2]] < -0.3
+                    ):
                         score -= 10.0
                 if score > best_score:
                     best, best_score = (e, m), score
             if best is not None:
                 entry = best[0]
                 vv, uu = np.nonzero(runs == (np.bincount(runs_flat[best[1]]).argmax()))
-                sides = {"top": (vv < 2).sum(), "bottom": (vv >= H - 2).sum(), "left": (uu < 2).sum(),
-                         "right": (uu >= W - 2).sum()}
+                sides = {
+                    "top": (vv < 2).sum(),
+                    "bottom": (vv >= H - 2).sum(),
+                    "left": (uu < 2).sum(),
+                    "right": (uu >= W - 2).sum(),
+                }
                 obs.entry = max(sides, key=sides.get)
         if entry is not None:
             sel = np.linalg.norm(xz - entry, axis=1) <= cfg.forearm_len_m
         else:
             sel = np.ones(len(xz), bool)
         pts = xz[sel]
-        obs.forearm_points = int(len(pts))
+        obs.forearm_points = len(pts)
         if len(pts) < 5:
             return
         c = pts.mean(axis=0)
@@ -372,11 +461,15 @@ class DepthTracker:
         w, V = np.linalg.eigh(cov)
         axis = V[:, 1]
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
-        obs.width_m = float(math.sqrt(12.0 * max(w[0], 0.0)))   # full width of a uniform band
+        obs.width_m = float(
+            math.sqrt(12.0 * max(w[0], 0.0))
+        )  # full width of a uniform band
         if cfg.cylinder:
             d3 = self._cylinder_axis(q[sel], axis, cam_bench, obs)
             if d3 is not None:
-                obs.axis_tilt_deg = float(math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2]))))
+                obs.axis_tilt_deg = float(
+                    math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2])))
+                )
             if d3 is not None and np.hypot(d3[0], d3[2]) > 1e-6:
                 a2 = np.array([d3[0], d3[2]]) / np.hypot(d3[0], d3[2])
                 axis = a2 if a2 @ axis >= 0 else -a2
@@ -389,31 +482,48 @@ class DepthTracker:
         else:
             # no entry seen and no history: the arm reaches from the person, so it points to the camera,
             # which is bench +z turned back by camera_yaw_deg
-            toward_cam = (rot_y(self.cfg.camera_yaw_deg) @ np.array([0.0, 0.0, 1.0]))[[0, 2]]
+            toward_cam = (rot_y(self.cfg.camera_yaw_deg) @ np.array([0.0, 0.0, 1.0]))[
+                [0, 2]
+            ]
             if axis @ toward_cam < 0:
                 axis = -axis
         d = np.array([axis[0], 0.0, axis[1]])
         obs.dir_bench = d
         obs.entry_bench = None if entry is None else np.array([entry[0], 0.0, entry[1]])
         proj = (xz - (entry if entry is not None else c)) @ axis
-        obs.length_m = float(np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2))))
+        obs.length_m = float(
+            np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2)))
+        )
         obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
         arm_like = cfg.arm_width_min_m <= obs.width_m <= cfg.arm_width_max_m
         if cfg.require_entry:
             arm_like = arm_like and entry is not None
         if cfg.cylinder:
-            arm_like = arm_like and obs.cyl_radius_m is not None \
-                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m \
-                and obs.cyl_rms_m is not None and obs.cyl_rms_m <= cfg.cylinder_max_rms_m \
-                and obs.axis_tilt_deg is not None and obs.axis_tilt_deg <= cfg.arm_max_tilt_deg
+            arm_like = (
+                arm_like
+                and obs.cyl_radius_m is not None
+                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m
+                and obs.cyl_rms_m is not None
+                and obs.cyl_rms_m <= cfg.cylinder_max_rms_m
+                and obs.axis_tilt_deg is not None
+                and obs.axis_tilt_deg <= cfg.arm_max_tilt_deg
+            )
         obs.arm_found = bool(arm_like)
-        obs.forearm_ok = obs.arm_found and obs.elongation >= cfg.min_elongation \
+        obs.forearm_ok = (
+            obs.arm_found
+            and obs.elongation >= cfg.min_elongation
             and obs.forearm_points >= cfg.min_forearm_points
+        )
         if obs.forearm_ok:
             self.last_dir = d
 
-    def _cylinder_axis(self, P: np.ndarray, axis_xz: np.ndarray, cam: np.ndarray,
-                       obs: DepthObs | None = None) -> np.ndarray | None:
+    def _cylinder_axis(
+        self,
+        P: np.ndarray,
+        axis_xz: np.ndarray,
+        cam: np.ndarray,
+        obs: DepthObs | None = None,
+    ) -> np.ndarray | None:
         """Fit a cylinder to the forearm's 3D points (bench frame); its axis direction, or None.
 
         The camera sees only the near half of the arm, and from a different angle along it,
@@ -470,18 +580,29 @@ class DepthTracker:
             obs.cyl_rms_m = float(np.sqrt(np.mean(resid(x) ** 2)))
         return d
 
-    def _dark_patch(self, obs: DepthObs, blob: np.ndarray, conf: np.ndarray, valid: np.ndarray,
-                    h: np.ndarray) -> np.ndarray:
+    def _dark_patch(
+        self,
+        obs: DepthObs,
+        blob: np.ndarray,
+        conf: np.ndarray,
+        valid: np.ndarray,
+        h: np.ndarray,
+    ) -> np.ndarray:
         """Low-confidence pixels touching the arm blob and not part of the table: a hand with no depth."""
         import cv2
+
         low = valid & (conf == 0) & ~blob & (h > -0.02)
         # thin low-confidence bands follow every depth edge; a dark hand is a thick patch
-        low = cv2.morphologyEx(low.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).astype(bool)
+        low = cv2.morphologyEx(
+            low.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)
+        ).astype(bool)
         if not low.any():
             obs.hand_depth = True
             return np.zeros_like(blob)
         n, lab = cv2.connectedComponents(low.astype(np.uint8), connectivity=8)
-        grown = cv2.dilate(blob.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(bool)
+        grown = cv2.dilate(blob.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(
+            bool
+        )
         touching = np.unique(lab[grown & low])
         touching = touching[touching > 0]
         dark = np.isin(lab, touching) if len(touching) else np.zeros_like(blob)
@@ -489,28 +610,52 @@ class DepthTracker:
         obs.hand_depth = obs.dark_px < self.cfg.dark_min_px
         return dark
 
-    def _cloud(self, frame: DepthFrame, q: np.ndarray, keep: np.ndarray, h: np.ndarray,
-               blob: np.ndarray | None, dark: np.ndarray) -> dict:
+    def _cloud(
+        self,
+        frame: DepthFrame,
+        q: np.ndarray,
+        keep: np.ndarray,
+        h: np.ndarray,
+        blob: np.ndarray | None,
+        dark: np.ndarray,
+    ) -> dict:
         import cv2
+
         idx = np.nonzero(keep)[0]
         n_target = self.cfg.cloud_points
         if blob is not None:
             arm_idx = np.nonzero(blob & keep)[0]
             rest = np.setdiff1d(idx, arm_idx, assume_unique=True)
             n_arm = min(len(arm_idx), n_target // 2)
-            pick = np.concatenate([
-                arm_idx[np.linspace(0, len(arm_idx) - 1, n_arm).astype(int)] if n_arm else arm_idx[:0],
-                rest[np.linspace(0, len(rest) - 1, min(len(rest), n_target - n_arm)).astype(int)] if len(rest) else rest,
-            ])
+            pick = np.concatenate(
+                [
+                    arm_idx[np.linspace(0, len(arm_idx) - 1, n_arm).astype(int)]
+                    if n_arm
+                    else arm_idx[:0],
+                    rest[
+                        np.linspace(
+                            0, len(rest) - 1, min(len(rest), n_target - n_arm)
+                        ).astype(int)
+                    ]
+                    if len(rest)
+                    else rest,
+                ]
+            )
         else:
-            pick = idx[np.linspace(0, len(idx) - 1, min(len(idx), n_target)).astype(int)] if len(idx) else idx
+            pick = (
+                idx[np.linspace(0, len(idx) - 1, min(len(idx), n_target)).astype(int)]
+                if len(idx)
+                else idx
+            )
         labels = np.full(len(pick), LABEL_OTHER, np.uint8)
         labels[np.abs(h[pick]) < self.cfg.table_band_m] = LABEL_TABLE
         if blob is not None:
             labels[blob[pick]] = LABEL_ARM
         labels[dark[pick]] = LABEL_DARK
         H, W = frame.depth.shape
-        small = cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA).reshape(-1, 3)
+        small = cv2.resize(frame.bgr, (W, H), interpolation=cv2.INTER_AREA).reshape(
+            -1, 3
+        )
         rgb = small[pick][:, ::-1]
         return {"points": q[pick], "labels": labels, "rgb": rgb}
 
@@ -519,19 +664,25 @@ class DepthTracker:
 class YawCorrectorConfig:
     """[camera.depth] keys for the correction."""
 
-    side: str = "right"               # the glove whose forearm the phone sees
-    reference: str = "lock"           # "lock": learn the depth-glove offset first, then remove drift from it;
-                                      # "table": trust camera_yaw_deg and correct to the absolute bench yaw
-    lock_s: float = 2.0               # how long to average before the lock
+    side: str = "right"  # the glove whose forearm the phone sees
+    reference: str = (
+        "lock"  # "lock": learn the depth-glove offset first, then remove drift from it;
+    )
+    # "table": trust camera_yaw_deg and correct to the absolute bench yaw
+    lock_s: float = 2.0  # how long to average before the lock
     lock_min_samples: int = 20
-    tau_s: float = 1.5                # time constant of the slow offset (SPEC: 2 percent a frame at 30 Hz)
-    outlier_deg: float = 25.0         # a sample this far from the current correction is skipped,
-    outlier_run: int = 45             # unless this many in a row agree it is real (about 1.5 s)
+    tau_s: float = (
+        1.5  # time constant of the slow offset (SPEC: 2 percent a frame at 30 Hz)
+    )
+    outlier_deg: float = (
+        25.0  # a sample this far from the current correction is skipped,
+    )
+    outlier_run: int = 45  # unless this many in a row agree it is real (about 1.5 s)
     max_correction_deg: float = 60.0
-    stale_ms: float = 300.0           # depth older than this does not update the correction
+    stale_ms: float = 300.0  # depth older than this does not update the correction
 
     @classmethod
-    def from_section(cls, sec) -> "YawCorrectorConfig":
+    def from_section(cls, sec) -> YawCorrectorConfig:
         c = cls()
         if sec is None:
             return c
@@ -589,10 +740,19 @@ class YawCorrector:
                 return False
         else:
             self._run = 0
-        dt = 0.0 if self.last_us is None else max(0.0, min(0.2, (t_us - self.last_us) / 1e6))
+        dt = (
+            0.0
+            if self.last_us is None
+            else max(0.0, min(0.2, (t_us - self.last_us) / 1e6))
+        )
         self.last_us = t_us
         k = 1.0 - math.exp(-dt / max(1e-3, self.cfg.tau_s))
-        self.offset_deg = float(np.clip(self.offset_deg + k * err, -self.cfg.max_correction_deg,
-                                        self.cfg.max_correction_deg))
+        self.offset_deg = float(
+            np.clip(
+                self.offset_deg + k * err,
+                -self.cfg.max_correction_deg,
+                self.cfg.max_correction_deg,
+            )
+        )
         self.updates += 1
         return True

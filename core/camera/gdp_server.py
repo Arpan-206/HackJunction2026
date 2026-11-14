@@ -4,6 +4,7 @@ The fake senders and the replay tool use it, so the reader on the other end sees
 same behaviour as with the real app (ios/PROTOCOL.md, "Transport"). ios/mac/serve.py
 re-exports it.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,14 +27,16 @@ class PacketServer:
         self._stop = threading.Event()
         self.sent = 0
         self.dropped = 0
-        self._thread = threading.Thread(target=self._accept, name="gdp-accept", daemon=True)
+        self._thread = threading.Thread(
+            target=self._accept, name="gdp-accept", daemon=True
+        )
         self._thread.start()
 
     def _accept(self) -> None:
         while not self._stop.is_set():
             try:
                 c, addr = self._sock.accept()
-            except (socket.timeout, OSError):
+            except (TimeoutError, OSError):
                 continue
             c.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             with self._lock:

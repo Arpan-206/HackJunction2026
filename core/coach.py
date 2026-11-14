@@ -104,7 +104,9 @@ class RuleCoach:
         fingers = summary.get("fingers") or {}
         if not fingers:
             if lead:
-                return CoachLine("tip", lead.strip(), None, step, self.speak, "rule", hand=hand)
+                return CoachLine(
+                    "tip", lead.strip(), None, step, self.speak, "rule", hand=hand
+                )
             return None
         worst = min(fingers.items(), key=lambda kv: kv[1].get("score", 1.0))
         finger, info = worst

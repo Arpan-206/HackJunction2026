@@ -14,11 +14,18 @@ import sys
 import time
 from datetime import UTC, datetime
 
-from verda import VerdaClient
+import paths
+from deploy import (
+    ENDPOINT_FILE,
+    HF_SECRET_NAME,
+    PRICE_USD_PER_H,
+    append_log,
+    balance,
+    now_iso,
+)
 from verda.exceptions import APIException
 
-import paths
-from deploy import ENDPOINT_FILE, HF_SECRET_NAME, PRICE_USD_PER_H, append_log, balance, now_iso
+from verda import VerdaClient
 
 GONE_POLL_S = 5
 GONE_LIMIT_S = 180
@@ -36,11 +43,23 @@ def hours_between(start_iso: str | None, end_iso: str) -> float | None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--name", default=None, help="default: the name in out/endpoint.json, else geppetto-gemma")
-    ap.add_argument("--delete-secret", action="store_true", help="also remove the HF_TOKEN secret from Verda")
+    ap.add_argument(
+        "--name",
+        default=None,
+        help="default: the name in out/endpoint.json, else geppetto-gemma",
+    )
+    ap.add_argument(
+        "--delete-secret",
+        action="store_true",
+        help="also remove the HF_TOKEN secret from Verda",
+    )
     a = ap.parse_args(argv)
 
-    info = json.loads(ENDPOINT_FILE.read_text(encoding="utf-8")) if ENDPOINT_FILE.exists() else {}
+    info = (
+        json.loads(ENDPOINT_FILE.read_text(encoding="utf-8"))
+        if ENDPOINT_FILE.exists()
+        else {}
+    )
     name = a.name or info.get("name") or "geppetto-gemma"
     secrets = paths.load_secrets()
     paths.require(secrets, "VERDA_CLOUD_CLIENT_ID", "VERDA_CLOUD")
@@ -63,7 +82,10 @@ def main(argv: list[str] | None = None) -> int:
         t0 = time.monotonic()
         while name in {d.name for d in client.containers.get_deployments()}:
             if time.monotonic() - t0 > GONE_LIMIT_S:
-                print(f"still listed after {GONE_LIMIT_S} s; check the Verda console", file=sys.stderr)
+                print(
+                    f"still listed after {GONE_LIMIT_S} s; check the Verda console",
+                    file=sys.stderr,
+                )
                 break
             time.sleep(GONE_POLL_S)
         hours = hours_between(started, ended)
@@ -82,10 +104,19 @@ def main(argv: list[str] | None = None) -> int:
             "balance": after,
         }
         append_log(record)
-        info.update({"torn_down_at": ended, "hours": hours, "estimated_usd": cost, "balance_after": after})
+        info.update(
+            {
+                "torn_down_at": ended,
+                "hours": hours,
+                "estimated_usd": cost,
+                "balance_after": after,
+            }
+        )
         ENDPOINT_FILE.write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(record, indent=2))
-    if a.delete_secret and HF_SECRET_NAME in {s.name for s in client.containers.get_secrets()}:
+    if a.delete_secret and HF_SECRET_NAME in {
+        s.name for s in client.containers.get_secrets()
+    }:
         client.containers.delete_secret(HF_SECRET_NAME, force=True)
         print(f"secret {HF_SECRET_NAME} deleted")
     remaining = [d.name for d in client.containers.get_deployments()]

@@ -18,9 +18,9 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from core.clock import FakeClock  # noqa: E402
-from core.config import load_config  # noqa: E402
-from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, GloveSource  # noqa: E402
+from core.clock import FakeClock
+from core.config import load_config
+from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, GloveSource
 
 BASE_US = 1_700_000_000_000_000
 
@@ -39,13 +39,17 @@ def records(path: Path):
             yield prefix, head + body
 
 
-def scan(path: Path, every: int, from_s: float, to_s: float) -> dict[str, dict[str, np.ndarray]]:
+def scan(
+    path: Path, every: int, from_s: float, to_s: float
+) -> dict[str, dict[str, np.ndarray]]:
     cfg = load_config()
     clock = FakeClock()
     src = GloveSource(cfg, clock, host="x", port=1)
     first_ts: int | None = None
     count: dict[int, int] = {}
-    out: dict[str, dict[str, list]] = {s: {"t": [], "angles": [], "wrist_q": []} for s in ("left", "right")}
+    out: dict[str, dict[str, list]] = {
+        s: {"t": [], "angles": [], "wrist_q": []} for s in ("left", "right")
+    }
     for prefix, raw in records(path):
         if prefix != PREFIX_DATA:
             src.feed(raw)
@@ -74,9 +78,7 @@ def scan(path: Path, every: int, from_s: float, to_s: float) -> dict[str, dict[s
         o["t"].append(t_s)
         o["angles"].append(np.asarray(h.angles, dtype=np.float32))
         o["wrist_q"].append(np.asarray(h.wrist_q, dtype=np.float32))
-    return {
-        s: {k: np.asarray(v) for k, v in d.items()} for s, d in out.items()
-    }
+    return {s: {k: np.asarray(v) for k, v in d.items()} for s, d in out.items()}
 
 
 def main() -> int:

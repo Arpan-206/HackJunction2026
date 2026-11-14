@@ -12,6 +12,7 @@ from app.schemas.records import Calibration, Recording
 from app.schemas.rig import WearerCalibration
 from app.services.bundles import BundleService
 from app.services.calibration import CalibrationService
+from app.services.core_export import CoreLessonExporter
 from app.services.dev import DevService
 from app.services.drafts import DraftService
 from app.services.files import FileLocator
@@ -32,7 +33,6 @@ from app.services.smoothing.one_euro import GloveSmoother
 from app.services.storage.json_store import JsonStore
 from app.services.storage.seed import install_seed_lessons
 from app.services.takes import TakesService
-from app.services.core_export import CoreLessonExporter
 from app.services.vision.mediapipe_hands import MediaPipeHands
 
 
@@ -110,7 +110,9 @@ def build_services(settings: Settings) -> Services:
     lessons = LessonService(lesson_store)
     media = MediaService(data / c.MEDIA_DIR_NAME)
     bundles = BundleService(data, TakesService(recorder), drafts)
-    core_export = CoreLessonExporter(data, settings.core_export_dir, settings.core_export)
+    core_export = CoreLessonExporter(
+        data, settings.core_export_dir, settings.core_export
+    )
     recorder.on_change.append(core_export.notify)
     lessons.on_change.append(core_export.notify)
     return Services(

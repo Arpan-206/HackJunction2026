@@ -8,6 +8,7 @@ low) and the confidence map, plus the frame rate and the table plane height. Wit
 --usb it starts iproxy itself. One client at a time on the phone, so stop the core's
 --depth run first.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,7 +24,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from core.camera.geppetto_depth import GeppettoDepthCamera  # noqa: E402
+from core.camera.geppetto_depth import GeppettoDepthCamera
 
 PAGE = """<!doctype html><title>Geppetto depth live</title>
 <style>body{margin:0;background:#1b1b1b;color:#eee;font:16px system-ui}
@@ -47,7 +48,9 @@ const s=await (await fetch('/status.json')).json();document.getElementById('s').
 setInterval(tick,100);
 </script>"""
 
-LUT = cv2.applyColorMap(np.arange(256, dtype=np.uint8).reshape(1, 256), cv2.COLORMAP_TURBO)[0]
+LUT = cv2.applyColorMap(
+    np.arange(256, dtype=np.uint8).reshape(1, 256), cv2.COLORMAP_TURBO
+)[0]
 
 
 class State:
@@ -64,25 +67,51 @@ class State:
         n[~np.isfinite(d) | (d <= 0)] = 0
         img = LUT[(n * 255).astype(np.uint8)]
         if f.confidence is not None:
-            img = np.where((f.confidence == 0)[..., None], (img * 0.35).astype(np.uint8), img)
+            img = np.where(
+                (f.confidence == 0)[..., None], (img * 0.35).astype(np.uint8), img
+            )
         depth_img = cv2.resize(img, (640, 480), interpolation=cv2.INTER_NEAREST)
         # overlay: colour under a depth tint; the tint is strongest where the confidence is high
-        tint = cv2.resize(LUT[(n * 255).astype(np.uint8)], (f.bgr.shape[1], f.bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+        tint = cv2.resize(
+            LUT[(n * 255).astype(np.uint8)],
+            (f.bgr.shape[1], f.bgr.shape[0]),
+            interpolation=cv2.INTER_LINEAR,
+        )
         if f.confidence is not None:
-            alpha = cv2.resize((f.confidence.astype(np.float32) / 2.0), (f.bgr.shape[1], f.bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+            alpha = cv2.resize(
+                (f.confidence.astype(np.float32) / 2.0),
+                (f.bgr.shape[1], f.bgr.shape[0]),
+                interpolation=cv2.INTER_LINEAR,
+            )
             alpha = (0.15 + 0.5 * alpha)[..., None]
         else:
             alpha = np.full(f.bgr.shape[:2] + (1,), 0.5, np.float32)
-        overlay = (f.bgr.astype(np.float32) * (1 - alpha) + tint.astype(np.float32) * alpha).astype(np.uint8)
-        conf_img = None if f.confidence is None else cv2.resize((f.confidence.astype(np.uint16) * 127).clip(0, 255).astype(np.uint8), (320, 240), interpolation=cv2.INTER_NEAREST)
+        overlay = (
+            f.bgr.astype(np.float32) * (1 - alpha) + tint.astype(np.float32) * alpha
+        ).astype(np.uint8)
+        conf_img = (
+            None
+            if f.confidence is None
+            else cv2.resize(
+                (f.confidence.astype(np.uint16) * 127).clip(0, 255).astype(np.uint8),
+                (320, 240),
+                interpolation=cv2.INTER_NEAREST,
+            )
+        )
         plane = None
         if f.plane is not None and f.transform is not None:
             plane = round(float(f.transform[1, 3] - f.plane[1, 3]), 3)
         ok = np.isfinite(d) & (d > 0)
-        status = {"frame_id": f.frame_id, "fps": self.cam.status().get("fps"), "plane_below_camera_m": plane,
-                  "depth_median_m": round(float(np.median(d[ok])), 3) if ok.any() else None,
-                  "conf_high_pct": None if f.confidence is None else round(float((f.confidence == 2).mean() * 100), 1),
-                  "error": self.cam.status().get("error")}
+        status = {
+            "frame_id": f.frame_id,
+            "fps": self.cam.status().get("fps"),
+            "plane_below_camera_m": plane,
+            "depth_median_m": round(float(np.median(d[ok])), 3) if ok.any() else None,
+            "conf_high_pct": None
+            if f.confidence is None
+            else round(float((f.confidence == 2).mean() * 100), 1),
+            "error": self.cam.status().get("error"),
+        }
         return f.bgr, depth_img, conf_img, status, overlay
 
 
@@ -95,7 +124,11 @@ def main() -> int:
     a = ap.parse_args()
     proxy = None
     if a.usb:
-        proxy = subprocess.Popen(["iproxy", f"{a.port}:{a.port}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proxy = subprocess.Popen(
+            ["iproxy", f"{a.port}:{a.port}"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         time.sleep(0.5)
     cam = GeppettoDepthCamera(a.host, a.port)
     cam.start()
@@ -128,19 +161,35 @@ def main() -> int:
                 return self.send(200, "text/html; charset=utf-8", PAGE.encode())
             v = current()
             if path == "/status.json":
-                body = json.dumps(v[3] if v else {"frame_id": None, "fps": None, "error": cam.status().get("error") or "no frame yet"}).encode()
+                body = json.dumps(
+                    v[3]
+                    if v
+                    else {
+                        "frame_id": None,
+                        "fps": None,
+                        "error": cam.status().get("error") or "no frame yet",
+                    }
+                ).encode()
                 return self.send(200, "application/json", body)
             if v is None:
                 return self.send(503, "text/plain", b"no frame yet")
             bgr, depth_img, conf_img, _, overlay = v
-            pick = {"/rgb.jpg": bgr, "/depth.jpg": depth_img, "/conf.jpg": conf_img, "/overlay.jpg": overlay}.get(path)
+            pick = {
+                "/rgb.jpg": bgr,
+                "/depth.jpg": depth_img,
+                "/conf.jpg": conf_img,
+                "/overlay.jpg": overlay,
+            }.get(path)
             if pick is None:
                 return self.send(404, "text/plain", b"not found")
             ok, jpg = cv2.imencode(".jpg", pick, [cv2.IMWRITE_JPEG_QUALITY, 80])
             return self.send(200, "image/jpeg", jpg.tobytes())
 
     srv = ThreadingHTTPServer(("127.0.0.1", a.http), H)
-    print(f"live view on http://localhost:{a.http}  (phone {a.host}:{a.port}{', usb' if a.usb else ''})", flush=True)
+    print(
+        f"live view on http://localhost:{a.http}  (phone {a.host}:{a.port}{', usb' if a.usb else ''})",
+        flush=True,
+    )
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

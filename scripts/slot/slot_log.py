@@ -23,7 +23,13 @@ from pathlib import Path
 from slot_links import Trace
 
 VERDICTS = ("ok", "look", "bad", "error", "skip")
-AUTO_ANSWER = {"ok": "pass", "look": "pass", "skip": "skip", "bad": "fail", "error": "fail"}
+AUTO_ANSWER = {
+    "ok": "pass",
+    "look": "pass",
+    "skip": "skip",
+    "bad": "fail",
+    "error": "fail",
+}
 
 
 @dataclass
@@ -60,7 +66,9 @@ class Record:
 class Console:
     """Plain prompts. auto=True never waits: it is the dry run."""
 
-    def __init__(self, auto: bool = False, out=None, inp=None, auto_pause: float = 0.0) -> None:
+    def __init__(
+        self, auto: bool = False, out=None, inp=None, auto_pause: float = 0.0
+    ) -> None:
         self.auto = auto
         self.out = out or sys.stdout
         self.inp = inp or sys.stdin
@@ -117,7 +125,10 @@ class Console:
         return self._read() or default
 
     def yes(self, question: str, default: bool = True) -> bool:
-        return self.ask(question, {"y": "yes", "n": "no"}, "yes" if default else "no") == "yes"
+        return (
+            self.ask(question, {"y": "yes", "n": "no"}, "yes" if default else "no")
+            == "yes"
+        )
 
     def judge(self, result: Result) -> str:
         return self.ask(
@@ -138,18 +149,39 @@ class RunLog:
         self.records: list[Record] = []
         self.results = self.dir / "results.jsonl"
         self.summary = self.dir / "summary.md"
-        (self.dir / "run.json").write_text(json.dumps(meta, indent=2, default=str) + "\n")
+        (self.dir / "run.json").write_text(
+            json.dumps(meta, indent=2, default=str) + "\n"
+        )
 
-    def add(self, step: int, key: str, title: str, attempt: int, t0: float, result: Result,
-            answer: str, trace: Trace, note: str = "") -> Record:
+    def add(
+        self,
+        step: int,
+        key: str,
+        title: str,
+        attempt: int,
+        t0: float,
+        result: Result,
+        answer: str,
+        trace: Trace,
+        note: str = "",
+    ) -> Record:
         t1 = time.time()
         rec = Record(
-            step=step, key=key, title=title, attempt=attempt,
+            step=step,
+            key=key,
+            title=title,
+            attempt=attempt,
             started=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t0)),
             ended=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t1)),
-            seconds=round(t1 - t0, 1), verdict=result.verdict, answer=answer,
-            summary=result.summary, fix=result.fix, details=result.details,
-            commands=list(trace.entries), dry_run=self.dry_run, note=note,
+            seconds=round(t1 - t0, 1),
+            verdict=result.verdict,
+            answer=answer,
+            summary=result.summary,
+            fix=result.fix,
+            details=result.details,
+            commands=list(trace.entries),
+            dry_run=self.dry_run,
+            note=note,
         )
         self.records.append(rec)
         with self.results.open("a") as f:
@@ -166,7 +198,11 @@ class RunLog:
 
     def write_summary(self) -> None:
         last = self.final()
-        mode = "DRY RUN (fakes only, no gloves, no phone)" if self.dry_run else "Real glove slot"
+        mode = (
+            "DRY RUN (fakes only, no gloves, no phone)"
+            if self.dry_run
+            else "Real glove slot"
+        )
         lines = [
             f"# Glove slot results, {self.meta.get('started', '')}",
             "",
@@ -179,8 +215,14 @@ class RunLog:
             r = last[step]
             tries = sum(1 for x in self.records if x.step == step)
             text = r.summary.replace("|", "/").replace("\n", " ")
-            lines.append(f"| {step} | {r.title} | {r.verdict} | {r.answer} | {tries} | {text} |")
-        fixes = [(s, last[s]) for s in sorted(last) if last[s].fix and last[s].answer != "pass"]
+            lines.append(
+                f"| {step} | {r.title} | {r.verdict} | {r.answer} | {tries} | {text} |"
+            )
+        fixes = [
+            (s, last[s])
+            for s in sorted(last)
+            if last[s].fix and last[s].answer != "pass"
+        ]
         if fixes:
             lines += ["", "## Fixes to try", ""]
             for s, r in fixes:

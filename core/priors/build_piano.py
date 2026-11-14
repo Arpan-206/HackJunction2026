@@ -47,8 +47,10 @@ def choose(meta: list[dict], per_subject: int) -> list[dict]:
 def inside_rate(angles: np.ndarray, lo: np.ndarray, hi: np.ndarray) -> dict:
     inside = (angles >= lo) & (angles <= hi)
     return {
-        "frames": int(len(angles)),
-        "per_joint": {n: round(float(inside[:, j].mean()), 3) for j, n in enumerate(H.ANGLE_NAMES)},
+        "frames": len(angles),
+        "per_joint": {
+            n: round(float(inside[:, j].mean()), 3) for j, n in enumerate(H.ANGLE_NAMES)
+        },
         "all_joints_inside": round(float(inside.all(axis=1).mean()), 3),
         "mean_joints_outside": round(float((~inside).sum(axis=1).mean()), 2),
     }
@@ -72,8 +74,15 @@ def main(argv: list[str] | None = None) -> int:
         pid = f"{int(m['piece_id']):03d}"
         pj = pull_piece(zf, pid)
         total_bytes += pj.bytes_read + pj.pressed.nbytes // 30
-        feats.append(piano.piece_features(pid, int(m["subject_id"]), pj.joints_left, pj.pressed, pj.bytes_read))
-        print(f"{pid} subject {m['subject_id']} frames {len(feats[-1].pressing)} fit_r {feats[-1].fit_r:.2f} t {time.time() - t0:.0f}s", flush=True)
+        feats.append(
+            piano.piece_features(
+                pid, int(m["subject_id"]), pj.joints_left, pj.pressed, pj.bytes_read
+            )
+        )
+        print(
+            f"{pid} subject {m['subject_id']} frames {len(feats[-1].pressing)} fit_r {feats[-1].fit_r:.2f} t {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
     train = [f for f in feats if f.subject_id not in TEST_SUBJECTS]
     test = [f for f in feats if f.subject_id in TEST_SUBJECTS]
@@ -83,15 +92,23 @@ def main(argv: list[str] | None = None) -> int:
         "source": "FurElise (CC BY-NC 4.0), left hand, marker motion capture of 15 elite pianists",
         "scale": "calibrated degrees: flexion rescaled by AAOS normal range (MCP 90, PIP 100, DIP 70; thumb MCP 50, IP 80) so a fist reads 90 (thumb 60); spreads anatomical",
         "fps_after_downsample": round(59.94 / piano.DOWNSAMPLE, 2),
-        "train_frames": int(len(Xtr)),
+        "train_frames": len(Xtr),
         "train_pressing_share": round(float(Ptr.mean()), 3),
         "all": piano.ranges_from(Xtr),
         "pressing": piano.ranges_from(Xtr[Ptr]) if Ptr.sum() > 100 else None,
         "not_pressing": piano.ranges_from(Xtr[~Ptr]) if (~Ptr).sum() > 100 else None,
-        "suggested_tolerances": piano.suggested_tolerances(Xtr[:: max(1, len(Xtr) // 20000)]),
+        "suggested_tolerances": piano.suggested_tolerances(
+            Xtr[:: max(1, len(Xtr) // 20000)]
+        ),
         "current_tolerances": {"perfect_deg": 15, "wrong_deg": 60},
         "pieces": [
-            {"piece_id": f.piece_id, "subject_id": f.subject_id, "frames": int(len(f.pressing)), "press_fit_r": round(f.fit_r, 3), "split": "test" if f.subject_id in TEST_SUBJECTS else "train"}
+            {
+                "piece_id": f.piece_id,
+                "subject_id": f.subject_id,
+                "frames": len(f.pressing),
+                "press_fit_r": round(f.fit_r, 3),
+                "split": "test" if f.subject_id in TEST_SUBJECTS else "train",
+            }
             for f in feats
         ],
         "test_subjects": list(TEST_SUBJECTS),
@@ -119,7 +136,20 @@ def main(argv: list[str] | None = None) -> int:
             "held_out_real_data_used": False,
         },
     )
-    print(json.dumps({k: out[k] for k in ("train_frames", "train_pressing_share", "suggested_tolerances", "bytes_streamed")}, indent=1))
+    print(
+        json.dumps(
+            {
+                k: out[k]
+                for k in (
+                    "train_frames",
+                    "train_pressing_share",
+                    "suggested_tolerances",
+                    "bytes_streamed",
+                )
+            },
+            indent=1,
+        )
+    )
     if test:
         print(json.dumps(out["held_out_pianists_inside_p5_p95"], indent=1))
     return 0

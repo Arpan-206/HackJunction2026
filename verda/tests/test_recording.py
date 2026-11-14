@@ -3,20 +3,23 @@
 import json
 
 import numpy as np
-import pytest
-
 import paths
+import pytest
 import recording as R
 
 FIXTURE = paths.CAPTURE_FIXTURE
 
-pytestmark = pytest.mark.skipif(not FIXTURE.exists(), reason="real capture fixture not in the repo")
+pytestmark = pytest.mark.skipif(
+    not FIXTURE.exists(), reason="real capture fixture not in the repo"
+)
 
 
 @pytest.fixture(scope="module")
 def folder(tmp_path_factory):
     out = tmp_path_factory.mktemp("rec")
-    return R.recording_from_capture(FIXTURE, out, side="right", marks=3, lesson_id="worn-right")
+    return R.recording_from_capture(
+        FIXTURE, out, side="right", marks=3, lesson_id="worn-right"
+    )
 
 
 def test_capture_becomes_a_lesson_folder_with_sketches(folder):

@@ -24,6 +24,7 @@ Keys: Backspace steps back one character. Esc at any time ends the log early.
 Raw terminal mode, so no accessibility permission is needed; only keys typed
 into this terminal are recorded.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -58,9 +59,18 @@ class Log:
 
     def key(self, ch: str, phase: str, expected: str | None) -> None:
         name = NAMES.get(ch, ch)
-        self.write({"t_ms": round((time.monotonic() - self.t0) * 1000, 1), "wall_us": int(time.time() * 1e6),
-                    "key": name, "phase": phase, "expected": expected,
-                    "ok": None if expected is None else (name == expected or (expected == " " and name == "Space"))})
+        self.write(
+            {
+                "t_ms": round((time.monotonic() - self.t0) * 1000, 1),
+                "wall_us": int(time.time() * 1e6),
+                "key": name,
+                "phase": phase,
+                "expected": expected,
+                "ok": None
+                if expected is None
+                else (name == expected or (expected == " " and name == "Space")),
+            }
+        )
         self.count += 1
 
 
@@ -120,7 +130,9 @@ def phase_text(log: Log, name: str, text: str, seconds: float | None = None) -> 
 
 
 def phase_marker(log: Log) -> bool:
-    say("\n--- marker ---  rest 3 s, then Space THREE times one second apart with the RIGHT THUMB only, rest 3 s, then Enter:")
+    say(
+        "\n--- marker ---  rest 3 s, then Space THREE times one second apart with the RIGHT THUMB only, rest 3 s, then Enter:"
+    )
     say("    ")
     n = 0
     while True:
@@ -147,10 +159,18 @@ def main() -> int:
     a = ap.parse_args()
     out = Path(a.out)
     log = Log(out)
-    out.with_suffix(".header.json").write_text(json.dumps({
-        "started_wall_us": int(time.time() * 1e6), "started_local": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "home": a.home, "words": a.words,
-        "note": "t_ms counts from started_wall_us; tools/typing_accuracy.py --capture-start-wall-us shifts wall_us onto the capture clock"}, indent=2))
+    out.with_suffix(".header.json").write_text(
+        json.dumps(
+            {
+                "started_wall_us": int(time.time() * 1e6),
+                "started_local": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "home": a.home,
+                "words": a.words,
+                "note": "t_ms counts from started_wall_us; tools/typing_accuracy.py --capture-start-wall-us shifts wall_us onto the capture clock",
+            },
+            indent=2,
+        )
+    )
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
@@ -163,7 +183,9 @@ def main() -> int:
         ok = ok and phase_text(log, "home", a.home)
         ok = ok and wait_enter("\nPress Enter when ready for the words.")
         ok = ok and phase_text(log, "words", a.words)
-        ok = ok and wait_enter("\nPress Enter for ten seconds of free typing (anything).")
+        ok = ok and wait_enter(
+            "\nPress Enter for ten seconds of free typing (anything)."
+        )
         ok = ok and phase_text(log, "free", "", seconds=a.free_seconds)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)

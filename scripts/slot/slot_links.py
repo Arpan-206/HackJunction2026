@@ -29,7 +29,13 @@ class Trace:
     entries: list[dict] = field(default_factory=list)
 
     def add(self, kind: str, command: str, ok: bool, output) -> dict:
-        e = {"t": round(time.time(), 3), "kind": kind, "command": command, "ok": bool(ok), "output": short(output)}
+        e = {
+            "t": round(time.time(), 3),
+            "kind": kind,
+            "command": command,
+            "ok": bool(ok),
+            "output": short(output),
+        }
         self.entries.append(e)
         return e
 
@@ -52,9 +58,17 @@ class HttpError(RuntimeError):
     pass
 
 
-def http(method: str, url: str, body: dict | None = None, timeout: float = 30.0, trace: Trace | None = None):
+def http(
+    method: str,
+    url: str,
+    body: dict | None = None,
+    timeout: float = 30.0,
+    trace: Trace | None = None,
+):
     data = None if body is None else json.dumps(body).encode()
-    req = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        url, data=data, method=method, headers={"Content-Type": "application/json"}
+    )
     label = f"{method} {url}" + ("" if body is None else f" {json.dumps(body)}")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -83,10 +97,14 @@ class CommandFailed(RuntimeError):
 class CoreLink:
     """One /ws connection (or /ws/robot). A reader thread keeps every message; cmd() waits for its ack."""
 
-    def __init__(self, url: str, trace: Trace | None = None, open_timeout: float = 10.0) -> None:
+    def __init__(
+        self, url: str, trace: Trace | None = None, open_timeout: float = 10.0
+    ) -> None:
         self.url = url
         self.trace = trace
-        self.ws = connect(url, proxy=None, open_timeout=open_timeout, max_size=8 * 1024 * 1024)
+        self.ws = connect(
+            url, proxy=None, open_timeout=open_timeout, max_size=8 * 1024 * 1024
+        )
         self.msgs: list[dict] = []
         self.lock = threading.Lock()
         self._n = 0
@@ -124,7 +142,11 @@ class CoreLink:
 
     def since(self, t0: float, kind: str | None = None) -> list[dict]:
         with self.lock:
-            return [m for m in self.msgs if m["_rx"] >= t0 and (kind is None or m.get("type") == kind)]
+            return [
+                m
+                for m in self.msgs
+                if m["_rx"] >= t0 and (kind is None or m.get("type") == kind)
+            ]
 
     def latest(self, kind: str) -> dict | None:
         with self.lock:
@@ -133,25 +155,49 @@ class CoreLink:
                     return m
         return None
 
-    def cmd(self, name: str, args: dict | None = None, timeout: float = 10.0, check: bool = True) -> dict:
+    def cmd(
+        self,
+        name: str,
+        args: dict | None = None,
+        timeout: float = 10.0,
+        check: bool = True,
+    ) -> dict:
         self._n += 1
         cid = f"slot-{self._n}"
         t0 = time.time()
-        self.ws.send(json.dumps({"v": 1, "type": "cmd", "id": cid, "name": name, "args": args or {}}))
+        self.ws.send(
+            json.dumps(
+                {"v": 1, "type": "cmd", "id": cid, "name": name, "args": args or {}}
+            )
+        )
         label = f"ws {self.url} cmd {name} {json.dumps(args or {})}"
         while time.time() - t0 < timeout:
             with self.lock:
-                ack = next((m for m in self.msgs if m.get("type") == "ack" and m.get("id") == cid), None)
+                ack = next(
+                    (
+                        m
+                        for m in self.msgs
+                        if m.get("type") == "ack" and m.get("id") == cid
+                    ),
+                    None,
+                )
             if ack is not None:
                 if self.trace is not None:
-                    self.trace.add("core", label, ack.get("ok"), ack.get("result") if ack.get("ok") else ack.get("error"))
+                    self.trace.add(
+                        "core",
+                        label,
+                        ack.get("ok"),
+                        ack.get("result") if ack.get("ok") else ack.get("error"),
+                    )
                 if check and not ack.get("ok"):
                     raise CommandFailed(name, ack.get("error") or {})
                 return ack
             time.sleep(0.02)
         if self.trace is not None:
             self.trace.add("core", label, False, "no ack")
-        raise CommandFailed(name, {"code": "timeout", "message": f"no ack in {timeout} s"})
+        raise CommandFailed(
+            name, {"code": "timeout", "message": f"no ack in {timeout} s"}
+        )
 
     def wait_event(self, t0: float, pred, timeout: float) -> dict | None:
         end = time.time() + timeout

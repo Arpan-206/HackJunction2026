@@ -32,7 +32,9 @@ from ..rgmp import PREFIX_DATA, GloveSource
 from . import asl, piano
 
 ROOT = Path(__file__).resolve().parents[2]
-CAPTURE = Path("/Users/arpanpandey/Code/Junction/repo/logs/live/20261114-131952/solver_12277.rgmp")
+CAPTURE = Path(
+    "/Users/arpanpandey/Code/Junction/repo/logs/live/20261114-131952/solver_12277.rgmp"
+)
 CAL_DATA = Path("/Users/arpanpandey/Code/Junction/repo/backend/data")
 TYPING_WINDOWS = {"typing_run_1": (1912.0, 32.0), "typing_run_2": (3500.0, 51.0)}
 # Capture clock zero, UTC (13:19:52 Helsinki). Calibration records are stamped in UTC.
@@ -40,8 +42,11 @@ CAPTURE_T0_UTC = "2026-11-14T11:19:52"
 OUT = Path(__file__).resolve().parent / "out"
 
 
-def hands_in_window(cfg, path: Path, start_s: float, seconds: float) -> dict[str, list[H.HandState]]:
+def hands_in_window(
+    cfg, path: Path, start_s: float, seconds: float
+) -> dict[str, list[H.HandState]]:
     from tools.replay import cut_window
+
     from ..rgmp import DATA_HDR, OUTER
 
     defs, window = cut_window(path, start_s, seconds)
@@ -75,7 +80,9 @@ def cal_before(cfg, side: str, before_utc: str):
     best = None
     for p in sorted((CAL_DATA / "calibrations").glob("*.json")):
         d = _json.loads(p.read_text(encoding="utf-8"))
-        if d.get("side") != side or not (_phase_present(d.get("flat")) and _phase_present(d.get("fist"))):
+        if d.get("side") != side or not (
+            _phase_present(d.get("flat")) and _phase_present(d.get("fist"))
+        ):
             continue
         if d["created_at"][:19] >= before_utc:
             continue
@@ -84,12 +91,22 @@ def cal_before(cfg, side: str, before_utc: str):
     if best is None:
         return None
     return make_hand_calibration(
-        side, best["flat"], best["fist"], cfg.calibration, cfg.hand,
-        {"range_calibration_id": best["id"], "created_at": best["created_at"], "picked": "newest before the window"},
+        side,
+        best["flat"],
+        best["fist"],
+        cfg.calibration,
+        cfg.hand,
+        {
+            "range_calibration_id": best["id"],
+            "created_at": best["created_at"],
+            "picked": "newest before the window",
+        },
     )
 
 
-def calibrated_angles(cfg, hands: list[H.HandState], side: str, wearer: str, before_utc: str | None = None) -> tuple[np.ndarray, dict]:
+def calibrated_angles(
+    cfg, hands: list[H.HandState], side: str, wearer: str, before_utc: str | None = None
+) -> tuple[np.ndarray, dict]:
     cal = cal_before(cfg, side, before_utc) if before_utc else None
     if cal is None:
         cal = load_hand(CAL_DATA, side, wearer, cfg.calibration, cfg.hand)
@@ -98,7 +115,9 @@ def calibrated_angles(cfg, hands: list[H.HandState], side: str, wearer: str, bef
         return raw, {"calibration": None}
     return np.stack([cal.apply(a) for a in raw]) if len(raw) else raw, {
         "calibration": cal.origin,
-        "unusable": [H.ANGLE_NAMES[i] for i in range(H.N_ANGLES) if cal.slot_weights()[i] == 0],
+        "unusable": [
+            H.ANGLE_NAMES[i] for i in range(H.N_ANGLES) if cal.slot_weights()[i] == 0
+        ],
     }
 
 
@@ -123,13 +142,19 @@ def typing_check(cfg, capture: Path, wearer: str) -> dict:
                     key = f"{item['joint']} {item['direction']}"
                     worst[key] = worst.get(key, 0) + 1
             res[f"{name}_{side}"] = {
-                "frames": int(len(ang)),
+                "frames": len(ang),
                 "coach_fact_rate": fact_rate(ang),
-                "inside_per_joint": {n: round(float(inside[:, j].mean()), 2) for j, n in enumerate(H.ANGLE_NAMES)},
+                "inside_per_joint": {
+                    n: round(float(inside[:, j].mean()), 2)
+                    for j, n in enumerate(H.ANGLE_NAMES)
+                },
                 "all_inside_share": round(float(inside.all(axis=1).mean()), 3),
                 "median_joints_outside": float(np.median(n_out)),
                 "top_worst": sorted(worst.items(), key=lambda kv: -kv[1])[:5],
-                "median_angles": {n: round(float(v), 1) for n, v in zip(H.ANGLE_NAMES, np.median(ang, axis=0))},
+                "median_angles": {
+                    n: round(float(v), 1)
+                    for n, v in zip(H.ANGLE_NAMES, np.median(ang, axis=0))
+                },
                 **info,
             }
     return res
@@ -139,7 +164,9 @@ def fact_rate(angles: np.ndarray) -> float:
     """Share of frames where the coach-facing piano filter (facts.py) would raise at least one fact."""
     from .facts import piano_fact
 
-    return round(float(np.mean([bool(piano_fact(a, None, None)["outside"]) for a in angles])), 3)
+    return round(
+        float(np.mean([bool(piano_fact(a, None, None)["outside"]) for a in angles])), 3
+    )
 
 
 def pianist_fact_rate() -> dict:
@@ -153,10 +180,12 @@ def pianist_fact_rate() -> dict:
         if p["split"] != "test":
             continue
         pj = pull_piece(zf, p["piece_id"])
-        f = piano.piece_features(p["piece_id"], p["subject_id"], pj.joints_left, pj.pressed, pj.bytes_read)
+        f = piano.piece_features(
+            p["piece_id"], p["subject_id"], pj.joints_left, pj.pressed, pj.bytes_read
+        )
         angs.append(f.angles_cal)
     X = np.vstack(angs)[::5]
-    return {"frames": int(len(X)), "fact_rate": fact_rate(X)}
+    return {"frames": len(X), "fact_rate": fact_rate(X)}
 
 
 def letters_on_lessons() -> dict:
@@ -180,7 +209,9 @@ def main(argv: list[str] | None = None) -> int:
         res["piano_ranges_on_real_typing"] = typing_check(cfg, a.capture, a.wearer)
         res["piano_fact_rate_held_out_pianists"] = pianist_fact_rate()
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "real_check.json").write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
+    (OUT / "real_check.json").write_text(
+        json.dumps(res, indent=1) + "\n", encoding="utf-8"
+    )
     print(json.dumps(res, indent=1)[:6000])
     return 0
 

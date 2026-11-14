@@ -33,7 +33,9 @@ class Step:
     note: str | None = None
     frame: str | None = None
     named_by: str = "auto"
-    weights_from: dict | None = None  # how `weights` was built (step_weights); None on older lessons
+    weights_from: dict | None = (
+        None  # how `weights` was built (step_weights); None on older lessons
+    )
 
     @property
     def duration_us(self) -> int:
@@ -530,6 +532,7 @@ def static_finger_weights(
 #   calibration  0 when the master's calibration marks every flexion joint of the finger unusable
 # ---------------------------------------------------------------------------
 
+
 def _typing_chart() -> dict[str, list[tuple[str, str]]]:
     """The typing task's QWERTY touch-typing chart: key -> [(hand, finger)] (one source, core/tasks/typing.py)."""
     from .tasks.typing import CHART  # lazy: the tasks package imports hand helpers
@@ -537,7 +540,9 @@ def _typing_chart() -> dict[str, list[tuple[str, str]]]:
     return CHART
 
 
-def chart_fingers(task: str, task_config: dict, index: int, hand: str) -> list[str] | None:
+def chart_fingers(
+    task: str, task_config: dict, index: int, hand: str
+) -> list[str] | None:
     """Fingers the task's chart names for step `index` on `hand`, or None when there is no chart.
 
     typing: task_config "keys" (a list, one key per step) or "text" (one character per step).
@@ -567,7 +572,11 @@ def chart_fingers(task: str, task_config: dict, index: int, hand: str) -> list[s
         return names or None
     if task == "piano":
         notes = cfg.get("notes")
-        if isinstance(notes, list) and index < len(notes) and isinstance(notes[index], dict):
+        if (
+            isinstance(notes, list)
+            and index < len(notes)
+            and isinstance(notes[index], dict)
+        ):
             f = notes[index].get("finger")
             return [f] if f in H.FINGERS else None
     return None
@@ -591,7 +600,9 @@ def pose_distance(a: np.ndarray, b: np.ndarray) -> float:
     return max(abs(fa[f] - fb[f]) for f in H.FINGERS)
 
 
-def take_groups(key_angles: list[np.ndarray], match_deg: float, takes: int = 0) -> list[list[int]]:
+def take_groups(
+    key_angles: list[np.ndarray], match_deg: float, takes: int = 0
+) -> list[list[int]]:
     """Group step indices into takes of one pose.
 
     takes > 1 and the step count divisible by it: the lesson is the same sequence
@@ -615,7 +626,10 @@ def take_groups(key_angles: list[np.ndarray], match_deg: float, takes: int = 0) 
 
 
 def consistency_weights(
-    takes: list[np.ndarray], consistent_deg: float, inconsistent_deg: float, floor: float
+    takes: list[np.ndarray],
+    consistent_deg: float,
+    inconsistent_deg: float,
+    floor: float,
 ) -> tuple[dict[str, float], dict[str, float]]:
     """(weights, spread in degrees) per finger from the key poses of several takes of one pose.
 
@@ -655,7 +669,9 @@ def step_weights(
     get = cfg.get if hasattr(cfg, "get") else (lambda k, d=None: d)
     match_deg = float(get("take_match_deg", 12.0))
     groups = take_groups(
-        [s.key_angles for s in steps], match_deg, int((task_config or {}).get("takes", 0) or 0)
+        [s.key_angles for s in steps],
+        match_deg,
+        int((task_config or {}).get("takes", 0) or 0),
     )
     group_of = {i: g for g in groups for i in g}
     out = []
@@ -674,7 +690,8 @@ def step_weights(
         cal = usable or {f: 1.0 for f in H.FINGERS}
         w = {
             f: round(
-                float(static.get(f, 1.0)) * cons[f] * chart[f] * float(cal.get(f, 1.0)), 2
+                float(static.get(f, 1.0)) * cons[f] * chart[f] * float(cal.get(f, 1.0)),
+                2,
             )
             for f in H.FINGERS
         }

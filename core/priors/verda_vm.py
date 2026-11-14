@@ -60,7 +60,10 @@ def client():
 
 def balance(c) -> dict[str, Any]:
     b = c.balance.get()
-    return {"amount": getattr(b, "amount", None), "currency": getattr(b, "currency", None)}
+    return {
+        "amount": getattr(b, "amount", None),
+        "currency": getattr(b, "currency", None),
+    }
 
 
 def log_cost(event: str, **fields: Any) -> None:
@@ -73,7 +76,9 @@ def lane_spent() -> float:
     if not COST_LOG.exists():
         return 0.0
     rows = [json.loads(x) for x in COST_LOG.read_text().splitlines() if x.strip()]
-    return round(sum(r.get("estimated_usd") or 0 for r in rows if r["event"] == "vm_down"), 2)
+    return round(
+        sum(r.get("estimated_usd") or 0 for r in rows if r["event"] == "vm_down"), 2
+    )
 
 
 def free_types(c) -> dict[str, str]:
@@ -105,7 +110,11 @@ def cmd_balance(c, a) -> int:
         for i in c.instances.get()
         if i.status not in ("deleted", "discontinued")
     ]
-    print(json.dumps({"balance": bal, "lane_spent_usd": lane_spent(), "instances": running}))
+    print(
+        json.dumps(
+            {"balance": bal, "lane_spent_usd": lane_spent(), "instances": running}
+        )
+    )
     return 0
 
 
@@ -122,9 +131,13 @@ def cmd_up(c, a) -> int:
     free = free_types(c)
     if a.type not in free:
         raise SystemExit(f"{a.type} is not free now; free: {sorted(free)}")
-    price = next(t.price_per_hour for t in c.instance_types.get() if t.instance_type == a.type)
+    price = next(
+        t.price_per_hour for t in c.instance_types.get() if t.instance_type == a.type
+    )
     planned = price * a.hours
-    print(f"balance {bal['amount']} {bal['currency']}; {a.type} at {price} USD/h; planned {planned:.2f} USD")
+    print(
+        f"balance {bal['amount']} {bal['currency']}; {a.type} at {price} USD/h; planned {planned:.2f} USD"
+    )
     if bal["amount"] is None or bal["amount"] - planned < BALANCE_FLOOR:
         log_cost("refused", type=a.type, balance=bal, planned_usd=planned)
         raise SystemExit("refused: the planned spend would break the 50 floor")
@@ -169,20 +182,40 @@ def cmd_down(c, a) -> int:
         if inst.status in ("deleted", "discontinued"):
             continue
         vols = [v for v in [getattr(inst, "os_volume_id", None)] if v]
-        c.instances.action(inst.id, "delete", volume_ids=vols or None, delete_permanently=bool(vols))
+        c.instances.action(
+            inst.id, "delete", volume_ids=vols or None, delete_permanently=bool(vols)
+        )
         gone.append(inst.id)
     hours = None
     if info.get("created_at"):
         start = datetime.fromisoformat(info["created_at"])
         hours = round((datetime.now(UTC) - start).total_seconds() / 3600, 3)
-    est = round(hours * info["price_usd_per_h"], 2) if hours is not None and info.get("price_usd_per_h") else None
+    est = (
+        round(hours * info["price_usd_per_h"], 2)
+        if hours is not None and info.get("price_usd_per_h")
+        else None
+    )
     bal = balance(c)
     if gone:
         log_cost("vm_down", deleted=gone, hours=hours, estimated_usd=est, balance=bal)
         if INSTANCE_FILE.exists():
             INSTANCE_FILE.unlink()
-    left = [(i.hostname, i.status) for i in c.instances.get() if i.status not in ("deleted", "discontinued")]
-    print(json.dumps({"deleted": gone, "hours": hours, "estimated_usd": est, "balance": bal, "instances_left": left}))
+    left = [
+        (i.hostname, i.status)
+        for i in c.instances.get()
+        if i.status not in ("deleted", "discontinued")
+    ]
+    print(
+        json.dumps(
+            {
+                "deleted": gone,
+                "hours": hours,
+                "estimated_usd": est,
+                "balance": bal,
+                "instances_left": left,
+            }
+        )
+    )
     return 0
 
 
@@ -199,7 +232,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("down")
     a = ap.parse_args(argv)
     c = client()
-    return {"balance": cmd_balance, "types": cmd_types, "up": cmd_up, "down": cmd_down}[a.cmd](c, a)
+    return {"balance": cmd_balance, "types": cmd_types, "up": cmd_up, "down": cmd_down}[
+        a.cmd
+    ](c, a)
 
 
 if __name__ == "__main__":

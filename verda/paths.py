@@ -27,14 +27,21 @@ def main_checkout() -> Path:
         if line.startswith("gitdir:"):
             gitdir = Path(line.split(":", 1)[1].strip())
             # <main>/.git/worktrees/<name> -> <main>
-            if gitdir.parent.name == "worktrees" and gitdir.parent.parent.name == ".git":
+            if (
+                gitdir.parent.name == "worktrees"
+                and gitdir.parent.parent.name == ".git"
+            ):
                 return gitdir.parent.parent.parent
     return ROOT
 
 
 def env_file() -> Path | None:
     """The first `.env` that exists: $GEPPETTO_ENV_FILE, this checkout, then the main checkout."""
-    candidates = [os.environ.get("GEPPETTO_ENV_FILE"), ROOT / ".env", main_checkout() / ".env"]
+    candidates = [
+        os.environ.get("GEPPETTO_ENV_FILE"),
+        ROOT / ".env",
+        main_checkout() / ".env",
+    ]
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             return Path(candidate)
@@ -47,7 +54,9 @@ def load_secrets() -> dict[str, str]:
     path = env_file()
     if path is not None:
         values.update({k: v for k, v in dotenv_values(path).items() if v})
-    values.update({k: v for k, v in os.environ.items() if k.startswith(SECRET_PREFIXES)})
+    values.update(
+        {k: v for k, v in os.environ.items() if k.startswith(SECRET_PREFIXES)}
+    )
     # The Gemini key carried a misspelt name for a while; accept both.
     if not values.get("GEMINI_API_KEY") and values.get("GEMINII_API_KEY"):
         values["GEMINI_API_KEY"] = values["GEMINII_API_KEY"]
@@ -67,5 +76,6 @@ def add_repo_paths() -> None:
         s = str(p)
         if s not in sys.path:
             sys.path.insert(0, s)
+
 
 CAPTURE_FIXTURE = ROOT / "backend/tests/fixtures/rgmp/worn_solver.rgmp.gz"

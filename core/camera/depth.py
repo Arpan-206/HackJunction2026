@@ -17,6 +17,7 @@ Conventions (do not change without a note in DECISIONS.md):
 - t_us is the core clock in microseconds: arrival minus the configured camera latency.
 - stream_t is the phone's own timestamp in seconds, useful only for intervals.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -45,7 +46,12 @@ class DepthFrame:
         if self.depth is None:
             return None
         import cv2
-        return cv2.resize(self.depth, (self.bgr.shape[1], self.bgr.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+        return cv2.resize(
+            self.depth,
+            (self.bgr.shape[1], self.bgr.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
+        )
 
     def depth_intrinsics(self) -> np.ndarray:
         """K scaled to the depth resolution."""
