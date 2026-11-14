@@ -14,6 +14,29 @@ export interface CoachConfig {
   deadZoneDeg: number;
   /** Largest timing slip that is forgiven, in milliseconds. */
   timingMs: number;
+  /**
+   * Fingers the step weights too little to correct (Step.weights below FOCUS_MIN_WEIGHT). They are drawn dimmed, never
+   * marked off, never named in a tip and left out of the match meter. Empty without step weights.
+   */
+  light?: readonly Finger[];
+  /** The step's weights, 0 to 1, every finger 1 without step weights. */
+  weights?: Record<Finger, number>;
+}
+
+/** Below this weight a finger is never the one to fix (backend FOCUS_MIN_WEIGHT, mock/scoring.ts). */
+export const FOCUS_MIN_WEIGHT = 0.3;
+
+/**
+ * Fingers too light to correct: weight under FOCUS_MIN_WEIGHT. When every finger is that light, the heaviest non-zero
+ * ones still count (the scorer's focus rule), so a lesson of only light fingers keeps its corrections.
+ */
+export function lightFingers(weights?: Partial<Record<Finger, number>> | null): Finger[] {
+  if (!weights) return [];
+  const w = (f: Finger) => Math.min(1, Math.max(0, weights[f] ?? 1));
+  const focus = FINGERS.filter((f) => w(f) >= FOCUS_MIN_WEIGHT && w(f) > 0);
+  if (focus.length) return FINGERS.filter((f) => !focus.includes(f));
+  const top = Math.max(...FINGERS.map(w));
+  return FINGERS.filter((f) => !(top > 0 && w(f) === top));
 }
 
 /** Dead zone used when the step does not say otherwise: a few degrees of natural tremor. */
@@ -24,9 +47,17 @@ export const DEFAULT_DEAD_ZONE_DEG = 4;
  * error, the same multiplier the scorer applies. Every live correction (strings, rings, finger tints, tips, the match
  * meter and the local score) reads its band from here, so a relaxed margin stops marking a slightly-off finger.
  */
-export function configFromTolerance(tol: { angle_deg?: number; timing_ms?: number } | undefined, margin: Margin = DEFAULT_MARGIN): CoachConfig {
+export function configFromTolerance(
+  tol: { angle_deg?: number; timing_ms?: number } | undefined,
+  margin: Margin = DEFAULT_MARGIN,
+  weights?: Partial<Record<Finger, number>> | null,
+): CoachConfig {
   const k = MARGIN_MULTIPLIERS[margin];
-  return { toleranceDeg: (tol?.angle_deg ?? 18) * k, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: (tol?.timing_ms ?? 250) * k };
+  const base = { toleranceDeg: (tol?.angle_deg ?? 18) * k, deadZoneDeg: DEFAULT_DEAD_ZONE_DEG, timingMs: (tol?.timing_ms ?? 250) * k };
+  if (!weights) return base;
+  const w = {} as Record<Finger, number>;
+  for (const f of FINGERS) w[f] = Math.min(1, Math.max(0, weights[f] ?? 1));
+  return { ...base, weights: w, light: lightFingers(weights) };
 }
 
 /** Total flexion of one finger (sum of its three joints) in degrees. */
@@ -102,9 +133,9 @@ export function fingerMatch(deviationDeg: number, toleranceDeg: number): number 
  * The live match meter, 0 to 100: the weakest finger's match. A hand is only as in line as its worst finger, so the meter
  * can never read high while a finger is flagged.
  */
-export function matchMeter(deviations: FingerValues, toleranceDeg: number): number {
+export function matchMeter(deviations: FingerValues, toleranceDeg: number, light: readonly Finger[] = []): number {
   let worst = 100;
-  for (const f of FINGERS) worst = Math.min(worst, fingerMatch(deviations[f], toleranceDeg));
+  for (const f of FINGERS) if (!light.includes(f)) worst = Math.min(worst, fingerMatch(deviations[f], toleranceDeg));
   return worst;
 }
 

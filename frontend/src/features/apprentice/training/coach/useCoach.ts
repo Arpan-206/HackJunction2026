@@ -37,6 +37,8 @@ export interface CoachLive {
    * finger tints read this, not the per-tick values, so they change in the same frame window as the match meter.
    */
   shown: FlagSnapshot;
+  /** Fingers the step weights too little to correct: drawn dimmed, never marked off (CoachConfig.light). */
+  light?: readonly Finger[];
 }
 
 /** Coarse snapshot (about 8 Hz) for the status row, tip and meter. */
@@ -135,6 +137,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
   const listeners = useRef(new Set<() => void>());
   const optsRef = useRef(opts);
   optsRef.current = opts;
+  live.current.light = opts.config.light ?? [];
 
   const sim = useRef(new ClumsySim());
   const avg = useRef(new MovingAverage(6));
@@ -223,8 +226,10 @@ export function useCoach(opts: UseCoachOptions): Coach {
           const status = { ...ALL_GOOD };
           for (const f of FINGERS) {
             dev[f] = applyDeadZone(aligned.deviation[f], o.config.deadZoneDeg);
-            status[f] = statusOf(dev[f], o.config.toleranceDeg);
-            ten[f] = tension(dev[f], o.config.toleranceDeg);
+            // a finger the step weights too little is never marked off: no tint, ring, string pull or tip
+            const light = o.config.light?.includes(f) ?? false;
+            status[f] = light ? 'good' : statusOf(dev[f], o.config.toleranceDeg);
+            ten[f] = light ? 0 : tension(dev[f], o.config.toleranceDeg);
           }
           L.deviation = dev;
           L.status = status;
@@ -253,7 +258,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
               }
             }
           }
-          r.tip = algorithmicTip(dev, o.config.toleranceDeg, r.lagMs, o.config.timingMs);
+          r.tip = algorithmicTip(dev, o.config.toleranceDeg, r.lagMs, o.config.timingMs, o.config.light);
         }
       }
 
@@ -264,7 +269,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
         viewRef.current = {
           deviation: L.deviation,
           status: L.status,
-          match: matchMeter(L.deviation, o.config.toleranceDeg),
+          match: matchMeter(L.deviation, o.config.toleranceDeg, o.config.light),
           tip: r.tip,
           lagMs: r.lagMs,
           hasLearner: L.hasLearner,
@@ -299,11 +304,13 @@ export function useCoach(opts: UseCoachOptions): Coach {
     const n = Math.max(1, r.sums.n);
     const meanAbs = zeroValues();
     const inTol = zeroValues();
-    let worst: Finger = 'index';
+    const light = optsRef.current.config.light ?? [];
+    const named = FINGERS.filter((f) => !light.includes(f));
+    let worst: Finger = named.includes('index') ? 'index' : (named[0] ?? 'index');
     for (const f of FINGERS) {
       meanAbs[f] = r.sums.abs[f] / n;
       inTol[f] = r.sums.good[f] / n;
-      if (meanAbs[f] > meanAbs[worst]) worst = f;
+      if (!light.includes(f) && meanAbs[f] > meanAbs[worst]) worst = f;
     }
     return {
       seconds: r.sums.seconds,
