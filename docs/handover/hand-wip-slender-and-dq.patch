@@ -1,0 +1,357 @@
+diff --git a/frontend/src/three/dqSkinning.ts b/frontend/src/three/dqSkinning.ts
+index e0bf0dc..33b93d2 100644
+--- a/frontend/src/three/dqSkinning.ts
++++ b/frontend/src/three/dqSkinning.ts
+@@ -1,4 +1,4 @@
+-import { ShaderChunk } from 'three';
++import { Matrix4, Quaternion, ShaderChunk, Vector3, type Skeleton, type SkinnedMesh } from 'three';
+ 
+ /**
+  * Dual quaternion skinning for every skinned mesh in the app (only the hand is skinned).
+@@ -8,71 +8,28 @@ import { ShaderChunk } from 'three';
+  * knuckles and reads as one soft lump. Blending the bones as unit dual quaternions instead keeps every blend a rigid
+  * motion, so a bent joint keeps its cross-section and curled fingers keep their volume.
+  *
+- * Each bone's mesh-space transform (bindMatrixInverse * bone * bindMatrix) is rigid even for a mirrored left hand, as
+- * the mesh and its bones share the mirror; it is turned into a dual quaternion in the vertex shader, so shadow depth
+- * passes and every material patch (outline hull, tints, rim) skin the same way with no extra uniforms.
++ * The dual quaternions are made on the CPU, once per bone per frame (skinWithDualQuaternions replaces the skeleton update):
++ * each bone's mesh-space transform (bindMatrixInverse * bone * bindMatrix) is rigid even for a mirrored or scaled hand,
++ * as the mesh and its bones share every ancestor, and its rotation and translation go into the skeleton's bone texture
++ * in place of the matrix. The vertex shader then only fetches and blends two vec4s per bone, cheaper than three.js's own
++ * matrix blend, which matters on software renderers. Shadow depth passes and every material patch (outline hull, tints,
++ * rim) read the same texture, so they all skin the same way.
+  */
+ 
+ const PARS = /* glsl */ `
+ #ifdef USE_SKINNING
+ 
+-	uniform mat4 bindMatrix;
+-	uniform mat4 bindMatrixInverse;
+-
+ 	uniform highp sampler2D boneTexture;
+ 
+-	mat4 getBoneMatrix( const in float i ) {
++	// One bone's unit dual quaternion: real part (rotation, x y z w) and dual part, in the first two of its four texels.
++	void getBoneDQ( const in float i, out vec4 real, out vec4 dual ) {
+ 
+ 		int size = textureSize( boneTexture, 0 ).x;
+ 		int j = int( i ) * 4;
+ 		int x = j % size;
+ 		int y = j / size;
+-		vec4 v1 = texelFetch( boneTexture, ivec2( x, y ), 0 );
+-		vec4 v2 = texelFetch( boneTexture, ivec2( x + 1, y ), 0 );
+-		vec4 v3 = texelFetch( boneTexture, ivec2( x + 2, y ), 0 );
+-		vec4 v4 = texelFetch( boneTexture, ivec2( x + 3, y ), 0 );
+-
+-		return mat4( v1, v2, v3, v4 );
+-
+-	}
+-
+-	// Rotation of a rigid matrix as a unit quaternion (x, y, z, w). GLSL matrices are column major: m[ col ][ row ].
+-	vec4 dqRotation( const in mat4 m ) {
+-
+-		float t = m[ 0 ][ 0 ] + m[ 1 ][ 1 ] + m[ 2 ][ 2 ];
+-		vec4 q;
+-		if ( t > 0.0 ) {
+-			float s = sqrt( t + 1.0 ) * 2.0;
+-			q = vec4( m[ 1 ][ 2 ] - m[ 2 ][ 1 ], m[ 2 ][ 0 ] - m[ 0 ][ 2 ], m[ 0 ][ 1 ] - m[ 1 ][ 0 ], 0.25 * s * s ) / s;
+-		} else if ( m[ 0 ][ 0 ] > m[ 1 ][ 1 ] && m[ 0 ][ 0 ] > m[ 2 ][ 2 ] ) {
+-			float s = sqrt( 1.0 + m[ 0 ][ 0 ] - m[ 1 ][ 1 ] - m[ 2 ][ 2 ] ) * 2.0;
+-			q = vec4( 0.25 * s * s, m[ 1 ][ 0 ] + m[ 0 ][ 1 ], m[ 2 ][ 0 ] + m[ 0 ][ 2 ], m[ 1 ][ 2 ] - m[ 2 ][ 1 ] ) / s;
+-		} else if ( m[ 1 ][ 1 ] > m[ 2 ][ 2 ] ) {
+-			float s = sqrt( 1.0 + m[ 1 ][ 1 ] - m[ 0 ][ 0 ] - m[ 2 ][ 2 ] ) * 2.0;
+-			q = vec4( m[ 1 ][ 0 ] + m[ 0 ][ 1 ], 0.25 * s * s, m[ 2 ][ 1 ] + m[ 1 ][ 2 ], m[ 2 ][ 0 ] - m[ 0 ][ 2 ] ) / s;
+-		} else {
+-			float s = sqrt( 1.0 + m[ 2 ][ 2 ] - m[ 0 ][ 0 ] - m[ 1 ][ 1 ] ) * 2.0;
+-			q = vec4( m[ 2 ][ 0 ] + m[ 0 ][ 2 ], m[ 2 ][ 1 ] + m[ 1 ][ 2 ], 0.25 * s * s, m[ 0 ][ 1 ] - m[ 1 ][ 0 ] ) / s;
+-		}
+-		return normalize( q );
+-
+-	}
+-
+-	vec4 dqMul( const in vec4 a, const in vec4 b ) {
+-
+-		return vec4( a.w * b.xyz + b.w * a.xyz + cross( a.xyz, b.xyz ), a.w * b.w - dot( a.xyz, b.xyz ) );
+-
+-	}
+-
+-	// Adds one bone to the blend: its rotation r and dual part 0.5 * t * r, sign-aligned with the first bone.
+-	void dqAccumulate( const in mat4 bone, const in float w, const in vec4 pivot, inout vec4 real, inout vec4 dual ) {
+-
+-		mat4 m = bindMatrixInverse * bone * bindMatrix;
+-		vec4 r = dqRotation( m );
+-		vec4 d = 0.5 * dqMul( vec4( m[ 3 ].xyz, 0.0 ), r );
+-		float s = dot( r, pivot ) < 0.0 ? - w : w;
+-		real += r * s;
+-		dual += d * s;
++		real = texelFetch( boneTexture, ivec2( x, y ), 0 );
++		dual = texelFetch( boneTexture, ivec2( x + 1, y ), 0 );
+ 
+ 	}
+ 
+@@ -88,19 +45,20 @@ const PARS = /* glsl */ `
+ const BASE = /* glsl */ `
+ #ifdef USE_SKINNING
+ 
+-	mat4 boneMatX = getBoneMatrix( skinIndex.x );
+-	mat4 boneMatY = getBoneMatrix( skinIndex.y );
+-	mat4 boneMatZ = getBoneMatrix( skinIndex.z );
+-	mat4 boneMatW = getBoneMatrix( skinIndex.w );
+-
+-	vec4 dqReal = vec4( 0.0 );
+-	vec4 dqDual = vec4( 0.0 );
++	vec4 dqReal;
++	vec4 dqDual;
+ 	{
+-		vec4 pivot = dqRotation( bindMatrixInverse * boneMatX * bindMatrix );
+-		dqAccumulate( boneMatX, skinWeight.x, pivot, dqReal, dqDual );
+-		dqAccumulate( boneMatY, skinWeight.y, pivot, dqReal, dqDual );
+-		dqAccumulate( boneMatZ, skinWeight.z, pivot, dqReal, dqDual );
+-		dqAccumulate( boneMatW, skinWeight.w, pivot, dqReal, dqDual );
++		vec4 rX, dX, rY, dY, rZ, dZ, rW, dW;
++		getBoneDQ( skinIndex.x, rX, dX );
++		getBoneDQ( skinIndex.y, rY, dY );
++		getBoneDQ( skinIndex.z, rZ, dZ );
++		getBoneDQ( skinIndex.w, rW, dW );
++		// Sign-align every bone with the first, so the blend takes the short way round.
++		float wY = dot( rX, rY ) < 0.0 ? - skinWeight.y : skinWeight.y;
++		float wZ = dot( rX, rZ ) < 0.0 ? - skinWeight.z : skinWeight.z;
++		float wW = dot( rX, rW ) < 0.0 ? - skinWeight.w : skinWeight.w;
++		dqReal = rX * skinWeight.x + rY * wY + rZ * wZ + rW * wW;
++		dqDual = dX * skinWeight.x + dY * wY + dZ * wZ + dW * wW;
+ 		float len = max( length( dqReal ), 1e-6 );
+ 		dqReal /= len;
+ 		dqDual /= len;
+@@ -143,3 +101,34 @@ export function installDualQuaternionSkinning(): void {
+   chunks.skinnormal_vertex = NORMAL;
+   chunks.skinning_vertex = POSITION;
+ }
++
++const _m = new Matrix4();
++const _q = new Quaternion();
++const _t = new Vector3();
++const _s = new Vector3();
++
++/**
++ * Makes `skeleton` write dual quaternions into its bone texture instead of matrices, in the space of `mesh` (every
++ * mesh bound to the skeleton must share that mesh's world transform and bind matrix, as the hand's fill, outline and
++ * depth meshes do).
++ */
++export function skinWithDualQuaternions(skeleton: Skeleton, mesh: SkinnedMesh): void {
++  skeleton.update = function update(this: Skeleton) {
++    const out = this.boneMatrices;
++    for (let i = 0; i < this.bones.length; i++) {
++      _m.multiplyMatrices(mesh.bindMatrixInverse, this.bones[i].matrixWorld).multiply(this.boneInverses[i]).multiply(mesh.bindMatrix);
++      _m.decompose(_t, _q, _s);
++      const o = i * 16;
++      out[o] = _q.x;
++      out[o + 1] = _q.y;
++      out[o + 2] = _q.z;
++      out[o + 3] = _q.w;
++      // Dual part: 0.5 * (t, 0) * q.
++      out[o + 4] = 0.5 * (_t.x * _q.w + _t.y * _q.z - _t.z * _q.y);
++      out[o + 5] = 0.5 * (-_t.x * _q.z + _t.y * _q.w + _t.z * _q.x);
++      out[o + 6] = 0.5 * (_t.x * _q.y - _t.y * _q.x + _t.z * _q.w);
++      out[o + 7] = -0.5 * (_t.x * _q.x + _t.y * _q.y + _t.z * _q.z);
++    }
++    if (this.boneTexture) this.boneTexture.needsUpdate = true;
++  };
++}
+diff --git a/frontend/src/three/handModel.ts b/frontend/src/three/handModel.ts
+index 02ad66d..cd80b20 100644
+--- a/frontend/src/three/handModel.ts
++++ b/frontend/src/three/handModel.ts
+@@ -20,7 +20,7 @@ const KNUCKLE_Z = -1.0;
+  * Where the wrist starts to close, past the wrist joint, and how long the closing dome is (scene units, 12 per metre):
+  * the hand closes from just before the wrist joint and ends about 2 cm past it.
+  */
+-const WRIST_CREASE = -0.2;
++const WRIST_CREASE = -0.42;
+ const WRIST_END = 0.22;
+ /** Concavity (offset to the neighbours along the normal per edge length) over which a crease fades into aCavity. */
+ const CREASE_FROM = 0.04;
+@@ -76,7 +76,11 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
+     .multiply(new Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
+ 
+   const world = new Map<string, { position: Vector3; quaternion: Quaternion }>();
+-  bindPos.forEach((p, n) => world.set(n, { position: p.clone().applyMatrix4(toHand), quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) }));
++  bindPos.forEach((p, n) => {
++    const at = p.clone().applyMatrix4(toHand);
++    at.z = shortenPalm(at.z);
++    world.set(n, { position: at, quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) });
++  });
+   const layout = buildLayout((n) => world.get(n) as { position: Vector3; quaternion: Quaternion });
+ 
+   // Geometry: drop the UV split so the surface is one welded shell, then bring it into hand space.
+@@ -85,6 +89,8 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
+   for (const k of Object.keys(src.attributes)) if (k !== 'position' && k !== 'skinIndex' && k !== 'skinWeight') src.deleteAttribute(k);
+   src.applyMatrix4(toHand);
+   let geo = mergeVertices(src, 1e-4);
++  const gp = geo.attributes.position;
++  for (let i = 0; i < gp.count; i++) gp.setZ(i, shortenPalm(gp.getZ(i)));
+   src.dispose();
+ 
+   // Remap skin indices from the glTF joint order to the layout's bone order.
+@@ -97,6 +103,7 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
+   geo.dispose();
+   geo = capped;
+   taperWrist(geo, wrist);
++  slenderise(geo, layout);
+   if (SUBDIVIDE) {
+     const sub = loopSubdivide(geo);
+     geo.dispose();
+@@ -183,6 +190,76 @@ export function closeHoles(geo: BufferGeometry): BufferGeometry {
+  * and wrapped onto an elliptical dome WRIST_END long, so the hand closes in a soft, tapered end a few centimetres past
+  * the wrist (the cut a tracked hand makes), with no edge or cap facing any camera.
+  */
++/**
++ * The model's palm is long for its fingers (a broad, fleshy hand), which from behind reads as a mitten. Everything
++ * behind the knuckle line (hand space z > PALM_SHORTEN.from) is drawn closer to it: joints and skin alike, so the bind
++ * pose stays exact. The scale eases in over `ease` scene units, so the surface has no crease where it starts.
++ */
++const PALM_SHORTEN = { from: -0.9, scale: 0.8, ease: 0.2 };
++
++function shortenPalm(z: number): number {
++  const { from, scale, ease } = PALM_SHORTEN;
++  if (z <= from) return z;
++  const d = z - from;
++  return from + d * scale + (1 - scale) * ease * (1 - Math.exp(-d / ease));
++}
++
++/**
++ * How much slimmer the drawn hand is than the model, which is a broad, fleshy hand: phalanges shrink towards their bone
++ * axis (length kept), and the palm narrows across and thins front to back about its own centre line.
++ */
++const SLENDER = { finger: 0.84, thumb: 0.9, palmWidth: 0.87, palmThickness: 0.84 };
++
++/**
++ * Slims the bind-pose skin without moving a joint, so the skinning stays exact: each vertex moves by the skin-weighted
++ * blend of what its bones ask for. A phalanx pulls the skin towards its own axis (projected onto the bone and onwards
++ * past its end, so fingertips keep their length); the wrist and metacarpals pull it towards the palm's centre line.
++ */
++function slenderise(geo: BufferGeometry, layout: HandLayout): void {
++  const { bones, palm } = layout;
++  const phalanx = new Map<number, { from: Vector3; axis: Vector3; scale: number }>();
++  CHAINS.forEach((chain, f) =>
++    chain.forEach((name, k) => {
++      if (k === 0 || k === chain.length - 1) return;
++      const b = bones.findIndex((d) => d.name === name);
++      const next = bones.findIndex((d) => d.name === chain[k + 1]);
++      const from = bones[b].worldPosition;
++      phalanx.set(b, { from, axis: bones[next].worldPosition.clone().sub(from).normalize(), scale: f === 0 ? SLENDER.thumb : SLENDER.finger });
++    }),
++  );
++  const pos = geo.attributes.position;
++  const si = geo.attributes.skinIndex;
++  const sw = geo.attributes.skinWeight;
++  const p = new Vector3();
++  const rel = new Vector3();
++  const move = new Vector3();
++  const off = new Vector3();
++  for (let i = 0; i < pos.count; i++) {
++    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
++    move.set(0, 0, 0);
++    for (let c = 0; c < 4; c++) {
++      const w = sw.getComponent(i, c);
++      if (w <= 0) continue;
++      const ph = phalanx.get(si.getComponent(i, c));
++      if (ph) {
++        rel.copy(p).sub(ph.from);
++        const t = Math.max(0, rel.dot(ph.axis));
++        off.copy(rel).addScaledVector(ph.axis, -t);
++        move.addScaledVector(off, (ph.scale - 1) * w);
++      } else {
++        rel.copy(p).sub(palm.centre);
++        move.addScaledVector(palm.radial, rel.dot(palm.radial) * (SLENDER.palmWidth - 1) * w);
++        move.addScaledVector(palm.palmar, rel.dot(palm.palmar) * (SLENDER.palmThickness - 1) * w);
++      }
++    }
++    pos.setXYZ(i, p.x + move.x, p.y + move.y, p.z + move.z);
++  }
++  pos.needsUpdate = true;
++}
++
++/** How far the wrist draws in from the palm (scale of its width and thickness) and over what length behind the crease. */
++const WRIST_NARROW = { width: 0.8, thickness: 0.9, reach: 0.45 };
++
+ function taperWrist(geo: BufferGeometry, wrist: Vector3): void {
+   const p = geo.attributes.position;
+   const zs = wrist.z + WRIST_CREASE;
+@@ -204,10 +281,20 @@ function taperWrist(geo: BufferGeometry, wrist: Vector3): void {
+   if (!Number.isFinite(x0) || zMax <= zs) return;
+   const cx = (x0 + x1) / 2;
+   const cy = (y0 + y1) / 2;
+-  const a = (x1 - x0) / 2;
+-  const b = (y1 - y0) / 2;
++  const { width, thickness, reach } = WRIST_NARROW;
++  const a = ((x1 - x0) / 2) * width;
++  const b = ((y1 - y0) / 2) * thickness;
+   const tube = zMax - zs;
+   const total = tube + (a + b) / 2;
++  // A wrist is narrower and thinner than the palm: the last stretch of the palm draws in towards the wrist's centre
++  // line, and the closed end keeps that slimmer section.
++  for (let i = 0; i < p.count; i++) {
++    const z = p.getZ(i);
++    const t = smoothstep(zs - reach, zs, z);
++    if (t <= 0) continue;
++    p.setX(i, cx + (p.getX(i) - cx) * (1 + (width - 1) * t));
++    p.setY(i, cy + (p.getY(i) - cy) * (1 + (thickness - 1) * t));
++  }
+   for (let i = 0; i < p.count; i++) {
+     const z = p.getZ(i);
+     if (z <= zs) continue;
+diff --git a/frontend/src/three/handPose.ts b/frontend/src/three/handPose.ts
+index ca9621d..370037c 100644
+--- a/frontend/src/three/handPose.ts
++++ b/frontend/src/three/handPose.ts
+@@ -66,7 +66,7 @@ export const CUP_GAIN: readonly number[] = [0, 0, 0, 0.06, 0.13];
+  * Spread (radians, away from the middle finger) added to every pose. The model's fingers lie pressed together, and a
+  * curled hand then reads as one lump; a hand at ease keeps a finger's width of air between its fingers.
+  */
+-export const REST_SPREAD: readonly number[] = [0, 0.08, 0, 0.05, 0.1];
++export const REST_SPREAD: readonly number[] = [0, 0.15, 0, 0.09, 0.18];
+ 
+ export interface BoneDesc {
+   name: string;
+@@ -209,7 +209,9 @@ export function buildLayout(world: (name: string) => { position: Vector3; quater
+       if (_v.crossVectors(spreadW, d).dot(palm.radial) < 0) spreadW.negate();
+       let bindFlex = THUMB_CMC_REST;
+       if (!(f === 0 && k === 0)) {
+-        const parentDir = k === 0 ? d : dir(k - 1);
++        // A finger's knuckle angle is measured from the back of the hand (the palm's distal axis), as a glove reports
++        // it, not from its own metacarpal, whose slope varies from model to model; the other joints from their parent.
++        const parentDir = f > 0 && slot === 0 ? palm.distal.clone().addScaledVector(flexW, -palm.distal.dot(flexW)).normalize() : k === 0 ? d : dir(k - 1);
+         bindFlex = signedAngle(parentDir, d, flexW);
+       }
+       return {
+@@ -289,7 +291,7 @@ export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, fl
+ export const PINCH = {
+   /** Unaided tip distance (hand-space units) at which the pads close fully, and beyond which the thumb is left alone. */
+   near: 0.55,
+-  far: 0.75,
++  far: 0.7,
+   /** Distance kept between the two tip joints when touching: about one fingertip's thickness. */
+   contact: 0.16,
+   /** How far in front of its knuckle (along the palm) the index tip must be for a pinch; curled back past it is a fist. */
+diff --git a/frontend/src/three/handRig.ts b/frontend/src/three/handRig.ts
+index 71ee1be..5871f91 100644
+--- a/frontend/src/three/handRig.ts
++++ b/frontend/src/three/handRig.ts
+@@ -2,7 +2,7 @@ import { Group, Matrix4, Skeleton, SkinnedMesh, type Bone, type Object3D, type V
+ import type { Finger, Side } from '../api/types';
+ import type { StageColors } from '../theme/themes';
+ import { FINGER_ORDER } from './anatomy';
+-import { installDualQuaternionSkinning } from './dqSkinning';
++import { installDualQuaternionSkinning, skinWithDualQuaternions } from './dqSkinning';
+ import type { HandTemplate } from './handModel';
+ import { applyHandPose, createBones } from './handPose';
+ import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
+@@ -67,6 +67,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
+     depth.userData.noCast = true;
+   }
+   const mesh = skin(mats.fill);
++  skinWithDualQuaternions(skeleton, mesh);
+   if (mats.line) {
+     const hull = skin(mats.line);
+     hull.userData.noCast = true;
