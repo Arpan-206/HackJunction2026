@@ -1,0 +1,74 @@
+name: ci
+
+# The three test suites on CRACI runners. Every push to main and to every lane
+# branch runs them, so CRACI records an SBOM and a network trace per lane.
+# tools/agent_bom reads those records through the CRACI API.
+#
+# Network policy (docs.craci.com/guides/setup-action-network and
+# cache-sbom-completeness): every built-in preset stays on (presets omitted) and
+# `default: deny` blocks unmatched traffic, so CRACI observes every package
+# download and the SBOM can be complete. No caches: a restored cache carries
+# the producing job's SBOM, and a legacy cache has no evidence.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+jobs:
+  core:
+    runs-on: craci
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: false
+      - name: Install core dependencies
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python -r requirements.txt
+      - name: Core tests
+        run: .venv/bin/python -m pytest -q
+
+  backend:
+    runs-on: craci
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: false
+      - run: uv sync
+      - name: Backend tests
+        run: uv run pytest -q
+
+  frontend:
+    runs-on: craci
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
