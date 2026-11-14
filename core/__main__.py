@@ -93,6 +93,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="score on raw angles (no per-wearer calibration)",
     )
+    ap.add_argument(
+        "--depth",
+        action="store_true",
+        help="depth step on: read the GeppettoDepth phone ([camera.geppetto_depth]), find table and forearm, "
+        "correct the glove yaw, serve /ws/depth (same as [camera] depth_enabled = true)",
+    )
+    ap.add_argument(
+        "--depth-host",
+        metavar="HOST:PORT",
+        help="GeppettoDepth address for --depth (default from [camera.geppetto_depth]); "
+        "a fake phone is python -m core.camera.fake_depth",
+    )
+    ap.add_argument(
+        "--depth-fake",
+        action="store_true",
+        help="with --depth: render the fake bench scene in process instead of reading a phone",
+    )
     ap.add_argument("--log-level", default="info")
     args = ap.parse_args(argv)
 
@@ -170,6 +187,20 @@ def main(argv: list[str] | None = None) -> int:
             Exception
         ) as e:  # mediapipe or the model file missing must not stop the server
             log.error("camera source unavailable: %s", e)
+
+    if args.depth or args.depth_fake or bool(cfg.camera.get("depth_enabled", False)):
+        try:
+            from .camera.depth_live import DepthTracking, FakeDepthSource
+
+            if args.depth_host:
+                h, p = args.depth_host.rsplit(":", 1)
+                cfg.camera.geppetto_depth.host, cfg.camera.geppetto_depth.port = h, int(p)
+            src = FakeDepthSource(clock=core.clock) if args.depth_fake else None
+            core.session.depth = DepthTracking.from_config(cfg, core.clock, source=src)
+            log.info("depth step on (%s)", "fake scene" if args.depth_fake else
+                     f"{cfg.camera.geppetto_depth.host}:{cfg.camera.geppetto_depth.port}")
+        except Exception as e:  # depth must never stop the server
+            log.error("depth step unavailable: %s", e)
 
     if args.lesson:
         core.session.load_lesson(args.lesson)

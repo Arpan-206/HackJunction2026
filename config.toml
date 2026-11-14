@@ -96,6 +96,9 @@ clip_high = 1.0
 max_gain = 2.0
 
 [camera]
+# Depth step (core/camera/depth_live.py): table, forearm, glove yaw correction, /ws/depth.
+# Off by default; python -m core --depth turns it on. Nothing verified on real depth yet.
+depth_enabled = false
 device = 0
 video = ""
 mirror = true
@@ -288,3 +291,41 @@ host = "10.0.34.248"
 port = 7700
 timeout_s = 5.0
 min_confidence = 1
+
+[camera.depth]
+# Depth tracking on the GeppettoDepth stream (core/camera/depth_track.py). Tested on the
+# fake bench scene only (core/camera/fake_depth.py); tune on a real bench recording with
+# python -m tools.depth_check. Metres, degrees, pixels at the 256x192 depth resolution.
+min_confidence = 1
+band_min_m = 0.012
+band_max_m = 0.35
+max_range_m = 1.0
+min_blob_px = 150
+forearm_len_m = 0.15
+min_elongation = 1.8
+min_forearm_points = 40
+ransac_iters = 60
+ransac_tol_m = 0.006
+max_tilt_deg = 25.0
+table_band_m = 0.01
+# Core yaw of the phone's viewing direction on the table: 180 when it faces the person
+# across the bench, 0 when it looks the same way as the person.
+camera_yaw_deg = 180.0
+cloud_points = 2000
+cloud_hz = 10.0
+dark_min_px = 120
+# Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
+correct_yaw = true
+side = "right"
+# "lock": learn the depth minus glove offset over lock_s, then remove drift from it.
+# "table": trust camera_yaw_deg and pull the glove to the bench yaw.
+reference = "lock"
+lock_s = 2.0
+lock_min_samples = 20
+# Slow offset: time constant tau_s (SPEC.md asks 2 percent a frame at 30 Hz, about 1.65 s).
+tau_s = 1.5
+outlier_deg = 25.0
+outlier_run = 45
+max_correction_deg = 60.0
+stale_ms = 300.0
+

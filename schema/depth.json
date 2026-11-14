@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/depth.json",
+  "title": "depth: point cloud from the depth step, on /ws/depth at about 10 Hz; $defs/block is the frame's optional depth block",
+  "type": "object",
+  "required": ["v", "type", "t", "frame_id", "frame", "n", "points", "labels", "table", "arm", "correction"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "depth" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "frame_id": { "type": "integer", "minimum": 0 },
+    "frame": {
+      "description": "bench: metres, y up from the table, x and z turned to the core world (z toward the person); camera: OpenCV camera frame when no table is found",
+      "enum": ["bench", "camera"]
+    },
+    "n": { "type": "integer", "minimum": 0 },
+    "points": { "description": "x, y, z of n points, flat", "type": "array", "items": { "type": "number" } },
+    "labels": {
+      "description": "0 other, 1 table, 2 arm (forearm and hand with depth), 3 dark patch next to the arm (a hand with no depth)",
+      "type": "array",
+      "items": { "type": "integer", "enum": [0, 1, 2, 3] }
+    },
+    "rgb": { "description": "r, g, b of n points, flat, 0 to 255", "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 255 } },
+    "table": {
+      "type": "object",
+      "required": ["found", "source"],
+      "properties": {
+        "found": { "type": "boolean" },
+        "source": { "enum": ["app", "fit", null] },
+        "camera_height_m": { "type": ["number", "null"] },
+        "agree_deg": { "description": "angle between the app's plane and our fit", "type": ["number", "null"] },
+        "agree_mm": { "description": "the app plane's centre above our fitted plane", "type": ["number", "null"] }
+      }
+    },
+    "arm": {
+      "type": "object",
+      "required": ["found", "hand_depth", "forearm_ok", "yaw_deg"],
+      "properties": {
+        "found": { "type": "boolean" },
+        "hand_depth": { "type": "boolean" },
+        "forearm_ok": { "type": "boolean" },
+        "yaw_deg": { "type": ["number", "null"] },
+        "dir": { "oneOf": [{ "$ref": "#/$defs/vec3" }, { "type": "null" }] },
+        "entry": { "oneOf": [{ "$ref": "#/$defs/vec3" }, { "type": "null" }] },
+        "length_m": { "type": "number" },
+        "elongation": { "type": "number" }
+      }
+    },
+    "correction": {
+      "type": "object",
+      "required": ["side", "correction_deg", "locked", "applied"],
+      "properties": {
+        "side": { "$ref": "common.json#/$defs/side" },
+        "correction_deg": { "type": "number" },
+        "locked": { "type": "boolean" },
+        "applied": { "type": "boolean" },
+        "glove_yaw_deg": { "type": ["number", "null"] }
+      }
+    },
+    "process_ms": { "type": "number", "minimum": 0 }
+  },
+  "$defs": {
+    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "block": {
+      "title": "frame.depth: present only when the core runs with --depth",
+      "type": "object",
+      "required": ["side", "table", "hand", "forearm_yaw_deg", "correction_deg", "applied"],
+      "properties": {
+        "side": { "$ref": "common.json#/$defs/side" },
+        "connected": { "type": "boolean" },
+        "frame_id": { "type": ["integer", "null"] },
+        "age_ms": { "type": ["number", "null"] },
+        "table": { "description": "a table plane was found", "type": "boolean" },
+        "hand": { "description": "an arm blob was found above the table", "type": "boolean" },
+        "hand_depth": { "description": "the hand itself returned depth (false with black gloves)", "type": "boolean" },
+        "forearm_yaw_deg": { "description": "core yaw of the forearm, elbow to fingers", "type": ["number", "null"] },
+        "forearm_ok": { "type": "boolean" },
+        "glove_yaw_deg": { "description": "the glove's wrist yaw before the correction", "type": ["number", "null"] },
+        "correction_deg": { "description": "yaw added to the glove's wrist, about world up", "type": "number" },
+        "locked": { "type": "boolean" },
+        "applied": { "type": "boolean" }
+      }
+    }
+  }
+}
