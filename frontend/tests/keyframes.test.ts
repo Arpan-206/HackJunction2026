@@ -15,7 +15,7 @@ const move = (id: string): MotionSpec => {
 /** Same values as backend/tests/test_new_skills.py, so the port and the backend agree. */
 describe('keyframes and per-hand hold poses (port of the backend synthesiser)', () => {
   it('every new move validates against the wire schema', () => {
-    for (const m of MOVES.filter((x) => ['shadow_puppets', 'surgical_grips', 'crochet'].includes(x.skill))) {
+    for (const m of MOVES.filter((x) => ['shadow_puppets', 'surgical_grips', 'crochet', 'touch_typing'].includes(x.skill))) {
       expect(motionSpecSchema.safeParse(m.default_motion).success, m.id).toBe(true);
     }
   });

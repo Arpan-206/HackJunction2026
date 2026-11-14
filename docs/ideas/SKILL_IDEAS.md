@@ -10,7 +10,9 @@ Our motion presets already cover most of these: `hold_pose` (a shape, with an op
 - **Surgical grips** (`surgical_grips`): scalpel pencil and table-knife grips, needle driver ring and thenar grips, forceps, instrument tie, needle arc, two-handed square knot. The gloves cannot see thread, knot type or needle depth, and the copy says so.
 - **Crochet basics** (`crochet`): hook and yarn hands, chain, slip stitch, single and double crochet, as yarn-over cycles of the hook hand.
 
-All three are propless. Every curl is an estimate from `research/11_new_skills.md` until an expert records it with the gloves.
+- **Touch typing** (`touch_typing`): home row rest, F and J, D and K, S and L, A and the semicolon, thumb on the space bar, the index reach to G and H, and an even-beat drill, at the desk with both hands over a chalk keyboard (a real-looking one with "Add a prop"). Its test is air typing (words one at a time, scored on the right finger per letter, an even rhythm and words per minute, against a bot typist) with a "Type on your keyboard" mode: the keyboard gives the key, the gloves give the finger ("You pressed E with your left index finger; use your left middle finger."). The gloves feel which finger struck and when, never which key: G and H are told from F and J only by the wrist, for display.
+
+All four are propless. Every curl is an estimate from `research/11_new_skills.md` (touch typing: from the standard finger chart) until an expert records it with the gloves.
 
 ## Ranked
 

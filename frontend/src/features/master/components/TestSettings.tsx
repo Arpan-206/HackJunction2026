@@ -9,6 +9,7 @@ interface TestSettingsProps {
 }
 
 function defaultTest(skill: Skill): TestSpec {
+  if (skill === 'touch_typing') return { kind: 'air_typing', opponent: 'bot', rounds: 3 };
   return skill === 'piano' ? { kind: 'piano_play_along', opponent: 'bot', rounds: 3 } : { kind: 'table_tennis_rally', opponent: 'bot', rounds: 3 };
 }
 
@@ -32,6 +33,7 @@ export function TestSettings({ skill, test, onChange }: TestSettingsProps) {
             <select id={kindId} className="field__control" value={test.kind} onChange={(e) => onChange({ ...test, kind: e.target.value as TestSpec['kind'] })}>
               <option value="table_tennis_rally">Table tennis rally</option>
               <option value="piano_play_along">Piano play-along</option>
+              <option value="air_typing">Air typing</option>
             </select>
           </div>
           <div className="field">

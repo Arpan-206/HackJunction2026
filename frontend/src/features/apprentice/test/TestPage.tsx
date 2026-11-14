@@ -5,6 +5,7 @@ import { ButtonLink } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { PianoPlayAlong } from './PianoPlayAlong/PianoPlayAlong';
 import { TableTennisRally } from './TableTennisRally/TableTennisRally';
+import { TypingTest } from './AirTyping/TypingTest';
 
 /** "Test your skills": the premade finale chosen by the lesson's test kind. */
 export function TestPage() {
@@ -39,7 +40,13 @@ export function TestPage() {
     <>
       <ApHeader title="Test your skills" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} />
       {offline && <p className="note ap-banner">Backend offline: playing with the built-in demo lesson.</p>}
-      {lesson.test.kind === 'table_tennis_rally' ? <TableTennisRally spec={lesson.test} lesson={lesson} /> : <PianoPlayAlong spec={lesson.test} lesson={lesson} />}
+      {lesson.test.kind === 'table_tennis_rally' ? (
+        <TableTennisRally spec={lesson.test} lesson={lesson} />
+      ) : lesson.test.kind === 'air_typing' ? (
+        <TypingTest spec={lesson.test} lesson={lesson} />
+      ) : (
+        <PianoPlayAlong spec={lesson.test} lesson={lesson} />
+      )}
     </>
   );
 }

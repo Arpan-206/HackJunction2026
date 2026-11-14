@@ -10,8 +10,8 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'general';
-type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
+type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'touch_typing' | 'general';
+type Prop = 'none' | 'racket' | 'keyboard' | 'ball';   // keyboard: a piano keyboard, or a computer keyboard for touch_typing
 type Hands = Side | 'both';   // one hand (left or right) or two
 
 // One hand at one instant. Flexion per joint: [MCP, PIP, DIP] for fingers, [CMC, MCP, IP] for the thumb.
@@ -92,7 +92,7 @@ interface Lesson {
 }
 
 interface TestSpec {
-  kind: 'table_tennis_rally' | 'piano_play_along';
+  kind: 'table_tennis_rally' | 'piano_play_along' | 'air_typing';  // air_typing: words struck in the air, scored per finger
   opponent: 'bot' | 'two_player';  // two_player = left glove vs right glove
   rounds: number;
 }

@@ -24,6 +24,7 @@ export function lessonTitle(step: Step, index: number): string {
 const TEST_COPY = {
   table_tennis_rally: { title: 'Test your skills: the rally', blurb: 'Play a live rally. The game reads your racket face, swing and grip at the moment of contact.' },
   piano_play_along: { title: 'Test your skills: play along', blurb: 'Play a short phrase as the notes arrive. Right note, right moment, right finger.' },
+  air_typing: { title: 'Test your skills: air typing', blurb: 'Type short words in the air, or on a real keyboard. The gloves check that every letter is struck by the right finger.' },
 } as const;
 
 /** The course page: an ordered syllabus of lessons, each with video, hand instructions and progress, ending with the test. */

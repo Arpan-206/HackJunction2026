@@ -44,7 +44,7 @@ class TestSpec(BaseModel):
 
     __test__ = False
 
-    kind: Literal["table_tennis_rally", "piano_play_along"]
+    kind: Literal["table_tennis_rally", "piano_play_along", "air_typing"]
     opponent: Literal["bot", "two_player"] = "bot"
     rounds: int = Field(default=3, ge=1)
 

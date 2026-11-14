@@ -17,3 +17,5 @@ export { CODEX_STAGE, drawParchment, getParchmentTexture, getParchmentUrl } from
 export { withHatching, createHatchedShadowMaterial } from './sketch';
 export { RobotHand, RobotStrings, loadRobotModel, useRobotModel, parseUrdf, type RobotHandHandle, type RobotHandProps, type RobotPoseLatest, type UrdfModel } from './robot';
 export { STRING_POINTS, writeStringSegments } from './stringMath';
+export { TypingKeyboard } from './TypingKeyboard';
+export { keyCenter, KEY_PITCH, TYPING_HAND_X, TYPING_HAND_Y } from './typingLayout';

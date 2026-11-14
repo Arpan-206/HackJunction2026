@@ -6,7 +6,7 @@
 export type Side = 'left' | 'right';
 export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-export type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'general';
+export type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'touch_typing' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 /** Which hands a move, step or recording uses: one hand (left or right) or both. */
 export type Hands = Side | 'both';
@@ -94,7 +94,7 @@ export interface Step {
 }
 
 export interface TestSpec {
-  kind: 'table_tennis_rally' | 'piano_play_along';
+  kind: 'table_tennis_rally' | 'piano_play_along' | 'air_typing';
   opponent: 'bot' | 'two_player';
   rounds: number;
 }

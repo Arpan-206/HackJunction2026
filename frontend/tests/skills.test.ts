@@ -32,7 +32,7 @@ const byId = (skills: SkillView[], id: string) => skills.find((s) => s.id === id
 describe('buildSkills: catalogue merged with lessons', () => {
   it('makes the seeded skills live from the seed lessons and keeps the rest in the workshop', () => {
     const skills = buildSkills(LOCAL_LESSONS);
-    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet']);
+    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet', 'touch_typing']);
     expect(skills.filter((s) => !s.live).map((s) => s.id)).toEqual([
       'fingerspelling', 'boxing', 'guitar_chords', 'rock_paper_scissors', 'hand_therapy',
     ]);
@@ -55,7 +55,7 @@ describe('buildSkills: catalogue merged with lessons', () => {
     const q = byId(skills, 'calligraphy_quill');
     expect(q).toMatchObject({ live: true, name: 'Calligraphy quill', difficulty: 'beginner', hands: 'two', description: 'Quill grip summary', lessonCount: 1 });
     expect(q.timeToLearn).toMatch(/1 day/);
-    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(5);
+    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(6);
   });
 
   it('turns a workshop skill live when an expert records a lesson for it, and ignores empty courses', () => {
@@ -115,6 +115,26 @@ describe('the propless seeded skills: shadow puppets, surgical grips and crochet
   });
 });
 
+describe('touch typing: a seeded two-handed skill on the keyboard', () => {
+  const skills = buildSkills(LOCAL_LESSONS);
+
+  it('is live with one course of eight two-handed lessons and the air typing test', () => {
+    const ty = byId(skills, 'touch_typing');
+    expect(ty).toMatchObject({ live: true, name: 'Touch typing', difficulty: 'beginner', hands: 'two', lessonCount: 8 });
+    const course = ty.courses[0];
+    expect(course.id).toBe('seed-touch-typing');
+    expect(course.test).toEqual({ kind: 'air_typing', opponent: 'bot', rounds: 3 });
+    expect(course.steps.every((s) => s.hands === 'both' && s.prop === 'keyboard')).toBe(true);
+    expect(course.steps[0].title).toBe('Lesson 1: Hands at rest on the home row');
+  });
+
+  it('is found by typing words', () => {
+    const find = (q: string) => filterSkills(skills, { ...NO_FILTER, query: q }).map((s) => s.id);
+    expect(find('home row')).toEqual(['touch_typing']);
+    expect(find('wpm')).toEqual(['touch_typing']);
+  });
+});
+
 describe('filterSkills: search and toggles', () => {
   const skills = buildSkills(LOCAL_LESSONS);
   const ids = (f: Partial<typeof NO_FILTER>) => filterSkills(skills, { ...NO_FILTER, ...f }).map((s) => s.id);
@@ -142,7 +162,7 @@ describe('filterSkills: search and toggles', () => {
 
   it('filters by difficulty and by hands, combined with the query', () => {
     expect(ids({ difficulty: 'advanced' })).toEqual(['guitar_chords']);
-    expect(ids({ hands: 'two' })).toEqual(['shadow_puppets', 'surgical_grips', 'crochet', 'boxing']);
+    expect(ids({ hands: 'two' })).toEqual(['shadow_puppets', 'surgical_grips', 'crochet', 'touch_typing', 'boxing']);
     expect(ids({ query: 'music', difficulty: 'beginner' })).toEqual(['piano']);
     expect(ids({ query: 'xyz' })).toEqual([]);
   });
