@@ -1,5 +1,5 @@
 // Walks the whole app in mock mode (no Python backend needed): role select, expert scratch (pick, hands and prop set-up,
-// calibrate, record, replay, save), generate steps and save, the assistant switch, learner library, a training attempt
+// calibrate, record, replay, save), generate steps and save, the assistant switch, learner dashboard and search, skill pages, a training attempt
 // with its score card, both tests.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/mock-*.png.
 // Run: node e2e/mock-walk.mjs   (starts the Vite dev server on :5181 if nothing answers there).
@@ -116,14 +116,38 @@ try {
   await page.getByRole('button', { name: 'Turn the assistant on' }).click();
   await expectVisible(page.getByRole('button', { name: 'Generate steps' }), 'drafting restored');
 
-  step('apprentice: the library lists the saved lessons');
+  step('apprentice: the dashboard lists every skill; search finds the saved lessons by their course titles');
   await page.goto(`${BASE}/apprentice`);
-  await expectVisible(page.getByText('Mock shakehand basics'), 'saved scratch lesson in the library');
-  await expectVisible(page.getByText('Mock piano scale'), 'saved generated lesson in the library');
-  await shot('10-library');
+  await expectVisible(page.getByRole('link', { name: /Table tennis/ }), 'table tennis skill card');
+  await expectVisible(page.getByRole('link', { name: /Shadow puppets/ }), 'workshop skill card');
+  await settle(3500);
+  await shot('10-dashboard');
+  await page.keyboard.press('/');
+  await page.keyboard.type('xyz');
+  await expectVisible(page.getByText(/No skill matches/), 'empty search state');
+  await page.keyboard.press('Escape');
+  if ((await page.getByRole('searchbox').inputValue()) !== '') throw new Error('Escape should clear the search');
+  for (const [title, card] of [['Mock shakehand basics', /Table tennis/], ['Mock piano scale', /Piano|General/]]) {
+    await page.getByRole('searchbox').fill(title);
+    await page.getByRole('link', { name: card }).first().click();
+    await expectVisible(page.getByRole('heading', { name: title }), `${title} on its skill page`);
+    await page.goBack();
+  }
+  await page.getByRole('searchbox').fill('');
 
-  step('apprentice: course page and a training attempt with its score card');
-  await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis`);
+  step('apprentice: a workshop skill page has no start button');
+  await page.getByRole('link', { name: /Shadow puppets/ }).click();
+  await expectVisible(page.getByText(/Not teachable yet/), 'workshop note');
+  if (await page.getByRole('link', { name: /Start lesson/ }).count()) throw new Error('a workshop skill must not offer a start button');
+
+  step('apprentice: skill page, then the course page and a training attempt with its score card');
+  await page.goto(`${BASE}/apprentice`);
+  await page.getByRole('link', { name: /Table tennis/ }).click();
+  await expectVisible(page.getByRole('link', { name: /Start lesson 1|Continue lesson/ }), 'skill page primary action');
+  await expectVisible(page.getByRole('group', { name: 'Which lesson plays' }), 'showcase lesson switch');
+  await settle(3000);
+  await shot('10b-skill');
+  await page.locator('.sk-course', { hasText: 'Table Tennis: grip and forehand' }).getByRole('link', { name: 'Open the course' }).click();
   await expectVisible(page.getByRole('link', { name: 'Start practising' }), 'course page');
   await shot('11-course');
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/steps/0`);

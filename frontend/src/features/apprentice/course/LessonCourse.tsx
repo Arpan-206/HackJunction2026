@@ -14,6 +14,7 @@ import { RankLine } from './RankLine';
 import { SealCard } from './SealCard';
 import { VideoSlot } from './VideoSlot';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
+import { skillName, skillPath } from '../skills/catalogue';
 
 /** Keeps the master's own wording when it already starts "Lesson N", otherwise numbers the step. */
 export function lessonTitle(step: Step, index: number): string {
@@ -42,7 +43,7 @@ export function LessonCourse() {
         <PageHeader title="Lesson not found" />
         <p className="note">{error?.message ?? 'That lesson does not exist.'}</p>
         <ButtonLink to="/apprentice" variant="secondary">
-          Back to lessons
+          Back to skills
         </ButtonLink>
       </div>
     );
@@ -149,7 +150,7 @@ export function LessonCourse() {
       </ol>
       <PlanCard lesson={lesson} />
       <div className="ap-course__back">
-        <BackLink to="/apprentice">All lessons</BackLink>
+        <BackLink to={skillPath(lesson.skill)}>Back to {skillName(lesson.skill)}</BackLink>
       </div>
     </>
   );

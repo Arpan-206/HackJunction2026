@@ -108,6 +108,8 @@ interface HandPreviewProps {
   label: string;
   /** Scene contents, typically a <Hand> and optional prop. */
   children: ReactNode;
+  /** Draws the walnut bench and plaster wall (low quality: no model props) instead of the plain carta azzurra. */
+  decor?: boolean;
 }
 
 /**
@@ -119,6 +121,7 @@ export function HandPreview({
   preset = "closeup",
   label,
   children,
+  decor = false,
 }: HandPreviewProps) {
   const api = useContext(PreviewContext);
   const { stage: colors } = useTheme();
@@ -141,7 +144,8 @@ export function HandPreview({
             controls="none"
             target={p.target}
             cameraPosition={p.position}
-            decor={false}
+            decor={decor}
+            quality="low"
           />
           <Suspense fallback={null}>{children}</Suspense>
         </StageColorsContext.Provider>

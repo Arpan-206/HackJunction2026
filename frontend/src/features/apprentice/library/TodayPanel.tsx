@@ -47,7 +47,7 @@ interface DueItem {
 }
 
 /**
- * The top of the library: what is due for review today, and a forgiving practice mark for the week (days practised against a
+ * The top of the learner dashboard: what is due for review today, and a forgiving practice mark for the week (days practised against a
  * goal the learner picks, never a chain that breaks). With ?demo=1 believable history is seeded once; ?dev=1 adds a button.
  */
 export function TodayPanel({ lessons }: { lessons: Lesson[] }) {
@@ -116,7 +116,7 @@ export function TodayPanel({ lessons }: { lessons: Lesson[] }) {
               ))}
             </ul>
           )}
-          {due.length === 0 && <p className="note">Pick a lesson below. A step you master comes back for review tomorrow.</p>}
+          {due.length === 0 && <p className="note">Pick a skill below. A lesson you master comes back for review tomorrow.</p>}
         </div>
         <div className="ap-today__week">
           <ol className="ap-weekmarks" aria-label="Days practised this week">

@@ -18,7 +18,7 @@ export function TestPage() {
         <PageHeader title="Lesson not found" />
         <p className="note">{error?.message ?? 'That lesson does not exist.'}</p>
         <ButtonLink to="/apprentice" variant="secondary">
-          Back to lessons
+          Back to skills
         </ButtonLink>
       </div>
     );

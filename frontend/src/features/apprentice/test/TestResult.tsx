@@ -49,7 +49,7 @@ export function TestResult({ title, score, scoreLabel, verdict, verdictText, bes
           Play again
         </Button>
         <ButtonLink to="/apprentice" variant="secondary" large>
-          Back to lessons
+          Back to skills
         </ButtonLink>
       </div>
     </Card>

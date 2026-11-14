@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import type { MotionSpec, Prop, Side } from '../../../api';
 import { Hand, HandCanvas, Keyboard, Racket } from '../../../three';
 import { synthFrame } from '../../../three/motion';
+import { keyPoseTime } from '../skills/catalogue';
 
 interface VideoSlotProps {
   url: string | null;
@@ -10,14 +11,6 @@ interface VideoSlotProps {
   motion: MotionSpec | null;
   prop: Prop;
   side: Side;
-}
-
-/** The moment of a motion that best shows it: contact for a swing, the first press for a sequence, any time for a hold. */
-export function keyPoseTime(spec: MotionSpec | null): number {
-  if (!spec) return 0;
-  if (spec.preset === 'grip_and_swing') return (spec.beat_ms / 1000) * 0.615;
-  if (spec.preset === 'finger_sequence') return (spec.beat_ms / 1000) * 0.5;
-  return 0;
 }
 
 /** Renders a few frames, then reads the canvas once and hands back an image so the WebGL context can be released. */

@@ -5,7 +5,7 @@ import { RoleSelect } from './RoleSelect';
 import { HandLab } from './HandLab';
 import { MasterHome } from '../features/master/MasterHome';
 import { MasterGenerate, MasterLesson, MasterScratch } from '../features/master/pages';
-import { ApprenticeHome, ApprenticeLesson, ApprenticeStep, ApprenticeTest } from '../features/apprentice/pages';
+import { ApprenticeHome, ApprenticeLesson, ApprenticeSkill, ApprenticeStep, ApprenticeTest } from '../features/apprentice/pages';
 
 const Playground = lazy(() => import('../playground/Playground'));
 
@@ -28,6 +28,11 @@ export function App() {
         <Route path="/expert/lessons/:lessonId" element={<MasterLesson />} />
         <Route path="/master/*" element={<MasterRedirect />} />
         <Route path="/apprentice" element={<ApprenticeHome />} />
+        <Route path="/apprentice/skills/:skillId" element={<ApprenticeSkill />} />
+        {/* The old lesson list lived at /apprentice; bare list paths land on the dashboard rather than a dead page. */}
+        <Route path="/apprentice/skills" element={<Navigate replace to="/apprentice" />} />
+        <Route path="/apprentice/lessons" element={<Navigate replace to="/apprentice" />} />
+        <Route path="/apprentice/library" element={<Navigate replace to="/apprentice" />} />
         <Route path="/apprentice/lessons/:lessonId" element={<ApprenticeLesson />} />
         <Route path="/apprentice/lessons/:lessonId/steps/:stepIndex" element={<ApprenticeStep />} />
         <Route path="/apprentice/lessons/:lessonId/test" element={<ApprenticeTest />} />

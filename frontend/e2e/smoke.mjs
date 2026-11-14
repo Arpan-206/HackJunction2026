@@ -63,6 +63,8 @@ const routes = [
   '/master/scratch',
   '/master/generate',
   '/apprentice',
+  ...[...new Set(seeds.map((seed) => seed.skill))].map((skill) => `/apprentice/skills/${skill}`),
+  '/apprentice/skills/shadow_puppets',
   ...seeds.flatMap((seed) => [`/apprentice/lessons/${seed.id}`, `/apprentice/lessons/${seed.id}/steps/0`, `/apprentice/lessons/${seed.id}/test`]),
   '/lab',
 ];
@@ -98,10 +100,31 @@ try {
     if (problems.length) failures.push({ route, problems });
     await page.close();
   }
+  // Through the dashboard: a live skill card opens its skill page, whose primary action opens the training room.
+  {
+    const page = await browser.newPage();
+    const problems = [];
+    page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+    try {
+      await page.goto(`${BASE}/apprentice`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('searchbox').fill('forehand');
+      await page.getByRole('link', { name: /Table tennis/ }).first().click();
+      const start = page.getByRole('link', { name: /^(Start|Continue|Review) lesson \d+$/ });
+      await start.waitFor({ state: 'visible', timeout: 15000 });
+      await start.click();
+      await page.waitForURL(/\/apprentice\/lessons\/[^/]+\/steps\/\d+$/, { timeout: 15000 });
+    } catch (e) {
+      problems.push(`dashboard click-through: ${e.message.split('\n')[0]}`);
+    }
+    console.log(`${problems.length ? 'FAIL' : 'ok  '} dashboard -> skill page -> training room`);
+    for (const p of problems) console.log(`       ${p}`);
+    if (problems.length) failures.push({ route: 'dashboard click-through', problems });
+    await page.close();
+  }
 } finally {
   await browser.close();
   vite?.kill();
 }
 
-console.log(`\n${routes.length - failures.length}/${routes.length} routes clean`);
+console.log(`\n${routes.length + 1 - failures.length}/${routes.length + 1} checks clean (routes plus the dashboard click-through)`);
 process.exit(failures.length ? 1 : 0);
