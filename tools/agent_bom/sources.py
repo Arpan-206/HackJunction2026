@@ -68,7 +68,11 @@ def audit_jobs(
         )
         for job in jobs.get("jobs", []):
             name = job.get("name", "")
-            if not name.startswith("lane ") or job.get("status") != "completed":
+            if (
+                not name.startswith("lane ")
+                or job.get("status") != "completed"
+                or job.get("conclusion") == "cancelled"
+            ):
                 continue
             lane = name.removeprefix("lane ").strip()
             if lane not in found:  # runs come newest first

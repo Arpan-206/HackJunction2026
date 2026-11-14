@@ -1,8 +1,8 @@
 # Who checked what the agents shipped? Geppetto on CRACI
 
-**Most interesting real finding.** An agent lane shipped a project that has never installed on Linux, and the cause is a keyboard listener nobody asked for. The `worktree-export` lane added one line, `lerobot>=0.3.3`, in `export/pyproject.toml`. That line locks 98 packages that neither the core nor the backend locks. One of them is `pynput` 1.8.2, a keyboard and mouse listener, which pulls `evdev` on Linux. On CRACI, `uv sync --frozen` in `export/` failed in 23 of 23 lane builds that contain `export/`. Each failure is the same: `evdev` 2.0.0 builds from source and finds no `Python.h`. uv names the chain itself: "`evdev` was included because `geppetto-export` depends on `lerobot` which depends on `pynput` which depends on `evdev`". No CI built `export/` before, so nobody saw it. On a Mac, `pynput` uses `pyobjc` instead, which is why it worked for the agent. Sources: lane audit run 43650860815 job logs; `export/uv.lock` on `origin/main` at `45e0489` via `python -m tools.agent_bom history`.
+**Most interesting real finding.** One line added by the `worktree-export` lane, `lerobot>=0.3.3` in `export/pyproject.toml`, locks 98 packages that neither the core nor the backend locks (`export/uv.lock`). With it, `export/` fails to install on Linux in 23 of 23 lane builds that contain it. Every failure is the same: `evdev` 2.0.0 builds from source and finds no `Python.h`. `evdev` is an input-device library: it reads Linux input devices. uv names the chain in the log: `geppetto-export` depends on `lerobot`, which depends on `pynput`, which depends on `evdev`. The CRACI SBOMs show the cost even though the install fails. Builds that contain `export/` record 95 more PyPI packages and 15 more vulnerability entries than builds without it. Three of those entries are `high`: `torch` 2.7.1 (GHSA-63cw-57p8-fm3p) and `fsspec` 2025.3.0 (GHSA-27vj-qcqg-25rc, PYSEC-2026-4217). `export/` is already in `main`, so these entries are now part of `main`'s baseline. A gate that only blocks new vulnerabilities cannot see them. Sources: lane audit run 43650860815 (job logs and CRACI SBOMs), `export/uv.lock` on `origin/main` at `45e0489`.
 
-Status on Sun 15 Nov 2026, written by the `craci` lane. Every number below names its source. "Not run: token missing" means the CRACI API was not called, because `CRACI_API_TOKEN` is not in `.env` yet.
+Status on Sun 15 Nov 2026, written by the `craci` lane. Every number names its source. The CRACI API token arrived at 01:19 Helsinki time. All API results below are real responses from `api.craci.com`.
 
 Words used here:
 
@@ -38,20 +38,18 @@ The lane audit also installs the three side projects that have their own lockfil
 
 ## 3. Builds on CRACI
 
-Counted on Sat 14 Nov 23:15 UTC from the GitHub Actions API (`gh run list`, then the jobs of each run). Every job below ran on a runner with the label `craci`.
+Counted on Sat 14 Nov 23:15 UTC from the GitHub Actions API. Every job below ran on a runner with the label `craci`. Later pushes to `craci` added more `craci-hello` and `ci` runs.
 
 | Workflow | Runs | Jobs that got a CRACI runner | Jobs that succeeded | Note |
 |---|---|---|---|---|
 | `craci-hello` | 7 | 7 | 7 | one per push to `craci` |
 | `ci` | 6 | 18 | 18 | core, backend, frontend on each push to `craci` |
-| `lane-audit` (first run, 43650356405) | 1 | 18 of 30 | 10 | cancelled after 10 jobs, replaced by the run below |
+| `lane-audit` (first run, 43650356405) | 1 | 18 of 30 | 10 | cancelled, replaced by the run below |
 | `lane-audit` (full, 43650860815) | 1 | 30 | 30 | 1 list job + 29 lane jobs (28 lane branches and `main`), 22:59 to 23:12 UTC |
 | `model-image` | 1 | 1 | 1 | |
 | Total | 16 | 74 | 66 | 8 more were cancelled while running |
 
-A lane job is green even when a step inside it fails, because the audit steps use `continue-on-error`. The step results below come from the job logs (`gh run view 43650860815 --log`, lines with `##[error]`).
-
-### Step results of the full lane audit (run 43650860815)
+A lane job is green even when a step inside it fails, because the audit steps use `continue-on-error`. `python3 -m tools.agent_bom steps 43650860815` reads the step failures from the job logs.
 
 | Step | Lanes where the step ran | Passed | Failed | Failure |
 |---|---|---|---|---|
@@ -62,92 +60,119 @@ A lane job is green even when a step inside it fails, because the audit steps us
 | `export/` install | 23 | 0 | 23 | `evdev` 2.0.0 source build: `Python.h: No such file or directory` |
 | `genui/` install | 29 | 29 | 0 | |
 
-### Per lane (run 43650860815)
-
-Made by `python3 -m tools.agent_bom steps 43650860815` from the GitHub job logs. It needs no CRACI token. A lane whose tree has no `export/` shows no `export/` failure.
-
-| Lane | Failed steps | npm audit (frontend) |
-|---|---|---|
-| `arkit-app` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `coach-tune` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `core-calibration` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `core-overnight` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `craci` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `demo-mode` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `expert-priors` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `fingerspelling-packs` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `frontend-updates` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `hand-root` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `hand-round-2` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `lidar` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `main` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `merge-main` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `models` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `replay-demo` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `robot-extras-wip` | `Frontend install, lint, tests and build` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `robot-view` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `rokoko-setup` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `shadows` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `slot-kit` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `submission` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `szymon-frontend` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `thumb-align` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `typing` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `verda` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `weights` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `worktree-decisions` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-| `worktree-export` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
-
-### Known vulnerabilities reported inside the CRACI builds (npm audit)
-
-`npm ci` prints an audit line. These counts come from that line in the CRACI job logs, not from the CRACI API.
-
-| Project | Lanes | npm audit line in the CRACI job log |
-|---|---|---|
-| `frontend/` | all 29 builds, `main` included | "15 vulnerabilities (12 moderate, 1 high, 2 critical)" |
-| `genui/` | all 29 builds | "found 0 vulnerabilities" |
-
-The count is the same in every lane. So no lane added or removed a frontend vulnerability. The details below come from `npm audit --package-lock-only` on `main`'s `frontend/package-lock.json` (run locally, Sun 15 Nov):
-
-| Severity | Package | Direct or transitive | Advisory | npm's proposed fix | Locked first in |
-|---|---|---|---|---|---|
-| critical | `tinypool` (<=2.1.1) | transitive (vitest) | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr: prototype pollution to remote code execution | `vitest@5.1.0` (major) | `0681d64`, direct to `main` |
-| critical | `vitest` (<=4.1.10) | direct, dev | GHSA-5xrq-8626-4rwp: Vitest UI server file read and execute | `vitest@5.1.0` (major) | `0681d64`, direct to `main` |
-| high | `vite` (<=6.4.3) | direct, dev | GHSA-4w7w-66w2-5vf9: path traversal in optimized deps `.map` handling | `vite@8.3.8` (major) | `2c7ff54`, direct to `main` |
-| moderate | 12 more: `esbuild`, `react-router`, `react-router-dom`, `@vitest/mocker`, `vite-node`, `minimatch`, `typescript-eslint` and 5 `@typescript-eslint/*` | mixed | see `npm audit` | major upgrades | `2c7ff54` or `0681d64` |
-
-All three high or critical packages are development tools. They are not in the production bundle. But the demo runs the Vite dev server (`npm run dev`, port 5173, CLAUDE.md "Run"), so `vite` and `esbuild` do run on the demo machine. Whether the demo table uses the dev server is unverified.
+`npm ci` in `frontend/` printed the same audit line in all 29 builds: "15 vulnerabilities (12 moderate, 1 high, 2 critical)". `genui/` printed "found 0 vulnerabilities".
 
 ## 4. Per-lane audit (CRACI API)
 
-Not run: token missing. `tools/agent_bom report` needs `CRACI_API_TOKEN`. Every CRACI build it needs already exists (section 3), so the report needs no new build.
+`python3 -m tools.agent_bom report`, run Sun 15 Nov 01:22 Helsinki time. It made 58 API calls (one SBOM and one network trace for each of the 29 lane jobs), and all 58 returned 200. The baseline is `lane main`, CRACI job 132618946275.
 
-When the token exists, run this from the repo root on the `craci` branch:
+### Every lane build, as the API returned it
 
-```sh
-python3 -m tools.agent_bom check
-python3 -m tools.agent_bom report --json /tmp/agent_bom.json > /tmp/agent_bom.md
-```
+| Lane | CRACI job | Packages | PyPI | npm | Vulnerability entries | High or critical | Hosts | Trace observations |
+|---|---|---|---|---|---|---|---|---|
+| `main` | 132618946275 | 441 | 162 | 274 | 45 | 7 | 15 | 863 |
+| `arkit-app` | 132618946171 | 441 | 162 | 274 | 45 | 7 | 15 | 853 |
+| `coach-tune` | 132618946104 | 441 | 162 | 274 | 45 | 7 | 15 | 862 |
+| `core-calibration` | 132618946144 | 438 | 159 | 274 | 45 | 7 | 15 | 839 |
+| `core-overnight` | 132618946181 | 346 | 67 | 274 | 30 | 4 | 15 | 641 |
+| `craci` | 132618946132 | 441 | 162 | 274 | 45 | 7 | 15 | 862 |
+| `demo-mode` | 132618946140 | 441 | 162 | 274 | 45 | 7 | 15 | 861 |
+| `expert-priors` | 132618946162 | 441 | 162 | 274 | 45 | 7 | 15 | 865 |
+| `fingerspelling-packs` | 132618946198 | 441 | 162 | 274 | 45 | 7 | 15 | 864 |
+| `frontend-updates` | 132618946153 | 441 | 162 | 274 | 45 | 7 | 15 | 859 |
+| `hand-root` | 132618946097 | 441 | 162 | 274 | 45 | 7 | 15 | 861 |
+| `hand-round-2` | 132618946569 | 346 | 67 | 274 | 30 | 4 | 15 | 635 |
+| `lidar` | 132618946194 | 441 | 162 | 274 | 45 | 7 | 15 | 855 |
+| `merge-main` | 132618946182 | 441 | 162 | 274 | 45 | 7 | 15 | 859 |
+| `models` | 132618946191 | 441 | 162 | 274 | 45 | 7 | 15 | 854 |
+| `replay-demo` | 132618946157 | 441 | 162 | 274 | 45 | 7 | 15 | 866 |
+| `robot-extras-wip` | 132618946202 | 346 | 67 | 274 | 30 | 4 | 15 | 638 |
+| `robot-view` | 132618946230 | 346 | 67 | 274 | 30 | 4 | 15 | 642 |
+| `rokoko-setup` | 132618947169 | 438 | 159 | 274 | 45 | 7 | 15 | 843 |
+| `shadows` | 132618947166 | 441 | 162 | 274 | 45 | 7 | 15 | 858 |
+| `slot-kit` | 132618947240 | 441 | 162 | 274 | 45 | 7 | 15 | 866 |
+| `submission` | 132618947351 | 441 | 162 | 274 | 45 | 7 | 15 | 865 |
+| `szymon-frontend` | 132618947331 | 438 | 159 | 274 | 45 | 7 | 15 | 846 |
+| `thumb-align` | 132618947343 | 441 | 162 | 274 | 45 | 7 | 15 | 859 |
+| `typing` | 132618947355 | 438 | 159 | 274 | 45 | 7 | 15 | 839 |
+| `verda` | 132618947370 | 352 | 73 | 274 | 30 | 4 | 15 | 664 |
+| `weights` | 132618947367 | 438 | 159 | 274 | 45 | 7 | 17 | 859 |
+| `worktree-decisions` | 132618947733 | 346 | 67 | 274 | 30 | 4 | 15 | 644 |
+| `worktree-export` | 132618948132 | 438 | 159 | 274 | 45 | 7 | 15 | 845 |
 
-Then paste the summary table and one table per lane here.
+"Packages" counts distinct package names (purl without version). "Vulnerability entries" counts distinct (advisory, package) pairs. The npm side is identical in all 29 builds: 274 packages.
 
-| Lane | New dependencies | Changed versions | New vulnerabilities | New hosts | Gate |
+The split is clean. The 23 builds with `export/` have 438 to 441 packages, 45 entries and 7 high or critical. The 6 builds without `export/` have 346 to 352 packages, 30 entries and 4 high or critical. That difference is the `lerobot` line (opening finding).
+
+### Summary against `main`
+
+| Lane | New dependencies | Changed versions | New vulnerabilities | New hosts | Gate exit code |
 |---|---|---|---|---|---|
-| every lane | not run: token missing | not run: token missing | not run: token missing | not run: token missing | not run: token missing |
+| `arkit-app` | 0 | 0 | 0 | 0 | 0 PASS |
+| `coach-tune` | 0 | 0 | 0 | 0 | 0 PASS |
+| `core-calibration` | 0 | 1 | 0 | 0 | 0 PASS |
+| `core-overnight` | 0 | 0 | 0 | 0 | 0 PASS |
+| `craci` | 0 | 0 | 0 | 0 | 0 PASS |
+| `demo-mode` | 0 | 0 | 0 | 0 | 0 PASS |
+| `expert-priors` | 0 | 0 | 0 | 0 | 0 PASS |
+| `fingerspelling-packs` | 0 | 0 | 0 | 0 | 0 PASS |
+| `frontend-updates` | 0 | 0 | 0 | 0 | 0 PASS |
+| `hand-root` | 0 | 0 | 0 | 0 | 0 PASS |
+| `hand-round-2` | 0 | 0 | 0 | 0 | 0 PASS |
+| `lidar` | 0 | 0 | 0 | 0 | 0 PASS |
+| `merge-main` | 0 | 0 | 0 | 0 | 0 PASS |
+| `models` | 0 | 0 | 0 | 0 | 0 PASS |
+| `replay-demo` | 0 | 0 | 0 | 0 | 0 PASS |
+| `robot-extras-wip` | 0 | 0 | 0 | 0 | 0 PASS |
+| `robot-view` | 0 | 0 | 0 | 0 | 0 PASS |
+| `rokoko-setup` | 0 | 1 | 0 | 0 | 0 PASS |
+| `shadows` | 0 | 0 | 0 | 0 | 0 PASS |
+| `slot-kit` | 0 | 0 | 0 | 0 | 0 PASS |
+| `submission` | 0 | 0 | 0 | 0 | 0 PASS |
+| `szymon-frontend` | 0 | 1 | 0 | 0 | 0 PASS |
+| `thumb-align` | 0 | 0 | 0 | 0 | 0 PASS |
+| `typing` | 0 | 1 | 0 | 0 | 0 PASS |
+| `verda` | 0 | 1 | 0 | 0 | 0 PASS |
+| `weights` | 0 | 1 | 0 | 2 | 1 BLOCK |
+| `worktree-decisions` | 0 | 0 | 0 | 0 | 0 PASS |
+| `worktree-export` | 0 | 1 | 0 | 0 | 0 PASS |
 
-### What the report contains per lane
+No lane adds a dependency that `main`'s build lacks. That is expected: 21 of 28 lanes have no commit that `main` lacks, and none of the 7 others changes a dependency file.
 
-| Column | Meaning | API field |
+The changed version is the same package in all 7 lanes: `opencv-python-headless`. `main`'s build installs two versions, 4.11.0.86 (locked by `backend/uv.lock`) and 5.0.0.93 (from `verda/uv.lock`). Six lanes install only 4.11.0.86. `verda` installs only 5.0.0.93.
+
+### The one block: `weights`
+
+| Host | Step running when CRACI first saw it | Requests |
 |---|---|---|
-| New dependency | A package (purl without version) in the lane's SBOM and not in `main`'s | SBOM `components[].purl` |
-| Introduced by | The commit and lane that first locked the package, from git | git history of the lockfiles |
-| Changed version | Same package, other version | SBOM `components[].version` |
-| Vulnerability | An entry in the SBOM's `vulnerabilities` list, highest rating | SBOM `vulnerabilities[].ratings[].severity` |
-| New host | A host the lane's build contacted and `main`'s build did not | trace `http.originUrl`, `tcp.tlsServerName` or `resolvedHosts`, `dns.record`, `sshGit.host` |
+| `copilot-proxy.githubusercontent.com` | Set up job | DNS lookups and one `GET /_dns` |
+| `pkg.github.com` | Set up job | DNS lookups and one `GET /_dns` |
 
-Most lanes have no commit that `main` lacks, and sit behind `main` (git `rev-list --count origin/main..origin/<lane>`: 21 of 28 lanes give 0). For them, "new" against `main` means "an older version that `main` has since changed". Seven lanes have commits that `main` does not have: `craci`, `frontend-updates`, `hand-round-2`, `robot-extras-wip`, `typing`, `weights`, `worktree-export`. None of these seven changes a core, backend or frontend dependency file. `worktree-export` carries its own copy of `export/pyproject.toml` and `export/uv.lock`.
+Both requests came at 23:08:52 UTC, during job setup, next to the same `GET /_dns` probes to `github.com`, `api.github.com` and `codeload.github.com`. That is before `actions/checkout` placed the lane's code on the machine. So the lane's code did not make them. They look like a connectivity check by the GitHub runner. Only 1 of 29 traces contains them. The gate still blocks, because it has no rule for runner traffic. A person decides: add both hosts to `tools/agent_bom/allowed_hosts.txt` with this reason, or re-run the `weights` build.
 
-## 5. Which lane brought each package into main (git, no token)
+### Hosts every build contacts
+
+All 29 traces share the same 15 hosts. No request was denied (the default CRACI policy observes and allows).
+
+| Kind | Hosts |
+|---|---|
+| Package registries | `pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`, `registry.yarnpkg.com` (one download, `yarn-1.22.22.tgz`, during `actions/setup-node`) |
+| GitHub source and API | `github.com`, `api.github.com`, `codeload.github.com`, `release-assets.githubusercontent.com` |
+| GitHub Actions service | `broker.`, `launch.`, `results-receiver.`, `run.`, `run-actions-3-azure-eastus.`, `token.actions.githubusercontent.com`, `productionresultssa12.blob.core.windows.net` |
+
+### `main`'s own high and critical entries (the baseline the gate cannot see)
+
+| Severity | Package | Advisory | Ecosystem | Brought in by |
+|---|---|---|---|---|
+| critical | `tinypool@1.1.1` | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr | npm | `0681d64`, direct to `main` (frontend rework) |
+| critical | `vitest@2.1.9` | GHSA-5xrq-8626-4rwp | npm | `0681d64`, direct to `main` |
+| high | `vite@5.4.21` | GHSA-587h-7wmj-h5pm | npm | `2c7ff54`, direct to `main` (frontend scaffold) |
+| high | `torch@2.7.1` | GHSA-63cw-57p8-fm3p | PyPI | `f2df0fd`, lane `worktree-export` (cherry-picked) |
+| high | `fsspec@2025.3.0` | GHSA-27vj-qcqg-25rc, PYSEC-2026-4217 | PyPI | `f2df0fd`, lane `worktree-export` (cherry-picked) |
+
+Source: CRACI SBOM of job 132618946275, `vulnerabilities[]` (source `osv`). "Brought in by": `python3 -m tools.agent_bom history`. The gate now prints this list as a note on every verdict.
+
+## 5. Which lane brought each package into main (git)
 
 `python3 -m tools.agent_bom history` walks the history of every lockfile on `main`. It finds the first commit that locked each package, then the first-parent merge that brought the commit into `main`. A commit that reached `main` by cherry-pick is matched to its lane by its subject.
 
@@ -161,9 +186,9 @@ Most lanes have no commit that `main` lacks, and sit behind `main` (git `rev-lis
 | `core-overnight` | `requirements.txt` | 10 | `b798106` |
 | `main` (direct, genui prototype) | `genui/package-lock.json` | 7 | `efc0465` |
 
-Only 8 commits on `main` ever changed a core, backend or frontend dependency file. The agent lanes added dependencies mostly by starting new side projects, not by growing the main ones.
+Only 8 commits on `main` ever changed a core, backend or frontend dependency file. The lanes added dependencies mostly by starting side projects, not by growing the main ones.
 
-Note: the core's `requirements.txt` has no versions and no lockfile. Each core build can install different versions. The CRACI SBOM of a core job is the only record of what it installed.
+The core's `requirements.txt` has no versions and no lockfile. The CRACI SBOM of a core job is the only record of what it installed. For example, it installed `opencv-contrib-python` 5.0.0.93.
 
 ## 6. Merge gate
 
@@ -172,7 +197,9 @@ The gate fails closed. It blocks a lane when the lane's CRACI build:
 1. adds a package with a `high` or `critical` vulnerability that `main`'s build does not have, or
 2. contacts a host that `main`'s build never contacts, and the host is not in `tools/agent_bom/allowed_hosts.txt`.
 
-It gives "no evidence" when the token or a lane build is missing. "No evidence" is not a pass.
+It gives "no evidence" when the token or a lane build is missing. "No evidence" is not a pass. Each block reason names the step that was running when CRACI first saw the host. Each verdict also prints `main`'s own high and critical entries.
+
+Result on Sun 15 Nov, 01:23 to 01:27 Helsinki time: 27 lanes PASS (exit 0), 1 lane BLOCK (exit 1, `weights`, two hosts during job setup, see section 4), 0 lanes NO EVIDENCE.
 
 ### Text for the dispatcher's merge notes (`briefs/LAUNCH.md`, `RUNBOOK.md`)
 
@@ -187,27 +214,58 @@ CRACI merge gate (run before every lane merge; owner: dispatcher)
 3. Read the exit code:
      0  PASS          merge.
      1  BLOCK         do not merge. Each printed line is one reason:
-                      "<severity> vulnerability <id> in <package>" or
-                      "unexpected host <host>: main's build never contacts it".
+                      "<severity> vulnerability <id> in <package>@<version>" or
+                      "unexpected host <host>: main's build never contacts it, first seen during step '<step>'".
                       Send the reasons to the lane. To accept a host on purpose, add it to
                       tools/agent_bom/allowed_hosts.txt in its own commit, with the reason.
      2  NO EVIDENCE   the token (CRACI_API_TOKEN in .env) or a lane build is missing.
                       Not a pass. Fix the cause (step 1) and run the gate again.
 4. Paste the gate output into the merge commit message.
+5. Never merge a dependency upgrade into main before the demo, whatever the gate says.
 ```
 
 ## 7. AI fix
 
-Not run. Real vulnerabilities exist (section 3: 2 critical and 1 high in `frontend/`, reported by npm audit inside the CRACI builds). But this lane cannot trigger CRACI's AI fix:
+The CRACI API has no fix endpoint. I checked the OpenAPI spec again on Sun 15 Nov (version `2026-09-11`, 9 operations: SBOM, OCI manifest SBOM, three artifact provenance lookups, job logs, active jobs, network trace, usage). It has no fix, remediation or vulnerability operation. So the AI fix runs from the CRACI web app, and Arpan triggers it himself.
 
-1. The CRACI API (OpenAPI version `2026-09-11`) has no fix or vulnerability endpoint.
-2. The web app needs Arpan's login, and this lane does not use his browser session.
+**No dependency upgrade merges into `main` before the demo.** A fix branch stays unmerged. This lane does not propose one for merge.
 
-The only proposal on record is npm's own, not CRACI's: major upgrades to `vitest@5.1.0` and `vite@8.3.8`. This lane did not apply it. A major upgrade of the test runner and the bundler touches every frontend lane, and other lanes are live tonight.
+### Steps for Arpan
 
-The nine API operations are: SBOM, OCI manifest SBOM, three artifact provenance lookups, job logs, active jobs, network trace and usage. The docs mention a list of vulnerabilities in the CRACI web app. An AI fix, if CRACI offers one, is in the web app, not the API.
+1. Open `platform.craci.com/projects/hackjunction2026/jobs/132618946275` (job `lane main`, run 43650860815; URL pattern from the first run's log).
+2. Open its vulnerability list. Pick `vitest@2.1.9` or `tinypool@1.1.1` (critical) or `vite@5.4.21` (high).
+3. Use the AI fix action. Let it write to its own branch, for example `craci-ai-fix`. Do not let it open a merge into `main`, or leave any such pull request as a draft.
+4. Tell the `craci` lane the branch name. The lane then runs `gh workflow run lane-audit.yml --ref craci -f lanes="main craci-ai-fix"`, then `python3 -m tools.agent_bom report craci-ai-fix`, and writes the after report below.
 
-Next step for Arpan: open job 132618946275 (`lane main`, run 43650860815) in the CRACI web app, at `platform.craci.com/projects/hackjunction2026/jobs/132618946275` (the URL pattern from the first run's log), use its fix action, copy the proposal into this section, apply it on a branch `craci-fix-<package>`, and run the report before and after.
+### Before report (main, Sun 15 Nov)
+
+| Source | Result |
+|---|---|
+| npm audit line in the CRACI job log | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| CRACI SBOM, npm entries | 30 entries: 3 critical, 1 high, 13 medium, 1 low, 12 unknown |
+| CRACI SBOM, all entries | 45 entries: 3 critical, 4 high, 17 medium, 3 low, 18 unknown |
+
+CRACI SBOM entries per npm package on `main` (job 132618946275):
+
+| Package | Entries | High or critical advisories |
+|---|---|---|
+| `tinypool@1.1.1` | 2 critical, 1 unknown | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr |
+| `vitest@2.1.9` | 1 critical, 1 medium, 2 unknown | GHSA-5xrq-8626-4rwp |
+| `vite@5.4.21` | 1 high, 6 medium, 1 low, 3 unknown | GHSA-587h-7wmj-h5pm |
+| `@vitest/mocker@2.1.9` | 2 medium | |
+| `react-router@6.30.6` | 2 medium | |
+| `esbuild@0.21.5` | 1 medium | |
+| `minimatch@10.2.6` | 1 medium, 1 unknown | |
+| `minimatch@3.1.5`, `debug@4.4.3` | 2 unknown each | |
+| `ms@2.1.3` | 1 unknown | |
+
+"unknown" entries are TuxCare `CLSA-*` advisories from OSV that carry no severity.
+
+npm's own proposal, for comparison only (not CRACI's): major upgrades to `vitest@5.1.0` and `vite@8.3.8`. Not applied.
+
+### After report
+
+Not run. At the time box no fix branch or pull request from CRACI existed on origin (checked with `git branch -r` and `gh pr list`).
 
 ## 8. Model server image provenance
 
@@ -217,28 +275,311 @@ Next step for Arpan: open job 132618946275 (`lane main`, run 43650860815) in the
 | Index digest on Sat 14 Nov 22:55 UTC | `sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1` | CRACI job 132617975360 (run 43650602941), `docker buildx imagetools inspect` |
 | linux/amd64 manifest | `sha256:082ca6f035279109041ffd3fe0695cb568b29bc580b35c4f297a66a08b216c1b` | same job |
 | linux/arm64 manifest | `sha256:18372a7224938643461b846fb64c5c9d3d6e9727e82caf2dc3043e620c9d4d7a` | same job |
-| CRACI provenance (`GET /v1preview1/artifact-provenance/oci_manifest`) | not run: token missing | |
+| `GET /v1preview1/artifact-provenance/oci_manifest`, index digest | 404 "the requested artifact was not found" | API, Sun 15 Nov 01:24 |
+| Same call, amd64 manifest digest | 404 "the requested artifact was not found" | API |
+| `GET /v1experimental1/sbom/oci_manifest`, index digest | 404 "the manifest or index was not recorded for your organization" | API |
 
-Expected answer: CRACI records provenance for artifacts that CRACI jobs create. vLLM's image is built elsewhere, so `jobs_created_in` will most likely be empty, or the call returns 404. That answer is still useful: it shows the model server is the one part of the coach with no build record we control. Run `python3 -m tools.agent_bom provenance sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1`.
-
-The deploy uses the tag, not the digest. If the tag moves, the coach changes with no commit. Pinning the digest in `verda/deploy.py` is a change for the `verda` lane owner, not this lane.
+CRACI records provenance for artifacts that CRACI jobs create or push. vLLM's image is built elsewhere, and our job only read its manifest. So CRACI has no record of it. The model server is the one part of the coach with no build record we control. The deploy also uses the tag, not the digest: if the tag moves, the coach changes with no commit. Pinning the digest in `verda/deploy.py` is a change for the `verda` lane owner, after the demo.
 
 ## 9. How tools/agent_bom works
 
 | File | Role |
 |---|---|
-| `tools/agent_bom/client.py` | CRACI API client. Only endpoints from the OpenAPI spec. Reads the token from the environment or `.env`; never prints it |
-| `tools/agent_bom/sources.py` | GitHub job ids per lane (through `gh`), lockfile history and lane attribution (through git) |
-| `tools/agent_bom/analyse.py` | SBOM and trace parsing, diff against `main`, the gate rule. No network, no git |
-| `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `provenance` (CRACI API); `history`, `steps` (git and GitHub only, no token) |
+| `tools/agent_bom/client.py` | CRACI API client. Only endpoints from the OpenAPI spec. Reads the token from the environment or a `.env` file (the worktree's, then the main checkout's); never prints it |
+| `tools/agent_bom/sources.py` | GitHub job ids per lane (through `gh`), lockfile history and lane attribution (through git), step failures from job logs |
+| `tools/agent_bom/analyse.py` | SBOM and trace parsing, diff against `main`, host first-seen times, the gate rule. No network, no git |
+| `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `provenance` (CRACI API); `history`, `steps` (git and GitHub only) |
 | `tools/agent_bom/tests/test_agent_bom.py` | 6 tests: 5 on spec-shaped fixtures (hand-written, marked as fixtures; no result here comes from them), 1 on real merge subjects from `main` |
 
 The CRACI API looks a job up by its GitHub job id. Its job list only shows active jobs, so `agent_bom` finds finished jobs through the GitHub Actions API, by the job name `lane <branch>`.
+
+### What the real responses taught us
+
+| Assumption before the token | Real response | Change to the tool |
+|---|---|---|
+| The SBOM may carry a `vulnerabilities` list | It does: 45 entries on `main`, all `source.name` = `osv`, one rating each. 18 have severity `unknown` | Kept; `unknown` stays below `low` and never blocks |
+| `affects[].ref` points at a component `bom-ref` | It is a full purl with version and qualifiers, for example `pkg:pypi/torch@2.7.1?file_name=...whl` | The tool strips qualifiers and keeps the version for the report |
+| DNS `record` is "name and type" (spec) | Only the name, with a trailing dot: `pypi.org.` | First word, trailing dot removed: handles both |
+| One version per package | `main` holds two versions of `minimatch`, `opencv-python-headless` and 14 more | Versions are now a set per package |
+| Components carry `version` | They do not. The version is only in the purl | Version read from the purl |
+| Every component is a dependency | The checked-out repository itself is a `pkg:github` component, with the job's commit as version | Skipped by the tool (read from `metadata.properties` `craci:job:repository`) |
+| `job.commitSha` in the trace is the lane's commit | It is the workflow commit on `craci`. The lane commit is in the SBOM's `pkg:github` component | Lane identity comes from the job name |
+
+Other API calls: `GET /v1preview1/jobs?status=active` returned 0 active jobs. `GET /v1preview1/usage` returned 503 "billing usage is temporarily unavailable".
 
 ## 10. Unverified
 
 | Item | Why |
 |---|---|
-| The SBOM carries a `vulnerabilities` list | The spec says "CycloneDX 1.7 SBOM" with no schema. `agent_bom` reads the list if present, and says so if absent |
-| The DNS `record` format | The spec says "record name and type". `agent_bom` takes the first word |
+| The `weights` hosts come from the GitHub runner | Timing and the `/_dns` probe pattern only. The GitHub steps API gives whole seconds, so "Set up job" and the start of `actions/checkout` overlap |
+| The `export/` failure on GitHub's own Ubuntu image | Seen only on CRACI's default image, which has no Python headers |
 | Lane attribution of cherry-picked commits | Matched by commit subject. Two lanes with the same subject would collide |
+| The demo uses the Vite dev server | Only CLAUDE.md says it runs `npm run dev` |
+
+## Appendix: `agent_bom report` output, one table per lane
+
+Generated by `python3 -m tools.agent_bom report` on Sun 15 Nov 01:22 Helsinki time. Lines that say "no commit that main lacks" mean the lane is behind `main`.
+
+#### Lane `arkit-app`
+
+CRACI job 132618946171 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `coach-tune`
+
+CRACI job 132618946104 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `core-calibration`
+
+CRACI job 132618946144 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+Gate: pass.
+
+#### Lane `core-overnight`
+
+CRACI job 132618946181 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `craci`
+
+CRACI job 132618946132 (run 43650860815, build success).
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `demo-mode`
+
+CRACI job 132618946140 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `expert-priors`
+
+CRACI job 132618946162 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `fingerspelling-packs`
+
+CRACI job 132618946198 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `frontend-updates`
+
+CRACI job 132618946153 (run 43650860815, build success).
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `hand-root`
+
+CRACI job 132618946097 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `hand-round-2`
+
+CRACI job 132618946569 (run 43650860815, build success).
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `lidar`
+
+CRACI job 132618946194 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `merge-main`
+
+CRACI job 132618946182 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `models`
+
+CRACI job 132618946191 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `replay-demo`
+
+CRACI job 132618946157 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `robot-extras-wip`
+
+CRACI job 132618946202 (run 43650860815, build success).
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `robot-view`
+
+CRACI job 132618946230 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `rokoko-setup`
+
+CRACI job 132618947169 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+Gate: pass.
+
+#### Lane `shadows`
+
+CRACI job 132618947166 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `slot-kit`
+
+CRACI job 132618947240 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `submission`
+
+CRACI job 132618947351 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `szymon-frontend`
+
+CRACI job 132618947331 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+Gate: pass.
+
+#### Lane `thumb-align`
+
+CRACI job 132618947343 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `typing`
+
+CRACI job 132618947355 (run 43650860815, build success).
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+Gate: pass.
+
+#### Lane `verda`
+
+CRACI job 132618947370 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 5.0.0.93 |
+
+Gate: pass.
+
+#### Lane `weights`
+
+CRACI job 132618947367 (run 43650860815, build success).
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+| Host main never contacts | Step running when CRACI first saw it |
+|---|---|
+| `copilot-proxy.githubusercontent.com` | Set up job |
+| `pkg.github.com` | Set up job |
+
+Gate: BLOCK: unexpected host copilot-proxy.githubusercontent.com: main's build never contacts it, first seen during step 'Set up job'; unexpected host pkg.github.com: main's build never contacts it, first seen during step 'Set up job'.
+
+#### Lane `worktree-decisions`
+
+CRACI job 132618947733 (run 43650860815, build success).
+The lane has no commit that main lacks: differences are older versions that main has changed.
+
+Clean: no new dependency, no new vulnerability and no new host against main.
+
+Gate: pass.
+
+#### Lane `worktree-export`
+
+CRACI job 132618948132 (run 43650860815, build success).
+
+| Changed version | Main | Lane |
+|---|---|---|
+| `opencv-python-headless` | 4.11.0.86, 5.0.0.93 | 4.11.0.86 |
+
+Gate: pass.

@@ -33,6 +33,7 @@ class Vulnerability:
     severity: str
     package_key: str
     source: str
+    version: str = ""
 
 
 @dataclass
@@ -43,6 +44,7 @@ class Build:
     vulns: list[Vulnerability] = field(default_factory=list)
     hosts: set[str] = field(default_factory=set)
     denied_hosts: set[str] = field(default_factory=set)
+    first_seen: dict[str, str] = field(default_factory=dict)
     has_vuln_data: bool = False
     job_ids: list[str] = field(default_factory=list)
     commits: set[str] = field(default_factory=set)
@@ -72,8 +74,17 @@ def parse_sbom(
     """Return packages keyed by versionless purl, vulnerabilities, and whether the SBOM had a vulnerabilities field."""
     packages: dict[str, Package] = {}
     by_ref: dict[str, str] = {}
+    # CRACI lists the checked-out repository itself as a pkg:github component whose version is the commit.
+    # It differs on every lane, so it is the lane's commit, not a dependency.
+    props = {
+        p.get("name"): p.get("value")
+        for p in (doc.get("metadata") or {}).get("properties") or []
+    }
+    self_key = f"pkg:github/{props.get('craci:job:repository', '')}".lower()
     for comp in _walk_components(doc.get("components") or []):
         purl = comp.get("purl") or ""
+        if purl and _purl_parts(purl)[0] == self_key:
+            continue
         name = comp.get("name") or ""
         if purl:
             key, eco, ver = _purl_parts(purl)
@@ -92,7 +103,16 @@ def parse_sbom(
             purl=purl,
             bom_ref=comp.get("bom-ref") or purl,
         )
-        packages.setdefault(key, pkg)
+        old = packages.get(key)
+        if old is not None and ver and ver not in old.version.split(", "):
+            # One build can hold several versions of a package (real SBOMs do: minimatch, opencv).
+            joined = ", ".join(sorted({*old.version.split(", "), ver} - {""}))
+            pkg = Package(
+                old.key, old.name, joined, old.ecosystem, old.purl, old.bom_ref
+            )
+            packages[key] = pkg
+        else:
+            packages.setdefault(key, pkg)
         if pkg.bom_ref:
             by_ref[pkg.bom_ref] = key
     vulns: list[Vulnerability] = []
@@ -109,22 +129,26 @@ def parse_sbom(
         source = (vuln.get("source") or {}).get("name", "")
         for affect in vuln.get("affects") or [{"ref": ""}]:
             ref = affect.get("ref", "")
+            # Real CRACI SBOMs put the full purl (version and qualifiers included) in affects[].ref.
             key = by_ref.get(ref) or (
                 _purl_parts(ref)[0] if ref.startswith("pkg:") else ref
             )
+            version = _purl_parts(ref)[2] if ref.startswith("pkg:") else ""
             vulns.append(
                 Vulnerability(
                     id=vuln.get("id", "?"),
                     severity=severity,
                     package_key=key,
                     source=source,
+                    version=version,
                 )
             )
     return packages, vulns, has_vuln_data
 
 
 def _dns_name(record: str) -> str:
-    """`record` is "name and type" per the spec; take the name and drop a trailing dot."""
+    """The spec says "name and type". Real traces carry only the name with a trailing dot ("pypi.org.").
+    Take the first word and drop the dot: that handles both."""
     return record.strip().split()[0].rstrip(".").lower() if record.strip() else ""
 
 
@@ -160,6 +184,29 @@ def trace_hosts(trace: dict[str, Any]) -> tuple[set[str], set[str]]:
     return hosts, denied
 
 
+def first_seen(trace: dict[str, Any]) -> dict[str, str]:
+    """Host -> earliest observedAt (RFC 3339) in the trace, for any protocol."""
+    seen: dict[str, str] = {}
+    for obs in trace.get("observations") or []:
+        hosts, _ = trace_hosts({"observations": [obs]})
+        for host in hosts:
+            at = obs.get("observedAt", "")
+            if at and (host not in seen or at < seen[host]):
+                seen[host] = at
+    return seen
+
+
+def step_at(steps: list[dict[str, Any]], at: str) -> str:
+    """Name of the GitHub step that was running at time `at` (steps carry started_at and completed_at, UTC)."""
+    stamp = at[:19]  # second precision, as the GitHub API gives
+    for step in steps:
+        start = (step.get("started_at") or "")[:19]
+        end = (step.get("completed_at") or "")[:19]
+        if start and end and start <= stamp <= end:
+            return step.get("name", "")
+    return ""
+
+
 def merge(
     builds: Iterable[tuple[str, dict[str, Any] | None, dict[str, Any] | None]],
 ) -> Build:
@@ -177,6 +224,9 @@ def merge(
             hosts, denied = trace_hosts(trace)
             out.hosts |= hosts
             out.denied_hosts |= denied
+            for host, at in first_seen(trace).items():
+                if host not in out.first_seen or at < out.first_seen[host]:
+                    out.first_seen[host] = at
             commit = (trace.get("job") or {}).get("commitSha")
             if commit:
                 out.commits.add(commit)
@@ -227,8 +277,16 @@ def diff(lane: str, base: Build, head: Build) -> LaneDiff:
     )
 
 
-def gate(d: LaneDiff, allowed_hosts: Iterable[str] = ()) -> list[str]:
-    """Reasons to block the merge. An empty list means the lane passes."""
+def gate(
+    d: LaneDiff,
+    allowed_hosts: Iterable[str] = (),
+    host_steps: dict[str, str] | None = None,
+) -> list[str]:
+    """Reasons to block the merge. An empty list means the lane passes.
+
+    `host_steps` (host -> GitHub step running when CRACI first saw it) only adds context to the reason.
+    """
+    host_steps = host_steps or {}
     reasons: list[str] = []
     patterns = [
         p.strip().lower()
@@ -237,8 +295,16 @@ def gate(d: LaneDiff, allowed_hosts: Iterable[str] = ()) -> list[str]:
     ]
     for v in d.new_vulns:
         if v.severity in GATE_SEVERITIES:
-            reasons.append(f"{v.severity} vulnerability {v.id} in {v.package_key}")
+            at = f"@{v.version}" if v.version else ""
+            reasons.append(f"{v.severity} vulnerability {v.id} in {v.package_key}{at}")
     for host in d.new_hosts:
         if not any(fnmatch.fnmatch(host, p) for p in patterns):
-            reasons.append(f"unexpected host {host}: main's build never contacts it")
+            where = (
+                f", first seen during step '{host_steps[host]}'"
+                if host_steps.get(host)
+                else ""
+            )
+            reasons.append(
+                f"unexpected host {host}: main's build never contacts it{where}"
+            )
     return reasons

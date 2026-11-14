@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .analyse import Build, LaneDiff, diff, gate, merge
+from .analyse import GATE_SEVERITIES, Build, LaneDiff, diff, gate, merge, step_at
 from .client import CraciClient, CraciError, load_token
 from .sources import (
     JobRef,
@@ -38,8 +38,31 @@ ALLOWED_HOSTS = Path(__file__).with_name("allowed_hosts.txt")
 CACHE = Path.home() / ".cache" / "agent_bom"
 
 
+def _env_files() -> list[Path]:
+    """The repo root .env, then the main checkout's .env when this runs in a git worktree."""
+    files = [REPO_ROOT / ".env"]
+    common = subprocess.run(
+        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    ).stdout.strip()
+    if common:
+        files.append(Path(common).parent / ".env")
+    return files
+
+
+def _token() -> str | None:
+    for env_file in _env_files():
+        token = load_token(env_file)
+        if token:
+            return token
+    return None
+
+
 def _client() -> CraciClient | None:
-    token = load_token(REPO_ROOT / ".env")
+    token = _token()
     return CraciClient(token) if token else None
 
 
@@ -66,11 +89,48 @@ def _build(client: CraciClient, repo: str, job: JobRef) -> Build:
     return build
 
 
+def _host_steps(
+    repo: str, job: JobRef, build: Build, hosts: list[str]
+) -> dict[str, str]:
+    """For each host, the GitHub step that was running when CRACI first observed it."""
+    if not hosts:
+        return {}
+    out = subprocess.run(
+        ["gh", "api", f"repos/{repo}/actions/jobs/{job.job_id}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout
+    steps = json.loads(out).get("steps", []) if out.strip() else []
+    return {h: step_at(steps, build.first_seen.get(h, "")) for h in hosts}
+
+
+def _baseline_note(base: Build) -> str:
+    """main's own high and critical findings, so "no new vulnerability" never reads as "clean"."""
+    bad = sorted(
+        {
+            (v.severity, v.id, v.package_key, v.version)
+            for v in base.vulns
+            if v.severity in GATE_SEVERITIES
+        }
+    )
+    if not bad:
+        return "main itself: no high or critical vulnerability in its SBOM."
+    items = "; ".join(f"{s} {i} in {k}@{ver}" for s, i, k, ver in bad)
+    return f"main itself carries {len(bad)} high or critical vulnerability entries (not caused by this lane): {items}"
+
+
 def _needle(pkg) -> str:
     return pkg.name or pkg.key.rsplit("/", 1)[-1]
 
 
-def render_lane(d: LaneDiff, job: JobRef, reasons: list[str]) -> str:
+def render_lane(
+    d: LaneDiff,
+    job: JobRef,
+    reasons: list[str],
+    host_steps: dict[str, str] | None = None,
+) -> str:
+    host_steps = host_steps or {}
     lines = [f"### Lane `{d.lane}`", ""]
     lines.append(f"CRACI job {job.job_id} (run {job.run_id}, build {job.conclusion}).")
     ahead = subprocess.run(
@@ -121,14 +181,17 @@ def render_lane(d: LaneDiff, job: JobRef, reasons: list[str]) -> str:
         ]
         for v in d.new_vulns:
             lines.append(
-                f"| {v.id} | {v.severity} | `{v.package_key}` | {v.source or 'CRACI SBOM'} |"
+                f"| {v.id} | {v.severity} | `{v.package_key}@{v.version}` | {v.source or 'CRACI SBOM'} |"
             )
         lines.append("")
     elif not d.has_vuln_data:
         lines += ["The SBOM carried no vulnerability data.", ""]
     if d.new_hosts:
-        lines += ["| Host main never contacts |", "|---|"]
-        lines += [f"| `{h}` |" for h in d.new_hosts]
+        lines += [
+            "| Host main never contacts | Step running when CRACI first saw it |",
+            "|---|---|",
+        ]
+        lines += [f"| `{h}` | {host_steps.get(h) or 'unknown'} |" for h in d.new_hosts]
         lines.append("")
     lines.append(f"Gate: {'BLOCK: ' + '; '.join(reasons) if reasons else 'pass'}.")
     lines.append("")
@@ -154,13 +217,14 @@ def cmd_report(args) -> int:
             continue
         head = _build(client, args.repo, jobs[lane])
         d = diff(lane, base, head)
-        reasons = gate(d, allowed)
+        steps = _host_steps(args.repo, jobs[lane], head, d.new_hosts)
+        reasons = gate(d, allowed, steps)
         high = sum(v.severity in ("high", "critical") for v in d.new_vulns)
         summary.append(
             f"| `{lane}` | {len(d.new_packages)} | {len(d.changed_versions)} | {len(d.new_vulns)} ({high} high or critical)"
             f" | {len(d.new_hosts)} | {'block' if reasons else 'pass'} |"
         )
-        sections.append(render_lane(d, jobs[lane], reasons))
+        sections.append(render_lane(d, jobs[lane], reasons, steps))
         results[lane] = {
             "job_id": jobs[lane].job_id,
             "new_packages": [p.purl or p.key for p in d.new_packages],
@@ -173,8 +237,9 @@ def cmd_report(args) -> int:
         }
     print(
         f"Base: `{args.base}` (CRACI job {jobs[args.base].job_id}), {len(base.packages)} packages, "
-        f"{len(base.hosts)} hosts.\n"
+        f"{len(base.vulns)} vulnerability entries, {len(base.hosts)} hosts.\n"
     )
+    print(_baseline_note(base) + "\n")
     print(
         "| Lane | New dependencies | Changed versions | New vulnerabilities | New hosts | Gate |"
     )
@@ -202,13 +267,17 @@ def cmd_gate(args) -> int:
                 f'Run: gh workflow run lane-audit.yml --ref craci -f lanes="{args.base} {args.lane}"'
             )
             return 2
-    d = diff(
-        args.lane,
-        _build(client, args.repo, jobs[args.base]),
-        _build(client, args.repo, jobs[args.lane]),
-    )
+    base = _build(client, args.repo, jobs[args.base])
+    head = _build(client, args.repo, jobs[args.lane])
+    d = diff(args.lane, base, head)
     allowed = ALLOWED_HOSTS.read_text().splitlines() if ALLOWED_HOSTS.is_file() else []
-    reasons = gate(d, allowed)
+    reasons = gate(
+        d, allowed, _host_steps(args.repo, jobs[args.lane], head, d.new_hosts)
+    )
+    print(
+        f"GATE {args.lane}: CRACI jobs {jobs[args.base].job_id} (main) and {jobs[args.lane].job_id} (lane)"
+    )
+    print(f"GATE {args.lane}: note: {_baseline_note(base)}")
     if not d.has_vuln_data:
         print(f"GATE {args.lane}: note: the lane's SBOM carried no vulnerability data.")
     if reasons:
@@ -266,11 +335,7 @@ def cmd_steps(args) -> int:
 
 
 def cmd_check(_args) -> int:
-    print(
-        "CRACI_API_TOKEN: set"
-        if load_token(REPO_ROOT / ".env")
-        else "CRACI_API_TOKEN: missing"
-    )
+    print("CRACI_API_TOKEN: set" if _token() else "CRACI_API_TOKEN: missing")
     return 0
 
 
