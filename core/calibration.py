@@ -166,8 +166,15 @@ def make_hand_calibration(
     cal_cfg,
     hand_cfg,
     origin: dict,
+    thumb_triples: dict | None = None,
 ) -> HandCalibration:
-    """Build from backend triples. Without a fist the range is the nominal span (origin says so)."""
+    """Build from backend triples. Without a fist the range is the nominal span (origin says so).
+
+    A thumb-folded capture (the backend's optional `thumb` phase, from the demo
+    table's guest calibration) replaces the fist as the closed end of the thumb
+    range: in a loose fist the thumb moves only about 14 degrees from flat, so
+    the fist alone makes the thumb range tiny or unusable.
+    """
     full = nominal_full(hand_cfg)
     flat = triples_to_angles(flat_triples)
     if _phase_present(fist_triples):
@@ -176,6 +183,12 @@ def make_hand_calibration(
     else:
         fist = flat + full
         origin = {**origin, "range": "nominal"}
+    if _phase_present(thumb_triples):
+        folded = triples_to_angles(thumb_triples)
+        fist = fist.copy()
+        for s in H.FLEXION_SLOTS["thumb"]:
+            fist[s] = folded[s]
+        origin = {**origin, "thumb": "measured"}
     return HandCalibration(
         side=side,
         flat=flat,
@@ -249,7 +262,13 @@ def load_hand(
             "created_at": (rng or rec).get("created_at"),
         }
         return make_hand_calibration(
-            side, flat, rng.get("fist") if rng else None, cal_cfg, hand_cfg, origin
+            side,
+            flat,
+            rng.get("fist") if rng else None,
+            cal_cfg,
+            hand_cfg,
+            origin,
+            rng.get("thumb") if rng else None,
         )
     cands = [
         r
@@ -265,7 +284,7 @@ def load_hand(
         "created_at": rng.get("created_at"),
     }
     return make_hand_calibration(
-        side, rng["flat"], rng.get("fist"), cal_cfg, hand_cfg, origin
+        side, rng["flat"], rng.get("fist"), cal_cfg, hand_cfg, origin, rng.get("thumb")
     )
 
 
