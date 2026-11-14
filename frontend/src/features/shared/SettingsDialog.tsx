@@ -163,7 +163,7 @@ export function SettingsDialog({ onClose, returnFocus }: SettingsDialogProps) {
             <h3 id={`${titleId}-stage`} className="settings__h">
               Stage and motion
             </h3>
-            <Switch on={props} onChange={setProps} label="Add a prop" note={`Draws the racket or keyboard with the hands in the rooms. ${PROP_NOTE} The Test your skills games always show them.`} />
+            <Switch on={props} onChange={setProps} label="Add a prop" note={`Draws the racket or keyboard with the hands in the rooms. ${PROP_NOTE} It applies to the Test your skills games too.`} />
             <Switch
               on={reduce}
               onChange={setReduce}
