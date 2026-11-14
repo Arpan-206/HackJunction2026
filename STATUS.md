@@ -5,6 +5,23 @@
 Everything below this section is the overnight core report, still valid.
 This section is what changed on Saturday and where things stand.
 
+**Evening batch (Sat 16:20 to 17:55), six lanes on Opus 5.5, all merged on
+main, every suite green** (core 177, backend 304, frontend 316, lint, build,
+demo walk and mock walk clean; nothing touched live gloves):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| lidar | core depth source on `ios/PROTOCOL.md`, fake phone `core/camera/fake_depth.py` (dark-hand and no-plane variants), depth step behind `python -m core --depth` or `--depth-fake` (table, forearm by cylinder fit, glove yaw drift correction), `/ws/depth` point cloud, `/depth` viewer, `tools/depth_check`, `docs/DEPTH_STREAM.md`. Nothing verified on real depth | `STATUS-lidar.md` |
+| demo-mode | `/demo` visitor flow with a 20 s guest calibration (flat, fist, thumb folded), lesson pick, live score beside the robot twin, Next visitor; kiosk flag; Geppetto rename done; thumb phase stored by the backend and now used by the core's thumb range | `STATUS-demo-mode.md` |
+| shadows | five shadow puppets reach a score card; Fingerspelling is teachable (A to Z, word drill, letter chart at `/apprentice/fingerspelling`); `tools/make_pose_lessons.py` emits core lessons | `STATUS-shadows.md` |
+| slot-kit | `scripts/slot/run.sh` guided checklist for the next glove slot, logs to `logs/slot/<time>/`, `--dry-run` on fakes passes; fake RCSP driver `tools/fake_rcsp_server.py` | `STATUS-slot-kit.md`, `docs/SLOT-KIT.md` |
+| models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
+| submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
+
+Core fixes from the batch: a glove button press records that glove
+(`record_start` takes a hand), and the thumb-folded capture sets the thumb
+range (`core/calibration.py`).
+
 **Depth camera (Sat 14:30):** `core/camera/depth.py` (`DepthFrame`,
 `DepthSource`) and `core/camera/record3dstream.py` read the free
 Record3DStream app (PathOn) on an iPhone; address in config.toml
