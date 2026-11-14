@@ -72,6 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--run-dir", type=Path, default=None, help="log folder (default logs/slot/<time>)")
     p.add_argument("--backend-dir", type=Path, default=None, help="dry run: backend folder to start (default <repo>/backend)")
     p.add_argument("--keep-lessons", action="store_true", help="dry run: keep the fake lessons it records")
+    p.add_argument("--pack", default="fi", help="step 9: fingerspelling pack to record into (default fi)")
+    p.add_argument("--pack-letters", default="", help="step 9: letters to record, e.g. S,U,Ä (default every slot not recorded yet)")
+    p.add_argument("--recorded-by", default="", help="step 9: the name stored with each letter (asked if missing)")
+    p.add_argument("--reference", default="", help="step 9: URL or document the letters are held against (default the pack's chart)")
     return p
 
 
@@ -105,6 +109,10 @@ def run(argv: list[str] | None = None, console: Console | None = None) -> int:
         freeze_seconds=DRY["freeze_seconds"] if a.dry_run else a.freeze_seconds,
         move_seconds=DRY["move_seconds"] if a.dry_run else a.move_seconds,
         duel_lesson=a.duel_lesson,
+        pack=a.pack,
+        pack_letters=[x for x in a.pack_letters.split(",") if x.strip()],
+        recorded_by=a.recorded_by,
+        reference=a.reference,
     )
     meta = {"started": time.strftime("%Y-%m-%d %H:%M:%S"), "wearer": a.wearer, "dry_run": a.dry_run,
             "argv": argv if argv is not None else sys.argv[1:], "repo": str(REPO), "python": py,
@@ -203,6 +211,8 @@ def cleanup_dry(stack, log: RunLog, console: Console, keep: bool) -> None:
     for r in log.records:
         if r.key == "demo_lessons":
             made += [t.get("lesson_id") for t in r.details.get("takes", []) if t.get("lesson_id")]
+        if r.key == "pack_letters":
+            made += [t.get("lesson_id") for t in r.details.get("letters", []) if t.get("lesson_id")]
     if not made:
         return
     from slot_links import CoreLink

@@ -56,6 +56,34 @@ export interface Keyframe {
 }
 
 /** A move the master can pick in "Start from scratch". Catalogue served by GET /api/moves. */
+/* ---- Fingerspelling packs (CONTRACT.md, "Fingerspelling packs") ---- */
+
+export type PackLetterStatus = 'recorded' | 'not_recorded';
+export interface PackReference {
+  label: string;
+  url: string;
+}
+/** One letter of a pack. A not-recorded letter carries no pose and no recording fields: it is never scored. */
+export interface PackLetter {
+  letter: string;
+  status: PackLetterStatus;
+  recorded_by: string | null;
+  reference: string | null;
+  recorded_at: string | null;
+  move_id: string | null;
+  lesson_id: string | null;
+  pose: Record<Finger, number> | null;
+}
+export interface FingerspellingPack {
+  id: string;
+  name: string;
+  language: string;
+  description: string;
+  default_reference: PackReference;
+  sources: PackReference[];
+  letters: PackLetter[];
+}
+
 export interface MoveKind {
   id: string;
   skill: Skill;

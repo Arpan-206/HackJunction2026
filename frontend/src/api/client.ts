@@ -26,6 +26,7 @@ import type {
   MotionPreviewRequest,
   MotionPreviewResponse,
   MoveKind,
+  FingerspellingPack,
   Recording,
   RecordingStartRequest,
   RecordingStartResponse,
@@ -159,6 +160,7 @@ export const api = {
   health: (signal?: AbortSignal) => request<HealthResponse>('GET', '/health', undefined, signal),
 
   moves: (skill?: Skill, signal?: AbortSignal) => request<MoveKind[]>('GET', `/moves${qs({ skill })}`, undefined, signal),
+  fingerspellingPacks: (signal?: AbortSignal) => request<FingerspellingPack[]>('GET', '/fingerspelling/packs', undefined, signal),
 
   lessons: (signal?: AbortSignal) => request<Lesson[]>('GET', '/lessons', undefined, signal),
   lesson: (id: string, signal?: AbortSignal) => request<Lesson>('GET', `/lessons/${encodeURIComponent(id)}`, undefined, signal),

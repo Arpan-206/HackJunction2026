@@ -22,7 +22,7 @@ import { mockCaptureNeutral, mockDriftCheck, mockDriverAction, mockGloveScenario
 import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
-import { MOVES } from './seed';
+import { MOVES, PACKS } from './seed';
 import { applyCalibrationMasks, buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
 import { DEFAULT_MARGIN, isMargin } from '../api/margin';
 import { getStore } from './store';
@@ -292,6 +292,12 @@ route('GET', '/health', () => ok({ status: 'ok', glove_source: getStore().dev.gl
 route('GET', '/moves', (req) => {
   const skill = skillOrNull(req.query.get('skill'));
   return ok(skill ? MOVES.filter((m) => m.skill === skill) : MOVES);
+});
+
+route('GET', '/fingerspelling/packs', () => ok(PACKS));
+route('GET', '/fingerspelling/packs/([^/]+)', (_req, [id]) => {
+  const pack = PACKS.find((p) => p.id === id);
+  return pack ? ok(pack) : notFound(`no fingerspelling pack '${id}'`);
 });
 
 route('GET', '/lessons', () => ok(getStore().listLessons()));

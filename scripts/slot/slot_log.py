@@ -108,6 +108,14 @@ class Console:
                     return v
             self.say(f"Type one of: {', '.join(choices)}.")
 
+    def text(self, question: str, default: str) -> str:
+        """A typed answer; Enter keeps the default. The dry run takes the default."""
+        if self.auto:
+            self.say(f"{question} [{default}] -> {default} (dry run)")
+            return default
+        self.say(f"{question} [{default}]")
+        return self._read() or default
+
     def yes(self, question: str, default: bool = True) -> bool:
         return self.ask(question, {"y": "yes", "n": "no"}, "yes" if default else "no") == "yes"
 
