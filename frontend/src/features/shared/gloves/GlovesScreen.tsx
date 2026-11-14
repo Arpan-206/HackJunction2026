@@ -5,6 +5,7 @@ import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { Hand, HandCanvas } from '../../../three';
 import { useDemoMode } from '../settings';
+import { CalibrationInUse } from './CalibrationInUse';
 import { DemoCheck } from './DemoCheck';
 import { FixText } from './FixText';
 import { canStartGloves, gloveFacts, nextPath, splitIssues } from './logic';
@@ -140,6 +141,7 @@ export default function GlovesScreen() {
       {status && (
         <>
           {now ? <FixFirst issue={now} /> : <Summary status={status} />}
+          <CalibrationInUse calibrateHref={`/gloves/calibrate?next=${encodeURIComponent(next)}`} />
           {demo && <DemoCheck ready={status.ready} onPass={() => navigate(next, { replace: true })} />}
 
           <div className="gl-pair">
