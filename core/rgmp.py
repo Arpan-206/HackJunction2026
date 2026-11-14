@@ -5,6 +5,7 @@ from the definition JSON, never from code. The joint mapping is configuration
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import re
@@ -550,11 +551,8 @@ class GloveSource:
                             heading_reliable=s.heading_reliable)
             events = H.finish_hand(h, self.cfg.hand, self.pinch[side])
             if not tracked and side in self._last_hand:
-                # hold the last pose, flagged untracked
-                prev = self._last_hand[side]
-                prev.tracked = False
-                prev.t_us = s.t_us
-                out[side] = (prev, [])
+                # hold the last pose, flagged untracked, as a copy so earlier consumers keep theirs
+                out[side] = (dataclasses.replace(self._last_hand[side], tracked=False, t_us=s.t_us), [])
                 continue
             self._last_hand[side] = h
             out[side] = (h, events)

@@ -148,8 +148,10 @@ async def test_glove_source_marks_silence(cfg, tmp_path):
     doc = make_definition(2, "right", "transform")
     src.feed(pack_definition(doc) + frame_bytes(0.0, int(time.time() * 1e6), "right", 2, "transform"))
     now = clock.now_us()
-    assert src.poll(now)["right"][0].tracked
+    first = src.poll(now)["right"][0]
+    assert first.tracked
     assert src.poll(now + 300_000)["right"][0].tracked is False
+    assert first.tracked is True       # the held copy must not change the hand handed out earlier
 
 
 def test_calibrate_zeroes_yaw(cfg, tmp_path):
