@@ -28,9 +28,9 @@ describe('settings store', () => {
     vi.unstubAllGlobals();
   });
 
-  it('defaults: standard margin, 3D score, motion follows the device', () => {
+  it('defaults: relaxed margin, 3D score, motion follows the device', () => {
     stubStorage();
-    expect(getMargin()).toBe('standard');
+    expect(getMargin()).toBe('relaxed');
     expect(scoreViewPref.get()).toBe('3d');
     expect(reduceMotionPref.get()).toBeNull();
     expect(prefersReducedMotion()).toBe(false);
@@ -54,14 +54,14 @@ describe('settings store', () => {
     const store = stubStorage();
     store.set('apprentice.margin', 'sloppy');
     store.set('apprentice.scoreView', 'hologram');
-    expect(getMargin()).toBe('standard');
+    expect(getMargin()).toBe('relaxed');
     expect(scoreViewPref.get()).toBe('3d');
     resetAll();
     const boom = () => {
       throw new Error('blocked');
     };
     vi.stubGlobal('window', { localStorage: { getItem: boom, setItem: boom, removeItem: boom } });
-    expect(getMargin()).toBe('standard');
+    expect(getMargin()).toBe('relaxed');
     marginPref.set('strict');
     expect(getMargin()).toBe('strict');
   });
@@ -129,10 +129,10 @@ describe('margin of error through the mock backend', () => {
 
 describe('gold only for mastery', () => {
   const r = (over: Partial<ScoreResult>): ScoreResult => ({ overall: 95, per_finger: vals({ thumb: 95, index: 95, middle: 95, ring: 95, little: 95 }), timing: 95, within_tolerance: true, worst_finger: 'ring', hint: '', warnings: [], ...over });
-  it('a high rep is mastery under standard or strict, not under a widened margin', () => {
+  it('a high rep is mastery under strict, standard or relaxed, not under just trying it', () => {
     expect(isMastery(r({}))).toBe(true);
     expect(isMastery(r({ margin: 'strict' }))).toBe(true);
-    expect(isMastery(r({ margin: 'relaxed' }))).toBe(false);
+    expect(isMastery(r({ margin: 'relaxed' }))).toBe(true);
     expect(isMastery(r({ margin: 'just_trying' }))).toBe(false);
     expect(isMastery(r({ within_tolerance: false }))).toBe(false);
   });

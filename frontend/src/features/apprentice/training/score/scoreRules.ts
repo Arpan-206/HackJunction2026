@@ -1,4 +1,3 @@
-import { MARGIN_QUIET } from '../../../../api/margin';
 import { FINGERS, type Finger, type ScoreResult } from '../../../../api/types';
 
 /** Overall score from which the numeral turns gold, provided every finger was also inside the tolerance. */
@@ -21,9 +20,9 @@ export function weakestFinger(result: ScoreResult, light: readonly Finger[] = []
 }
 
 /**
- * Gold is only for mastery: a high score inside the tolerance, judged with the standard or a strict margin. A rep that
- * only passed because the learner widened the margin (relaxed, just trying it) is good, not mastered.
+ * Gold is only for mastery: a high score inside the tolerance, judged with the strict, standard or relaxed margin
+ * (relaxed is the learner's default for the demo). A rep that only passed on "just trying it" is good, not mastered.
  */
 export function isMastery(result: ScoreResult): boolean {
-  return Math.round(result.overall) >= MASTERY && result.within_tolerance && !MARGIN_QUIET.includes(result.margin ?? 'standard');
+  return Math.round(result.overall) >= MASTERY && result.within_tolerance && (result.margin ?? 'standard') !== 'just_trying';
 }

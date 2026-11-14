@@ -1,7 +1,8 @@
+import { followsHandPosition } from './handPosition';
 import { delayProbe } from '../api/delayProbe';
 import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Group, Mesh, Vector3, type Quaternion, type Material } from 'three';
+import { Group, Mesh, Vector3, type Camera, type Material, type Object3D, type Quaternion } from 'three';
 import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER } from './anatomy';
 import { HAND_SCALE, loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
@@ -17,6 +18,37 @@ import { useStageAnchor, useStageColors } from './stageContext';
 const CORE_REST: Record<Side, [number, number, number]> = { left: [-0.15, 0.1, -0.2], right: [0.15, 0.1, -0.2] };
 /** The furthest the hand moves from its place on the stage, metres per axis: the core's work box half sizes. */
 const MAX_OFFSET_M: [number, number, number] = [0.225, 0.125, 0.15];
+
+/** The hand's wrist stays inside this share of the picture (1 is the edge), which leaves room for the fingers. */
+const VIEW_LIMIT = 0.68;
+/** The hand never comes nearer to the camera than this share of its resting distance, so it cannot fill the picture. */
+const VIEW_NEAREST = 0.7;
+const VIEW_O = new Vector3();
+const VIEW_P = new Vector3();
+
+/**
+ * The largest share (0 to 1) of the offset `o` from `base` (both in `parent` space) that keeps the hand in view.
+ * 1 when the full offset is in view; a base that is itself out of view gives 0, so the hand stays where the scene put it.
+ */
+function viewShare(parent: Object3D | null, camera: Camera, base: Vector3, o: Vector3): number {
+  if (!parent || o.lengthSq() === 0) return 1;
+  const restDist = parent.localToWorld(VIEW_P.copy(base)).distanceTo(camera.position);
+  const inView = (s: number) => {
+    parent.localToWorld(VIEW_P.copy(base).addScaledVector(o, s));
+    if (VIEW_P.distanceTo(camera.position) < restDist * VIEW_NEAREST) return false;
+    VIEW_P.project(camera);
+    return Math.abs(VIEW_P.x) <= VIEW_LIMIT && Math.abs(VIEW_P.y) <= VIEW_LIMIT && VIEW_P.z < 1;
+  };
+  if (inView(1)) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 7; i++) {
+    const mid = (lo + hi) / 2;
+    if (inView(mid)) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
 
 export interface HandProps {
   side?: Side;
@@ -234,7 +266,7 @@ function HandBody({
       g.quaternion.copy(smoother.quat);
       if (pivoting) pivotOffset(smoother.quat, centreLocal, pivot);
       else pivot.set(0, 0, 0);
-      if (followWristPos !== false && target.wrist_pos) {
+      if (target.wrist_pos && (followWristPos === true || (followWristPos === 'auto' && followsHandPosition()))) {
         // the core's wrist position in metres, offset from its rest pose and scaled to the stage (hand-root lane)
         // clamped to the core's work box half sizes, so the hand cannot leave the stage
         const r = CORE_REST[side];
@@ -242,7 +274,10 @@ function HandBody({
           const m = MAX_OFFSET_M[k] * HAND_SCALE;
           return Math.min(m, Math.max(-m, (smoother.pos[k] - r[k]) * HAND_SCALE));
         };
-        pivot.set(pivot.x + off(0), pivot.y + off(1), pivot.z + off(2));
+        // then pulled back along the same line until the hand is inside the picture (any screen, any camera)
+        VIEW_O.set(off(0), off(1), off(2));
+        const k = viewShare(g.parent, state.camera, pivot, VIEW_O);
+        pivot.addScaledVector(VIEW_O, k);
       }
       g.position.copy(pivot);
     }

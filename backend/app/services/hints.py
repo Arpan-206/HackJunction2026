@@ -88,9 +88,10 @@ def build_hint(
     )
     if finger is not None:
         deviation = deviations_deg[finger]
+        name = "thumb" if finger == "thumb" else f"{finger} finger"  # never "thumb finger"
         if deviation > 0:
-            return f"Relax your {finger} finger, it is curled about {abs(deviation):.0f} degrees (in total) too much."
-        return f"Curl your {finger} finger more, it is about {abs(deviation):.0f} degrees (in total) too straight."
+            return f"Relax your {name}, it is curled about {abs(deviation):.0f} degrees (in total) too much."
+        return f"Curl your {name} more, it is about {abs(deviation):.0f} degrees (in total) too straight."
     if abs(timing_ms) >= limits.timing_ms:
         word = "late" if timing_ms > 0 else "early"
         return f"Your finger shapes are right, but you are about {abs(timing_ms):.0f} ms {word}. Match the guide hand's beat."

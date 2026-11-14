@@ -114,6 +114,8 @@ export default function ScoreScene({ result, weakest, allGood, mastery, pose, si
           rotation={[0, side === 'left' ? -HAND_TURN : HAND_TURN, 0]}
           frame={frame}
           smoothing={false}
+          // the score picture is composed around the hand: it stays in its place, wherever the wrist was in the room
+          followWristPos={false}
         />
         {!compact && (
           <group position={[0, -0.55, -2.55]} scale={0.8}>

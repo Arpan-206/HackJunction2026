@@ -1,3 +1,5 @@
+import { useHandPosition } from '../../../three/handPosition';
+import { skillUsesHandPosition } from '../skills/catalogue';
 import { useParams } from 'react-router-dom';
 import { ApHeader } from '../ApHeader';
 import { PageHeader } from '../../../components/PageHeader';
@@ -11,6 +13,7 @@ import { TypingTest } from './AirTyping/TypingTest';
 export function TestPage() {
   const { lessonId } = useParams();
   const { data: lesson, loading, error, offline } = useLessonById(lessonId);
+  useHandPosition(!!lesson && skillUsesHandPosition(lesson.skill));
 
   if (loading) return <p className="note ap-state">Setting the table...</p>;
   if (error || !lesson) {

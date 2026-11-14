@@ -1,3 +1,5 @@
+import { useHandPosition } from '../../../three/handPosition';
+import { skillUsesHandPosition } from '../skills/catalogue';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, tutorialVideoOf, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
@@ -119,6 +121,8 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
   const twoHanded = step.hands === 'both';
   // Shadow puppets are learnt on the wall: the lamp's shadow theatre replaces the guidance modes.
   const theatre = lesson.skill === 'shadow_puppets';
+  // Only a skill that moves through space (table tennis) follows the hand's position from the phone's depth.
+  useHandPosition(skillUsesHandPosition(lesson.skill));
   // Touch typing is learnt at the desk: both hands over a QWERTY keyboard, the expert's as ghosts. The skill is off the
   // catalogue for now (no lesson carries the id), but the desk stays wired for when it comes back.
   const desk = (lesson.skill as string) === 'touch_typing';

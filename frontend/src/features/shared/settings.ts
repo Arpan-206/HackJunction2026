@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { DEFAULT_MARGIN, isMargin, MARGIN_MULTIPLIERS } from '../../api/margin';
+import { isMargin, MARGIN_MULTIPLIERS } from '../../api/margin';
 import type { Margin, Tolerance } from '../../api/types';
 
 /**
@@ -76,9 +76,16 @@ export function pref<T>(key: string, parse: (raw: string | null) => T, serialise
 
 /* ---- margin of error ---- */
 
-export const marginPref = pref<Margin>(MARGIN_KEY, (raw) => (isMargin(raw) ? raw : DEFAULT_MARGIN), (v) => v);
+/**
+ * The margin a learner starts with. Relaxed for the demo (Arpan, 14 Nov): the gloves and the phone's depth are not
+ * exact, so a near miss by a degree or two should pass. DEFAULT_MARGIN (standard) stays the wire default when a
+ * request names no margin.
+ */
+export const LEARNER_DEFAULT_MARGIN: Margin = 'relaxed';
 
-/** The learner's margin of error and its setter. Standard unless the learner chose otherwise. */
+export const marginPref = pref<Margin>(MARGIN_KEY, (raw) => (isMargin(raw) ? raw : LEARNER_DEFAULT_MARGIN), (v) => v);
+
+/** The learner's margin of error and its setter. Relaxed unless the learner chose otherwise. */
 export const useMargin = marginPref.use;
 export const getMargin = marginPref.get;
 

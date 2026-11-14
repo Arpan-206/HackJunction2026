@@ -30,6 +30,8 @@ export interface KeyPose {
 export interface CatalogueEntry {
   id: string;
   name: string;
+  /** The live hand follows its position in space from the phone's depth (three/handPosition.ts). Default false. */
+  handPosition?: boolean;
   /** One or two plain sentences for the card search and the top of the skill page. */
   description: string;
   difficulty: Difficulty;
@@ -65,6 +67,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     // The shakehand grip held still: the racket's face reads clearly before the swing turns it edge on.
     keyPose: hold(0.62, 0.8, 0.84, 0.86, 0.88),
     scene: 'racket',
+    handPosition: true,
   },
   {
     id: 'piano',
@@ -138,6 +141,11 @@ export function skillNameFromId(id: string): string {
 /** The display name of a skill id, from the catalogue when it is known. */
 export function skillName(id: string): string {
   return CATALOGUE.find((c) => c.id === id)?.name ?? skillNameFromId(id);
+}
+
+/** Whether a skill's live hand follows its position in space (the phone's depth): table tennis yes, the rest no. */
+export function skillUsesHandPosition(id: string): boolean {
+  return CATALOGUE.find((c) => c.id === id)?.handPosition ?? false;
 }
 
 /** The dashboard path of a skill page. */

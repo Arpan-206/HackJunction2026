@@ -1,3 +1,5 @@
+import { useHandPosition } from '../../../three/handPosition';
+import { skillUsesHandPosition } from '../skills/catalogue';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { api, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult } from '../../../api';
@@ -205,6 +207,7 @@ function PlayRound({ lesson }: { lesson: Lesson }) {
   const cue = showProps ? 'none' : (step.prop ?? 'none');
   const policy = useMemo(() => policyForStage('blind'), []);
   const theatre = lesson.skill === 'shadow_puppets';
+  useHandPosition(skillUsesHandPosition(lesson.skill));
   const learner = useRef<HandHandle>(null);
   const running = phase === 'ready' || phase === 'perform' || phase === 'scoring' || phase === 'called';
 

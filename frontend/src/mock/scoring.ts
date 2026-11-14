@@ -291,8 +291,9 @@ export function buildHint(
   const finger = focusFinger(deviations, perFinger ?? uniform(limits));
   if (finger !== null) {
     const deviation = deviations[finger] ?? 0;
-    if (deviation > 0) return `Relax your ${finger} finger, it is curled about ${Math.abs(deviation).toFixed(0)} degrees (in total) too much.`;
-    return `Curl your ${finger} finger more, it is about ${Math.abs(deviation).toFixed(0)} degrees (in total) too straight.`;
+    const name = finger === 'thumb' ? 'thumb' : `${finger} finger`; // never "thumb finger"
+    if (deviation > 0) return `Relax your ${name}, it is curled about ${Math.abs(deviation).toFixed(0)} degrees (in total) too much.`;
+    return `Curl your ${name} more, it is about ${Math.abs(deviation).toFixed(0)} degrees (in total) too straight.`;
   }
   if (Math.abs(timingMs) >= limits.timingMs) {
     const word = timingMs > 0 ? 'late' : 'early';
