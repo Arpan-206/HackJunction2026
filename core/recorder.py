@@ -530,34 +530,11 @@ def static_finger_weights(
 #   calibration  0 when the master's calibration marks every flexion joint of the finger unusable
 # ---------------------------------------------------------------------------
 
-# Standard QWERTY touch-typing chart (hand, finger) -> keys. A copy of
-# core/tasks/typing.py CHART_ROWS on the unmerged branch `typing`; that table
-# wins when it is importable.
-TYPING_CHART_ROWS: dict[tuple[str, str], str] = {
-    ("left", "little"): "`1qaz",
-    ("left", "ring"): "2wsx",
-    ("left", "middle"): "3edc",
-    ("left", "index"): "45rtfgvb",
-    ("right", "index"): "67yuhjnm",
-    ("right", "middle"): "8ik,",
-    ("right", "ring"): "9ol.",
-    ("right", "little"): "0-=p[]\\;'/",
-}
-
-
 def _typing_chart() -> dict[str, list[tuple[str, str]]]:
-    try:  # the typing task's own chart, once that branch is merged
-        from .tasks.typing import CHART  # type: ignore[attr-defined]
+    """The typing task's QWERTY touch-typing chart: key -> [(hand, finger)] (one source, core/tasks/typing.py)."""
+    from .tasks.typing import CHART  # lazy: the tasks package imports hand helpers
 
-        return dict(CHART)
-    except ImportError:
-        chart: dict[str, list[tuple[str, str]]] = {
-            " ": [("left", "thumb"), ("right", "thumb")]
-        }
-        for who, keys in TYPING_CHART_ROWS.items():
-            for k in keys:
-                chart[k] = [who]
-        return chart
+    return CHART
 
 
 def chart_fingers(task: str, task_config: dict, index: int, hand: str) -> list[str] | None:
