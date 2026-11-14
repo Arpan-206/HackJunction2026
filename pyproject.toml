@@ -1,0 +1,17 @@
+[project]
+name = "geppetto-core"
+version = "0.1.0"
+description = "Geppetto core service: gloves and camera in, scored hands out over WebSocket"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy", "fastapi", "uvicorn[standard]", "websockets", "jsonschema",
+  "opencv-contrib-python", "mediapipe",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "httpx"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/coach.json",
+  "title": "coach: one line of text for the codex margin",
+  "type": "object",
+  "required": ["v", "type", "t", "id", "kind", "text", "focus", "step", "speak", "source"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "coach" },
+    "t": { "$ref": "common.json#/$defs/t_us" },
+    "id": { "type": "string" },
+    "kind": { "type": "string", "enum": ["tip", "praise", "question", "status"] },
+    "text": { "type": "string", "maxLength": 120 },
+    "focus": { "oneOf": [{ "$ref": "common.json#/$defs/finger" }, { "type": "null" }] },
+    "step": { "type": ["integer", "null"], "minimum": 0 },
+    "speak": { "type": "boolean" },
+    "source": { "type": "string", "enum": ["gemma", "rule"] },
+    "hand": { "oneOf": [{ "$ref": "common.json#/$defs/side" }, { "type": "null" }] },
+    "options": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 3 }
+  },
+  "if": { "properties": { "kind": { "const": "question" } } },
+  "then": { "required": ["options"] }
+}

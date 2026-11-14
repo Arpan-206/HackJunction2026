@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/session.json",
+  "title": "session: sent whenever the session state changes",
+  "type": "object",
+  "allOf": [
+    { "$ref": "common.json#/$defs/session_state" },
+    {
+      "required": ["v", "type", "t"],
+      "properties": {
+        "v": { "const": 1 },
+        "type": { "const": "session" },
+        "t": { "$ref": "common.json#/$defs/t_us" }
+      }
+    }
+  ]
+}

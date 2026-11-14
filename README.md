@@ -112,3 +112,23 @@ research/  Research notes
 - `docs/ideas/`: `PITCH.md`, `DEMO_RUNBOOK.md`, `JUDGE_QA.md`, `VIDEO_SCRIPT.md`, `VIDEO_LESSONS.md`, `GOOGLE_TRACK.md`, `ACCOUNTS_AND_DATA.md`, `ML_PIPELINE_INTERFACE.md`, `BACKLOG.md`.
 - `research/`: `00_plan.md` to `10_learning_pipeline.md` (hardware, hand training, Gemini, Gemma, Rokoko, learning pipeline).
 - `frontend/README.md`, `frontend/ARCHITECTURE.md`, `backend/README.md`, `PRODUCT.md`.
+
+## Core service (`core/`): gloves in, scored hands out
+
+A second Python service, built overnight against `SPEC.md`, reads the Rokoko
+hand solver directly (RGMP on 12277, RCSP on 45451), records lessons from the
+gloves, scores a learner against a master at 30 Hz, and serves one WebSocket
+(`/ws`) with hands, ghost, score and coach lines. It also serves this repo's
+`docs/CONTRACT.md` shapes (`/api/*`, `/ws/gloves`) so the frontend can use
+it, and it can feed `backend/` through `/ws/ingest`.
+
+```
+source .venv/bin/activate          # made with `uv venv --python 3.12`; deps in requirements.txt
+python -m pytest -q                # core tests only (tests/)
+python -m core --fake              # no hardware: http://localhost:8765/debug
+python -m core --fake --port 8000  # the same, on the port the frontend proxies to
+```
+
+Read `STATUS.md` (what works, what is untested), `DECISIONS.md` (every
+judgement call) and `RECONCILE.md` (how the two halves fit, and an opinion on
+`SPEC.md` versus `docs/CONTRACT.md`).

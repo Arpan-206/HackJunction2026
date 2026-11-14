@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geppetto core debug view</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; font: 13px/1.4 -apple-system, Helvetica, Arial, sans-serif; background: #15161a; color: #ddd; display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto 1fr; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: #202229; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  header input { width: 220px; background: #111; color: #eee; border: 1px solid #444; padding: 3px 6px; }
+  button, select { background: #2b2e37; color: #eee; border: 1px solid #555; padding: 3px 8px; cursor: pointer; border-radius: 3px; }
+  button:hover { background: #3a3e4a; }
+  #canvas { width: 100%; height: 100%; display: block; background: #0e0f12; }
+  aside { overflow-y: auto; padding: 8px 10px; background: #1b1d23; border-left: 1px solid #333; }
+  h3 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #8ab; }
+  .big { font-size: 40px; font-weight: 700; }
+  .bar { height: 10px; background: #333; border-radius: 3px; overflow: hidden; margin: 2px 0 6px; }
+  .bar > div { height: 100%; }
+  .row { display: flex; justify-content: space-between; }
+  .controls { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  #log { font: 11px/1.3 Menlo, monospace; white-space: pre-wrap; max-height: 220px; overflow-y: auto; background: #111; padding: 4px; border-radius: 3px; }
+  #coach { font-size: 15px; font-style: italic; color: #f2d79b; min-height: 1.5em; }
+  .ok { color: #7c7; } .err { color: #e77; } .dim { color: #888; }
+  code { color: #9cf; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Geppetto debug</strong>
+  <input id="url" value="">
+  <button id="connect">connect</button>
+  <span id="status" class="dim">disconnected</span>
+  <span id="fps" class="dim"></span>
+  <label><input type="checkbox" id="topview"> top view</label>
+  <label><input type="checkbox" id="showangles"> angles</label>
+</header>
+<canvas id="canvas"></canvas>
+<aside>
+  <h3>Session</h3>
+  <div id="session" class="dim">–</div>
+  <div class="controls">
+    <select id="mode"><option>idle</option><option>record</option><option>learn</option><option>mirror</option><option>duel</option><option>playback</option></select>
+    <button data-cmd="set_mode" data-args="mode">set_mode</button>
+    <button data-cmd="ping">ping</button>
+    <button data-cmd="calibrate">calibrate</button>
+  </div>
+  <div class="controls">
+    <select id="lesson"></select>
+    <button id="load">lesson_load</button>
+    <button data-cmd="step_prev">◀ step</button>
+    <button data-cmd="step_next">step ▶</button>
+    <button data-cmd="step_restart">restart</button>
+  </div>
+  <div class="controls">
+    <button data-cmd="record_start">record_start</button>
+    <button data-cmd="record_mark">record_mark</button>
+    <button id="recsave">record_stop save</button>
+    <button id="recdrop">record_stop discard</button>
+  </div>
+  <div class="controls">
+    roles L <select id="roleL"><option>free</option><option>master</option><option>learner</option></select>
+    R <select id="roleR"><option>free</option><option>master</option><option>learner</option></select>
+    <button id="roles">set_roles</button>
+  </div>
+  <div class="controls">
+    sources L <select id="srcL"><option>glove</option><option>camera</option><option>none</option></select>
+    R <select id="srcR"><option>glove</option><option>camera</option><option>none</option></select>
+    <button id="sources">set_sources</button>
+  </div>
+  <div class="controls">
+    tempo <input id="tempo" type="range" min="0.25" max="1.5" step="0.05" value="1" style="width:90px"><span id="tempov">1.00</span>
+    <button id="settempo">set_tempo</button>
+    <button id="loop">toggle loop</button>
+  </div>
+  <div class="controls">
+    task <select id="task"><option>general</option><option>chords</option><option>piano</option><option>boxing</option></select>
+    <button id="settask">set_task</button>
+    rate <select id="rate"><option>15</option><option selected>30</option><option>60</option></select>
+    <button id="subscribe">subscribe</button>
+  </div>
+  <h3>Score</h3>
+  <div class="row"><span class="big" id="overall">–</span><span id="scoremeta" class="dim"></span></div>
+  <div id="fingers"></div>
+  <h3>Coach</h3>
+  <div id="coach"></div>
+  <h3>Hands</h3>
+  <div id="hands" class="dim"></div>
+  <h3>Log</h3>
+  <div id="log"></div>
+</aside>
+<script>
+const $ = id => document.getElementById(id);
+const FINGERS = ["thumb","index","middle","ring","little"];
+const CHAINS = [[1,2,3,4,5],[1,6,7,8,9,10],[1,11,12,13,14,15],[1,16,17,18,19,20],[1,21,22,23,24,25]];
+const FINGER_OF = {}; CHAINS.forEach((c, i) => c.slice(1).forEach(j => FINGER_OF[j] = FINGERS[i]));
+let ws = null, last = {}, frames = 0, fpsT = performance.now(), hello = null, session = null, coach = null, cid = 0, lastAngles = null;
+const pending = {};
+const log = (s, cls) => { const d = $("log"); const line = document.createElement("div"); if (cls) line.className = cls; line.textContent = new Date().toLocaleTimeString() + " " + s; d.prepend(line); while (d.children.length > 60) d.lastChild.remove(); };
+$("url").value = `ws://${location.hostname || "localhost"}:${location.port || 8765}/ws`;
+
+function send(name, args) {
+  if (!ws || ws.readyState !== 1) { log("not connected", "err"); return; }
+  const id = "d-" + (++cid);
+  pending[id] = name;
+  ws.send(JSON.stringify({ v: 1, type: "cmd", id, name, args: args || {} }));
+}
+function connect() {
+  if (ws) ws.close();
+  ws = new WebSocket($("url").value);
+  $("status").textContent = "connecting…";
+  ws.onopen = () => { $("status").textContent = "connected"; $("status").className = "ok"; log("connected"); };
+  ws.onclose = () => { $("status").textContent = "disconnected"; $("status").className = "err"; log("closed"); };
+  ws.onerror = e => log("ws error", "err");
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    switch (m.type) {
+      case "hello": hello = m; session = m.session; fillLessons(m.lessons); log(`hello: ${m.lessons.length} lessons, fake=${m.fake}`); renderSession(); break;
+      case "frame": last = m; frames++; break;
+      case "session": session = m; renderSession(); log(`session: ${m.mode} step ${m.step}/${m.steps_total} lesson=${m.lesson_id}`); break;
+      case "lesson": log(`lesson: ${m.lesson.title} (${m.lesson.steps.length} steps, ${m.lesson.steps.map(s=>s.kind).join(",")})`); break;
+      case "event": log(`event ${m.name} ${m.hand || ""} ${JSON.stringify(m.data)}`, m.name === "step_passed" ? "ok" : ""); break;
+      case "coach": coach = m; $("coach").textContent = `[${m.kind}] ${m.text}` + (m.focus ? ` (${m.focus})` : ""); log(`coach ${m.kind}: ${m.text}`); break;
+      case "ack": { const n = pending[m.id] || "?"; delete pending[m.id]; log(`ack ${n}: ` + (m.ok ? JSON.stringify(m.result) : `ERROR ${m.error.code}: ${m.error.message}`), m.ok ? "ok" : "err"); if (n === "ping" && m.ok) log(`latency ${(Date.now()*1000 - m.result.t)/1000 | 0} ms (clock skew included)`); break; }
+    }
+  };
+}
+function fillLessons(list) { const s = $("lesson"); s.innerHTML = ""; list.forEach(l => { const o = document.createElement("option"); o.value = l.id; o.textContent = `${l.id} (${l.steps_total})`; s.appendChild(o); }); }
+function renderSession() {
+  if (!session) return;
+  $("session").innerHTML = `mode <code>${session.mode}</code> task <code>${session.task}</code> lesson <code>${session.lesson_id}</code> step <code>${session.step}</code>/${session.steps_total}<br>roles L=${session.roles.left} R=${session.roles.right} · sources L=${(session.sources||{}).left} R=${(session.sources||{}).right}<br>recording=${session.recording} calibrated=${session.calibrated} anchor=${session.anchor} tempo=${session.tempo} loop=${session.loop} gemma=${session.gemma}`;
+  $("mode").value = session.mode; $("roleL").value = session.roles.left; $("roleR").value = session.roles.right;
+  if (session.sources) { $("srcL").value = session.sources.left; $("srcR").value = session.sources.right; }
+  $("task").value = session.task;
+}
+document.querySelectorAll("button[data-cmd]").forEach(b => b.onclick = () => {
+  const a = {}; if (b.dataset.args === "mode") a.mode = $("mode").value; send(b.dataset.cmd, a);
+});
+$("connect").onclick = connect;
+$("load").onclick = () => send("lesson_load", { lesson_id: $("lesson").value });
+$("recsave").onclick = () => send("record_stop", { save: true });
+$("recdrop").onclick = () => send("record_stop", { save: false });
+$("roles").onclick = () => send("set_roles", { left: $("roleL").value, right: $("roleR").value });
+$("sources").onclick = () => send("set_sources", { left: $("srcL").value, right: $("srcR").value });
+$("tempo").oninput = () => $("tempov").textContent = Number($("tempo").value).toFixed(2);
+$("settempo").onclick = () => send("set_tempo", { factor: Number($("tempo").value) });
+$("loop").onclick = () => send("set_loop", { on: !(session && session.loop) });
+$("settask").onclick = () => send("set_task", { task: $("task").value, config: $("task").value === "chords" ? { chords: ["G", "C", "D"] } : {} });
+$("subscribe").onclick = () => send("subscribe", { rate_hz: Number($("rate").value), rots: false });
+
+const canvas = $("canvas"), ctx = canvas.getContext("2d");
+function project(p, w, h) {
+  const scale = Math.min(w, h) * 1.6;           // pixels per metre
+  const top = $("topview").checked;
+  const x = w / 2 + p[0] * scale;
+  const y = top ? h / 2 + p[2] * scale : h * 0.62 - p[1] * scale;
+  return [x, y];
+}
+function fingerColour(score, finger) {
+  if (!score || !score.fingers) return "#9cf";
+  const v = score.fingers[finger]; if (v == null) return "#9cf";
+  return v >= 0.85 ? "#4cd964" : v >= 0.5 ? "#f0b429" : "#ff453a";
+}
+function drawHand(joints, w, h, opts) {
+  const pts = joints.map(p => project(p, w, h));
+  ctx.lineWidth = opts.width || 3; ctx.setLineDash(opts.dash || []);
+  CHAINS.forEach((chain, fi) => {
+    ctx.strokeStyle = opts.colour || fingerColour(opts.score, FINGERS[fi]);
+    ctx.beginPath(); ctx.moveTo(...pts[chain[0]]);
+    chain.slice(1).forEach(j => ctx.lineTo(...pts[j])); ctx.stroke();
+  });
+  // palm outline: metacarpal bases and wrist
+  ctx.strokeStyle = opts.colour || "#8aa"; ctx.beginPath(); [1,6,11,16,21,1].forEach((j, i) => i ? ctx.lineTo(...pts[j]) : ctx.moveTo(...pts[j])); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = opts.colour || "#eee";
+  pts.forEach((p, i) => { ctx.beginPath(); ctx.arc(p[0], p[1], i === 1 ? 5 : 2.5, 0, 7); ctx.fill(); });
+  if (opts.label) { ctx.fillStyle = opts.colour || "#ccc"; ctx.font = "12px sans-serif"; ctx.fillText(opts.label, pts[1][0] + 8, pts[1][1] + (opts.dash ? 30 : -10)); }
+}
+function render() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  ctx.clearRect(0, 0, w, h);
+  // ground line / origin
+  ctx.strokeStyle = "#2a2d35"; ctx.lineWidth = 1; ctx.beginPath();
+  const o = project([0, 0, 0], w, h); ctx.moveTo(0, o[1]); ctx.lineTo(w, o[1]); ctx.moveTo(o[0], 0); ctx.lineTo(o[0], h); ctx.stroke();
+  ctx.fillStyle = "#555"; ctx.font = "11px sans-serif"; ctx.fillText($("topview").checked ? "top view: X right, Z down (toward viewer)" : "front view: X right, Y up  (metres)", 10, h - 10);
+  const f = last;
+  if (f.ghost) for (const side in f.ghost) { const g = f.ghost[side]; if (g) drawHand(g.joints, w, h, { colour: "rgba(214,170,100,0.75)", dash: [6, 4], width: 4, label: `ghost ${side} (${g.placement}, ${g.source})` }); }
+  if (f.hands) for (const side of ["left", "right"]) {
+    const hd = f.hands[side]; if (!hd) continue;
+    const scored = f.score && f.score.hand === side ? f.score : (f.scores && f.scores[side]) || null;
+    const colour = !hd.tracked ? "#666" : (hd.role === "learner" ? null : hd.role === "master" ? "#c9a" : "#9cf");
+    drawHand(hd.joints, w, h, { colour, score: scored, label: `${side} ${hd.role} ${hd.source}${hd.tracked ? "" : " UNTRACKED"}` });
+    if ($("showangles").checked && hd.angles) { ctx.fillStyle = "#8ab"; ctx.font = "11px Menlo, monospace"; ctx.fillText(side + " " + hd.angles.map(a => String(a | 0).padStart(3)).join(" "), 10, side === "left" ? 20 : 36); }
+  }
+  // score panel
+  const s = f.score;
+  if (s) {
+    $("overall").textContent = s.overall.toFixed(2); $("overall").style.color = s.overall >= 0.85 ? "#4cd964" : s.overall >= 0.5 ? "#f0b429" : "#ff453a";
+    $("scoremeta").innerHTML = `${s.hand}<br>worst <b>${s.worst}</b> ${s.hint || ""}<br>timing ${s.timing_ms == null ? "–" : s.timing_ms + " ms"}<br>progress ${(s.step_progress * 100) | 0}% hold ${s.hold_ms} ms`;
+    $("fingers").innerHTML = FINGERS.map(fn => `<div class="row"><span>${fn}</span><span>${s.fingers[fn].toFixed(2)} · ${s.err_deg[fn].toFixed(0)}°</span></div><div class="bar"><div style="width:${s.fingers[fn] * 100}%;background:${fingerColour(s, fn)}"></div></div>`).join("");
+  } else { $("overall").textContent = "–"; $("scoremeta").textContent = ""; $("fingers").textContent = ""; }
+  if (f.hands) $("hands").innerHTML = ["left", "right"].map(side => { const hd = f.hands[side]; if (!hd) return `${side}: null`; return `${side}: dev ${hd.device_id} ${hd.source} ${hd.role} tracked=${hd.tracked} anchor=${hd.anchor} curl ${FINGERS.map(fn => hd.curl[fn].toFixed(2)).join(" ")} pinch ${Object.entries(hd.pinch).filter(([k, v]) => v).map(([k]) => k).join(",") || "–"}`; }).join("<br>") + (f.task && Object.keys(f.task).length ? `<br>task ${JSON.stringify(f.task)}` : "");
+  const now = performance.now();
+  if (now - fpsT > 1000) { $("fps").textContent = `${(frames * 1000 / (now - fpsT)).toFixed(1)} frames/s · seq ${f.seq || 0}`; frames = 0; fpsT = now; }
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+connect();
+</script>
+</body>
+</html>

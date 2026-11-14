@@ -1,0 +1,10 @@
+numpy
+fastapi
+uvicorn[standard]
+websockets
+jsonschema
+opencv-contrib-python
+mediapipe
+pytest
+pytest-asyncio
+httpx

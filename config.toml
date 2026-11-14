@@ -1,0 +1,148 @@
+# Geppetto core configuration. Every threshold lives here, never in code.
+
+[server]
+host = "0.0.0.0"
+port = 8765
+frame_rate_hz = 30
+protocol_version = 1
+lessons_dir = "lessons"
+logs_dir = "logs"
+schema_dir = "schema"
+
+[sources]
+# Which source feeds each physical hand: "glove", "camera" or "none".
+left = "glove"
+right = "glove"
+
+[glove]
+solver_host = "127.0.0.1"
+solver_port = 12277
+rcsp_host = "127.0.0.1"
+rcsp_port = 45451
+raw_port = 12276
+silence_ms = 250
+clock_window_s = 5.0
+reconnect_s = 2.0
+
+[rgmp]
+# The solver's stream definition drives the parser. These settings say how
+# to find joints inside it; the exact stream names are unverified until we
+# dump a real definition (see STATUS.md).
+group = "joints_openxr"
+joint_name_field = "target_frame"
+position_measure_types = ["POSITION"]
+orientation_measure_types = ["ORIENTATION", "ROTATION", "QUATERNION"]
+pose_measure_types = ["POSE", "TRANSFORM"]
+hand_fields = ["device_info.hand", "device_info.Hand", "device_info.side", "static_data.hand"]
+left_values = ["left", "Left", "LEFT", "l", "L", "true"]
+# Fallback when no hand field is found: even device_id is left, odd is right.
+hand_from_device_id_parity = true
+
+[rgmp.joint_aliases]
+# stream joint name -> OpenXR joint name
+pinky_metacarpal = "little_metacarpal"
+pinky_proximal = "little_proximal"
+pinky_intermediate = "little_intermediate"
+pinky_distal = "little_distal"
+pinky_tip = "little_tip"
+hand_palm = "palm"
+hand_wrist = "wrist"
+
+[camera]
+device = 0
+video = ""
+mirror = true
+model_path = "models/hand_landmarker.task"
+num_hands = 2
+min_detection_confidence = 0.5
+min_presence_confidence = 0.5
+min_tracking_confidence = 0.5
+latency_us = 60000
+silence_ms = 300
+metacarpal_fraction = 0.25
+# Where a camera hand is drawn in the world: a plane in front of the viewer.
+plane_width_m = 0.6
+plane_height_m = 0.4
+plane_y_m = 0.1
+plane_z_m = -0.3
+one_euro_min_cutoff = 1.5
+one_euro_beta = 0.05
+one_euro_d_cutoff = 1.0
+
+[hand]
+curl_full_deg = 90
+curl_full_thumb_deg = 60
+pinch_on_m = 0.015
+pinch_off_m = 0.030
+joint_decimals = 4
+
+[score]
+perfect_deg = 8
+wrong_deg = 45
+pass_score = 0.85
+ema_tau_ms = 150
+move_window_ms = 250
+move_pass_mean = 0.75
+stuck_s = 5.0
+hold_ms_default = 500
+timing_hint_ms = 150
+spread_weight = 0.5
+
+[score.camera]
+# Wider tolerances when either hand being scored comes from the camera.
+perfect_deg = 15
+wrong_deg = 60
+
+[record]
+rate_hz = 83.33
+still_deg_s = 20
+still_min_ms = 400
+key_window_ms = 300
+static_finger_deg = 15
+static_finger_weight = 0.5
+hold_fraction = 0.5
+default_weights = { thumb = 1.0, index = 1.0, middle = 1.0, ring = 1.0, little = 1.0 }
+
+[session]
+default_roles = { left = "free", right = "learner" }
+mirror_delay_ms = 300
+tempo_default = 1.0
+tempo_min = 0.25
+tempo_max = 1.5
+loop_default = true
+control_pinch = "little"
+control_pinch_hold_ms = 500
+# the control gesture needs index, middle and ring under this curl (a fist is not a control pinch)
+control_pinch_max_other_curl = 0.5
+rate_hz_min = 15
+rate_hz_max = 60
+duel_rounds = 5
+
+[coach]
+min_interval_s = 4.0
+speak = true
+text_max_chars = 120
+
+[fusion]
+hold_ms = 300
+ease_ms = 500
+
+[rest_pose]
+left = { p = [-0.15, 0.10, -0.20], q = [0.0, 0.0, 0.0, 1.0] }
+right = { p = [0.15, 0.10, -0.20], q = [0.0, 0.0, 0.0, 1.0] }
+
+[fake]
+step_period_s = 8.0
+rate_hz = 83.33
+hand_rate_hz = 60
+
+[piano]
+# Key press: knuckle flexion rises faster than press_velocity_deg_s and ends at
+# least press_min_deg past its resting value. Release when back within release_deg.
+press_velocity_deg_s = 250
+press_min_deg = 12
+release_deg = 6
+rest_tau_ms = 2000
+good_ms = 120
+near_ms = 300
+default_tempo_bpm = 70

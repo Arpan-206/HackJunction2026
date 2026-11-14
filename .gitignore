@@ -7,6 +7,7 @@ dist/
 # Python
 .venv/
 __pycache__/
+*.pyc
 .pytest_cache/
 .ruff_cache/
 
@@ -20,6 +21,16 @@ backend/data/
 genui/test/output/
 playwright-report/
 test-results/
+
+# Core service (core/): runtime output, captures, models, generated demo lessons
+logs/*.json
+logs/*.jsonl
+logs/*.log
+models/*.task
+lessons/*/trace.npz
+lessons/fake-demo/
+lessons/fake-wave/
+*.rgmp
 
 # OS and editors
 .DS_Store

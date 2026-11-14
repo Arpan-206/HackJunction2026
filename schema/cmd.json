@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geppetto.local/schema/cmd.json",
+  "title": "cmd: viewer to core",
+  "type": "object",
+  "required": ["v", "type", "id", "name"],
+  "properties": {
+    "v": { "const": 1 },
+    "type": { "const": "cmd" },
+    "id": { "type": "string" },
+    "name": {
+      "type": "string",
+      "enum": [
+        "set_mode", "set_task", "set_roles", "set_sources", "calibrate", "calibrate_camera",
+        "record_start", "record_mark", "record_stop",
+        "lesson_load", "lesson_delete", "step_goto", "step_next", "step_prev", "step_restart",
+        "set_tempo", "set_loop", "describe_task", "coach_answer", "subscribe", "ping"
+      ]
+    },
+    "args": { "type": "object" }
+  }
+}
