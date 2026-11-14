@@ -18,7 +18,15 @@ def load_seed_lessons() -> tuple[Lesson, ...]:
 
 
 def install_seed_lessons(store: JsonStore[Lesson]) -> None:
-    """Write any missing seed lessons into the store, never overwriting edits."""
+    """Write any missing seed lessons into the store, never overwriting edits.
+
+    A stored seed lesson that no longer ships (a skill taken off the catalogue) is removed first, before anything reads
+    it: its skill id may no longer validate.
+    """
+    shipped = {lesson.id for lesson in load_seed_lessons()}
+    for item_id in store.ids():
+        if item_id.startswith(c.SEED_LESSON_PREFIX) and item_id not in shipped:
+            store.delete(item_id)
     for lesson in load_seed_lessons():
         if store.get(lesson.id) is None:
             store.save(lesson)

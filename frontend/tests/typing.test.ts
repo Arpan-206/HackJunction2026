@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { GloveFrame } from '../src/api/types';
+import type { GloveFrame, MoveKind } from '../src/api/types';
 import { frameAt, handFrame } from '../src/mock/synth';
-import { MOVES } from '../src/mock/seed';
+// Touch typing is off the catalogue; its drill moves stay as fixtures for the typing engine kept in the code.
+import retiredMoves from './fixtures/retired-moves.json';
 import { fingerForKey, fingerPhrase, HOME_KEYS, keyLabel, sameFinger } from '../src/features/apprentice/typing/fingerMap';
 import {
   AirTypingJudge, correctionLine, isMastery, KeystrokeMatcher, keyWindow, lettersFor, rhythmEvenness, StrikeDetector, wordsPerMinute,
@@ -9,6 +10,8 @@ import {
 } from '../src/features/apprentice/typing/strikes';
 import { alignToLoop, botTyping, SimulatedStriker, strikeCurls, strikingKey, typistMotion, HOVER, TYPIST_BEAT_MS } from '../src/features/apprentice/typing/typist';
 import { ALL_WORDS, HOME_WORDS, isHomeRowWord, pickWords } from '../src/features/apprentice/typing/words';
+
+const MOVES = retiredMoves as unknown as MoveKind[];
 
 const at = (side: 'left' | 'right', finger: Strike['finger'], t: number): Strike => ({ side, finger, t });
 

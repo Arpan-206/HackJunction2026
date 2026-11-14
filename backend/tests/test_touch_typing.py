@@ -1,14 +1,15 @@
-"""Touch typing: the moves load and synthesise, each drill strikes the right finger of the right hand, and the seed ships."""
+"""Touch typing drills (off the catalogue, kept as fixtures for the typing engine): each strikes the right finger."""
 
 import math
 
 import pytest
 from app.schemas.motion import HoldPose, Keyframes
 from app.services.motion import synthesiser
-from app.services.moves import load_moves
 from fastapi.testclient import TestClient
 
-TYPING = [m for m in load_moves() if m.skill == "touch_typing"]
+from tests.retired_moves import load_retired_moves
+
+TYPING = [m for m in load_retired_moves() if m.skill == "touch_typing"]
 HOVER_INDEX = 0.35
 
 
@@ -112,21 +113,6 @@ def test_typing_moves_synthesise_for_both_hands(move) -> None:
         HOVER_INDEX + 0.3
     )
     assert synthesiser.pose_at(fj, 0.2, "right").curls[1] == pytest.approx(HOVER_INDEX)
-
-
-def test_typing_seed_lesson_is_served(client: TestClient) -> None:
-    """The seed course installs with eight two-handed lessons on the keyboard and the air typing test."""
-    lessons = {lesson["id"]: lesson for lesson in client.get("/api/lessons").json()}
-    lesson = lessons["seed-touch-typing"]
-    moves = {m.id: m for m in TYPING}
-    assert lesson["skill"] == "touch_typing"
-    assert len(lesson["steps"]) == 8
-    assert lesson["test"] == {"kind": "air_typing", "opponent": "bot", "rounds": 3}
-    for step in lesson["steps"]:
-        assert step["hands"] == "both" and step["prop"] == "keyboard"
-        assert step["motion"]["preset"] == moves[step["move_id"]].default_motion.preset
-    typing = client.get("/api/moves", params={"skill": "touch_typing"}).json()
-    assert len(typing) == 8
 
 
 def test_a_typing_drill_scores_its_own_motion(client: TestClient) -> None:

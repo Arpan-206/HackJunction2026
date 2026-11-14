@@ -1,16 +1,18 @@
 /**
  * The skill catalogue behind the learner dashboard: what each skill is, how hard it is, which hands it needs, roughly how long
  * it takes and the key pose its card shows. Skills with lessons from the API are live; the rest are "in the workshop", known
- * ideas no expert has recorded yet (docs/ideas/SKILL_IDEAS.md). A lesson for a skill id this module does not know still shows
+ * skills no expert has recorded yet. A lesson for a skill id this module does not know still shows
  * up as a live skill with sensible defaults. Everything here is pure, so the merge and the search are unit tested.
  */
-import type { Lesson, MotionSpec } from '../../../api/types';
+import type { Lesson, MotionSpec, Step } from '../../../api/types';
 import type { LoggedAttempt } from '../../shared/practiceLog';
 import { deriveStep, isDue } from '../pipeline/progress';
 import { DEFAULT_CONFIG, type PipelineConfig } from '../pipeline/stages';
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 export type HandsNeeded = 'one' | 'two';
+/** The chalk set a card draws around the key pose, so the skill reads at a glance with props off. */
+export type SkillScene = 'racket' | 'keys' | 'letter';
 
 export const DIFFICULTIES: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
@@ -39,6 +41,8 @@ export interface CatalogueEntry {
   keyPose: KeyPose;
   /** A picture for the card instead of the key pose on a chalk hand, for a skill whose look is not the hand itself. */
   still?: { src: string; alt: string };
+  /** What the card sketches around the hand: the racket and ball, the keys on the bench, or a held letter. Default letter. */
+  scene?: SkillScene;
   /** For a skill in the workshop: what its lessons would cover once an expert records them. */
   wouldTeach?: string[];
 }
@@ -48,7 +52,7 @@ const hold = (thumb: number, index: number, middle: number, ring: number, little
   t: 0,
 });
 
-/** Every skill the dashboard knows by name, live ones first. Order here is the order on the dashboard. */
+/** The four demo skills, in dashboard order. A lesson for any other skill id still shows up after them with defaults. */
 export const CATALOGUE: CatalogueEntry[] = [
   {
     id: 'table_tennis',
@@ -58,7 +62,9 @@ export const CATALOGUE: CatalogueEntry[] = [
     keywords: ['grip', 'racket', 'sport', 'swing', 'forehand', 'ping pong', 'wrist', 'ball'],
     hands: 'one',
     timeToLearn: 'About a week at 15 minutes a day',
-    keyPose: { motion: { preset: 'grip_and_swing', grip: 'shakehand', swing: 'forehand', beat_ms: 1500 }, t: 0.92 },
+    // The shakehand grip held still: the racket's face reads clearly before the swing turns it edge on.
+    keyPose: hold(0.62, 0.8, 0.84, 0.86, 0.88),
+    scene: 'racket',
   },
   {
     id: 'piano',
@@ -69,6 +75,20 @@ export const CATALOGUE: CatalogueEntry[] = [
     hands: 'one',
     timeToLearn: 'A few days at 10 minutes a day',
     keyPose: { motion: { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5], beat_ms: 620 }, t: 1.55 },
+    scene: 'keys',
+  },
+  {
+    id: 'finnish_fingerspelling',
+    name: 'Finnish fingerspelling',
+    description: 'Spell words letter by letter with the one-handed Finnish manual alphabet, A to Z plus Å, Ä and Ö, with every finger checked.',
+    difficulty: 'intermediate',
+    keywords: ['sign', 'sign language', 'finnish', 'suomi', 'viittomakieli', 'letters', 'alphabet', 'deaf', 'spelling', 'words', 'names', 'accessibility'],
+    hands: 'one',
+    timeToLearn: 'Two weeks at 10 minutes a day',
+    // The letter Y: thumb and little finger out, the clearest shape of the alphabet from any side.
+    keyPose: hold(0, 1, 1, 1, 0),
+    scene: 'letter',
+    wouldTeach: ['Clear letters first: A, I, L, V and Y', 'Spelling VIILI and LAVA at an even pace', 'The rest of the alphabet, A to Z plus Å, Ä and Ö'],
   },
   {
     id: 'shadow_puppets',
@@ -79,92 +99,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     hands: 'two',
     timeToLearn: 'An evening',
     keyPose: hold(0.7, 0, 0, 0.9, 0.9),
-    still: { src: '/stills/shadow-puppets.jpg', alt: "The expert's rabbit, a hand's shadow on the plaster wall by lamplight" },
-  },
-  {
-    id: 'surgical_grips',
-    name: 'Surgical grips',
-    description: 'Hold the scalpel, needle driver and forceps the way surgeons are taught, then tie with the instrument and drive the needle with the wrist.',
-    difficulty: 'intermediate',
-    keywords: ['surgery', 'medical', 'scalpel', 'needle', 'suture', 'knot', 'forceps', 'grip', 'doctor', 'health'],
-    hands: 'one',
-    timeToLearn: 'Two weeks at 15 minutes a day',
-    keyPose: hold(0.45, 0.2, 0.4, 0.55, 0.8),
-  },
-  {
-    id: 'crochet',
-    name: 'Crochet basics',
-    description: 'Hold the hook in one hand and the yarn in the other, then chain, slip stitch, single and double crochet in an even rhythm.',
-    difficulty: 'beginner',
-    keywords: ['craft', 'yarn', 'hook', 'stitch', 'knitting', 'textile', 'wool', 'making'],
-    hands: 'two',
-    timeToLearn: 'A week at 15 minutes a day',
-    keyPose: hold(0.45, 0.4, 0.5, 0.8, 0.85),
-  },
-  {
-    id: 'touch_typing',
-    name: 'Touch typing',
-    description: 'Rest both hands on the home row and give every key its finger. The gloves feel which finger strikes and when, so they catch the wrong finger even when the right key goes down.',
-    difficulty: 'beginner',
-    keywords: ['typing', 'keyboard', 'keys', 'home row', 'words per minute', 'wpm', 'office', 'computer', 'fingering', 'qwerty'],
-    hands: 'two',
-    timeToLearn: 'Two weeks at 15 minutes a day',
-    keyPose: hold(0.2, 0.35, 0.35, 0.35, 0.3),
-  },
-  {
-    id: 'fingerspelling',
-    name: 'Fingerspelling',
-    description: 'Spell words letter by letter in sign language, with each finger checked. Taught by Deaf teachers.',
-    difficulty: 'intermediate',
-    keywords: ['sign', 'sign language', 'letters', 'alphabet', 'deaf', 'spelling', 'words', 'accessibility'],
-    hands: 'one',
-    timeToLearn: 'Two weeks at 10 minutes a day',
-    keyPose: hold(-0.2, 1, 1, 1, -0.1),
-    wouldTeach: ['Closed letters: A, E and S', 'Open letters: B, C and O', 'Spelling a short name at an even pace'],
-  },
-  {
-    id: 'boxing',
-    name: 'Boxing form',
-    description: 'A proper fist with the thumb outside and a straight wrist at impact, the two things a coach fixes first.',
-    difficulty: 'intermediate',
-    keywords: ['fist', 'sport', 'wrist', 'punch', 'fitness', 'form', 'combo', 'safety'],
-    hands: 'two',
-    timeToLearn: 'About a week',
-    keyPose: hold(0.85, 1, 1, 1, 1),
-    wouldTeach: ['Making a safe fist', 'A straight wrist on the jab and the cross', 'A called combination on the beat'],
-  },
-  {
-    id: 'guitar_chords',
-    name: 'Guitar chords',
-    description: 'The fretting-hand shapes of C, G, D and E minor, then clean changes between them in time.',
-    difficulty: 'advanced',
-    keywords: ['music', 'chords', 'strings', 'instrument', 'fretting', 'shapes', 'song'],
-    hands: 'one',
-    timeToLearn: 'Three weeks at 15 minutes a day',
-    keyPose: hold(0.25, 0.55, 0.68, 0.72, 0.4),
-    wouldTeach: ['The E minor and C shapes', 'The G and D shapes', 'Changing chords on the beat'],
-  },
-  {
-    id: 'rock_paper_scissors',
-    name: 'Rock paper scissors',
-    description: 'Three shapes, thrown on "shoot". A quick game against the bot that reads your hand from the glove.',
-    difficulty: 'beginner',
-    keywords: ['game', 'play', 'fist', 'scissors', 'paper', 'rock', 'quick'],
-    hands: 'one',
-    timeToLearn: 'Five minutes',
-    keyPose: hold(0.8, -0.1, -0.1, 1, 1),
-    wouldTeach: ['Rock, paper and scissors, clearly shaped', 'Throwing on the call, not after it'],
-  },
-  {
-    id: 'hand_therapy',
-    name: 'Hand therapy',
-    description: 'The tendon glide sequence: straight, hook, fist, tabletop and straight fist. A practice aid for recovery.',
-    difficulty: 'beginner',
-    keywords: ['rehab', 'recovery', 'tendon', 'exercise', 'health', 'mobility', 'grip', 'stretch'],
-    hands: 'one',
-    timeToLearn: 'A few minutes a day, ongoing',
-    keyPose: hold(0.1, 0.6, 0.6, 0.6, 0.6),
-    wouldTeach: ['Each of the five glide positions', 'Moving through the sequence slowly and fully'],
+    // The talking dog with its jaw open, drawn from the lesson's own theatre; hovering the card plays it.
+    still: { src: '/stills/shadow-puppets.jpg', alt: "The expert's talking dog, a hand's shadow on the plaster wall by lamplight" },
   },
 ];
 
@@ -272,6 +208,19 @@ export function buildSkills(lessons: Lesson[], catalogue: CatalogueEntry[] = CAT
   return [...all.filter((s) => s.live), ...all.filter((s) => !s.live)];
 }
 
+/** Motions that move (worth a hover preview), as opposed to a held shape or a resting hand. */
+const MOVING_PRESETS: ReadonlySet<string> = new Set(['finger_sequence', 'grip_and_swing', 'pinch', 'keyframes']);
+
+/**
+ * The lesson a skill card plays while hovered: the first lesson, across its courses, whose motion moves (a swing, a scale,
+ * a spelled word, the talking dog), else the first lesson. It is read from the lesson data, so once an expert records that
+ * lesson the preview plays the recording instead of the guide motion.
+ */
+export function previewStep(skill: Pick<SkillView, 'courses'>): Step | null {
+  const steps = skill.courses.flatMap((c) => c.steps);
+  return steps.find((s) => s.motion && MOVING_PRESETS.has(s.motion.preset)) ?? steps[0] ?? null;
+}
+
 /* ---------- search ---------- */
 
 export interface SkillFilter {
@@ -290,7 +239,7 @@ export function searchText(skill: SkillView): string {
   return fold([skill.name, skill.description, ...skill.keywords, ...lessons].join(' '));
 }
 
-/** True when every word of the query appears somewhere in the skill's text (so "sign lang" finds fingerspelling). */
+/** True when every word of the query appears somewhere in the skill's text (so "sign lang" finds Finnish fingerspelling). */
 export function matchesQuery(skill: SkillView, query: string): boolean {
   const words = fold(query).split(' ').filter(Boolean);
   if (!words.length) return true;
@@ -358,6 +307,27 @@ export function skillProgress(courses: Lesson[], attempts: Record<string, Logged
       ? { courseId: first.courseId, index: first.index, kind: 'review' as const }
       : null;
   return { lessons, total: flat.length, mastered: flat.filter((l) => l.mastered).length, started, next };
+}
+
+/** The progress bar under a skill card: the fraction of lessons mastered, its label, and whether the skill is complete. */
+export interface ProgressBar {
+  /** 0 to 1. */
+  fraction: number;
+  /** Whole percent, for aria-valuenow. */
+  percent: number;
+  /** "2 of 3 lessons mastered"; just "3 lessons" before the first rep. */
+  label: string;
+  /** Every lesson mastered: the only state drawn in gold. */
+  complete: boolean;
+}
+
+export function progressBar(p: Pick<SkillProgress, 'mastered' | 'total' | 'started'>): ProgressBar {
+  const total = Math.max(0, p.total);
+  const mastered = Math.min(Math.max(0, p.mastered), total);
+  const fraction = total > 0 ? mastered / total : 0;
+  const noun = total === 1 ? 'lesson' : 'lessons';
+  const label = p.started || mastered > 0 ? `${mastered} of ${total} ${noun} mastered` : `${total} ${noun}`;
+  return { fraction, percent: Math.round(fraction * 100), label, complete: total > 0 && mastered === total };
 }
 
 /* ---------- why a card matched ---------- */

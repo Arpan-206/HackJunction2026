@@ -57,3 +57,17 @@ class JsonStore(Generic[M]):
             self._model.model_validate_json(p.read_text(encoding="utf-8"))
             for p in files
         ]
+
+    def ids(
+        self,
+    ) -> "list[str]":  # quoted: the list method above shadows the builtin here
+        """Return the id of every stored file without loading it, so a file that no longer validates can still be named."""
+        return sorted(p.stem for p in self._dir.glob("*.json"))
+
+    def delete(self, item_id: str) -> bool:
+        """Remove the stored model; return False when there was none."""
+        path = self._path(item_id)
+        if not path.exists():
+            return False
+        path.unlink()
+        return True

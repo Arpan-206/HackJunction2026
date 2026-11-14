@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { MotionSpec } from '../src/api/types';
 import { motionSpecSchema } from '../src/api/schemas';
 import { MOVES } from '../src/mock/seed';
+// Crochet and touch typing are off the catalogue; their moves stay here as fixtures for the keyframe engine.
+import retiredMoves from './fixtures/retired-moves.json';
 import { handFrame, poseAt } from '../src/mock/synth';
 import { synthFrame } from '../src/three/motion';
 import { motionPeriod } from '../src/features/apprentice/training/coach/reference';
 
 const move = (id: string): MotionSpec => {
-  const m = MOVES.find((x) => x.id === id);
+  const m = [...MOVES, ...(retiredMoves as unknown as typeof MOVES)].find((x) => x.id === id);
   if (!m) throw new Error(`no move ${id}`);
   return m.default_motion;
 };
@@ -15,7 +17,9 @@ const move = (id: string): MotionSpec => {
 /** Same values as backend/tests/test_new_skills.py, so the port and the backend agree. */
 describe('keyframes and per-hand hold poses (port of the backend synthesiser)', () => {
   it('every new move validates against the wire schema', () => {
-    for (const m of MOVES.filter((x) => ['shadow_puppets', 'surgical_grips', 'crochet', 'touch_typing'].includes(x.skill))) {
+    const fresh = MOVES.filter((x) => ['shadow_puppets', 'finnish_fingerspelling'].includes(x.skill));
+    expect(fresh.length).toBe(5 + 29);
+    for (const m of [...fresh, ...(retiredMoves as unknown as typeof MOVES)]) {
       expect(motionSpecSchema.safeParse(m.default_motion).success, m.id).toBe(true);
     }
   });
