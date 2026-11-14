@@ -221,7 +221,7 @@ function withRimAndFade<M extends Material>(mat: M, rim: number, rimColor: Color
 /** How much each lit style darkens the folds between fingers and the creases (the mesh's aCavity), 0..1. */
 const CAVITY = { chalk: 0.4, sketch: 0.45, wood: 0.55 };
 /** How much each lit style darkens a surface turning away from the eye (EDGE_FRAG), 0..1. */
-const EDGE = { chalk: 0.45, sketch: 0.4, wood: 0.5 };
+const EDGE = { chalk: 0.45, sketch: 0.2, wood: 0.5 };
 
 export interface HandMaterialSet {
   /** The hand's skin material. One per hand, so fingers are tinted through `setTint`, not by swapping materials. */
@@ -279,7 +279,7 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
 
   if (style === 'sketch') {
     const base = new Color(tint ?? stage.chalk);
-    const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.08 });
+    const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: handGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.0 });
     return finish(fill, outlineMaterial(stage.ink, 0.022), base, CAVITY.sketch, EDGE.sketch);
   }
 
