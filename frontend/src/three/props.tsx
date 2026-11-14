@@ -83,8 +83,10 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
     faceB.translate(-1.2, 0, -0.034);
     g.add(new Mesh(faceB, black));
 
-    g.position.set(0.04, -0.21, -0.78);
-    g.rotation.z = 0.05;
+    // The handle lies in the tunnel the curled fingers make in the grip pose: diagonally across the palm, from under the
+    // index knuckle to the base of the little finger, as a shakehand grip holds it.
+    g.position.set(0, -0.4, -0.92);
+    g.rotation.set(0, -0.45, 0.05, 'YXZ');
     return g;
   }, [stage.ink, rubber]);
 

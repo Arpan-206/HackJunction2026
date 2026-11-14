@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { CastShadows, KeyLight, Stage } from '../three';
+import { CastShadows, KeyLight, Stage, handModelSettled } from '../three';
 import { StageColorsContext } from '../three/stageContext';
 import { THEMES } from '../theme/themes';
 
@@ -32,6 +32,11 @@ function Capture({ job, first, onShot }: { job: StillJob; first: boolean; onShot
     // The first still waits for the bench, wall and light maps; later ones reuse the cached textures.
     const wait = first ? 2600 : 500;
     if (done.current || frames.current < 6 || performance.now() - start.current < wait) return;
+    // Hands draw nothing until the shared hand model has loaded; never shoot an empty bench.
+    if (!handModelSettled()) {
+      start.current = performance.now() - wait + 200;
+      return;
+    }
     done.current = true;
     onShot(gl.domElement.toDataURL('image/jpeg', 0.9));
   });

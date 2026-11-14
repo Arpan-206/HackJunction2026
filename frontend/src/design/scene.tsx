@@ -33,7 +33,7 @@ export function onHand(hand: RefObject<HandHandle>, at: JointRef): (out: Vector3
   return (out) => {
     const h = hand.current;
     if (!h) return null;
-    if (at === 'wrist') return h.rig.root.localToWorld(out.set(0, 0.12, -0.05));
+    if (at === 'wrist') return h.rig.root.localToWorld(out.copy(h.rig.wristBack));
     const [name, k] = at.split(':') as [Finger, string | undefined];
     const f = h.rig.fingers[FINGER_ORDER.indexOf(name)];
     if (k === undefined) return f.tip.getWorldPosition(out);

@@ -8,19 +8,21 @@ import {
   NearestFilter,
   RGBAFormat,
   RepeatWrapping,
-  ReplaceStencilOp,
-  NotEqualStencilFunc,
+  LessEqualDepth,
   SRGBColorSpace,
   BackSide,
   Texture,
   TextureLoader,
   type Material,
+  type WebGLProgramParametersWithUniforms,
 } from 'three';
+import type { Finger } from '../api/types';
 import type { StageColors } from '../theme/themes';
+import { FINGER_ORDER } from './anatomy';
 import { withHatching } from './sketch';
 
 /**
- * How a hand is drawn. chalk: master, wood: apprentice marionette, ghost: translucent overlay, shadow: dark guidance,
+ * How a hand is drawn. chalk: master, wood: apprentice, ghost: translucent overlay, shadow: dark guidance,
  * sketch: the expert's codex hand, lit toon shading with iron-gall hatching and a heavier ink outline.
  */
 export type HandStyle = 'chalk' | 'wood' | 'ghost' | 'shadow' | 'sketch';
@@ -66,35 +68,120 @@ export function getWoodTextures(): WoodTextures {
   return wood;
 }
 
-let stencilCounter = 0;
 
-/** Unique stencil reference (1..254) so overlapping translucent segments of one hand do not double up. */
-export function nextStencilRef(): number {
-  stencilCounter = (stencilCounter % 254) + 1;
-  return stencilCounter;
+/**
+ * Adds a shader patch on top of whatever onBeforeCompile a material already has (the hatching, say), and extends its
+ * program cache key so differently patched materials never share a program.
+ */
+function patchShader<M extends Material>(mat: M, key: string, patch: (shader: WebGLProgramParametersWithUniforms) => void): M {
+  const prev = mat.onBeforeCompile;
+  const prevKey = mat.customProgramCacheKey.bind(mat);
+  mat.onBeforeCompile = (shader, renderer) => {
+    prev.call(mat, shader, renderer);
+    patch(shader);
+  };
+  mat.customProgramCacheKey = () => `${prevKey()}|${key}`;
+  return mat;
 }
 
-function stencilise<M extends Material>(m: M, ref: number): M {
-  m.stencilWrite = true;
-  m.stencilRef = ref;
-  m.stencilFunc = NotEqualStencilFunc;
-  m.stencilFail = ReplaceStencilOp;
-  m.stencilZFail = ReplaceStencilOp;
-  m.stencilZPass = ReplaceStencilOp;
-  return m;
+const TINT_VERT_HEAD = /* glsl */ `
+attribute vec4 aFingerA;
+attribute float aFingerB;
+uniform vec3 uFingerTint[5];
+uniform float uFingerOn[5];
+varying vec4 vFingerTint;
+`;
+
+const TINT_VERT_BODY = /* glsl */ `
+{
+  float w0 = aFingerA.x * uFingerOn[0];
+  float w1 = aFingerA.y * uFingerOn[1];
+  float w2 = aFingerA.z * uFingerOn[2];
+  float w3 = aFingerA.w * uFingerOn[3];
+  float w4 = aFingerB * uFingerOn[4];
+  float s = w0 + w1 + w2 + w3 + w4;
+  vec3 c = uFingerTint[0] * w0 + uFingerTint[1] * w1 + uFingerTint[2] * w2 + uFingerTint[3] * w3 + uFingerTint[4] * w4;
+  vFingerTint = vec4(s > 0.0001 ? c / s : vec3(0.0), clamp(s, 0.0, 1.0));
+}
+`;
+
+/** Per-finger tint state shared by a hand's fill material: linear RGB per finger and an on/off weight. */
+export interface FingerTints {
+  colors: Float32Array;
+  on: Float32Array;
+}
+
+/**
+ * Lets one material tint single fingers: the mesh's aFingerA/aFingerB weights pick the finger, so a wrong finger turns
+ * vermilion up to its knuckle crease while the rest of the hand keeps the base colour (multiplied by any map, as wood).
+ */
+function withFingerTints<M extends Material>(mat: M, tints: FingerTints): M {
+  const uniforms = { uFingerTint: { value: tints.colors }, uFingerOn: { value: tints.on } };
+  return patchShader(mat, 'finger-tint-v1', (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${TINT_VERT_HEAD}`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n${TINT_VERT_BODY}`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec4 vFingerTint;')
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( mix( diffuse, vFingerTint.rgb, vFingerTint.a ), opacity );');
+  });
+}
+
+/**
+ * Ink hull for a skinned mesh: the same skinned geometry pushed out along its skinned normals and drawn back faces
+ * only, so the outline bends with the fingers. `width` is in hand-space units.
+ */
+function outlineMaterial(color: string, width: number): MeshBasicMaterial {
+  const uniforms = { uOutline: { value: width } };
+  return patchShader(new MeshBasicMaterial({ color, side: BackSide }), 'hand-outline-v1', (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uOutline;')
+      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\n#ifdef USE_SKINNING\ntransformed += normalize( objectNormal ) * uOutline;\n#endif');
+  });
+}
+
+/**
+ * Translucent overlay in the manner of a tracked-hand view: a fresnel rim (edges more opaque than the face), constant
+ * slight transparency, and a fade along the forearm so the hand dissolves at the wrist instead of ending in a cut.
+ */
+function withRimAndFade<M extends Material>(mat: M, rim: number, rimColor: Color): M {
+  const uniforms = { uRim: { value: rim }, uRimColor: { value: rimColor } };
+  return patchShader(mat, 'hand-rim-fade-v1', (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aForearm;\nvarying float vForearm;\nvarying vec3 vRimN;\nvarying vec3 vRimV;')
+      .replace(
+        '#include <project_vertex>',
+        '#include <project_vertex>\nvForearm = aForearm;\n#ifdef USE_SKINNING\nvRimN = normalize( normalMatrix * objectNormal );\n#else\nvRimN = vec3( 0.0, 0.0, 1.0 );\n#endif\nvRimV = -mvPosition.xyz;',
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uRim;\nuniform vec3 uRimColor;\nvarying float vForearm;\nvarying vec3 vRimN;\nvarying vec3 vRimV;')
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+{
+  float facing = abs( dot( normalize( vRimN ), normalize( vRimV ) ) );
+  float rim = pow( 1.0 - facing, 2.0 );
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, uRimColor, rim * 0.6 );
+  gl_FragColor.a *= ( 1.0 - uRim + uRim * 2.6 * rim ) * ( 1.0 - smoothstep( 0.18, 0.8, vForearm ) );
+}`,
+      );
+  });
 }
 
 export interface HandMaterialSet {
-  /** Creates a fresh fill material (one per finger so each can be tinted). */
-  fill: () => Material;
-  /** Ink or edge material for the back-face outline, or null when the style has none. */
+  /** The hand's skin material. One per hand, so fingers are tinted through `setTint`, not by swapping materials. */
+  fill: Material;
+  /** Ink or edge material for the skinned outline hull, or null when the style has none. */
   line: Material | null;
-  /** Outline inflation in scene units. */
-  outline: number;
-  /** Dark material for pegs and joint hardware (wood only). */
-  peg: Material | null;
-  /** Base colour of a fill, used when clearing tints. */
+  /** Translucent styles: a depth-only material drawn just before the fill. */
+  prepass?: Material;
+  /** Base colour of the fill. */
   base: Color;
+  /** Tints one finger (null clears it). Cheap: it writes two uniforms. */
+  setTint: (finger: Finger, color: string | null) => void;
   dispose: () => void;
 }
 
@@ -105,77 +192,45 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
     owned.push(m);
     return m;
   };
-  const stencilRef = nextStencilRef();
+  const tints: FingerTints = { colors: new Float32Array(15), on: new Float32Array(5) };
+  const scratch = new Color();
+  const setTint = (finger: Finger, color: string | null) => {
+    const i = FINGER_ORDER.indexOf(finger);
+    if (i < 0) return;
+    tints.on[i] = color ? 1 : 0;
+    if (color) {
+      scratch.set(color);
+      tints.colors.set([scratch.r, scratch.g, scratch.b], i * 3);
+    }
+  };
   const dispose = () => owned.forEach((m) => m.dispose());
+  const finish = (fill: Material, line: Material | null, base: Color): HandMaterialSet => ({ fill: track(withFingerTints(fill, tints)), line: line && track(line), base, setTint, dispose });
 
   if (style === 'wood') {
     const w = getWoodTextures();
     const base = new Color(tint ?? '#ffffff');
-    return {
-      fill: () =>
-        track(
-          new MeshStandardMaterial({
-            color: base.clone(),
-            map: w.color,
-            normalMap: w.normal,
-            roughnessMap: w.roughness,
-            roughness: 0.82,
-            metalness: 0,
-          }),
-        ),
-      line: track(new MeshBasicMaterial({ color: '#2a1b10', side: BackSide })),
-      outline: 0.009,
-      peg: track(new MeshStandardMaterial({ color: '#5a3a22', roughness: 0.7, map: w.color, normalMap: w.normal })),
-      base,
-      dispose,
-    };
+    const fill = new MeshStandardMaterial({ color: base.clone(), map: w.color, normalMap: w.normal, roughnessMap: w.roughness, roughness: 0.78, metalness: 0 });
+    return finish(fill, outlineMaterial('#2a1b10', 0.012), base);
   }
 
-  if (style === 'ghost') {
-    const base = new Color(tint ?? stage.ghost);
-    return {
-      fill: () => stencilise(track(new MeshBasicMaterial({ color: base.clone(), transparent: true, opacity: 0.34, depthWrite: false })), stencilRef),
-      line: null,
-      outline: 0,
-      peg: null,
-      base,
-      dispose,
-    };
-  }
-
-  if (style === 'shadow') {
-    const base = new Color(tint ?? stage.shadow);
-    return {
-      fill: () => stencilise(track(new MeshBasicMaterial({ color: base.clone(), transparent: true, opacity: 0.42, depthWrite: false })), stencilRef),
-      line: null,
-      outline: 0,
-      peg: null,
-      base,
-      dispose,
-    };
+  if (style === 'ghost' || style === 'shadow') {
+    const ghost = style === 'ghost';
+    const base = new Color(tint ?? (ghost ? stage.ghost : stage.shadow));
+    const fill = new MeshBasicMaterial({ color: base.clone(), transparent: true, opacity: ghost ? 0.3 : 0.4, depthWrite: false, depthFunc: LessEqualDepth });
+    // The rim lightens a pale ghost (a glow on a dark bench) and stays the base colour for a dark one (ink on paper).
+    const rim = base.getHSL({ h: 0, s: 0, l: 0 }).l > 0.6 ? base.clone().lerp(new Color('#ffffff'), 0.4) : base.clone();
+    const set = finish(withRimAndFade(fill, ghost ? 0.55 : 0.25, rim), null, base);
+    // Depth-only pass drawn just before the fill, so only the nearest layer of the one translucent skin shows.
+    set.prepass = track(new MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true }));
+    return set;
   }
 
   if (style === 'sketch') {
     const base = new Color(tint ?? stage.chalk);
-    const ink = track(new MeshBasicMaterial({ color: stage.ink, side: BackSide }));
-    return {
-      fill: () => track(withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.08 })),
-      line: ink,
-      outline: 0.018,
-      peg: null,
-      base,
-      dispose,
-    };
+    const fill = withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.08 });
+    return finish(fill, outlineMaterial(stage.ink, 0.022), base);
   }
 
   const base = new Color(tint ?? stage.chalk);
-  const ink = track(new MeshBasicMaterial({ color: stage.ink, side: BackSide }));
-  return {
-    fill: () => track(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() })),
-    line: ink,
-    outline: 0.014,
-    peg: null,
-    base,
-    dispose,
-  };
+  return finish(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), outlineMaterial(stage.ink, 0.016), base);
 }

@@ -1,8 +1,9 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Mesh, Vector3, type Material } from 'three';
 import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER } from './anatomy';
+import { loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
 import { applyPose, buildHandRig, type HandRig } from './handRig';
 import type { HandStyle } from './materials';
 import { restFrame, synthFrame } from './motion';
@@ -62,38 +63,55 @@ function pickHand(f: GloveFrame | null | undefined, side: Side): HandFrame | nul
   return null;
 }
 
+// Start fetching the hand model as soon as any 3D code loads, so the first hand rarely waits.
+if (typeof window !== 'undefined' && import.meta.env.MODE !== 'test') void loadHandTemplate();
+
 /**
- * The articulated 3D hand. Driven by (in priority order) getFrame, live, frame, motion, then a relaxed rest pose.
- * All pose updates mutate three.js objects inside useFrame: nothing here re-renders React per frame.
+ * The skinned 3D hand. Driven by (in priority order) getFrame, live, frame, motion, then a relaxed rest pose.
+ * All pose updates mutate three.js objects inside useFrame: nothing here re-renders React per frame. The hand model
+ * loads once; until it has, nothing is drawn and the ref stays null.
  */
-export const Hand = forwardRef<HandHandle, HandProps>(function Hand(
-  {
-    side = 'right',
-    style = 'chalk',
-    frame,
-    live,
-    motion,
-    getFrame,
-    smoothing,
-    position = OUTER_DEFAULT,
-    rotation = OUTER_DEFAULT,
-    scale = 1,
-    tint,
-    fingerTint,
-    focusFinger = null,
-    opacity = 1,
-    showJoints = false,
-    showTrails = false,
-    followWristPos = false,
-    children,
-  },
-  ref,
-) {
+export const Hand = forwardRef<HandHandle, HandProps>(function Hand(props, ref) {
+  return (
+    <Suspense fallback={null}>
+      <LoadedHand {...props} handRef={ref} />
+    </Suspense>
+  );
+});
+
+function LoadedHand(props: HandProps & { handRef: React.ForwardedRef<HandHandle> }) {
+  const template = useHandTemplate();
+  if (!template) return null;
+  return <HandBody {...props} template={template} />;
+}
+
+function HandBody({
+  template,
+  handRef: ref,
+  side = 'right',
+  style = 'chalk',
+  frame,
+  live,
+  motion,
+  getFrame,
+  smoothing,
+  position = OUTER_DEFAULT,
+  rotation = OUTER_DEFAULT,
+  scale = 1,
+  tint,
+  fingerTint,
+  focusFinger = null,
+  opacity = 1,
+  showJoints = false,
+  showTrails = false,
+  followWristPos = false,
+  children,
+}: HandProps & { template: HandTemplate; handRef: React.ForwardedRef<HandHandle> }) {
   const stage = useStageColors();
   const outer = useRef<Group>(null);
   const inner = useRef<Group>(null);
   const smoother = useMemo(() => new HandSmoother(), []);
-  const rig = useMemo(() => buildHandRig(style, stage, side, tint), [style, stage, side, tint]);
+  const rig = useMemo(() => buildHandRig(template, style, stage, side, tint), [template, style, stage, side, tint]);
   const rest = useMemo(() => restFrame(side), [side]);
   const handle = useMemo<HandHandle>(
     () => ({
@@ -156,4 +174,4 @@ export const Hand = forwardRef<HandHandle, HandProps>(function Hand(
       {showTrails && <FingertipTrails handRef={selfRef} focus={focusFinger} />}
     </group>
   );
-});
+}
