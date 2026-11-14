@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Hand, HandPreview } from '../../../three';
+import { Hand, HandStill } from '../../../three';
 import { synthFrame } from '../../../three/motion';
 import { DIFFICULTY_LABEL, DIFFICULTY_MARKS, type Difficulty, type KeyPose } from './catalogue';
 
@@ -26,14 +26,14 @@ export function DifficultyLine({ difficulty }: { difficulty: Difficulty }) {
 export const DISPLAY_POSE = { rotation: [0, 2.13, 0] as [number, number, number], position: [0.38, 0, -0.84] as [number, number, number] };
 
 /**
- * A skill's key pose as a still: the expert's chalk hand on the walnut bench, drawn by the shared preview canvas, so a
- * whole grid of cards costs one WebGL context. The pose is fixed, so smoothing is off and the hand never drifts.
+ * A skill's key pose as a still: the expert's chalk hand on the walnut bench, drawn once to a picture by the shared
+ * offscreen renderer (see HandStill), so a whole grid of cards is plain images that scroll with the page.
  */
 export function SkillStill({ pose, label, className }: { pose: KeyPose; label: string; className?: string }) {
   const frame = useMemo(() => synthFrame(pose.motion, pose.t, 'right'), [pose]);
   return (
-    <HandPreview className={className} preset="closeup" label={label} decor>
+    <HandStill className={className} preset="closeup" label={label} stillId={`skill:${JSON.stringify(pose)}:right:chalk:${DISPLAY_POSE.rotation}:${DISPLAY_POSE.position}`} decor>
       <Hand side="right" style="chalk" frame={frame} smoothing={false} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
-    </HandPreview>
+    </HandStill>
   );
 }

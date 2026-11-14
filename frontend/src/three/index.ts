@@ -9,7 +9,7 @@ export { HandSmoother, DEFAULT_SMOOTHING, type SmoothingConfig } from './smoothi
 export type { HandStyle } from './materials';
 export type { HandRig } from './handRig';
 export { handModelSettled, loadHandTemplate } from './handModel';
-export { PreviewHost, HandPreview } from './Preview';
+export { HandStill, clearStills } from './HandStill';
 export { createGoldLeafMaterial, createMarbleMaterial, getWalnutTextures, getMarbleTextures, getPlasterTextures } from './surfaces';
 export { GoldSeal, type StageQuality } from './atmosphere';
 export { CodexSet, CastShadows, KeyLight, type CodexSetProps } from './CodexSet';

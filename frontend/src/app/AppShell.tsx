@@ -1,5 +1,4 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { PreviewHost } from "../three/Preview";
 import { useAssistant } from "../features/shared/assistant";
 import { SettingsButton } from "../features/shared/SettingsDialog";
 import { GloveStatusLine } from "../features/shared/gloves/GloveStatusLine";
@@ -89,7 +88,7 @@ export function AppShell() {
   // Mock mode switches itself on when /api/health does not answer; say so, so fake data is never mistaken for a live session.
   const mock = typeof window !== "undefined" && window.__apprenticeMock === true;
   return (
-    <PreviewHost className="shell">
+    <div className="shell">
       <div className="rail-col">
         <nav className="rail" aria-label="Main">
           <NavLink to="/" className="rail__brand" aria-label="Apprentice home">
@@ -130,6 +129,6 @@ export function AppShell() {
       <main className="main" id="main">
         <Outlet />
       </main>
-    </PreviewHost>
+    </div>
   );
 }

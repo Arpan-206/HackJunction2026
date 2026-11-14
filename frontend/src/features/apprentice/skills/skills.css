@@ -297,6 +297,10 @@
   border-radius: var(--radius-m);
   background: var(--stage-bg);
 }
+.sk-show__still {
+  width: 100%;
+  height: 100%;
+}
 .sk-show__cap {
   display: grid;
   gap: 0.2rem;

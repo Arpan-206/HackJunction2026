@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HandFrame, Lesson, Step } from '../../../api';
-import { Hand, HandCanvas } from '../../../three';
+import { Hand, HandCanvas, HandStill } from '../../../three';
 import { synthFrame } from '../../../three/motion';
 import { layoutFor, Puppet, puppetLayout, raiseFor, ShadowTheatreSet, THEATRE_CAMERA } from '../../../three/ShadowTheatre';
 import { shapeName } from '../training/modes/ShadowPuppets';
@@ -145,9 +145,9 @@ export function WorkshopShowcase({ pose, name }: { pose: KeyPose; name: string }
   return (
     <figure className="sk-show">
       <div className="sk-show__stage sk-show__stage--still">
-        <HandCanvas preset="single" label={`${name}: the key pose on a chalk hand`} stage={{ decor: true }}>
+        <HandStill className="sk-show__still" preset="single" decor stillId={`workshop:${JSON.stringify(pose)}:right:chalk`} label={`${name}: the key pose on a chalk hand`}>
           <Hand side="right" style="chalk" frame={frame} smoothing={false} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
-        </HandCanvas>
+        </HandStill>
       </div>
       <figcaption className="sk-show__cap">
         <span className="sk-show__now">The key pose, sketched</span>
