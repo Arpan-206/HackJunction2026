@@ -131,14 +131,24 @@ function withFingerTints<M extends Material>(mat: M, tints: FingerTints): M {
 /**
  * Ink hull for a skinned mesh: the same skinned geometry pushed out along its skinned normals and drawn back faces
  * only, so the outline bends with the fingers. `width` is in hand-space units.
+ *
+ * The hull is also pushed a few widths away from the camera. At the silhouette that changes nothing (there is only
+ * background behind it), but inside a fold, such as the palm crease of a curled hand, the hull of the far side no longer
+ * pokes through the near skin, so creases stay clean and only the outer contour is inked.
  */
+const OUTLINE_DEPTH_BIAS = 8;
+
 function outlineMaterial(color: string, width: number): MeshBasicMaterial {
-  const uniforms = { uOutline: { value: width } };
-  return patchShader(new MeshBasicMaterial({ color, side: BackSide }), 'hand-outline-v1', (shader) => {
+  const uniforms = { uOutline: { value: width }, uOutlineBias: { value: width * OUTLINE_DEPTH_BIAS } };
+  return patchShader(new MeshBasicMaterial({ color, side: BackSide }), 'hand-outline-v2', (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uOutline;')
-      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\n#ifdef USE_SKINNING\ntransformed += normalize( objectNormal ) * uOutline;\n#endif');
+      .replace('#include <common>', '#include <common>\nuniform float uOutline;\nuniform float uOutlineBias;')
+      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\n#ifdef USE_SKINNING\ntransformed += normalize( objectNormal ) * uOutline;\n#endif')
+      .replace(
+        '#include <project_vertex>',
+        '#include <project_vertex>\nmvPosition.xyz += normalize( mvPosition.xyz ) * uOutlineBias * length( modelViewMatrix[ 0 ].xyz );\ngl_Position = projectionMatrix * mvPosition;',
+      );
   });
 }
 
