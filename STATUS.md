@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 03:48 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, 05:00 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -127,7 +127,7 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Seventeen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+Eighteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
 nothing pushed, nothing of the teammate's touched. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
@@ -217,6 +217,20 @@ the `external` value route B uses. Their root `CLAUDE.md` says "no em
 dashes anywhere" and "uv only": this branch was checked for em dashes and
 its virtualenv was made with `uv venv`, so it conforms; its commits were not
 pushed because the overnight brief said not to.
+
+Checked at 04:55: eight more commits by Szymon Arciszewski (authored 01:44 to
+02:47), `9376632..ad9822d`:
+
+| Area | What landed |
+| --- | --- |
+| `frontend/src` (77 files) | Learner skill dashboard replaces the library; hands choice, optional props and an assistant switch; codex parchment stage and sketch hand style; `/design` prototype routes |
+| `frontend/docs`, tests, e2e | Dashboard screenshots, mock walk extended |
+| `backend/app` (6 files), `docs/CONTRACT.md` | New `Hands = Side | 'both'` type; `Recording.hands`; `POST /recordings/start` takes `hands` (default `both`). `/ws/gloves` and `/ws/ingest` unchanged |
+
+Effect on the core: none on SPEC.md. `core/compat.py` ignores the new
+`hands` field on `/api/recordings/start` (the core records the master hand
+it finds); add it if route A is chosen. Both stream shapes are unchanged, so
+routes A and B still hold.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
