@@ -59,3 +59,33 @@
 :root[data-reduce-motion] .stage-reset:hover {
   transform: none;
 }
+
+/* "Recentre hand" (three/RecentreHandButton.tsx): the same ink chip as Reset view, with its words, since it is the one
+   way back when the phone's depth lets the hand drift off. It takes a corner class from .stage-reset--*. */
+.stage-recentre {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: var(--target, 44px);
+  padding: 0 0.8rem 0 0.6rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  font: 600 max(1rem, var(--step--1)) var(--font-ui);
+  cursor: pointer;
+}
+.stage-recentre svg {
+  flex: none;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.stage-recentre:hover {
+  background: var(--surface);
+}
+.stage-recentre:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

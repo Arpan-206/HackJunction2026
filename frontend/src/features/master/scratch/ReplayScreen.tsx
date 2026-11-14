@@ -50,7 +50,7 @@ function useReplayCoach(masterAt: MutableRefObject<() => HandFrame | null>, glov
       refTime: 0,
       shown: { status: ALL_GOOD, deviation: zeroValues() },
     };
-    const view: CoachView = { deviation: zeroValues(), status: ALL_GOOD, match: 100, tip: null, lagMs: 0, hasLearner: false, running: false, waiting: false, checkpoint: 0, checkpoints: 0, holdFraction: 0, cycle: 0 };
+    const view: CoachView = { deviation: zeroValues(), status: ALL_GOOD, match: 100, score: 100, tip: null, lagMs: 0, hasLearner: false, running: false, waiting: false, checkpoint: 0, checkpoints: 0, holdFraction: 0, cycle: 0 };
     return {
       live: { current: live },
       subscribe: () => () => undefined,

@@ -14,9 +14,10 @@ import {
   Euler,
   Vector3,
 } from 'three';
-import type { GloveStreamHandle } from '../../../../api';
+import type { GloveStreamHandle, HandFrame } from '../../../../api';
 import { Hand, HandCanvas, Racket, RACKET_BLADE, RacketSketch } from '../../../../three';
-import { toonGradient } from '../../../../three/materials';
+import { toonGradient, type HandStyle } from '../../../../three/materials';
+import { synthFrame } from '../../../../three/motion';
 import { TABLE } from './ball';
 import { PADDLE_Z, type RallyGame } from './rally';
 
@@ -80,39 +81,6 @@ function Table() {
   return <primitive object={built.g} />;
 }
 
-function BotPaddle({ game }: { game: RallyGame }) {
-  const group = useRef<Group>(null);
-  const parts = useMemo(() => {
-    const g = new Group();
-    const face = new MeshToonMaterial({ color: '#b2321b', gradientMap: toonGradient() });
-    const wood = new MeshToonMaterial({ color: '#c89b62', gradientMap: toonGradient() });
-    const discGeo = new CylinderGeometry(0.17, 0.17, 0.025, 36);
-    discGeo.rotateX(Math.PI / 2);
-    const handleGeo = new CylinderGeometry(0.03, 0.034, 0.16, 12);
-    const disc = new Mesh(discGeo, face);
-    const handle = new Mesh(handleGeo, wood);
-    handle.position.y = -0.24;
-    g.add(disc, handle);
-    return { g, geos: [discGeo, handleGeo], mats: [face, wood] };
-  }, []);
-  useEffect(
-    () => () => {
-      parts.geos.forEach((x) => x.dispose());
-      parts.mats.forEach((x) => x.dispose());
-    },
-    [parts],
-  );
-  useFrame(() => {
-    const p = game.paddle.b;
-    group.current?.position.set(p.x, p.y, -PADDLE_Z);
-  });
-  return (
-    <group ref={group}>
-      <primitive object={parts.g} />
-    </group>
-  );
-}
-
 function BallMesh({ game }: { game: RallyGame }) {
   const ball = useRef<Mesh>(null);
   const shadow = useRef<Mesh>(null);
@@ -147,19 +115,25 @@ function BallMesh({ game }: { game: RallyGame }) {
 
 interface PlayerHandProps {
   game: RallyGame;
-  gloves: GloveStreamHandle;
+  /** The live gloves that pose a player's hand; absent for the bot, whose robot hand holds `frame`. */
+  gloves?: GloveStreamHandle;
+  frame?: HandFrame;
   who: 'a' | 'b';
   side: 'left' | 'right';
+  style?: HandStyle;
   /** Draw the solid racket; otherwise its chalk outline marks where the blade is. */
   showProp: boolean;
 }
+
+/** The bot's robot hand closes on its racket in a shakehand grip and holds it there. */
+const BOT_GRIP: HandFrame = synthFrame({ preset: 'hold_pose', pose: { thumb: 0.62, index: 0.8, middle: 0.84, ring: 0.86, little: 0.88 } }, 0, 'left');
 
 /**
  * A wooden hand holding a racket whose blade is kept on the ball; the glove supplies the wrist and finger pose. A marker
  * at the blade's centre moves with the hand, so wherever the wrist turns, the whole hand is shifted to put the blade
  * back on the paddle point.
  */
-function PlayerHand({ game, gloves, who, side, showProp }: PlayerHandProps) {
+function PlayerHand({ game, gloves, frame, who, side, style = 'wood', showProp }: PlayerHandProps) {
   const group = useRef<Group>(null);
   const blade = useRef<Group>(null);
   const at = useMemo(() => new Vector3(), []);
@@ -176,7 +150,7 @@ function PlayerHand({ game, gloves, who, side, showProp }: PlayerHandProps) {
   return (
     <group ref={group}>
       <group rotation={who === 'a' ? TURN_A : TURN_B}>
-        <Hand side={side} style="wood" live={gloves.latest} scale={HAND_SCALE} rotation={[0, 0, 0]}>
+        <Hand side={side} style={style} live={gloves?.latest} frame={frame} scale={HAND_SCALE} rotation={[0, 0, 0]}>
           {showProp ? <Racket /> : <RacketSketch weight={2.4} />}
           <group ref={blade} position={RACKET_BLADE} />
         </Hand>
@@ -193,19 +167,25 @@ interface RallySceneProps {
   showProp?: boolean;
 }
 
-/** The 3D court: lapis table with white lines and net, the ball, the bot paddle or two gloved players. */
+/** The 3D court: lapis table with white lines and net, the ball, and the bot's robot hand or a second gloved player. */
 export function RallyScene({ game, gloves, twoPlayer, showProp = true }: RallySceneProps) {
   return (
     <HandCanvas
       preset="single"
       label="A table tennis table seen from behind the near player"
-      // The view the game has always opened on (it looked at the world origin, the middle of the table): orbit round that.
-      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'orbit', cameraPosition: [0, 2.1, 3.9], target: [0, 0, 0] }}
+      // From behind the near player, aimed a little above and beyond the middle of the table so the bot's robot hand at the
+      // far end stays in the picture with yours (aimed at the origin it sat on the top edge). Orbit round that point.
+      stage={{ showCircle: false, showShadow: false, groundY: 0, controls: 'orbit', cameraPosition: [0, 2.1, 3.9], target: [0, 0.5, -0.4] }}
     >
       <Table />
       <BallMesh game={game} />
       <PlayerHand game={game} gloves={gloves} who="a" side="right" showProp={showProp} />
-      {twoPlayer ? <PlayerHand game={game} gloves={gloves} who="b" side="left" showProp={showProp} /> : <BotPaddle game={game} />}
+      {twoPlayer ? (
+        <PlayerHand game={game} gloves={gloves} who="b" side="left" showProp={showProp} />
+      ) : (
+        // The bot plays with a robot hand on its racket: always the solid racket, so its returns read from the near end.
+        <PlayerHand game={game} frame={BOT_GRIP} who="b" side="left" style="robot" showProp />
+      )}
     </HandCanvas>
   );
 }

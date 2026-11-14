@@ -388,8 +388,8 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
                   }
                 />
               )}
-              {/* Shadow puppets and the desk keep the video in the stage's corner; gone with the ghost off, where the expert steps back. */}
-              {(theatre || desk) && stageVideo && pipOn && track && ghostOn && (
+              {/* Shadow puppets and the desk keep the video in the stage's corner, the ghost on or off. */}
+              {(theatre || desk) && stageVideo && pipOn && track && (
                 <TakeVideoPip video={stageVideo} coach={coach} period={track.period} rate={watching ? watchRate : 1} onHide={() => setPipOn(false)} />
               )}
             </div>

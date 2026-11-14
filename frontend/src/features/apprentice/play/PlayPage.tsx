@@ -5,7 +5,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { api, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
-import { HandCanvas, Keyboard, PropCue, type HandHandle } from '../../../three';
+import { HandCanvas, Keyboard, PropCue, RecentreHandButton, type HandHandle } from '../../../three';
 import { ApHeader } from '../ApHeader';
 import { KeyPoseStill } from '../course/VideoSlot';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
@@ -232,6 +232,7 @@ function PlayRound({ lesson }: { lesson: Lesson }) {
             <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} />
           </HandCanvas>
         )}
+        <RecentreHandButton corner="top-left" />
         {!running && phase !== 'done' && <p className="ap-play__idle">Your hand, live from the glove. Move it to warm up.</p>}
       </section>
     </div>

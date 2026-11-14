@@ -1,4 +1,4 @@
-import { followsHandPosition } from './handPosition';
+import { followsHandPosition, handCentre } from './handPosition';
 import { delayProbe } from '../api/delayProbe';
 import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -267,9 +267,9 @@ function HandBody({
       if (pivoting) pivotOffset(smoother.quat, centreLocal, pivot);
       else pivot.set(0, 0, 0);
       if (target.wrist_pos && (followWristPos === true || (followWristPos === 'auto' && followsHandPosition()))) {
-        // the core's wrist position in metres, offset from its rest pose and scaled to the stage (hand-root lane)
-        // clamped to the core's work box half sizes, so the hand cannot leave the stage
-        const r = CORE_REST[side];
+        // the core's wrist position in metres, offset from its rest pose (or from where the learner last recentred it)
+        // and scaled to the stage (hand-root lane), clamped to the core's work box half sizes, so the hand cannot leave the stage
+        const r = handCentre(side, smoother.pos, CORE_REST[side]);
         const off = (k: number) => {
           const m = MAX_OFFSET_M[k] * HAND_SCALE;
           return Math.min(m, Math.max(-m, (smoother.pos[k] - r[k]) * HAND_SCALE));

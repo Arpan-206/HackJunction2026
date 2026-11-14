@@ -9,6 +9,9 @@ import { useBotSkill, useDuelOutcome } from '../useDuelOutcome';
 import { RallyGame, type PlayerId, type RallyPhase } from './rally';
 import { RallyScene } from './RallyScene';
 import { SwingTracker, type SwingReading } from './swing';
+import { RecentreHandButton } from '../../../../three';
+import { recentreHandPosition } from '../../../../three/handPosition';
+import { calibrateCoreHeading } from '../../../../api/coreCommand';
 
 const SIM_BEAT_S = 1.5;
 /** Fraction of the simulator beat at which the wrist snap is under way. */
@@ -23,6 +26,11 @@ interface Snapshot {
   rally: number;
   caption: string;
 }
+
+/** Seconds the player gets to hold the racket hand flat before the glove's heading is zeroed. */
+const CAL_READY_S = 3;
+/** How long the hand keeps still after the count, milliseconds: the core zeroes the heading over the next second. */
+const CAL_HOLD_MS = 1200;
 
 const EMPTY: Snapshot = { phase: 'serve', points: { a: 0, b: 0 }, rounds: { a: 0, b: 0 }, round: 1, rally: 0, caption: '' };
 
@@ -41,7 +49,8 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
   const gloves = useGloveStream(true);
   const clock = useStreamClock(gloves);
   const [showProps] = useShowProps();
-  const [stage, setStage] = useState<'intro' | 'playing' | 'result'>('intro');
+  const [stage, setStage] = useState<'intro' | 'calibrate' | 'playing' | 'result'>('intro');
+  const [count, setCount] = useState(CAL_READY_S);
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [cue, setCue] = useState(false);
   const [runKey, setRunKey] = useState(0);
@@ -88,6 +97,32 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
     setRunKey((k) => k + 1);
     setStage('playing');
   }, [clock, spec.rounds, twoPlayer, botSkill]);
+  const startRef = useRef(start);
+  startRef.current = start;
+
+  // Before every game the glove is lined up: hand flat, fingers at the screen, then the core zeroes its heading (the glove
+  // starts each session facing an arbitrary way, which drew the hand backwards) and the hand's position is recentred.
+  // The simulator needs neither, so it starts straight away.
+  const begin = useCallback(() => (clock.simulated() ? start() : setStage('calibrate')), [clock, start]);
+  useEffect(() => {
+    if (stage !== 'calibrate') return;
+    let n = CAL_READY_S;
+    setCount(n);
+    let hold: number | undefined;
+    const tick = window.setInterval(() => {
+      n -= 1;
+      setCount(n);
+      if (n > 0) return;
+      window.clearInterval(tick);
+      void calibrateCoreHeading();
+      recentreHandPosition();
+      hold = window.setTimeout(() => startRef.current(), CAL_HOLD_MS);
+    }, 1000);
+    return () => {
+      window.clearInterval(tick);
+      window.clearTimeout(hold);
+    };
+  }, [stage]);
 
   useEffect(() => {
     if (stage !== 'playing') return;
@@ -178,6 +213,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
       )}
       <div className="ap-arena__scene">
         <RallyScene key={runKey} game={g} gloves={gloves} twoPlayer={twoPlayer} showProp={showProps} />
+        <RecentreHandButton corner="top-left" />
         {stage === 'playing' && (
           <>
             {cue && <p className="ap-cue">SWING!</p>}
@@ -200,8 +236,24 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
             </ul>
             <div className="ap-intro__foot">
               <PropSwitch prop="racket" className="ap-intro__prop" />
-              <Button large onClick={start}>
+              <Button large onClick={begin}>
                 Start the rally
+              </Button>
+            </div>
+          </Card>
+        )}
+        {stage === 'calibrate' && (
+          <Card as="section" className="ap-intro ap-calib" aria-label="Line up your hand">
+            <h2>Line up your hand</h2>
+            <p>
+              {twoPlayer ? 'Both players: hold your hand' : 'Hold your racket hand'} flat, palm down, fingers pointing at the screen, and keep still.
+            </p>
+            <p className="ap-calib__count" aria-live="polite">
+              {count > 0 ? count : 'Hold still...'}
+            </p>
+            <div className="ap-intro__foot">
+              <Button variant="secondary" onClick={start}>
+                Skip
               </Button>
             </div>
           </Card>

@@ -5,7 +5,7 @@ import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { FINGERS } from '../../../../api/types';
-import { Hand, HandCanvas, Keyboard, PropCue, Racket, RacketSketch, STRING_POINTS, useStageColors, useStageOrbit, writeStringSegments, type HandHandle, type OrbitView, type StageProps } from '../../../../three';
+import { Hand, HandCanvas, Keyboard, PropCue, Racket, RecentreHandButton, RacketSketch, STRING_POINTS, useStageColors, useStageOrbit, writeStringSegments, type HandHandle, type OrbitView, type StageProps } from '../../../../three';
 import { FaultMarks } from '../modes/FaultMarks';
 import { LearnerHand } from '../modes/LearnerHand';
 import { Crossbar } from '../modes/Strings';
@@ -16,6 +16,12 @@ import { FingerTinter } from '../modes/useFingerTints';
 export const TRANSITION_MS = 1300;
 /** How far above its resting place the expert's hand hangs while it works the puppet. */
 const PUPPETEER_LIFT = 1.2;
+/**
+ * How far the keyboard comes towards the player on this stage. <Keyboard /> and its chalk sketch lie under the fingers of a
+ * hand whose wrist is at the origin; here the hand is centred on the stage instead (its middle at the origin), which put the
+ * keys a hand's length beyond the fingertips, and the lit key was not the one under the finger.
+ */
+const KEYS_Z = 1.0;
 /** Height above the wooden hand the ghost floats down from. */
 const GHOST_FALL = 1.4;
 
@@ -58,20 +64,16 @@ export interface PracticeStageProps extends ModeProps {
  */
 export function PracticeStage({ coach, gloves, side, prop, cue, policy, toleranceDeg, phase, transitionAt, video }: PracticeStageProps) {
   const progress = () => progressOf(phase, transitionAt);
-  const expertAway = phase === 'try' && !policy.showMaster;
   return (
     <div className="ap-practice">
       <figure className="ap-practice__pane">
-        {expertAway ? (
-          <p className="ap-practice__away">The expert steps back while the ghost is off. Show your own hand.</p>
-        ) : (
-          <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? "The expert's chalk hand works a wooden puppet hand on strings; both make exactly the same move" : "The expert's chalk hand plays the move"}>
-            <FramingCamera progress={progress} far={prop === 'racket' ? 1.3 : prop === 'keyboard' ? 1.25 : 1} />
-            <ExpertSide coach={coach} side={side} prop={prop} cue={cue} progress={progress} watching={phase === 'watch' || transitionAt !== null} />
-          </HandCanvas>
-        )}
+        {/* The expert stays with the ghost off too: only the ghost over your hand goes. */}
+        <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? "The expert's chalk hand works a wooden puppet hand on strings; both make exactly the same move" : "The expert's chalk hand plays the move"}>
+          <FramingCamera progress={progress} far={prop === 'racket' ? 1.3 : prop === 'keyboard' ? 1.25 : 1} />
+          <ExpertSide coach={coach} side={side} prop={prop} cue={cue} progress={progress} watching={phase === 'watch' || transitionAt !== null} />
+        </HandCanvas>
         <figcaption className="ap-practice__cap">The expert</figcaption>
-        {!expertAway && video}
+        {video}
       </figure>
       <figure className="ap-practice__pane">
         <HandCanvas preset="closeup" stage={STAGE} label={phase === 'watch' ? 'Your wooden hand, live from the glove' : policy.showMaster ? "Your wooden hand with the expert's ghost over it" : 'Your wooden hand on its own'}>
@@ -79,6 +81,7 @@ export function PracticeStage({ coach, gloves, side, prop, cue, policy, toleranc
           <LearnerSide coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} policy={policy} toleranceDeg={toleranceDeg} progress={progress} trying={phase === 'try' || transitionAt !== null} />
         </HandCanvas>
         <figcaption className="ap-practice__cap">You</figcaption>
+        <RecentreHandButton />
       </figure>
     </div>
   );
@@ -158,8 +161,13 @@ function ExpertSide({ coach, side, prop, cue, progress, watching }: SideProps & 
     strings.current = 1 - clamp01(k / 0.35);
   });
 
+  // The expert plays the same keyboard: under the puppet while watching (it rests where the hand plays), then under the expert.
+  const keysHand = watching ? puppet : master;
   return (
     <>
+      {(prop === 'keyboard' || cue === 'keyboard') && (
+        <group position={[0, 0, KEYS_Z]}>{prop === 'keyboard' ? <Keyboard handRef={keysHand} /> : <PropCue prop={cue} hand={keysHand} />}</group>
+      )}
       <group ref={lift}>
         <Hand ref={master} side={side} style="chalk" getFrame={getMaster}>
           {prop === 'racket' && <Racket />}
@@ -260,8 +268,11 @@ function LearnerSide({ coach, gloves, side, prop, cue, policy, toleranceDeg, pro
 
   return (
     <>
-      {prop === 'keyboard' && <Keyboard handRef={learner} />}
-      <PropCue prop={cue} hand={learner} />
+      <group position={[0, 0, KEYS_Z]}>
+        {prop === 'keyboard' && <Keyboard handRef={learner} />}
+        {cue === 'keyboard' && <PropCue prop={cue} hand={learner} />}
+      </group>
+      {cue !== 'keyboard' && <PropCue prop={cue} hand={learner} />}
       <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} />
       {trying && <FaultMarks hand={learner} coach={coach} policy={policy} toleranceDeg={toleranceDeg} />}
       {showGhost && (

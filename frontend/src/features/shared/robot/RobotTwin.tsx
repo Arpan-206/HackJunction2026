@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { DESIGN_ASPECT, TWIN_TARGET as TARGET, twinCamera } from './twinFraming';
-import type { GloveFrame, HandFrame, Side } from '../../../api/types';
+import type { Finger, GloveFrame, HandFrame, Side } from '../../../api/types';
 import type { RobotStreamHandle } from '../../../api/useRobotStream';
 import { useCoreGloves } from '../../../api/useCoreGloves';
 import { Hand, HandCanvas, RobotHand, RobotStrings, type HandHandle, type HandStyle, type RobotHandHandle, type StringTarget } from '../../../three';
@@ -24,6 +24,21 @@ export interface TwinLesson {
   side: Side;
   /** The step title, for the panel. */
   label: string;
+  /**
+   * Teach mode: the robot's own attempt, which differs from the expert's hand. With it the robot is no puppet, so no
+   * strings are drawn.
+   */
+  robotFrame?: (t: number) => HandFrame | null;
+  /** Teach mode: false hides the expert's hand beside the robot, so the teacher judges from memory. Default true. */
+  showExpert?: boolean;
+  /** Teach mode: a word or number shown large over the stage (the glove countdown). */
+  banner?: string;
+  /** Per-finger colours on the robot, e.g. vermilion on the finger a hint points at. */
+  robotTint?: Partial<Record<Finger, string>>;
+  /** The robot's caption, e.g. its name in teach mode. */
+  robotLabel?: string;
+  /** What the robot says, shown under the stage. */
+  speech?: string;
 }
 
 interface RobotTwinProps {
@@ -142,7 +157,7 @@ function HumanoidTwin({ robot, lesson, human: given, className, label }: Omit<Ro
   const coreLive = useCoreGloves(engineUrl);
   const side: Side = lesson?.side ?? given?.side ?? robot.hand ?? 'right';
   let human: TwinHuman | null = given ?? null;
-  if (lesson) human = { side, style: 'chalk', getFrame: lesson.getFrame, label: 'The expert' };
+  if (lesson) human = lesson.showExpert === false ? null : { side, style: 'chalk', getFrame: lesson.getFrame, label: 'The expert' };
   else if (human && engineUrl) human = robot.source === 'off' || robot.source === 'lesson' ? null : { ...human, live: coreLive, getFrame: undefined };
   const box = useRef<HTMLDivElement>(null);
   const camera = twinCamera(useAspect(box));
@@ -159,16 +174,17 @@ function HumanoidTwin({ robot, lesson, human: given, className, label }: Omit<Ro
           side={side}
           style="robot"
           live={human?.live}
-          getFrame={human?.getFrame}
+          getFrame={lesson?.robotFrame ?? lesson?.getFrame ?? human?.getFrame}
+          fingerTint={lesson?.robotTint}
           smoothing={HUMANOID_LAG_S}
           position={[human ? ROBOT_X : 0, LIFT, 0]}
           centred={false}
         />
-        {human && <RobotStrings human={humanRef} robot={robotRef} />}
+        {human && !lesson?.robotFrame && <RobotStrings human={humanRef} robot={robotRef} />}
       </HandCanvas>
       <div className="rb-twin__caps" aria-hidden="true">
         {human && <span className="rb-twin__cap">{human.label}</span>}
-        <span className="rb-twin__cap rb-twin__cap--robot">{ROBOT_CAPTION.humanoid}</span>
+        <span className="rb-twin__cap rb-twin__cap--robot">{lesson?.robotLabel ?? ROBOT_CAPTION.humanoid}</span>
       </div>
     </div>
   );
