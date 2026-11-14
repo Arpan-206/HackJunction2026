@@ -1,4 +1,4 @@
-# Apprentice: frontend and backend contract
+# Geppetto: frontend and backend contract
 
 This is the single source of truth for the data shapes and HTTP/WebSocket API shared by `backend/` (FastAPI) and `frontend/` (React + TypeScript). If you change a shape, change it here, in `backend/app/schemas/`, and in `frontend/src/api/types.ts` in the same commit.
 
@@ -10,8 +10,8 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'touch_typing' | 'general';
-type Prop = 'none' | 'racket' | 'keyboard' | 'ball';   // keyboard: a piano keyboard, or a computer keyboard for touch_typing
+type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'shadow_puppets' | 'general';   // the four demo skills, plus general
+type Prop = 'none' | 'racket' | 'keyboard' | 'ball';   // keyboard: a piano keyboard (or a computer keyboard for the air typing test)
 type Hands = Side | 'both';   // one hand (left or right) or two
 
 // One hand at one instant. Flexion per joint: [MCP, PIP, DIP] for fingers, [CMC, MCP, IP] for the thumb.
@@ -42,8 +42,8 @@ type MotionSpec =
 
 // hold_pose.left_pose: the left hand's shape when the two hands differ (the snail's shell); null mirrors `pose`.
 // keyframes: loop through key poses. Each key owns a slot of `ms`; the hand eases in from the previous key over the first
-// half of the slot, then holds it. Period = sum of keys[].ms. left_keys gives the left hand its own keys (crochet's yarn
-// hand), stretched to the same period; null mirrors `keys`. Wrist angles are radians in hand space: positive pitch lifts
+// half of the slot, then holds it. Period = sum of keys[].ms. left_keys gives the left hand its own keys (one hand holds
+// while the other moves), stretched to the same period; null mirrors `keys`. Wrist angles are radians in hand space: positive pitch lifts
 // the fingers, positive roll turns the thumb down (pronation of the right hand).
 interface Keyframe { pose: Record<Finger, number>; ms: number; yaw?: number; pitch?: number; roll?: number }
 
@@ -59,7 +59,9 @@ interface MoveKind {
   default_repetitions: number;
 }
 
-interface Tolerance { angle_deg: number; timing_ms: number }   // room for error; defaults 18 deg, 250 ms
+// Room for error; defaults 18 deg, 250 ms. finger_angle_deg (optional, from POST /recordings/model) gives fingers their own
+// angle band in degrees of total flexion; a finger left out, or the field absent or null, uses angle_deg.
+interface Tolerance { angle_deg: number; timing_ms: number; finger_angle_deg?: Partial<Record<Finger, number>> | null }
 
 // The learner's margin of error: multiplies the step's Tolerance and the hint thresholds (see Backend notes).
 // strict x0.6, standard x1 (the default, unchanged behaviour), relaxed x1.5, just_trying x2.5.
@@ -74,9 +76,25 @@ interface Step {
   prop: Prop;
   motion: MotionSpec | null; // mock guide motion (generated or from the move catalog)
   reference_recording_id: string | null;  // master's chosen take; null until recorded
+  take_ids?: string[];       // the takes the step's model was built from (POST /recordings/model), at most 5; [] by default
   repetitions: number;       // how many takes the master should record
   tolerance: Tolerance;
-  video_url: string | null;  // optional master video for this step (future)
+  video_url: string | null;  // older single video link; read as a tutorial video at offset 0 when tutorial_video is absent
+  tutorial_video?: MediaRef | null;  // the expert talking the step through (POST /media), synced to the reference take; null by default
+}
+
+// A stored video (POST /media) attached to a step or a take. offset_s is the video time at which the take's frame 0 plays:
+// for a tutorial video, where the step's reference take starts; for a take's own webcam, normally about 0 (negative when the
+// camera started after the take). Bounded to +-3600 s (MEDIA_MAX_OFFSET_S).
+interface MediaRef { media_id: string; url: string; offset_s: number }
+
+interface MediaInfo {        // POST /media
+  id: string;
+  url: string;               // '/api/media/{id}': serves the file with HTTP range requests (206), so players can seek
+  duration_s: number | null; // as the uploader stated it (multipart field duration_s); null when not sent
+  content_type: 'video/webm' | 'video/mp4' | 'video/quicktime';
+  size_bytes: number;
+  created_at: string;
 }
 
 interface Lesson {
@@ -113,7 +131,44 @@ interface Recording {
   duration_s: number;
   fps: number;
   hands: Side | 'both';      // what the take captured; a one-handed take holds only that hand. Default 'both'.
+  video: MediaRef | null;    // the webcam filmed during the take (PUT /recordings/{id}/video); null by default
   frames: GloveFrame[];      // smoothed frames as streamed
+}
+
+interface RecordingSummary {   // GET /recordings: a Recording without frames
+  id: string; lesson_id: string | null; step_id: string | null; started_at: string;
+  duration_s: number; fps: number; hands: Side | 'both'; video: MediaRef | null;
+  frame_count: number;
+}
+
+interface TakesModelRequest {
+  recording_ids: string[];   // 2 to 5 distinct ids (3 to 5 recommended); 1 or more than 5 is a 422
+  side?: Side;               // the hand to model; default: the first hand every take has (400 when they share none)
+  timing_ms?: number;        // copied into the returned tolerance (default 250); timing is not derived from the takes
+}
+
+interface TakeConsistency {
+  recording_id: string;
+  is_reference: boolean;     // the medoid take
+  distance_deg: number;      // mean over fingers of the DTW total-flexion error against the reference; 0 for it
+  score: number;             // 0..100: the take scored as an attempt against the reference with the derived tolerance
+  error_deg: Record<Finger, number>;   // per-finger DTW total-flexion error against the reference
+  worst_finger: Finger | null;         // the finger that strays most; null for the reference
+  outlier: boolean;          // far from the other takes: suggest recording it again (never with fewer than 3 takes)
+}
+
+interface TakesModel {
+  side: Side;
+  reference_recording_id: string;      // put in Step.reference_recording_id
+  take_ids: string[];                  // the request's ids in order; put in Step.take_ids
+  tolerance: Tolerance;                // put in Step.tolerance: finger_angle_deg has all five fingers, angle_deg is their median
+  spread_deg: Record<Finger, number>;  // each finger's robust spread around the reference, before scaling and clamping
+  takes: TakeConsistency[];            // request order
+  consistency: number;                 // 0..100: mean score of the non-reference takes
+  steadiest_finger: Finger;
+  loosest_finger: Finger;
+  enough_takes: boolean;               // at least 3 takes
+  warnings: string[];                  // plain sentences: too few takes, or which take strays
 }
 
 interface ScoreResult {
@@ -172,9 +227,17 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/recordings/start` | `{lesson_id?, step_id?, hands?: 'left' or 'right' or 'both'}` (default `both`) | `{recording_id}` |
 | POST | `/recordings/{id}/stop` | | `Recording` |
 | GET | `/recordings/{id}` | | `Recording` |
+| GET | `/recordings?step_id=&lesson_id=` | | `RecordingSummary[]` (no frames), oldest first; both filters optional |
+| DELETE | `/recordings/{id}` | | 204; deletes a stored take, or discards one still recording; 404 when unknown |
+| PUT | `/recordings/{id}/video` | `{media_id, offset_s?: number}` (default 0, within +-3600) | `RecordingSummary` with `video` set (url filled in by the server); 404 for an unknown take or media id |
+| DELETE | `/recordings/{id}/video` | | `RecordingSummary` with `video: null`; the stored file stays until `DELETE /media/{id}` |
+| POST | `/media` | multipart: `video` (webm, mp4 or mov; a codecs parameter such as `video/webm;codecs=vp9` is fine; max 200 MB), `duration_s?` (seconds, 0 to 14400) | 201 `MediaInfo` (413 too large, 415 wrong type, 400 bad duration or empty file) |
+| GET | `/media/{id}` | | the file with its content type; `Range: bytes=a-b` answers 206 with `Content-Range`; 404 when unknown |
+| DELETE | `/media/{id}` | | 204; 404 when unknown. Steps or takes that still point at it show their still instead |
+| POST | `/recordings/model` | `TakesModelRequest` | `TakesModel` (see Takes model in the notes); 422 for 1, more than 5 or repeated ids, 404 for an unknown id |
 | POST | `/motion/preview` | `{motion: MotionSpec, side: Side, duration_s: number}` | `{frames: GloveFrame[]}` (synthesised guide hands) |
 | POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], side?: "left" or "right", tolerance, margin?: Margin, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string}` (at least one attempt source; calibration fields and `margin` optional, see notes) | `ScoreResult` |
-| POST | `/coach/hint` | `CoachHintRequest`: `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms, move_name?, joint_deviations?: Record<Finger, [knuckle, middle, tip]>, wrist_error_deg?, wrist_axis?: "pitch"\|"yaw"\|"roll", tolerance_deg?, margin?: Margin, attempt?: number, last_hint?: string}` (only the first four are needed) | `{hint, focus_finger: Finger\|null, cue_type: "curl"\|"extend"\|"timing"\|"wrist"\|"praise", severity: "low"\|"medium"\|"high", provider}` |
+| POST | `/coach/hint` | `CoachHintRequest`: `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms, move_name?, joint_deviations?: Record<Finger, [knuckle, middle, tip]>, wrist_error_deg?, wrist_axis?: "pitch"\|"yaw"\|"roll", tolerance_deg?, finger_tolerance_deg?: Partial<Record<Finger, number>>, margin?: Margin, attempt?: number, last_hint?: string}` (only the first four are needed) | `{hint, focus_finger: Finger\|null, cue_type: "curl"\|"extend"\|"timing"\|"wrist"\|"praise", severity: "low"\|"medium"\|"high", provider}` |
 | POST | `/coach/plan` | `CoachPlanRequest` | `CoachPlanResponse` (Gemini practice plan; fake derives drills from the worst fingers) |
 | POST | `/motion/from_text` | `{text: string (max 200 chars), side?: Side}` | `MotionFromTextResponse` (LLM picks a preset; fake uses keyword rules) |
 | POST | `/vision/hands` | multipart `image` (jpeg) | `{hands: {side, wrist_pos, landmarks: [x,y,z][]}[]}` (MediaPipe) |
@@ -213,10 +276,13 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 - `POST /score` with `attempt_frames` scores those frames instead of the stored recording (frames win if both are sent). The backend records the unmodified glove stream, so any client-side change (for example the clumsy apprentice simulation) only reaches the scorer through `attempt_frames`. Frame `t` is rebased by the scorer; start the frames at the beat the reference motion starts on, because a `reference_motion` is synthesised from `t = 0`.
 - Scoring metric: per finger, the error is the mean absolute difference of the finger's TOTAL flexion (sum of its 3 joints, in degrees) over the DTW-aligned path, the same quantity the frontend live coach compares with `tolerance.angle_deg`. A finger under-curled 25 degrees in total is therefore off at the default 18 degree tolerance, however the 25 is spread over joints. The error maps to 0..100 with `100 * exp(-0.5 * (err / (1.5 * angle_deg))^2)`; `within_tolerance` needs every finger error and the timing error inside tolerance. Hint degrees are the same total-flexion deviation. Calibration normalises per joint before the sum. Held poses: when the reference is a `hold_pose` or `idle` motion, or its total flexion moves less than 12 degrees peak to peak on every finger (`STATIC_REFERENCE_RANGE_DEG`), there is no beat to be early or late for, so the timing offset is taken as 0: `timing` is 100, `within_tolerance` ignores timing, `overall` keeps the same weights, and the hint never mentions early or late.
 - Margin of error: `margin` on `POST /score` and `POST /coach/hint` is the learner's own choice of strictness, on top of the expert's `Step.tolerance`. Its multiplier (`MARGIN_MULTIPLIERS` in `app/constants.py`: strict 0.6, standard 1.0, relaxed 1.5, just_trying 2.5) scales `angle_deg` and `timing_ms` before scoring, so the Gaussian, `within_tolerance` and `overall` all use the widened band, and scales every hint threshold (finger 4 degrees, timing 120 ms, wrist 8 degrees, and the tolerances severity is measured against). `relaxed` and `just_trying` are quiet margins: they also raise each hint threshold to its widened tolerance, so a finger, the timing or the wrist inside the band is never corrected and the hint praises instead. Without `margin` (or with `standard`) every number is exactly as before. `ScoreResult.margin` echoes the margin used. Invalid names are a 422. The WebSocket carries no scoring, so it has no margin; the browser's live corrections apply the same multiplier to the step tolerance on the client.
+- Takes model (`POST /recordings/model`, `backend/app/services/takes.py`, mirrored in `frontend/src/mock/takes.ts`): "best take + spread". Every pair of takes is compared with the scorer's own per-finger DTW (`compare`), and a pair's distance is the mean over fingers of the total-flexion error. The medoid take (smallest total distance to the others; the first on a tie) becomes the reference, and each other take is compared against it. A take is an outlier when its distance to the reference is at least 12 degrees (`TAKES_OUTLIER_MIN_DEG`) and more than twice (`TAKES_OUTLIER_FACTOR`) the median distance between the other takes; this needs 3 takes. Each finger's spread is the 75th percentile (`TAKES_SPREAD_PERCENTILE`) of its error against the reference over the non-outlier takes (all takes when every one is an outlier), and its tolerance is spread x 2.5 (`TAKES_TOLERANCE_SCALE`) clamped to 10..36 degrees (`TAKES_TOLERANCE_FLOOR_DEG`, `TAKES_TOLERANCE_CEIL_DEG`), rounded to 0.1: a finger the expert holds steady is judged strictly, a finger that varies gets room. `tolerance.angle_deg` is the median of the five, for anything that reads one number. Two takes are accepted with `enough_takes: false` and a warning. All constants are in `backend/app/constants.py` (`TAKES_*`).
+- Per-finger tolerance: with `Tolerance.finger_angle_deg`, `POST /score` scores each finger with its own band (Gaussian and `within_tolerance`), the margin of error multiplies every band, `worst_finger` is the finger with the largest error relative to its own band, and the hint names the finger furthest outside its own band among those past their own threshold. `POST /coach/hint` does the same with `finger_tolerance_deg`. With every band equal to `angle_deg`, or the field absent, every number is exactly as before. The lesson generator never fills `take_ids` or `finger_angle_deg` (they are left out of the schema sent to the model). The core's live score and ghost (`core/`, `/ws`) do not read them.
 - `POST /coach/hint`: `deviations` are signed degrees of TOTAL finger flexion per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late; `wrist_error_deg` is signed about `wrist_axis` (pitch positive = too high, yaw positive = turned too far right, roll positive = rolled clockwise). `hint` is one imperative sentence of at most 14 words naming one finger or the wrist and one direction, for example "Lift your index finger slightly." `cue_type` is `extend` when the finger is curled too much, `curl` when too straight. `provider` is `fake`, `algorithmic` (the model failed, was rejected or nothing needed fixing), `gemini`, `ollama`, or `fake (rate limited)` when the Gemini budget was spent. Identical requests within 60 s are served from a cache; pass the previous `hint` as `last_hint` so the wording changes.
 - Gemini free tier budget: the backend spends at most about 80 percent of the free RPM and RPD per model (limits in `app/constants.py`), persists the day count in `DATA_DIR/gemini_usage.json`, and when spent answers with the offline fallback and provider `fake (rate limited)` (also on `/lessons/generate`, `/coach/plan`, `/motion/from_text`). Hints use `GEMINI_HINT_MODEL` (default `gemini-3.5-flash-lite`), everything else `GEMINI_MODEL` (default also `gemini-3.5-flash-lite`, 500 requests per day free; both share its budget).
 - Calibrated scoring: with `attempt_calibration_id` (or `use_latest_calibration: true`, which uses the latest calibration for the attempt's side), each attempt joint is normalised to 0..1 as `(x - flat) / (fist - flat)`, clipped, then mapped into the reference's angle space using `reference_calibration_id` if given, otherwise the nominal range (flat and fist of the guide hand at curl 0 and 1). The reference is never altered. Joints with a calibrated range under 0.05 rad, or a calibration with an uncaptured phase, are left uncalibrated and a message is added to `ScoreResult.warnings`. Without these fields scoring is unchanged. `reference_calibration_id` has no effect on its own. Unknown ids give 404.
 - `POST /lessons/generate_from_video` stores nothing: the upload goes to a temporary file that is deleted after the call. Gemini uploads the file, waits until it is ACTIVE (60 s), then generates with a 120 s budget; on timeout or repeated invalid output it falls back to the fake template. Ollama and fake cannot read video.
+- Expert media: videos live in `DATA_DIR/media` as `{id}.{webm|mp4|mov}` plus `{id}.json` (`MediaInfo`), limits in `app/constants.py` (`MEDIA_*`). Two kinds per step, both optional. A tutorial video (`Step.tutorial_video`): the expert talking, shown on the learner's Tutorial beside the chalk hand playing the step's reference take at `video time - offset_s` (clamped at 0, the take looping while the video runs on). A take video (`Recording.video`): the webcam filmed during that take, so it is synced by construction; the practice screen plays the reference take's video small beside the stage in lockstep with the ghost. `Step.video_url` stays for older lessons and is read as a tutorial video at offset 0 when `tutorial_video` is absent. The lesson generator never fills `tutorial_video` (left out of the model's schema). Deleting a take or a lesson does not delete its media. In mock mode the clips live in the browser (IndexedDB, falling back to memory) and the player gets an object URL for `/api/media/{id}` (`useMediaSrc` in `frontend/src/api/media.ts`).
 - `POST /lessons/generate` returns an unsaved lesson (it has an `id` and `created_at`). `PUT /lessons/{id}` creates the lesson if the id is unknown, so the generated lesson can be saved after editing. `POST /lessons` returns 201.
 - Step ids are optional in `POST`/`PUT` bodies (the server assigns them); `Step.tolerance`, `repetitions`, `hands` and `prop` have defaults.
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
@@ -297,3 +363,59 @@ interface DriftCheckResult {
 - The driver (1.9.7) sends a glove's RGMP definition to any client but data frames only while some RCSP client holds `SubscribeToData` for it (the core does this when it runs with `--rcsp`). A glove whose definition arrived but no data for `ROKOKO_SUBSCRIBE_GRACE_S` (2 s) has `streaming: false` and gives one `not_streaming` step that says so; it never shows as `no_frames` or `low_frame_rate`. The backend never subscribes itself.
 - Neutral pose: hands flat on the table, thumbs together, still. `offsets` are the mean joint flexion (radians, the `/ws/gloves` joints), `yaw_zero_deg` the circular mean wrist heading (rotation about +y of the fingers' -z), `noise_deg` the mean per-joint standard deviation in degrees. Quality bands are in `backend/app/constants.py` (`QUALITY_*`). Smartgloves have no calibrate command over RCSP; `reinit: true` sends the documented `ReinitAlgo` first and waits `REINIT_SETTLE_S`.
 - Drift check: mean absolute joint flexion change per hand against the saved offsets, and the wrist heading change; `ok` when every streaming hand is within both thresholds.
+
+## Expert training persistence: drafts, bundles, backups
+
+Everything an expert records lives on disk under the backend's data folder (`backend/data/`, gitignored), so a page reload, a closed tab, a backend restart or a laptop swap (with a bundle file) loses nothing. Mock mode keeps all of this in browser memory only and says so on the scratch screens.
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/drafts/scratch` | | `DraftDoc`, the most recently saved scratch draft; 404 when none |
+| GET | `/drafts/scratch/{id}` | | `DraftDoc` or 404 |
+| PUT | `/drafts/scratch/{id}` | `{schema_version: number, draft: object}` | `DraftDoc` (one file per draft, `data/drafts/<id>.json`; the oldest beyond `DRAFTS_KEEP` (20) are pruned); 413 over `DRAFT_MAX_BYTES` (512 KB), 400 for an unsafe id |
+| DELETE | `/drafts/scratch/{id}` | | 204 (also when already gone) |
+| GET | `/calibrations/active` | | `{left: Calibration \| null, right: Calibration \| null, wearer: WearerCalibration \| null}`: the newest saved calibration per hand and the newest per-wearer one, read from disk |
+| GET | `/lessons/{id}/export` | | `Bundle` (kind `lessons`) as a download, `Content-Disposition: attachment; filename="<lesson-title>.geppetto.json"`; 404 unknown lesson |
+| GET | `/export/lessons?ids=a,b&name=` | | `Bundle` of several lessons (one skill), named `name` or the first title; 404 for an unknown id |
+| GET | `/export/all` | | `Bundle` (kind `all`): every lesson, take, calibration, per-wearer calibration and draft, with video records listed but no video bytes |
+| POST | `/lessons/import?overwrite=false` | `Bundle` (JSON) | `ImportReport`; 422 for a bundle of a newer `format_version` |
+
+```ts
+interface DraftDoc {
+  id: string;                 // the draft's own id (safe id: letters, digits, _ and -)
+  kind: 'scratch';
+  schema_version: number;     // the frontend draft's shape version (ScratchDraft.v)
+  updated_at: string;         // set by the server on every PUT
+  draft: Record<string, unknown>;  // the frontend's draft object, stored as is
+}
+
+interface Bundle {
+  format: 'geppetto.bundle';
+  format_version: number;     // 1; an importer refuses a newer one
+  kind: 'lessons' | 'all';
+  name: string;               // the skill or lesson name; the file name is its slug + '.geppetto.json'
+  exported_at: string;
+  lessons: Lesson[];
+  recordings: Recording[];    // every take a step names (reference_recording_id and take_ids), with frames
+  takes_models: { lesson_id: string; step_id: string; model: TakesModel }[];  // rebuilt from the takes at export; empty for kind 'all'
+  calibrations: Calibration[];          // per take and hand, the newest one saved before the take was recorded
+  wearer_calibrations: WearerCalibration[];  // those whose range_calibration_ids point at the calibrations above
+  media: { info: MediaInfo; data_base64: string | null }[];  // bytes embedded only up to BUNDLE_MEDIA_EMBED_MAX_BYTES (2 MB)
+  drafts: DraftDoc[];         // kind 'all' only
+  warnings: string[];         // e.g. a take that is referenced but no longer stored
+}
+
+interface ImportReport {
+  created: ImportItem[];      // new here
+  unchanged: ImportItem[];    // already here, identical
+  overwritten: ImportItem[];  // only with overwrite=true
+  conflicts: ImportItem[];    // a different local copy with the same id was kept (never replaced silently)
+  lesson_ids: string[];       // every lesson of the bundle, now available
+  warnings: string[];
+}
+interface ImportItem { kind: 'lesson' | 'recording' | 'calibration' | 'wearer_calibration' | 'media' | 'draft'; id: string; note: string }
+```
+
+- Import is idempotent by id: importing the same file twice creates nothing the second time. A local item that differs from the file's copy is a conflict and is kept, since a lesson or take has no edit time to tell which is newer; `overwrite=true` replaces it and lists it under `overwritten`.
+- Backups: after every `POST /lessons` and `PUT /lessons/{id}` the lesson's bundle is written (after the response) to `data/exports/<lesson-title-slug>-<UTC time>.geppetto.json`; the newest `EXPORT_BACKUPS_KEEP` (5) per title are kept. A failed backup is logged and never fails the publish.
+- Calibrations are files read on every request, so the newest one per hand is in use straight after a restart (`GET /calibrations/active`); the backend logs which one at start-up. The live `/ws/gloves` stream stays raw: calibration is applied when scoring (`use_latest_calibration`) and by the core, which reads the same files at its start and on its `calibrate` command.

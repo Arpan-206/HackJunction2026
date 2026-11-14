@@ -62,6 +62,8 @@ function patchFetch(): void {
     await wait(LATENCY_MS);
     const res = await handleMockRequest({ method, path: target.path, query: target.query, ...parsed });
     if (init?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    // A stored video (GET /media/{id}) comes back as its own bytes, as the backend serves it.
+    if (res.body instanceof Blob) return new Response(res.body, { status: res.status, headers: { 'Content-Type': res.body.type, 'X-Apprentice-Mock': '1' } });
     return new Response(res.status === 204 ? null : JSON.stringify(res.body), {
       status: res.status,
       headers: { 'Content-Type': 'application/json', 'X-Apprentice-Mock': '1' },

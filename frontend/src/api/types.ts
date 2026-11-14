@@ -6,7 +6,7 @@
 export type Side = 'left' | 'right';
 export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-export type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'touch_typing' | 'general';
+export type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'shadow_puppets' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 /** Which hands a move, step or recording uses: one hand (left or right) or both. */
 export type Hands = Side | 'both';
@@ -71,6 +71,11 @@ export interface MoveKind {
 export interface Tolerance {
   angle_deg: number;
   timing_ms: number;
+  /**
+   * Per-finger angle tolerance in degrees of total flexion (from POST /api/recordings/model). A finger left out, or the
+   * whole field absent or null, uses angle_deg. The margin of error multiplies these too.
+   */
+  finger_angle_deg?: Partial<Record<Finger, number>> | null;
 }
 
 /**
@@ -88,9 +93,55 @@ export interface Step {
   prop: Prop;
   motion: MotionSpec | null;
   reference_recording_id: string | null;
+  /** The expert's takes the step's model was built from (POST /api/recordings/model), at most 5; empty or absent for one take. */
+  take_ids?: string[];
   repetitions: number;
   tolerance: Tolerance;
+  /** Older single video link; read as a tutorial video synced at 0 s when `tutorial_video` is absent (see tutorialVideoOf). */
   video_url: string | null;
+  /**
+   * The expert talking the step through (POST /api/media), with the second at which the reference take starts in it. The
+   * learner's Tutorial plays the reference hand in sync with it. Absent or null when there is none.
+   */
+  tutorial_video?: MediaRef | null;
+}
+
+/** A stored video (POST /api/media) attached to a step or a take, with its sync point. */
+export interface MediaRef {
+  media_id: string;
+  /** Where the video is served: /api/media/{media_id} (HTTP range requests supported). */
+  url: string;
+  /**
+   * Seconds into the video at which frame 0 of the take plays (the step's reference take for a tutorial video). Normally
+   * about 0 for a take's own webcam; negative when the camera started after the take.
+   */
+  offset_s: number;
+}
+
+/** POST /api/media: a stored video. */
+export interface MediaInfo {
+  id: string;
+  url: string;
+  /** Length in seconds as the uploader stated it; null when unknown. */
+  duration_s: number | null;
+  content_type: 'video/webm' | 'video/mp4' | 'video/quicktime';
+  size_bytes: number;
+  created_at: string;
+}
+
+/** Optional fields of POST /api/media next to the video itself. */
+export interface MediaUploadOptions {
+  /** Length in seconds, as the browser measured it; stored and returned as is. */
+  duration_s?: number;
+  /** File name sent with a Blob (a recorded clip has none); the type decides the format, not the name. */
+  filename?: string;
+}
+
+/** PUT /api/recordings/{id}/video: attach a stored video to a take. */
+export interface MediaAttachRequest {
+  media_id: string;
+  /** Video time at the take's frame 0; default 0. */
+  offset_s?: number;
 }
 
 export interface TestSpec {
@@ -129,6 +180,8 @@ export interface Recording {
   fps: number;
   /** The hands this take captured; a one-handed take stores only that hand's frames. 'both' keeps every hand. */
   hands: Hands;
+  /** The webcam filmed during this take (PUT /api/recordings/{id}/video); offset_s is the video time at frame 0. */
+  video?: MediaRef | null;
   frames: GloveFrame[];
 }
 
@@ -183,6 +236,63 @@ export interface RecordingStartResponse {
   recording_id: string;
 }
 
+/** GET /api/recordings: a stored take without its frames. */
+export type RecordingSummary = Omit<Recording, 'frames'> & { frame_count: number };
+
+/** Query of GET /api/recordings; both filters optional. */
+export interface RecordingListQuery {
+  step_id?: string;
+  lesson_id?: string;
+}
+
+/** POST /api/recordings/model: 2 to 5 distinct take ids (3 to 5 recommended). */
+export interface TakesModelRequest {
+  recording_ids: string[];
+  /** The hand to model; omit to use the first hand every take has. */
+  side?: Side;
+  /** Timing tolerance to put in the returned tolerance; default 250. Not derived from the takes. */
+  timing_ms?: number;
+}
+
+/** How one take sits against the chosen reference (the medoid take). */
+export interface TakeConsistency {
+  recording_id: string;
+  is_reference: boolean;
+  /** Mean over fingers of the DTW total-flexion error against the reference, in degrees; 0 for the reference. */
+  distance_deg: number;
+  /** 0..100: the take scored as an attempt against the reference with the derived tolerance; 100 for the reference. */
+  score: number;
+  /** Per-finger DTW total-flexion error against the reference, in degrees. */
+  error_deg: Record<Finger, number>;
+  /** The finger that strays most; null for the reference. */
+  worst_finger: Finger | null;
+  /** Far from the other takes: suggest recording it again. Never set with fewer than 3 takes. */
+  outlier: boolean;
+}
+
+/** The step model built from several takes: best take (the medoid) plus a per-finger tolerance from their spread. */
+export interface TakesModel {
+  side: Side;
+  /** Put this in Step.reference_recording_id. */
+  reference_recording_id: string;
+  /** The request's ids in order; put them in Step.take_ids. */
+  take_ids: string[];
+  /** Put this in Step.tolerance: angle_deg is the median of finger_angle_deg, which is always complete here. */
+  tolerance: Tolerance & { finger_angle_deg: Record<Finger, number> };
+  /** Each finger's robust spread around the reference before scaling and clamping, in degrees. */
+  spread_deg: Record<Finger, number>;
+  /** One entry per take, in request order. */
+  takes: TakeConsistency[];
+  /** 0..100: mean score of the non-reference takes. */
+  consistency: number;
+  steadiest_finger: Finger;
+  loosest_finger: Finger;
+  /** At least 3 takes, the recommended minimum. */
+  enough_takes: boolean;
+  /** Plain sentences: too few takes, or which take strays. */
+  warnings: string[];
+}
+
 export interface MotionPreviewRequest {
   motion: MotionSpec;
   side: Side;
@@ -219,6 +329,8 @@ export interface CoachHintRequest {
   timing_ms: number;
   /** The step's own angle tolerance (before the margin); default 18. */
   tolerance_deg?: number;
+  /** The step's per-finger tolerance (Tolerance.finger_angle_deg), before the margin; a finger left out uses tolerance_deg. */
+  finger_tolerance_deg?: Partial<Record<Finger, number>> | null;
   /** The learner's margin of error; omit for standard. */
   margin?: Margin;
 }
@@ -448,3 +560,64 @@ export interface SetMotionMessage {
 /* ---- Frontend constants derived from the contract ---- */
 
 export const FINGERS: readonly Finger[] = ['thumb', 'index', 'middle', 'ring', 'little'] as const;
+
+/* ---- Expert training persistence: drafts on disk, bundle files (docs/CONTRACT.md, "Expert training persistence") ---- */
+
+export type DraftKind = 'scratch';
+
+/** A draft stored by the backend (GET/PUT/DELETE /drafts/scratch[/id]), one file each under data/drafts. */
+export interface DraftDoc<T = Record<string, unknown>> {
+  id: string;
+  kind: DraftKind;
+  /** The draft object's shape version (ScratchDraft.v). */
+  schema_version: number;
+  /** Set by the server on every save. */
+  updated_at: string;
+  draft: T;
+}
+
+/** GET /calibrations/active: the newest saved calibration per hand, read from disk. */
+export interface ActiveCalibration {
+  left: Calibration | null;
+  right: Calibration | null;
+  wearer: WearerCalibration | null;
+}
+
+export const BUNDLE_FORMAT = 'geppetto.bundle';
+export const BUNDLE_FORMAT_VERSION = 1;
+export const BUNDLE_FILE_SUFFIX = '.geppetto.json';
+
+/** A `.geppetto.json` file: lessons with every take, takes model, calibration and video they use. */
+export interface Bundle {
+  format: typeof BUNDLE_FORMAT;
+  format_version: number;
+  kind: 'lessons' | 'all';
+  name: string;
+  exported_at: string;
+  lessons: Lesson[];
+  recordings: Recording[];
+  takes_models: { lesson_id: string; step_id: string; model: TakesModel }[];
+  calibrations: Calibration[];
+  wearer_calibrations: WearerCalibration[];
+  media: { info: MediaInfo; data_base64: string | null }[];
+  drafts: DraftDoc[];
+  warnings: string[];
+}
+
+export type ImportItemKind = 'lesson' | 'recording' | 'calibration' | 'wearer_calibration' | 'media' | 'draft';
+
+export interface ImportItem {
+  kind: ImportItemKind;
+  id: string;
+  note: string;
+}
+
+/** POST /lessons/import: what was added, what was there already, and what differs here (kept, not overwritten). */
+export interface ImportReport {
+  created: ImportItem[];
+  unchanged: ImportItem[];
+  overwritten: ImportItem[];
+  conflicts: ImportItem[];
+  lesson_ids: string[];
+  warnings: string[];
+}

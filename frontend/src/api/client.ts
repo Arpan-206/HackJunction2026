@@ -23,16 +23,24 @@ import type {
   HealthResponse,
   Lesson,
   LessonDraft,
+  MediaAttachRequest,
+  MediaInfo,
+  MediaUploadOptions,
   MotionPreviewRequest,
   MotionPreviewResponse,
   MoveKind,
   Recording,
+  RecordingListQuery,
   RecordingStartRequest,
+  RecordingSummary,
   RecordingStartResponse,
   ScoreRequest,
   ScoreResult,
   Skill,
+  TakesModel,
+  TakesModelRequest,
 } from './types';
+import type { ActiveCalibration, Bundle, DraftDoc, DraftKind, ImportReport } from './types';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 
 /** Error thrown for any failed request: HTTP error, network failure or unparseable body. */
@@ -182,6 +190,32 @@ export const api = {
   startRecording: (req: RecordingStartRequest = {}) => request<RecordingStartResponse>('POST', '/recordings/start', req),
   stopRecording: (id: string) => request<Recording>('POST', `/recordings/${encodeURIComponent(id)}/stop`),
   recording: (id: string, signal?: AbortSignal) => request<Recording>('GET', `/recordings/${encodeURIComponent(id)}`, undefined, signal),
+  /** GET /api/recordings: stored takes without frames, oldest first, optionally for one step or lesson. */
+  recordings: (query: RecordingListQuery = {}, signal?: AbortSignal) =>
+    request<RecordingSummary[]>('GET', `/recordings${qs({ step_id: query.step_id, lesson_id: query.lesson_id })}`, undefined, signal),
+  /** DELETE /api/recordings/{id}: deletes a stored take, or discards one still recording (204; 404 when unknown). */
+  deleteRecording: (id: string) => request<void>('DELETE', `/recordings/${encodeURIComponent(id)}`),
+  /** POST /api/recordings/model: 2 to 5 takes become the reference (the medoid take) plus a per-finger tolerance. */
+  takesModel: (req: TakesModelRequest) => request<TakesModel>('POST', '/recordings/model', req),
+
+  /**
+   * POST /api/media: stores an expert video (webm, mp4 or mov; 415 otherwise, 413 above 200 MB) and returns its id and
+   * url. A recorded Blob is sent as a file named after `opts.filename` (default `clip` plus the type's extension).
+   */
+  uploadMedia: (video: Blob, opts: MediaUploadOptions = {}, onProgress?: (percent: number) => void, signal?: AbortSignal) => {
+    const form = new FormData();
+    const ext = video.type.includes('mp4') ? '.mp4' : video.type.includes('quicktime') ? '.mov' : '.webm';
+    form.append('video', video, opts.filename ?? (video instanceof File ? video.name : `clip${ext}`));
+    if (opts.duration_s !== undefined && Number.isFinite(opts.duration_s)) form.append('duration_s', String(opts.duration_s));
+    return upload<MediaInfo>('/media', form, onProgress, signal);
+  },
+  /** DELETE /api/media/{id}: removes a stored video (204; 404 when unknown). Steps or takes still pointing at it fall back to their still. */
+  deleteMedia: (id: string) => request<void>('DELETE', `/media/${encodeURIComponent(id)}`),
+  /** PUT /api/recordings/{id}/video: attaches the webcam video filmed during a take, with the video time at its frame 0. */
+  attachTakeVideo: (recordingId: string, req: MediaAttachRequest) =>
+    request<RecordingSummary>('PUT', `/recordings/${encodeURIComponent(recordingId)}/video`, req),
+  /** DELETE /api/recordings/{id}/video: detaches a take's video (the file stays until deleteMedia). */
+  detachTakeVideo: (recordingId: string) => request<RecordingSummary>('DELETE', `/recordings/${encodeURIComponent(recordingId)}/video`),
 
   previewMotion: (req: MotionPreviewRequest) => request<MotionPreviewResponse>('POST', '/motion/preview', req),
   score: (req: ScoreRequest) => request<ScoreResult>('POST', '/score', req),
@@ -200,6 +234,17 @@ export const api = {
   finishWearerCalibration: (id: string, req: CalibrationFinishRequest) =>
     request<WearerCalibration>('POST', `/gloves/calibrations/${encodeURIComponent(id)}/finish`, req),
   driftCheck: (req: DriftCheckRequest) => request<DriftCheckResult>('POST', '/gloves/drift_check', req),
+
+  // Expert training persistence (docs/CONTRACT.md, "Expert training persistence").
+  activeCalibration: (signal?: AbortSignal) => request<ActiveCalibration>('GET', '/calibrations/active', undefined, signal),
+  latestDraft: <T = Record<string, unknown>>(kind: DraftKind, signal?: AbortSignal) => request<DraftDoc<T>>('GET', `/drafts/${kind}`, undefined, signal),
+  saveDraft: <T = Record<string, unknown>>(kind: DraftKind, id: string, schemaVersion: number, draft: T) =>
+    request<DraftDoc<T>>('PUT', `/drafts/${kind}/${encodeURIComponent(id)}`, { schema_version: schemaVersion, draft }),
+  deleteDraft: (kind: DraftKind, id: string) => request<void>('DELETE', `/drafts/${kind}/${encodeURIComponent(id)}`),
+  exportLesson: (id: string) => request<Bundle>('GET', `/lessons/${encodeURIComponent(id)}/export`),
+  exportLessons: (ids: string[], name = '') => request<Bundle>('GET', `/export/lessons${qs({ ids: ids.join(','), name: name || undefined })}`),
+  exportAll: () => request<Bundle>('GET', '/export/all'),
+  importBundle: (bundle: Bundle, overwrite = false) => request<ImportReport>('POST', `/lessons/import${overwrite ? '?overwrite=true' : ''}`, bundle),
 
   devState: (signal?: AbortSignal) => request<DevState>('GET', '/dev/state', undefined, signal),
   setDevState: (patch: DevStatePatch) => request<DevState>('POST', '/dev/state', patch),

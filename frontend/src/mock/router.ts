@@ -5,8 +5,11 @@ import type {
   JointTriple,
   Lesson,
   Margin,
+  MediaInfo,
+  MediaRef,
   MotionSpec,
   Recording,
+  RecordingSummary,
   ScoreResult,
   Hands,
   Side,
@@ -20,11 +23,14 @@ import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
 import { MOVES } from './seed';
-import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
+import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, fingerThresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
+import { modelFromFrames, TAKES_HARD_MIN, TAKES_MAX } from './takes';
 import { DEFAULT_MARGIN, isMargin } from '../api/margin';
 import { getStore } from './store';
+import { deleteMedia, getMedia, putMedia } from './media';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
+import * as persist from './persist';
 
 /**
  * In-browser implementation of every route in docs/CONTRACT.md (prefix /api). It returns the same status codes and
@@ -56,9 +62,14 @@ export class HttpError extends Error {
 }
 
 const SIDES: Side[] = ['left', 'right'];
-const SKILLS: Skill[] = ['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet', 'touch_typing', 'general'];
+const FINGERS: Finger[] = ['thumb', 'index', 'middle', 'ring', 'little'];
+const SKILLS: Skill[] = ['table_tennis', 'piano', 'finnish_fingerspelling', 'shadow_puppets', 'general'];
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+/** MEDIA_MAX_BYTES and MEDIA_MAX_OFFSET_S in backend/app/constants.py. */
+const MAX_MEDIA_BYTES = 200 * 1024 * 1024;
+const MAX_MEDIA_OFFSET_S = 3600;
+const MAX_MEDIA_DURATION_S = 4 * 3600;
 const DEFAULT_TOLERANCE: Tolerance = { angle_deg: 18, timing_ms: 250 };
 const SCORE_FPS = 30;
 const MAX_PREVIEW_S = 30;
@@ -88,17 +99,50 @@ function side(v: unknown, fallback?: Side): Side {
 
 function skillOrNull(v: unknown): Skill | null {
   if (v === undefined || v === null || v === '') return null;
-  return SKILLS.includes(v as Skill) ? (v as Skill) : invalid('skill must be table_tennis, piano or general');
+  return SKILLS.includes(v as Skill) ? (v as Skill) : invalid('skill must be table_tennis, piano, finnish_fingerspelling, shadow_puppets or general');
+}
+
+/** A per-finger degree map: known fingers only, every value positive; null when absent. */
+function fingerDegrees(v: unknown, name: string): Partial<Record<Finger, number>> | null {
+  if (v === undefined || v === null) return null;
+  if (!isObj(v)) return invalid(`${name} must be an object`);
+  const out: Partial<Record<Finger, number>> = {};
+  for (const [k, raw] of Object.entries(v)) {
+    if (!FINGERS.includes(k as Finger)) return invalid(`${name} has an unknown finger: ${k}`);
+    const n = Number(raw);
+    if (!(n > 0)) return invalid(`${name} values must be positive`);
+    out[k as Finger] = n;
+  }
+  return out;
 }
 
 function tolerance(v: unknown): Tolerance {
-  if (v === undefined || v === null) return { ...DEFAULT_TOLERANCE };
+  if (v === undefined || v === null) return { ...DEFAULT_TOLERANCE, finger_angle_deg: null };
   if (!isObj(v)) return invalid('tolerance must be an object');
   const angle = v.angle_deg === undefined ? DEFAULT_TOLERANCE.angle_deg : Number(v.angle_deg);
   const timing = v.timing_ms === undefined ? DEFAULT_TOLERANCE.timing_ms : Number(v.timing_ms);
   if (!(angle > 0) || !(timing > 0)) return invalid('tolerance values must be positive');
-  return { angle_deg: angle, timing_ms: timing };
+  return { angle_deg: angle, timing_ms: timing, finger_angle_deg: fingerDegrees(v.finger_angle_deg, 'finger_angle_deg') };
 }
+
+function takeIds(v: unknown): string[] {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.some((x) => typeof x !== 'string')) return invalid('take_ids must be a list of strings');
+  if (v.length > TAKES_MAX) return invalid(`take_ids must have at most ${TAKES_MAX} items`);
+  return v as string[];
+}
+
+/** A video reference on a step or a take: null, or {media_id, url, offset_s} with a bounded offset. */
+function mediaRef(v: unknown, name: string): MediaRef | null {
+  if (v === undefined || v === null) return null;
+  if (!isObj(v) || typeof v.media_id !== 'string' || typeof v.url !== 'string') return invalid(`${name} needs media_id and url`);
+  const offset = v.offset_s === undefined ? 0 : Number(v.offset_s);
+  if (!Number.isFinite(offset) || Math.abs(offset) > MAX_MEDIA_OFFSET_S) return invalid(`${name}.offset_s must be within ${MAX_MEDIA_OFFSET_S} s`);
+  return { media_id: v.media_id, url: v.url, offset_s: offset };
+}
+
+/** The base type of a MediaRecorder type: 'video/webm;codecs=vp9' is 'video/webm'. */
+const baseType = (type: string) => type.split(';')[0].trim().toLowerCase();
 
 function margin(v: unknown): Margin {
   if (v === undefined || v === null) return DEFAULT_MARGIN;
@@ -124,16 +168,18 @@ function normaliseStep(raw: unknown): Step {
     prop: (raw.prop as Step['prop'] | undefined) ?? 'none',
     motion: raw.motion === undefined || raw.motion === null ? null : motion(raw.motion),
     reference_recording_id: (raw.reference_recording_id as string | null | undefined) ?? null,
+    take_ids: takeIds(raw.take_ids),
     repetitions: reps,
     tolerance: tolerance(raw.tolerance),
     video_url: (raw.video_url as string | null | undefined) ?? null,
+    tutorial_video: mediaRef(raw.tutorial_video, 'tutorial_video'),
   };
 }
 
 function normaliseLesson(raw: unknown): LessonDraftBody {
   if (!isObj(raw)) return invalid('request body must be a JSON object');
   if (typeof raw.title !== 'string' || !raw.title) return invalid('title is required');
-  if (!SKILLS.includes(raw.skill as Skill)) return invalid('skill must be table_tennis, piano or general');
+  if (!SKILLS.includes(raw.skill as Skill)) return invalid('skill must be table_tennis, piano, finnish_fingerspelling, shadow_puppets or general');
   if (!Array.isArray(raw.steps) || raw.steps.length < 1) return invalid('a lesson needs at least one step');
   return {
     title: raw.title,
@@ -336,7 +382,80 @@ route('POST', '/recordings/start', (req) => {
   return ok({ recording_id: id });
 });
 route('POST', '/recordings/([^/]+)/stop', (_req, [id]) => ok(stopTake(id)));
+route('GET', '/recordings', (req) => {
+  const stepId = req.query.get('step_id');
+  const lessonId = req.query.get('lesson_id');
+  const summaries: RecordingSummary[] = getStore()
+    .listRecordings()
+    .filter((r) => (stepId === null || r.step_id === stepId) && (lessonId === null || r.lesson_id === lessonId))
+    .map(({ frames, ...rest }) => ({ ...rest, frame_count: frames.length }));
+  return ok(summaries);
+});
+route('POST', '/recordings/model', async (req) => {
+  const b = body(req);
+  const ids = b.recording_ids;
+  if (!Array.isArray(ids) || ids.some((x) => typeof x !== 'string')) return invalid('recording_ids must be a list of strings');
+  if (ids.length < TAKES_HARD_MIN || ids.length > TAKES_MAX) return invalid(`recording_ids must have ${TAKES_HARD_MIN} to ${TAKES_MAX} items`);
+  if (new Set(ids).size !== ids.length) return invalid('recording_ids must be distinct');
+  const timing = b.timing_ms === undefined ? DEFAULT_TOLERANCE.timing_ms : Number(b.timing_ms);
+  if (!(timing > 0)) return invalid('timing_ms must be positive');
+  const wanted = b.side === undefined || b.side === null ? null : side(b.side);
+  const frames = (ids as string[]).map((id) => (getStore().getRecording(id) ?? notFound(`recording ${id} not found`)).frames);
+  await sleep(120);
+  try {
+    return ok(modelFromFrames(frames, ids as string[], wanted, timing));
+  } catch (e) {
+    if (e instanceof ScoringError) return bad(e.message);
+    throw e;
+  }
+});
 route('GET', '/recordings/([^/]+)', (_req, [id]) => ok(getStore().getRecording(id) ?? notFound(`recording ${id} not found`)));
+route('DELETE', '/recordings/([^/]+)', (_req, [id]) => {
+  const active = takes.get(id);
+  if (active) {
+    // A take still recording is discarded, as the backend recorder does.
+    active.stop();
+    takes.delete(id);
+    return ok(null, 204);
+  }
+  return getStore().deleteRecording(id) ? ok(null, 204) : notFound(`recording ${id} not found`);
+});
+
+route('PUT', '/recordings/([^/]+)/video', async (req, [id]) => {
+  const b = body(req);
+  if (typeof b.media_id !== 'string') return invalid('media_id is required');
+  const entry = (await getMedia(b.media_id)) ?? notFound(`media ${b.media_id} not found`);
+  const rec = getStore().getRecording(id) ?? notFound(`recording ${id} not found`);
+  const video = mediaRef({ media_id: entry.info.id, url: entry.info.url, offset_s: b.offset_s }, 'video') as MediaRef;
+  const { frames, ...rest } = getStore().saveRecording({ ...rec, video });
+  return ok({ ...rest, frame_count: frames.length });
+});
+route('DELETE', '/recordings/([^/]+)/video', (_req, [id]) => {
+  const rec = getStore().getRecording(id) ?? notFound(`recording ${id} not found`);
+  const { frames, ...rest } = getStore().saveRecording({ ...rec, video: null });
+  return ok({ ...rest, frame_count: frames.length });
+});
+
+route('POST', '/media', async (req) => {
+  const video = req.form?.get('video');
+  if (!(video instanceof Blob)) return invalid('video file is required');
+  const type = baseType(video.type);
+  if (!VIDEO_TYPES.includes(type)) throw new HttpError(415, `video must be one of ${VIDEO_TYPES.join(', ')}`);
+  if (video.size === 0) return bad('video file is empty');
+  if (video.size > MAX_MEDIA_BYTES) throw new HttpError(413, `video is larger than ${MAX_MEDIA_BYTES / (1024 * 1024)} MB`);
+  const rawDuration = req.form?.get('duration_s');
+  const duration = rawDuration === null || rawDuration === undefined || rawDuration === '' ? null : Number(rawDuration);
+  if (duration !== null && !(duration >= 0 && duration <= MAX_MEDIA_DURATION_S)) return bad(`duration_s must be between 0 and ${MAX_MEDIA_DURATION_S}`);
+  const id = newId();
+  const info: MediaInfo = { id, url: `/api/media/${id}`, duration_s: duration, content_type: type as MediaInfo['content_type'], size_bytes: video.size, created_at: nowIso() };
+  await putMedia(info, video);
+  return ok(info, 201);
+});
+route('GET', '/media/([^/]+)', async (_req, [id]) => {
+  const entry = (await getMedia(id)) ?? notFound(`media ${id} not found`);
+  return ok(entry.blob);
+});
+route('DELETE', '/media/([^/]+)', async (_req, [id]) => ((await deleteMedia(id)) ? ok(null, 204) : notFound(`media ${id} not found`)));
 
 route('POST', '/motion/preview', (req) => {
   const b = body(req);
@@ -367,7 +486,9 @@ route('POST', '/coach/hint', (req) => {
   const deviations = (isObj(b.deviations) ? b.deviations : {}) as Partial<Record<Finger, number>>;
   const tol = b.tolerance_deg === undefined ? DEFAULT_TOLERANCE_ANGLE_DEG : Number(b.tolerance_deg);
   if (!(tol > 0)) invalid('tolerance_deg must be positive');
-  return ok({ hint: buildHint(deviations, Number(b.timing_ms ?? 0), thresholds(margin(b.margin), tol)), provider: 'algorithmic' });
+  const chosen = margin(b.margin);
+  const perFinger = fingerThresholds({ angle_deg: tol, timing_ms: DEFAULT_TOLERANCE.timing_ms, finger_angle_deg: fingerDegrees(b.finger_tolerance_deg, 'finger_tolerance_deg') }, chosen);
+  return ok({ hint: buildHint(deviations, Number(b.timing_ms ?? 0), thresholds(chosen, tol), perFinger), provider: 'algorithmic' });
 });
 route('POST', '/coach/plan', async (req) => {
   const b = body(req);
@@ -513,6 +634,33 @@ route('POST', '/dev/state', (req) => {
   store.saveDev();
   return ok(store.dev);
 });
+
+/* ---- Expert training persistence: drafts, bundle export and import (mock/persist.ts) ---- */
+const persisted = (run: Handler): Handler => async (req, params) => {
+  try {
+    return await run(req, params);
+  } catch (e) {
+    if (e instanceof persist.PersistError) throw new HttpError(e.status, e.message);
+    throw e;
+  }
+};
+const draftKind = (kind: string): string => (kind === 'scratch' ? kind : invalid("kind must be 'scratch'"));
+route('GET', '/calibrations/active', () => ok(persist.activeCalibration()));
+route('GET', '/drafts/([^/]+)', persisted((_req, [kind]) => ok(persist.latestDraft(draftKind(kind)))));
+route('GET', '/drafts/([^/]+)/([^/]+)', persisted((_req, [kind, id]) => ok(persist.getDraft(draftKind(kind), id))));
+route('PUT', '/drafts/([^/]+)/([^/]+)', persisted((req, [kind, id]) => ok(persist.putDraft(draftKind(kind), id, req.json))));
+route('DELETE', '/drafts/([^/]+)/([^/]+)', persisted((_req, [kind, id]) => {
+  persist.deleteDraft(draftKind(kind), id);
+  return ok(null, 204);
+}));
+route('GET', '/lessons/([^/]+)/export', (_req, [id]) => ok(persist.exportLessons([getStore().getLesson(id) ?? notFound(`lesson ${id} not found`)])));
+route('GET', '/export/lessons', (req) => {
+  const ids = [...new Set((req.query.get('ids') ?? '').split(',').map((s) => s.trim()).filter(Boolean))];
+  if (!ids.length) return invalid('ids is required');
+  return ok(persist.exportLessons(ids.map((id) => getStore().getLesson(id) ?? notFound(`lesson ${id} not found`)), req.query.get('name') ?? undefined));
+});
+route('GET', '/export/all', () => ok(persist.exportAll()));
+route('POST', '/lessons/import', persisted((req) => ok(persist.importBundle(req.json, req.query.get('overwrite') === 'true'))));
 
 /** Runs a request against the mock backend and returns the status and JSON body. */
 export async function handleMockRequest(req: MockRequest): Promise<MockResponse> {
