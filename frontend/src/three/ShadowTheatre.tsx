@@ -19,7 +19,7 @@ export const WALL_Z = -2.7;
 /** The lamp's flame, where the light sits. */
 export const LAMP_POS: [number, number, number] = [0, -0.62, 2.45];
 /** Height and depth of the hands between the lamp and the wall. */
-export const PUPPET_Y = 0.12;
+export const PUPPET_Y = -0.05;
 export const PUPPET_Z = 0.75;
 /** How far either side of the lamp the expert's and the learner's hands sit. */
 export const PUPPET_X = 0.62;
@@ -28,6 +28,11 @@ export const PUPPET_SCALE = 0.4;
 /** Camera framing: above the lamp, looking past the hands at the wall. */
 export const THEATRE_CAMERA: [number, number, number] = [0, 1.25, 8.4];
 export const THEATRE_TARGET: [number, number, number] = [0, 0.55, -1.5];
+/**
+ * The part of the wall (scene units on the wall plane) the theatre camera shows clear of the shape's name above and the
+ * bench below, with a small margin at the sides. Every shadow's fingers stay inside it for the whole rep (tested).
+ */
+export const WALL_VIEW = { left: -3.9, right: 3.9, bottom: -0.9, top: 2.45 };
 
 const LAMP_URL = '/models/vintage_oil_lamp/vintage_oil_lamp.gltf';
 /** Height of the lamp model's flame above its base, in model units. */
@@ -75,7 +80,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
     case 'left':
       return [{ side: 'left', tilt: raise, position: [-reach, 0, 0], rotation: [0, -QUARTER, 0], scale: s }];
     case 'wings': {
-      const w = s * 0.82;
+      const w = s * 0.7;
       return [
         { side: 'right', tilt: 0.4, position: [-0.12 * w, 0, 0], rotation: [0, -QUARTER, 0], scale: w },
         { side: 'left', tilt: -0.4, position: [0.12 * w, 0, 0.04], rotation: [0, QUARTER, 0], scale: w },
@@ -92,7 +97,7 @@ export function puppetLayout(layout: PuppetLayout, s = PUPPET_SCALE, raise = RAI
 }
 
 /** How far each one-handed puppet is raised: the dog's snout stays near level, the swan's neck stands tall. */
-const RAISE_BY_MOVE: Record<string, number> = { sp_talking_dog: 0.55, sp_swan: 1.3 };
+const RAISE_BY_MOVE: Record<string, number> = { sp_rabbit: 1.25, sp_talking_dog: 0.55, sp_swan: 1.5 };
 
 /** The lift a move's one-handed puppet needs. */
 export const raiseFor = (moveId: string | null | undefined): number => (moveId ? RAISE_BY_MOVE[moveId] : undefined) ?? RAISE;
