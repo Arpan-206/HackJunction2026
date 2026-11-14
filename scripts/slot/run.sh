@@ -8,7 +8,8 @@
 #
 # Steps, in order: 0 stack check, 1 depth clip, 2 right thumb recalibration,
 # 3 left glove recalibration, 4 button, LED, mirror and duel, 5 yaw,
-# 6 piano press, 7 robot twin flex direction, 8 demo lessons.
+# 6 piano press, 7 robot twin flex direction, 8 demo lessons, 9 fingerspelling
+# letters into a pack (--pack fi, --pack-letters S,U,Ä, --recorded-by NAME).
 # Each step prints what to do, waits for Enter, runs its check, shows the
 # result and asks pass, fail, skip or retry. Every result, with its commands
 # and their output, goes to logs/slot/<time>/results.jsonl and summary.md.

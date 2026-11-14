@@ -307,7 +307,7 @@ interface DriftCheckResult {
 
 ## Fingerspelling packs
 
-Added by lane fingerspelling-packs (additive). Letters live in packs, one alphabet per pack. The file is `backend/app/data/fingerspelling_packs.json`, copied verbatim to `frontend/src/mock/data/fingerspelling-packs.json`. The slot kit step `fingerspelling_letters` writes recorded letters into both.
+Added by lane fingerspelling-packs (additive). Letters live in packs, one alphabet per pack. The file is `backend/app/data/fingerspelling_packs.json`, copied verbatim to `frontend/src/mock/data/fingerspelling-packs.json`. The slot kit's step 9 (`pack_letters`, `scripts/slot/slot_letters.py`) writes recorded letters into both.
 
 ```ts
 type PackLetterStatus = 'recorded' | 'not_recorded';

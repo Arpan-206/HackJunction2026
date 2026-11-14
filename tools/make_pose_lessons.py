@@ -12,6 +12,10 @@ and cuts it into one step per seed step, exactly like core.fake.build_fake_lesso
 The result is lessons/<id>/lesson.json plus trace.npz in the core's format, so
 `python -m core --fake --lesson <id>` and the practice flow play them.
 
+Only recorded letters are emitted (backend/app/data/fingerspelling_packs.json): an ASL letter the pack does not mark
+recorded is left out, a word with such a letter is skipped, and a pack whose letters a person recorded (the slot kit,
+the camera) gets one lesson of its recorded poses. A letter that is not recorded yet never becomes a step.
+
 One core lesson per seed course. A held shape becomes a hold step; a shape with
 a motion (the talking dog's jaw, the bird's wings, J and Z) plays its loop
 twice and becomes a move step. Spelled words (--word) become one lesson with a
@@ -41,6 +45,7 @@ from core.recorder import Lesson, Recorder
 
 SEED_DIR = ROOT / "backend" / "app" / "data" / "seed"
 MOVES_FILE = ROOT / "backend" / "app" / "data" / "moves.json"
+PACKS_FILE = ROOT / "backend" / "app" / "data" / "fingerspelling_packs.json"
 SKILLS = ("shadow_puppets", "fingerspelling")
 WORDS = ("JUNCTION", "GEPPETTO")
 # The backend synthesiser eases into each key over this fraction of its slot (backend/app/constants.py).
@@ -202,24 +207,66 @@ def load_moves() -> dict[str, dict]:
     return {m["id"]: m for m in json.loads(MOVES_FILE.read_text())}
 
 
-def course_steps(course: dict) -> list[PoseStep]:
-    """One PoseStep per seed step; a word step is skipped here (spelled words come from --word)."""
+def load_packs(path: Path = PACKS_FILE) -> list[dict]:
+    """The fingerspelling packs (backend/app/data/fingerspelling_packs.json)."""
+    return json.loads(path.read_text(encoding="utf-8"))["packs"]
+
+
+def recorded_letter_moves(packs: list[dict]) -> set[str]:
+    """Move ids of letters a pack marks recorded. A letter move outside this set is never emitted."""
+    return {x["move_id"] for p in packs for x in p["letters"] if x["status"] == "recorded" and x.get("move_id")}
+
+
+def _is_letter_move(move_id: str) -> bool:
+    return move_id.startswith("fs_") and not move_id.startswith("fs_word_")
+
+
+def course_steps(course: dict, recorded: set[str] | None = None) -> list[PoseStep]:
+    """One PoseStep per seed step. Word steps are skipped (spelled words come from --word), and so is any letter
+    the packs do not mark recorded (`recorded`, default: read the pack file)."""
+    recorded = recorded_letter_moves(load_packs()) if recorded is None else recorded
     out = []
     for s in course["steps"]:
-        if str(s.get("move_id", "")).startswith("fs_word_"):
+        mid = str(s.get("move_id", ""))
+        if mid.startswith("fs_word_") or (_is_letter_move(mid) and mid not in recorded):
             continue
         out.append(PoseStep(_shape_name(s["title"]), s["instruction"], s["motion"]))
     return out
 
 
-def word_steps(word: str, moves: dict[str, dict]) -> list[PoseStep]:
+def word_steps(word: str, moves: dict[str, dict], recorded: set[str] | None = None) -> list[PoseStep]:
+    """One step per letter of an ASL word. A letter with no move, or not recorded in the pack, raises ValueError."""
+    recorded = recorded_letter_moves(load_packs()) if recorded is None else recorded
     steps = []
     for ch in word.upper():
         m = moves.get(f"fs_{ch.lower()}")
         if m is None:
             raise ValueError(f"no fingerspelling move for {ch!r}")
+        if m["id"] not in recorded:
+            raise ValueError(f"{ch} is not recorded yet")
         steps.append(PoseStep(f"Letter {ch}", m["description"], m["default_motion"]))
     return steps
+
+
+def pack_short_name(pack: dict) -> str:
+    """"Finnish fingerspelling (sormiaakkoset)" -> "Sormiaakkoset". The same rule as the slot kit's take titles."""
+    name = pack["name"]
+    return name.split("(", 1)[1].rstrip(")").strip().capitalize() if "(" in name else name
+
+
+def pack_pose_steps(pack: dict) -> list[PoseStep]:
+    """The letters a person recorded into a pack (a pose, no catalogue move), as hold steps. Unrecorded slots: none.
+
+    Step names are the bare letter and the lesson title avoids "fingerspell": core/priors/facts.py reads lessons named
+    like that with the ASL letter model, which is wrong for another alphabet.
+    """
+    out = []
+    for x in pack["letters"]:
+        if x["status"] != "recorded" or x.get("move_id") or not x.get("pose"):
+            continue
+        note = f"Recorded by {x['recorded_by']} on {str(x['recorded_at'])[:10]} against {x['reference']}."
+        out.append(PoseStep(x["letter"], note, {"preset": "hold_pose", "pose": dict(x["pose"])}))
+    return out
 
 
 def course_lesson_id(course: dict) -> str:
@@ -234,10 +281,13 @@ def build_all(
     words=WORDS,
     hold_s: float = HOLD_S,
 ) -> list[Lesson]:
-    """Write one lesson per seed course of the skills, plus one per word. Overwrites earlier runs of this tool."""
+    """Write one lesson per seed course of the skills, one per word, and one per pack with letters a person recorded.
+    Only recorded letters are emitted. Overwrites earlier runs of this tool."""
     lessons = []
+    packs = load_packs()
+    recorded = recorded_letter_moves(packs)
     for course in load_courses(skills):
-        steps = course_steps(course)
+        steps = course_steps(course, recorded)
         if not steps:
             continue
         lid = course_lesson_id(course)
@@ -255,12 +305,31 @@ def build_all(
         moves = load_moves()
         for w in words:
             lid = f"{LESSON_PREFIX}spell-{w.lower()}"
+            try:
+                steps = word_steps(w, moves, recorded)
+            except ValueError as e:
+                print(f"skipped {lid}: {e}")
+                continue
             lesson = record_lesson(
                 cfg,
                 lid,
-                f"Fingerspelling: spell {w.upper()}",
-                word_steps(w, moves),
+                f"ASL fingerspelling alphabet: spell {w.upper()}",
+                steps,
                 {"skill": "fingerspelling", "word": w.upper(), "made_by": "tools/make_pose_lessons.py"},
+                hold_s,
+            )
+            lesson.save(out_dir, keyframes=False, overwrite=True)
+            lessons.append(lesson)
+        for pack in packs:
+            steps = pack_pose_steps(pack)
+            if not steps:
+                continue
+            lesson = record_lesson(
+                cfg,
+                f"{LESSON_PREFIX}pack-{pack['id']}",
+                f"{pack_short_name(pack)}: the recorded letters",
+                steps,
+                {"skill": "fingerspelling", "pack": pack["id"], "made_by": "tools/make_pose_lessons.py"},
                 hold_s,
             )
             lesson.save(out_dir, keyframes=False, overwrite=True)
@@ -288,6 +357,14 @@ def main(argv: list[str] | None = None) -> int:
         if "fingerspelling" in skills:
             for w in words:
                 print(f"{LESSON_PREFIX}spell-{w.lower()}", "|", " ".join(w))
+            for pack in load_packs():
+                steps = pack_pose_steps(pack)
+                if steps:
+                    print(f"{LESSON_PREFIX}pack-{pack['id']}", "|", ", ".join(x.name for x in steps))
+                else:
+                    missing = [x["letter"] for x in pack["letters"] if x["status"] != "recorded"]
+                    if missing:
+                        print(f"(no lesson for {pack['id']}: not recorded yet: {', '.join(missing)})")
         return 0
     out = Path(args.out) if args.out else ROOT / cfg.server.lessons_dir
     out.mkdir(parents=True, exist_ok=True)
