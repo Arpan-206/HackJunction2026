@@ -23,3 +23,8 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.2.0",
 ]
+
+[tool.uv]
+# Security override (CRACI): fsspec CVE-2026-104851.
+# datasets 3.6.0 (through lerobot 0.3.3) pins fsspec<=2025.3.0.
+override-dependencies = ["fsspec[http]>=2026.6.0"]
