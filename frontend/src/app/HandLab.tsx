@@ -34,7 +34,7 @@ const ANATOMY: { title: string; style: HandStyle; frame: HandFrame; yaw?: number
   { title: 'relaxed, sketch, side', style: 'sketch', frame: held([-0.05, -0.1, -0.1, -0.1, -0.1]), yaw: SIDE },
   { title: 'fist, chalk, side', style: 'chalk', frame: held(FIST), yaw: SIDE },
   { title: 'fist, wood, front', style: 'wood', frame: held(FIST), yaw: FRONT },
-  { title: 'pinch, chalk, front', style: 'chalk', frame: held([0.25, 0.3, 0.05, 0.05, 0.05]), yaw: FRONT },
+  { title: 'pinch, chalk, front', style: 'chalk', frame: held([0.45, 0.5, 0, 0, 0]), yaw: FRONT },
   { title: 'point, wood, side', style: 'wood', frame: held([0.5, 0, 0.9, 0.95, 0.95]), yaw: SIDE },
   { title: 'palm up, sketch', style: 'sketch', frame: held([0.1, 0.15, 0.2, 0.25, 0.3], [0, 0, Math.PI]) },
   { title: 'two hands, ghost and chalk', style: 'chalk', frame: held([0.2, 0.3, 0.35, 0.4, 0.45]), preset: 'pair', pair: true },

@@ -51,6 +51,11 @@ export interface ThumbTuning {
 export const THUMB_TUNING: ThumbTuning = { opposition: 0.8, roll: 0.6, curl: 0.6 };
 /** Ring and little metacarpals flex a little with their knuckles, which cups the palm in a fist (radian per radian). */
 export const CUP_GAIN: readonly number[] = [0, 0, 0, 0.06, 0.13];
+/**
+ * Spread (radians, away from the middle finger) added to every pose. The model's fingers lie pressed together, and a
+ * curled hand then reads as one lump; a hand at ease keeps a finger's width of air between its fingers.
+ */
+export const REST_SPREAD: readonly number[] = [0, 0.08, 0, 0.05, 0.1];
 
 export interface BoneDesc {
   name: string;
@@ -243,13 +248,98 @@ export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, fl
         a = j.bindFlex + swing;
         roll = swing * thumb.roll;
       } else if (f === 0) a = j.bindFlex + (a - j.bindFlex) * thumb.curl;
-      jointQuaternion(layout.bones[j.bone].quaternion, j, a, k === 0 ? spread[f] ?? 0 : 0, roll, bones[j.bone].quaternion);
+      jointQuaternion(layout.bones[j.bone].quaternion, j, a, k === 0 ? (spread[f] ?? 0) + REST_SPREAD[f] : 0, roll, bones[j.bone].quaternion);
     }
     if (fd.cup) {
       const mcp = Math.max(0, (flex[f * 3] ?? 0) - fd.joints[0].bindFlex);
       bones[fd.cup.bone].quaternion.copy(layout.bones[fd.cup.bone].quaternion).multiply(_q.setFromAxisAngle(fd.cup.axis, mcp * fd.cup.gain));
     }
   }
+  closePinch(bones, layout);
+}
+
+/**
+ * Pinch contact. Joint angles alone leave the thumb and index pads a little apart (a glove's thumb reading is coarse and
+ * the model's thumb is not the wearer's), so when the posed thumb tip already sits near the index tip, held out in front
+ * of the knuckle as in a pinch, the thumb's CMC and MCP turn the rest of the way until the pads touch. Far apart, or
+ * with the index curled into a fist, nothing changes; in between the correction fades in, so a pinch closes smoothly.
+ */
+export const PINCH = {
+  /** Unaided tip distance (hand-space units) at which the pads close fully, and beyond which the thumb is left alone. */
+  near: 0.3,
+  far: 0.5,
+  /** Distance kept between the two tip joints when touching: about one fingertip's thickness. */
+  contact: 0.16,
+  /** How far in front of its knuckle (along the palm) the index tip must be for a pinch; curled back past it is a fist. */
+  reachFrom: -0.05,
+  reachTo: 0.1,
+};
+
+const _p = new Vector3();
+const _wq = new Quaternion();
+const _thumbTip = new Vector3();
+const _indexTip = new Vector3();
+const _indexKnuckle = new Vector3();
+const _target = new Vector3();
+const _joint = new Vector3();
+const _jq = new Quaternion();
+const _pq = new Quaternion();
+const _a = new Vector3();
+const _b = new Vector3();
+const _r = new Quaternion();
+const _pi = new Quaternion();
+const _chain: number[] = [];
+
+/** Hand-space position (and optionally rotation) of a bone from the current local transforms, without matrices. */
+function boneWorld(bones: readonly Object3D[], layout: HandLayout, i: number, pos: Vector3, quat: Quaternion): void {
+  _chain.length = 0;
+  for (let b = i; b >= 0; b = layout.bones[b].parent) _chain.push(b);
+  pos.set(0, 0, 0);
+  quat.identity();
+  for (let k = _chain.length - 1; k >= 0; k--) {
+    const b = bones[_chain[k]];
+    pos.add(_p.copy(b.position).applyQuaternion(quat));
+    quat.multiply(b.quaternion);
+  }
+}
+
+function closePinch(bones: readonly Object3D[], layout: HandLayout): void {
+  const thumb = layout.fingers[0];
+  const index = layout.fingers[1];
+  boneWorld(bones, layout, thumb.tip, _thumbTip, _wq);
+  boneWorld(bones, layout, index.tip, _indexTip, _wq);
+  boneWorld(bones, layout, index.joints[0].bone, _indexKnuckle, _wq);
+  const d0 = _thumbTip.distanceTo(_indexTip);
+  const reach = _a.copy(_indexTip).sub(_indexKnuckle).dot(layout.palm.distal);
+  const w = (1 - smoothstep(PINCH.near, PINCH.far, d0)) * smoothstep(PINCH.reachFrom, PINCH.reachTo, reach);
+  if (w <= 0) return;
+  // Aim at a point one contact distance short of the index tip, on the thumb's side of it.
+  _target.copy(_thumbTip).sub(_indexTip);
+  if (_target.lengthSq() < 1e-8) return;
+  _target.setLength(PINCH.contact).add(_indexTip);
+  _target.lerpVectors(_thumbTip, _target, w);
+  // Cyclic coordinate descent over the MCP then the CMC: each turns so the tip swings onto the line to the target.
+  const joints = [thumb.joints[1].bone, thumb.joints[0].bone];
+  for (let it = 0; it < 4; it++) {
+    for (const j of joints) {
+      boneWorld(bones, layout, j, _joint, _jq);
+      boneWorld(bones, layout, thumb.tip, _thumbTip, _wq);
+      _a.copy(_thumbTip).sub(_joint);
+      _b.copy(_target).sub(_joint);
+      if (_a.lengthSq() < 1e-8 || _b.lengthSq() < 1e-8) continue;
+      _r.setFromUnitVectors(_a.normalize(), _b.normalize());
+      // World turn r on this bone: local' = parentWorld^-1 * r * parentWorld * local.
+      _pq.copy(_jq).multiply(_q.copy(bones[j].quaternion).invert());
+      const local = bones[j].quaternion;
+      local.premultiply(_pi.copy(_pq).invert().multiply(_r).multiply(_pq));
+      local.normalize();
+    }
+  }
+}
+
+function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
 }
 
 /** Creates the bone hierarchy at its bind pose under `root` (the wrist is its child). Returns bones in layout order. */

@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { curlsToFlexion } from '../src/three/motion';
 import { FINGER_ORDER } from '../src/three/anatomy';
 import { buildHandTemplate, type HandTemplate } from '../src/three/handModel';
-import { applyHandPose, createBones, jointQuaternion, signedAngle } from '../src/three/handPose';
+import { applyHandPose, createBones, jointQuaternion, PINCH, signedAngle } from '../src/three/handPose';
 
 let tpl: HandTemplate;
 
@@ -133,6 +133,34 @@ describe('flexion to bones', () => {
     const [index, middle] = [1, 2].map((f) => at(tpl.layout.fingers[f].joints[1].bone));
     const over = index.clone().lerp(middle, 0.5);
     expect(fist.tip[0].distanceTo(over)).toBeLessThan(0.25);
+  });
+
+  it('closes a pinch: thumb and index tips meet at the pinch curls', () => {
+    // The synthesiser's pinch peak (thumb 0.45, index 0.5): the tip joints sit one fingertip's thickness apart.
+    const pinch = pose([0.45, 0.5, 0, 0, 0]);
+    expect(pinch.tip[0].distanceTo(pinch.tip[1])).toBeLessThan(0.2);
+    // Halfway through the press the pads are still apart, so the pinch visibly opens and closes.
+    const half = pose([0.22, 0.25, 0, 0, 0]);
+    expect(half.tip[0].distanceTo(half.tip[1])).toBeGreaterThan(0.35);
+  });
+
+  it('leaves the thumb alone outside a pinch (open hand, fist, rabbit)', () => {
+    const unaided = (curls: number[]) => {
+      const keep = { ...PINCH };
+      PINCH.near = PINCH.far = -1;
+      try {
+        return pose(curls).tip[0];
+      } finally {
+        Object.assign(PINCH, keep);
+      }
+    };
+    for (const curls of [
+      [0, 0, 0, 0, 0],
+      [0.8, 0.95, 0.95, 0.95, 0.95],
+      [0.7, 0, 0, 0.9, 0.9],
+    ]) {
+      expect(pose(curls).tip[0].distanceTo(unaided(curls))).toBeLessThan(1e-6);
+    }
   });
 
   it('spreads index and little away from the middle finger', () => {
