@@ -1381,3 +1381,115 @@
   font: italic 400 var(--step-0) / 1.3 var(--font-note);
   letter-spacing: 0;
 }
+
+/* ---------- Touch typing (air typing and the keyboard mode) ---------- */
+.ty-test {
+  display: grid;
+  gap: 1rem;
+}
+.ty-test > .ap-seg {
+  justify-self: start;
+}
+.ty-word {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.15rem;
+  padding: 0.6rem 1.5rem 0.75rem;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  max-width: calc(100% - 1.5rem);
+}
+.ty-word__count {
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text-2);
+}
+.ty-word__letters {
+  display: flex;
+  gap: 0.15em;
+  font: 500 clamp(3rem, 2rem + 4vw, 5.5rem) / 1.05 var(--font-display);
+  letter-spacing: 0.04em;
+}
+.ty-word__finger {
+  font: 600 var(--step-1) var(--font-ui);
+}
+.ty-letter {
+  border-bottom: 0.08em solid transparent;
+}
+.ty-letter--now {
+  border-bottom-color: var(--text);
+}
+.ty-letter--ok {
+  color: var(--ok);
+}
+.ty-letter--off {
+  color: var(--danger);
+}
+.ty-callout {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  width: min(92%, 52rem);
+  margin: 0;
+  padding: 0.7rem 1.25rem;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  font: italic 400 var(--step-2) / 1.25 var(--font-note);
+  text-align: center;
+}
+.ty-callout--off {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.ty-callout--ok {
+  border-color: var(--ok);
+}
+.ty-line {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(94%, 60rem);
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  font: 500 clamp(1.5rem, 1rem + 1.6vw, 2.4rem) / 1.3 var(--font-display);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.ty-line__char--done {
+  color: var(--text-2);
+}
+.ty-live {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 0;
+  font-size: var(--step-1);
+}
+.ty-live strong {
+  font: 500 var(--step-3) / 1 var(--font-display);
+  margin-right: 0.35rem;
+}
+.ty-keys-side {
+  display: grid;
+  gap: 0.75rem;
+}
+.ty-fixes {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.3rem;
+  font: italic 400 var(--step-1) var(--font-note);
+  color: var(--danger);
+}
+.ty-note {
+  margin: 0;
+  font-size: var(--step-0);
+}
