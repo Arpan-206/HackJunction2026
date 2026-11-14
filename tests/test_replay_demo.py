@@ -6,10 +6,21 @@ import time
 
 import numpy as np
 
+from core import geom
+from core import hand as H
+from core.calibration import angles_to_triples, load_hand, make_hand_calibration
 from core.clock import Clock
 from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, GloveSource
 from tools import capture_inventory as inv
-from tools.fake_rgmp_server import frame_bytes, make_definition, pack_definition, pack_disconnect
+from tools.cut_lesson import apply_calibration, cut_lesson, score_take, window_hands
+from tools.fake_rgmp_server import (
+    frame_bytes,
+    joint_transform,
+    make_definition,
+    pack_definition,
+    pack_disconnect,
+    pack_frame,
+)
 from tools.replay import CaptureClock, ReplayServer, cut_window, iter_messages, restamp, split_capture
 
 RATE = 83.33
@@ -167,3 +178,73 @@ def test_inventory_walk_on_a_synthetic_capture(tmp_path):
     back = inv.load_cache(tmp_path / "c.npz")
     assert np.allclose(back["right"]["angles"], w["right"]["angles"])
     assert json.loads(json.dumps(back["devices"]))
+
+
+# --- held-pose lessons (tools/cut_lesson.py) and the thumb calibration ------------------------------------------
+
+POSE_A = {"thumb": 0.2, "index": 0.1, "middle": 0.1, "ring": 0.1, "little": 0.1}  # flat
+POSE_B = {"thumb": 0.8, "index": 0.9, "middle": 0.9, "ring": 0.9, "little": 0.9}  # fist
+
+
+def still_frame(curl, ts_us, dev=2, side="right"):
+    local = H.synth_joints(curl, side=side)
+    xr, rots = joint_transform(local, H.joint_rotations(local), geom.quat_from_axis_angle([1, 0, 0], 0.0))
+    return pack_frame(dev, 0, ts_us, xr, rots, "transform")
+
+
+def make_still_capture(path, plan=((POSE_A, 3.0), (POSE_B, 3.0), (POSE_A, 3.0))):
+    out = bytearray(pack_definition(make_definition(2, "right", "transform")))
+    t = 0.0
+    for curl, secs in plan:
+        for _ in range(int(secs * RATE)):
+            out += still_frame(curl, 1_000_000 + int(t * 1e6))
+            t += 1 / RATE
+    path.write_bytes(bytes(out))
+    return path
+
+
+def test_cut_a_held_pose_and_score_other_takes(cfg, tmp_path):
+    cap = make_still_capture(tmp_path / "still.rgmp")
+    expert = window_hands(cap, "right", 0.3, 2.4, cfg=cfg)
+    assert 65 <= len(expert) <= 75  # 30 Hz
+    apply_calibration(expert, None, cfg)
+    lesson = cut_lesson(cfg, expert, "right", "Held flat", "replay-test-flat", tmp_path / "lessons", None)
+    assert [s.kind for s in lesson.steps] == ["hold"]
+    assert (tmp_path / "lessons" / "replay-test-flat" / "lesson.json").exists()
+    assert (tmp_path / "lessons" / "replay-test-flat" / "trace.npz").exists()
+    same = window_hands(cap, "right", 6.3, 2.4, cfg=cfg)  # the same pose, a later take
+    wrong = window_hands(cap, "right", 3.3, 2.4, cfg=cfg)  # a fist
+    apply_calibration(same, None, cfg)
+    apply_calibration(wrong, None, cfg)
+    good, bad = score_take(cfg, lesson, same, "right", None), score_take(cfg, lesson, wrong, "right", None)
+    assert good["passed"] and good["score_mean"] > 95
+    assert not bad["passed"] and bad["score_mean"] < 30
+
+
+def test_a_thumb_phase_makes_an_unusable_thumb_usable(cfg):
+    flat = np.zeros(18)
+    flat[[0, 1]] = [51.0, 15.0]
+    fist = flat.copy()
+    fist[[0, 1]] = [28.0, 11.0]  # the real right glove: a fist reads the thumb lower than flat
+    fist[2:14] = 90.0
+    folded = flat.copy()
+    folded[[0, 1]] = [62.0, 36.0]
+    before = make_hand_calibration("right", angles_to_triples(flat), angles_to_triples(fist), cfg.calibration, cfg.hand, {})
+    after = make_hand_calibration("right", angles_to_triples(flat), angles_to_triples(fist), cfg.calibration, cfg.hand, {},
+                                  angles_to_triples(folded))
+    assert before.finger_weights()["thumb"] == 0.0 and after.finger_weights()["thumb"] == 1.0
+    assert after.origin["thumb"] == "measured"
+
+
+def test_thumb_calibration_copy_loads_like_the_backend_record(cfg, tmp_path):
+    rng = {"id": "r-thumb", "side": "right", "flat": angles_to_triples(np.full(18, 20.0)),
+           "fist": angles_to_triples(np.full(18, 80.0)), "thumb": angles_to_triples(np.full(18, 70.0)),
+           "created_at": "2026-11-14T00:00:00Z"}
+    rec = {"id": "w-thumb", "wearer": "arpan", "created_at": "2026-11-14T00:00:01Z", "neutral": [],
+           "range_calibration_ids": {"right": "r-thumb"}}
+    (tmp_path / "calibrations").mkdir()
+    (tmp_path / "glove_calibrations").mkdir()
+    (tmp_path / "calibrations" / "r-thumb.json").write_text(json.dumps(rng))
+    (tmp_path / "glove_calibrations" / "w-thumb.json").write_text(json.dumps(rec))
+    cal = load_hand(tmp_path, "right", "arpan", cfg.calibration, cfg.hand)
+    assert cal is not None and cal.origin["thumb"] == "measured" and cal.origin["range_calibration_id"] == "r-thumb"

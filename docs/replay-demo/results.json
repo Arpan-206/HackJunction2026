@@ -1,0 +1,1863 @@
+{
+ "capture": "/Users/arpanpandey/Code/Junction/repo/logs/live/20261114-131952/solver_12277.rgmp",
+ "thumb_calibration": {
+  "frames": 285,
+  "window": [
+   2969.0,
+   9.5
+  ],
+  "flat_thumb_deg": {
+   "mcp": 50.9,
+   "ip": 14.9
+  },
+  "fist_thumb_deg": {
+   "mcp": 27.7,
+   "ip": 10.9
+  },
+  "folded_thumb_deg": {
+   "mcp": 62.0,
+   "ip": 36.3,
+   "cmc": 52.5
+  },
+  "fingers_deg_during_fold": {
+   "index": 38.1,
+   "middle": 40.1,
+   "ring": 34.3,
+   "little": 26.5
+  },
+  "thumb_triple": {
+   "thumb": [
+    0.9156,
+    1.0813,
+    0.6327
+   ],
+   "index": [
+    0.6812,
+    0.7877,
+    0.5267
+   ],
+   "middle": [
+    0.3626,
+    1.0415,
+    0.6979
+   ],
+   "ring": [
+    0.1449,
+    0.9894,
+    0.6627
+   ],
+   "little": [
+    0.3728,
+    0.6082,
+    0.4062
+   ]
+  },
+  "files": [
+   "calibrations/50462cbe80bd.json",
+   "calibrations/c8713cacaff6-thumb.json",
+   "glove_calibrations/a907152ed526-thumb.json"
+  ]
+ },
+ "calibration_summary": {
+  "raw": {
+   "left": null,
+   "right": null
+  },
+  "before": {
+   "left": {
+    "wearer": "arpan",
+    "wearer_calibration_id": "a907152ed526",
+    "range_calibration_id": "50462cbe80bd",
+    "created_at": "2026-11-14T11:34:24.588857+00:00",
+    "range": "measured",
+    "usable_joints": 12,
+    "unusable": [
+     "ring_mcp",
+     "little_mcp"
+    ],
+    "finger_weights": {
+     "thumb": 1.0,
+     "index": 1.0,
+     "middle": 1.0,
+     "ring": 1.0,
+     "little": 1.0
+    },
+    "flat_deg": {
+     "thumb": 28.2,
+     "index": 34.5,
+     "middle": 35.8,
+     "ring": 33.2,
+     "little": 32.6
+    },
+    "range_deg": {
+     "thumb": 17.2,
+     "index": 8.2,
+     "middle": 5.3,
+     "ring": 2.2,
+     "little": 0.7
+    }
+   },
+   "right": {
+    "wearer": "arpan",
+    "wearer_calibration_id": "a907152ed526",
+    "range_calibration_id": "c8713cacaff6",
+    "created_at": "2026-11-14T11:34:24.589858+00:00",
+    "range": "measured",
+    "usable_joints": 12,
+    "unusable": [
+     "thumb_mcp",
+     "thumb_ip"
+    ],
+    "finger_weights": {
+     "thumb": 0.0,
+     "index": 1.0,
+     "middle": 1.0,
+     "ring": 1.0,
+     "little": 1.0
+    },
+    "flat_deg": {
+     "thumb": 32.9,
+     "index": 24.8,
+     "middle": 38.4,
+     "ring": 42.3,
+     "little": 32.0
+    },
+    "range_deg": {
+     "thumb": -13.5,
+     "index": 48.6,
+     "middle": 37.6,
+     "ring": 36.1,
+     "little": 42.8
+    }
+   }
+  },
+  "after": {
+   "left": {
+    "wearer": "arpan",
+    "wearer_calibration_id": "a907152ed526-thumb",
+    "range_calibration_id": "50462cbe80bd",
+    "created_at": "2026-11-14T11:34:24.588857+00:00",
+    "range": "measured",
+    "usable_joints": 12,
+    "unusable": [
+     "ring_mcp",
+     "little_mcp"
+    ],
+    "finger_weights": {
+     "thumb": 1.0,
+     "index": 1.0,
+     "middle": 1.0,
+     "ring": 1.0,
+     "little": 1.0
+    },
+    "flat_deg": {
+     "thumb": 28.2,
+     "index": 34.5,
+     "middle": 35.8,
+     "ring": 33.2,
+     "little": 32.6
+    },
+    "range_deg": {
+     "thumb": 17.2,
+     "index": 8.2,
+     "middle": 5.3,
+     "ring": 2.2,
+     "little": 0.7
+    }
+   },
+   "right": {
+    "wearer": "arpan",
+    "wearer_calibration_id": "a907152ed526-thumb",
+    "range_calibration_id": "c8713cacaff6-thumb",
+    "created_at": "2026-11-14T11:34:24.589858+00:00",
+    "range": "measured",
+    "thumb": "measured",
+    "usable_joints": 14,
+    "unusable": [],
+    "finger_weights": {
+     "thumb": 1.0,
+     "index": 1.0,
+     "middle": 1.0,
+     "ring": 1.0,
+     "little": 1.0
+    },
+    "flat_deg": {
+     "thumb": 32.9,
+     "index": 24.8,
+     "middle": 38.4,
+     "ring": 42.3,
+     "little": 32.0
+    },
+    "range_deg": {
+     "thumb": 16.2,
+     "index": 48.6,
+     "middle": 37.6,
+     "ring": 36.1,
+     "little": 42.8
+    }
+   }
+  }
+ },
+ "lessons": [
+  {
+   "lesson": "replay-right-little-out-rest-half-thumb-half-2985",
+   "side": "right",
+   "pose": "little out, rest half, thumb half",
+   "expert": [
+    2985.9,
+    8.0
+   ],
+   "learner": [
+    3090.5,
+    6.0
+   ],
+   "wrong": [
+    1139.6,
+    4.5
+   ],
+   "pose_dist_deg": 2.0,
+   "wrong_dist_deg": 31.8,
+   "flex_deg": {
+    "thumb": 36.0,
+    "index": 44.0,
+    "middle": 53.0,
+    "ring": 50.0,
+    "little": 39.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 1.9,
+       "index": 1.9,
+       "middle": 2.3,
+       "ring": 1.7,
+       "little": 3.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 71.5,
+      "score_best": 72.4,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 3.8,
+       "index": 32.0,
+       "middle": 36.3,
+       "ring": 33.6,
+       "little": 22.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 1.4,
+       "index": 3.1,
+       "middle": 3.6,
+       "ring": 2.0,
+       "little": 2.1
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 88.9,
+      "score_best": 89.3,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 6.5,
+       "index": 26.3,
+       "middle": 23.7,
+       "ring": 14.8,
+       "little": 12.6
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 3.2,
+       "index": 3.1,
+       "middle": 3.6,
+       "ring": 2.0,
+       "little": 2.1
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 91.1,
+      "score_best": 91.4,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 1.8,
+       "index": 26.3,
+       "middle": 23.7,
+       "ring": 14.8,
+       "little": 12.6
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-right-flat-hand-thumb-open-1666",
+   "side": "right",
+   "pose": "flat hand, thumb open",
+   "expert": [
+    1666.7,
+    8.0
+   ],
+   "learner": [
+    1605.3,
+    4.5
+   ],
+   "wrong": [
+    857.4,
+    3.7
+   ],
+   "pose_dist_deg": 3.4,
+   "wrong_dist_deg": 51.1,
+   "flex_deg": {
+    "thumb": 21.0,
+    "index": 20.0,
+    "middle": 17.0,
+    "ring": 14.0,
+    "little": 20.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 135,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 4.1,
+       "index": 3.9,
+       "middle": 4.5,
+       "ring": 4.9,
+       "little": 1.8
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 111,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 42.4,
+      "score_best": 42.9,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 14.0,
+       "index": 43.7,
+       "middle": 46.1,
+       "ring": 50.8,
+       "little": 49.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 135,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 9.1,
+       "index": 3.9,
+       "middle": 1.3,
+       "ring": 1.3,
+       "little": 1.0
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 111,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 23.3,
+      "score_best": 23.9,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 24.1,
+       "index": 63.0,
+       "middle": 47.1,
+       "ring": 38.8,
+       "little": 52.3
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 135,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 1.8,
+       "index": 3.9,
+       "middle": 1.3,
+       "ring": 1.3,
+       "little": 1.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 111,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 38.6,
+      "score_best": 39.1,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 4.8,
+       "index": 63.0,
+       "middle": 47.1,
+       "ring": 38.8,
+       "little": 52.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-right-middle-ring-little-out-rest-half-thumb-open-1244",
+   "side": "right",
+   "pose": "middle+ring+little out, rest half, thumb open",
+   "expert": [
+    1244.5,
+    8.0
+   ],
+   "learner": [
+    2413.4,
+    5.4
+   ],
+   "wrong": [
+    420.8,
+    3.8
+   ],
+   "pose_dist_deg": 3.1,
+   "wrong_dist_deg": 37.3,
+   "flex_deg": {
+    "thumb": 20.0,
+    "index": 43.0,
+    "middle": 38.0,
+    "ring": 36.0,
+    "little": 27.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 161,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 3.6,
+       "index": 2.8,
+       "middle": 3.3,
+       "ring": 2.5,
+       "little": 5.6
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 114,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 47.6,
+      "score_best": 48.5,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 19.2,
+       "index": 22.7,
+       "middle": 31.0,
+       "ring": 61.8,
+       "little": 62.2
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 161,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 3.1,
+       "index": 4.0,
+       "middle": 3.3,
+       "ring": 1.5,
+       "little": 4.9
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 114,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 32.4,
+      "score_best": 33.8,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 63.0,
+       "index": 35.3,
+       "middle": 45.1,
+       "ring": 70.6,
+       "little": 41.2
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 161,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 0.6,
+       "index": 4.0,
+       "middle": 3.3,
+       "ring": 1.5,
+       "little": 4.9
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 114,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 45.7,
+      "score_best": 46.8,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 15.5,
+       "index": 35.3,
+       "middle": 45.1,
+       "ring": 70.6,
+       "little": 41.2
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-right-half-curl-thumb-open-3189",
+   "side": "right",
+   "pose": "half curl, thumb open",
+   "expert": [
+    3189.8,
+    7.1
+   ],
+   "learner": [
+    1523.2,
+    4.2
+   ],
+   "wrong": [
+    1139.6,
+    4.5
+   ],
+   "pose_dist_deg": 5.2,
+   "wrong_dist_deg": 37.5,
+   "flex_deg": {
+    "thumb": 25.0,
+    "index": 41.0,
+    "middle": 56.0,
+    "ring": 61.0,
+    "little": 50.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 126,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 6.8,
+       "index": 5.5,
+       "middle": 5.6,
+       "ring": 6.1,
+       "little": 3.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 65.7,
+      "score_best": 66.3,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 8.2,
+       "index": 29.7,
+       "middle": 36.6,
+       "ring": 42.1,
+       "little": 28.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 126,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 99.9,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 12.4,
+       "index": 7.2,
+       "middle": 7.9,
+       "ring": 8.5,
+       "little": 4.7
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 1.0,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 73.8,
+      "score_best": 74.1,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 14.6,
+       "index": 21.8,
+       "middle": 28.0,
+       "ring": 33.1,
+       "little": 24.8
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 1.0,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 126,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 99.9,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 2.5,
+       "index": 7.2,
+       "middle": 7.9,
+       "ring": 8.5,
+       "little": 4.7
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 1.0,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 77.6,
+      "score_best": 77.8,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 8.8,
+       "index": 21.8,
+       "middle": 28.0,
+       "ring": 33.1,
+       "little": 24.8
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 1.0,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-right-index-out-ring-in-thumb-open-1638",
+   "side": "right",
+   "pose": "index out, ring in, thumb open",
+   "expert": [
+    1638.8,
+    7.1
+   ],
+   "learner": [
+    1798.8,
+    4.3
+   ],
+   "wrong": [
+    1139.6,
+    4.5
+   ],
+   "pose_dist_deg": 1.8,
+   "wrong_dist_deg": 42.1,
+   "flex_deg": {
+    "thumb": 21.0,
+    "index": 33.0,
+    "middle": 63.0,
+    "ring": 69.0,
+    "little": 65.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 131,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 0.9,
+       "index": 1.0,
+       "middle": 2.3,
+       "ring": 2.3,
+       "little": 2.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 56.1,
+      "score_best": 57.0,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 13.0,
+       "index": 26.4,
+       "middle": 45.7,
+       "ring": 45.4,
+       "little": 41.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 131,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 0.7,
+       "index": 1.3,
+       "middle": 3.9,
+       "ring": 2.9,
+       "little": 2.4
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 63.3,
+      "score_best": 64.3,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 21.9,
+       "index": 24.1,
+       "middle": 33.2,
+       "ring": 30.0,
+       "little": 39.1
+      },
+      "weights": {
+       "thumb": 0.0,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 131,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 0.1,
+       "index": 1.3,
+       "middle": 3.9,
+       "ring": 2.9,
+       "little": 2.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 134,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 70.6,
+      "score_best": 71.4,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 10.3,
+       "index": 24.1,
+       "middle": 33.2,
+       "ring": 30.0,
+       "little": 39.1
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-left-flat-hand-thumb-open-1790",
+   "side": "left",
+   "pose": "flat hand, thumb open",
+   "expert": [
+    1791.1,
+    8.0
+   ],
+   "learner": [
+    2710.9,
+    6.0
+   ],
+   "wrong": [
+    2702.8,
+    3.1
+   ],
+   "pose_dist_deg": 5.5,
+   "wrong_dist_deg": 55.8,
+   "flex_deg": {
+    "thumb": 18.0,
+    "index": 19.0,
+    "middle": 18.0,
+    "ring": 15.0,
+    "little": 19.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 98.9,
+      "score_best": 99.2,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 17.5,
+       "index": 4.5,
+       "middle": 3.4,
+       "ring": 6.6,
+       "little": 6.8
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 32.4,
+      "score_best": 34.1,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 26.5,
+       "index": 48.6,
+       "middle": 51.8,
+       "ring": 51.5,
+       "little": 49.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 14.7,
+       "index": 2.6,
+       "middle": 0.4,
+       "ring": 3.8,
+       "little": 4.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 13.6,
+      "score_best": 14.8,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 29.9,
+       "index": 60.0,
+       "middle": 63.1,
+       "ring": 63.2,
+       "little": 69.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 14.7,
+       "index": 2.6,
+       "middle": 0.4,
+       "ring": 3.8,
+       "little": 4.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 13.6,
+      "score_best": 14.8,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 29.9,
+       "index": 60.0,
+       "middle": 63.1,
+       "ring": 63.2,
+       "little": 69.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-left-flat-hand-thumb-half-1202",
+   "side": "left",
+   "pose": "flat hand, thumb half",
+   "expert": [
+    1202.9,
+    8.0
+   ],
+   "learner": [
+    475.2,
+    6.0
+   ],
+   "wrong": [
+    2702.8,
+    3.1
+   ],
+   "pose_dist_deg": 2.2,
+   "wrong_dist_deg": 43.4,
+   "flex_deg": {
+    "thumb": 35.0,
+    "index": 28.0,
+    "middle": 32.0,
+    "ring": 29.0,
+    "little": 27.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 3.6,
+       "index": 1.9,
+       "middle": 1.9,
+       "ring": 3.7,
+       "little": 2.7
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 56.2,
+      "score_best": 57.4,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 10.7,
+       "index": 40.6,
+       "middle": 40.7,
+       "ring": 37.8,
+       "little": 39.7
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 6.9,
+       "index": 0.6,
+       "middle": 1.1,
+       "ring": 2.7,
+       "little": 3.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 20.6,
+      "score_best": 22.2,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 16.7,
+       "index": 58.9,
+       "middle": 62.8,
+       "ring": 58.7,
+       "little": 60.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 6.9,
+       "index": 0.6,
+       "middle": 1.1,
+       "ring": 2.7,
+       "little": 3.4
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 20.6,
+      "score_best": 22.2,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 16.7,
+       "index": 58.9,
+       "middle": 62.8,
+       "ring": 58.7,
+       "little": 60.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-left-half-curl-thumb-closed-3019",
+   "side": "left",
+   "pose": "half curl, thumb closed",
+   "expert": [
+    3020.0,
+    8.0
+   ],
+   "learner": [
+    3087.0,
+    6.0
+   ],
+   "wrong": [
+    366.8,
+    3.0
+   ],
+   "pose_dist_deg": 1.9,
+   "wrong_dist_deg": 40.7,
+   "flex_deg": {
+    "thumb": 49.0,
+    "index": 46.0,
+    "middle": 59.0,
+    "ring": 57.0,
+    "little": 51.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 2.4,
+       "index": 3.3,
+       "middle": 2.2,
+       "ring": 1.8,
+       "little": 1.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 55.3,
+      "score_best": 58.0,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 27.2,
+       "index": 36.2,
+       "middle": 40.8,
+       "ring": 38.0,
+       "little": 34.1
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 4.2,
+       "index": 5.9,
+       "middle": 2.3,
+       "ring": 1.0,
+       "little": 1.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 40.4,
+      "score_best": 41.5,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 41.4,
+       "index": 25.0,
+       "middle": 38.9,
+       "ring": 54.0,
+       "little": 46.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 4.2,
+       "index": 5.9,
+       "middle": 2.3,
+       "ring": 1.0,
+       "little": 1.3
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 40.4,
+      "score_best": 41.5,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 41.4,
+       "index": 25.0,
+       "middle": 38.9,
+       "ring": 54.0,
+       "little": 46.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-left-index-ring-little-out-rest-half-thumb-open-1736",
+   "side": "left",
+   "pose": "index+ring+little out, rest half, thumb open",
+   "expert": [
+    1737.1,
+    8.0
+   ],
+   "learner": [
+    3562.0,
+    6.0
+   ],
+   "wrong": [
+    2702.8,
+    3.1
+   ],
+   "pose_dist_deg": 4.1,
+   "wrong_dist_deg": 37.0,
+   "flex_deg": {
+    "thumb": 26.0,
+    "index": 36.0,
+    "middle": 44.0,
+    "ring": 37.0,
+    "little": 35.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 6.8,
+       "index": 2.7,
+       "middle": 3.2,
+       "ring": 4.5,
+       "little": 4.9
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 67.8,
+      "score_best": 69.5,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 17.6,
+       "index": 34.1,
+       "middle": 31.6,
+       "ring": 31.8,
+       "little": 32.8
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 8.3,
+       "index": 2.0,
+       "middle": 4.2,
+       "ring": 8.6,
+       "little": 3.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 41.3,
+      "score_best": 43.4,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 27.4,
+       "index": 47.2,
+       "middle": 38.8,
+       "ring": 34.9,
+       "little": 50.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 8.3,
+       "index": 2.0,
+       "middle": 4.2,
+       "ring": 8.6,
+       "little": 3.0
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     },
+     "wrong": {
+      "frames": 93,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 41.3,
+      "score_best": 43.4,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 27.4,
+       "index": 47.2,
+       "middle": 38.8,
+       "ring": 34.9,
+       "little": 50.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 1.0
+      }
+     }
+    }
+   }
+  },
+  {
+   "lesson": "replay-left-half-curl-thumb-half-556",
+   "side": "left",
+   "pose": "half curl, thumb half",
+   "expert": [
+    557.0,
+    8.0
+   ],
+   "learner": [
+    1858.8,
+    6.0
+   ],
+   "wrong": [
+    366.8,
+    3.0
+   ],
+   "pose_dist_deg": 5.7,
+   "wrong_dist_deg": 38.3,
+   "flex_deg": {
+    "thumb": 43.0,
+    "index": 42.0,
+    "middle": 58.0,
+    "ring": 56.0,
+    "little": 50.0
+   },
+   "scores": {
+    "raw": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 100.0,
+      "score_best": 100.0,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 4.0,
+       "index": 9.0,
+       "middle": 3.2,
+       "ring": 4.0,
+       "little": 4.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 59.8,
+      "score_best": 62.5,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 24.7,
+       "index": 32.6,
+       "middle": 38.5,
+       "ring": 37.5,
+       "little": 32.8
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "before": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 99.0,
+      "score_best": 99.1,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 7.5,
+       "index": 17.3,
+       "middle": 5.8,
+       "ring": 9.8,
+       "little": 10.9
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 68.3,
+      "score_best": 69.3,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 34.4,
+       "index": 18.0,
+       "middle": 33.7,
+       "ring": 30.1,
+       "little": 30.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    },
+    "after": {
+     "right": {
+      "frames": 180,
+      "passed": true,
+      "passed_at_s": 0.5,
+      "score_mean": 99.0,
+      "score_best": 99.1,
+      "time_at_pass_pct": 100.0,
+      "err_deg_median": {
+       "thumb": 7.5,
+       "index": 17.3,
+       "middle": 5.8,
+       "ring": 9.8,
+       "little": 10.9
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     },
+     "wrong": {
+      "frames": 91,
+      "passed": false,
+      "passed_at_s": null,
+      "score_mean": 68.3,
+      "score_best": 69.3,
+      "time_at_pass_pct": 0.0,
+      "err_deg_median": {
+       "thumb": 34.4,
+       "index": 18.0,
+       "middle": 33.7,
+       "ring": 30.1,
+       "little": 30.5
+      },
+      "weights": {
+       "thumb": 0.5,
+       "index": 0.5,
+       "middle": 0.5,
+       "ring": 0.5,
+       "little": 0.5
+      }
+     }
+    }
+   }
+  }
+ ]
+}
