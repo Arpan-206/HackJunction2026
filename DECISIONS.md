@@ -172,3 +172,11 @@ duel step reset only one hand; `set_loop` did not reach the piano piece;
 DTW could block the loop for half a second on long steps; the replay tool
 paced two-glove captures slowly; the recorded `rate_hz` was a constant.
 Seven of these have regression tests in `tests/test_review_fixes.py`.
+
+## D24. Two integration routes, both kept
+Their 00:28 push added an `external` glove source to their backend
+(`/ws/ingest`), made for a pipeline like this core. `tools/ingest_bridge.py`
+forwards this core's hands into it. Route A (core serves their contract,
+D22) and route B (core feeds their backend) are both tested and documented
+in STATUS.md. Neither was chosen; that is the morning's call. The bridge
+drops untracked hands and sends only the five CONTRACT.md keys per hand.

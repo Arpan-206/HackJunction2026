@@ -1,6 +1,6 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 01:52 Helsinki time, on branch `core-overnight`
+Written Sat 14 Nov 2026, 02:40 Helsinki time, on branch `core-overnight`
 (not pushed). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
@@ -62,6 +62,7 @@ carries the new lesson itself). CORS allows GET from any origin.
 | `tools/replay.py` | Serves a raw capture on TCP, paced by `timestamp_us`, optional loop and speed | Capture of 120 frames replays into the reader, 26 joints per frame |
 | `tools/rgmp_tee.py` | Records a live solver socket to a raw capture, optionally re-serves it | Not run (needs a live socket); it is 60 lines of plain asyncio |
 | `tools/ws_log.py` | Records the viewer socket to JSONL; replays it as a fake core that acks every command | Recorded 57 messages from `--fake` and replayed them to a client with an ack |
+| `tools/ingest_bridge.py` | Forwards this core's `/ws/gloves` hands into the teammate backend's `/ws/ingest` external source | Ran against their backend at `cfbe9c2`: both hands re-emitted on their `/ws/gloves` as `source: "replay"` (see Teammate activity) |
 | `tools/debug_view.html` | Plain canvas page: hands (finger colours from the score), sepia ghost, score bars, coach line, session, event log, buttons for every command, measured frames/s | Served at `/debug`; JS passes `node --check`; rendered in headless Chrome against `--fake` (screenshot checked) |
 | `core/camera/` | MediaPipe HandLandmarker (installed 1.2.3 tasks API, checked against the package, VIDEO mode) in a thread; webcam or video file; 21 landmarks to the same Hand object with `source: "camera"`, `anchor: "camera"`, wrist on a plane in front of the viewer, One Euro filter; wider `[score.camera]` tolerances | Synthetic landmarks round-trip angles and handedness for both hands and both mirror settings; ingest/poll with a fake result; the landmarker ran on blank frames and on a synthetic 45-frame video (0 hands, no error, 5.6 ms/frame) |
 
@@ -126,7 +127,7 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Fifteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+Sixteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
 nothing pushed, nothing of the teammate's touched. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
@@ -161,6 +162,41 @@ angle_deg))^2)`. Nothing under `frontend/` changed. No effect on SPEC.md or
 on `core/`; `core/compat.py` does not serve the three new endpoints (404)
 and `/api/score` still answers 501. Read `docs/ideas/` for their demo
 runbook before the morning stand-up.
+
+Checked at 02:34: five more commits by Szymon Arciszewski (authored 00:27 to
+00:28), `072d5a4..cfbe9c2`, all in `backend/`, `docs/` and `research/`:
+
+| Commit | What |
+| --- | --- |
+| `512cb87` | Scoring follows the attempt's side and ignores timing for held poses |
+| `5a24f56` | Glove WebSocket teardown with an anyio task group |
+| `743f134` | Rokoko Studio UDP mapper rewritten for JSON v3/v4; **new `external` glove source**: `POST /api/ingest/frames` and `WS /ws/ingest` accept HandFrames from "your own pipeline" |
+| `2cc3c8a` | Gemini request budget, live hint fields, Flash-Lite hint model |
+| `cfbe9c2` | `docs/HARDWARE_INTEGRATION.md`, `research/06..10`: Studio UDP setup, the unverified finger flex axis, the external source |
+
+Why it matters: the external source is the second way to join the two
+halves. This core can read the real solver (RGMP) and push each hand into
+their backend as a HandFrame; their frontend then needs no change at all.
+`tools/ingest_bridge.py` does that, and it is verified: their backend at
+`cfbe9c2` was installed in a scratch worktree (`uv sync`) and started on
+`:8000`; this core ran `--fake` on `:8765`; the bridge switched their source
+to `external` and their `/ws/gloves` re-emitted both hands as `source:
+"replay"` at 30 Hz with the right flexion and wrist quaternion, with no
+backend errors. Their own Rokoko path is Studio UDP, with a flex axis they
+call unverified. Nothing under `frontend/` changed. No contract change for
+SPEC.md.
+
+So there are two ways to join the halves in the morning, both tested here:
+
+| Route | Processes | Command |
+| --- | --- | --- |
+| A. Core serves their contract | this core only | `python -m core --solver HOST:12277 --rcsp HOST:45451 --port 8000`, then their `npm run dev` |
+| B. Core feeds their backend | this core, their backend, the bridge | `python -m core --solver ...` on 8765; their `uv run uvicorn app.main:app --port 8000`; `python -m tools.ingest_bridge` |
+
+Route A gives their frontend only the glove stream and lessons; route B
+gives their backend everything it already does (its scoring, LLM, storage)
+with real-glove input. SPEC.md's `/ws` (ghost, score, coach, session) is
+served in both cases on this core's port.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
