@@ -150,11 +150,13 @@ def wait_healthy(client: VerdaClient, name: str, limit_s: float = WAIT_LIMIT_S) 
         if status != last:
             history.append({"t": now_iso(), "after_s": round(time.monotonic() - started), "status": status.value})
             print(f"  {history[-1]['after_s']:5d} s  {status.value}", flush=True)
+            if status == ContainerDeploymentStatus.UNHEALTHY:
+                print("  (unhealthy while vLLM downloads and loads the weights is normal; `uv run python logs.py` shows progress)", flush=True)
+            if status == ContainerDeploymentStatus.QUOTA_REACHED:
+                print("  quota reached: no GPU of this type is free; tear down and try --gpu H100", file=sys.stderr)
             last = status
         if status == ContainerDeploymentStatus.HEALTHY:
             return history
-        if status in (ContainerDeploymentStatus.UNHEALTHY, ContainerDeploymentStatus.QUOTA_REACHED):
-            print(f"deployment is {status.value}; check the replica logs in the Verda console", file=sys.stderr)
         if time.monotonic() - started > limit_s:
             raise SystemExit(f"not healthy after {limit_s / 60:.0f} min (last status {status.value}); tear down or keep waiting")
         time.sleep(POLL_S)
