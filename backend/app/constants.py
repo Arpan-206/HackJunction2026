@@ -98,6 +98,15 @@ SCORE_SIGMA_FACTOR = 1.5
 FINGER_WEIGHT = 0.8
 TIMING_WEIGHT = 0.2
 MIN_SCORE_FRAMES = 2
+# Per-finger step weights (STATUS-weights.md, the core's [score] focus_min_weight and [record] weights). The worst
+# finger and the hint only ever name a finger weighted at least FOCUS_MIN_WEIGHT; with none that heavy, the heaviest
+# non-zero fingers stand in. Take consistency: a finger whose total flexion varies across the expert's takes by a
+# standard deviation of TAKE_CONSISTENT_DEG or less keeps weight 1, TAKE_INCONSISTENT_DEG or more drops to
+# TAKE_INCONSISTENT_FLOOR. Total flexion is three joints summed, so these are three times the core's per-joint numbers.
+FOCUS_MIN_WEIGHT = 0.3
+TAKE_CONSISTENT_DEG = 12.0
+TAKE_INCONSISTENT_DEG = 45.0
+TAKE_INCONSISTENT_FLOOR = 0.2
 # A reference whose every finger moves less than this much total flexion (peak to peak) is a held pose: its timing is
 # not scored, since aligning two near-constant series says nothing about when the learner moved.
 STATIC_REFERENCE_RANGE_DEG = 12.0
