@@ -1,0 +1,150 @@
+/*
+ * Robot screens (features/shared/robot): the teleop screen and "Teach the robot". Ink on paper; malachite only for a
+ * finger that copies fully, vermilion only for what to change (a finger at its limit), gold only for a mastered copy.
+ * No status pills. All text at least 16px, readable from 3 m.
+ */
+.rb-page {
+  display: grid;
+  gap: 1.25rem;
+  font-size: 1.15rem;
+}
+.rb-line {
+  margin: 0;
+  line-height: 1.45;
+}
+.rb-line--ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+.rb-line--fix {
+  color: var(--danger);
+  font-weight: 600;
+}
+.rb-line--missing {
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: 1.25rem;
+}
+.rb-note {
+  margin: 0;
+  font-family: var(--font-note);
+  font-style: italic;
+  font-size: 1.2rem;
+  line-height: 1.4;
+}
+.rb-stage {
+  width: 100%;
+  height: clamp(20rem, 52vh, 36rem);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--stage-bg);
+  display: grid;
+  place-items: center;
+}
+.rb-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+.rb-controls,
+.rb-read {
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+}
+.rb-h {
+  margin: 0;
+  font-size: var(--step-1);
+}
+.rb-seg {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.rb-seg__opt {
+  flex: 1 1 auto;
+  min-height: var(--target);
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  font: 600 1.15rem var(--font-ui);
+  cursor: pointer;
+}
+.rb-seg__opt:last-child {
+  border-right: 0;
+}
+.rb-seg__opt[aria-checked='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.rb-engage {
+  min-height: 5.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 3px solid var(--line-strong);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  color: var(--text);
+  font: 700 var(--step-1) var(--font-display);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rb-engage.is-on {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.rb-engage:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rb-state {
+  font-weight: 600;
+}
+.rb-fingers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+.rb-finger {
+  line-height: 1.4;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--line);
+}
+
+/* Teach the robot (skill page) */
+.rb-teach {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.rb-teach__stage {
+  width: 100%;
+  height: clamp(16rem, 38vh, 26rem);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+.rb-teach__score {
+  margin: 0;
+  font: 700 var(--step-2, 2rem) var(--font-display);
+}
+.rb-teach__score.is-mastered {
+  color: var(--gold-text);
+}
+.rb-teach__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
