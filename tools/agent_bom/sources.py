@@ -74,6 +74,151 @@ def branch_jobs(repo: str, branch: str, workflow: str = "ci.yml") -> list[JobRef
     ]
 
 
+def _git(*args: str) -> str:
+    return subprocess.run(["git", *args], capture_output=True, text=True).stdout
+
+
+def lock_needles(name: str, ecosystem: str) -> list[tuple[str, list[str]]]:
+    """Exact strings that mark a package in our lockfiles, with the files to search. Lockfiles hold transitive deps."""
+    if ecosystem == "npm":
+        return [(f'"node_modules/{name}"', ["frontend/package-lock.json"]), (f'"{name}"', ["frontend/package.json"])]
+    if ecosystem == "pypi":
+        return [(f'name = "{name}"', ["backend/uv.lock"]), (name, ["requirements.txt", "pyproject.toml"])]
+    return [(name, LOCKFILES)]
+
+
+def first_commit_on(ref: str, needle: str, paths: list[str]) -> str:
+    """Oldest commit reachable from `ref` whose diff of `paths` changes the count of `needle` (git pickaxe)."""
+    out = _git("log", "--reverse", "--format=%H", f"-S{needle}", ref, "--", *paths).split()
+    return out[0] if out else ""
+
+
+def lane_of(sha: str, main: str = "origin/main") -> tuple[str, str]:
+    """Which lane brought `sha` into main: the first first-parent commit of main that contains it.
+
+    Returns (lane, merge subject). A merge subject names the lane ("Merge lane X", "Merge remote-tracking branch
+    'origin/X'", "Merge branch 'X'", "Merge pull request #1 from owner/X"). A plain commit means "direct to main".
+    """
+    chain = _git("rev-list", "--first-parent", "--reverse", main).split()
+    lo, hi = 0, len(chain) - 1
+    if not chain or subprocess.run(["git", "merge-base", "--is-ancestor", sha, chain[hi]]).returncode != 0:
+        return "", ""
+    while lo < hi:  # ancestry is monotone along the first-parent chain
+        mid = (lo + hi) // 2
+        if subprocess.run(["git", "merge-base", "--is-ancestor", sha, chain[mid]]).returncode == 0:
+            hi = mid
+        else:
+            lo = mid + 1
+    subject = _git("log", "-1", "--format=%s", chain[lo]).strip()
+    parents = _git("rev-list", "--parents", "-n1", chain[lo]).split()
+    if len(parents) <= 2:
+        picked = _cherry_pick_sources().get(_git("log", "-1", "--format=%s", sha).strip())
+        return (f"{picked} (cherry-picked)" if picked else "main (direct)"), subject
+    return lane_from_merge_subject(subject), subject
+
+
+_PICKS: dict[str, str] | None = None
+
+
+def _cherry_pick_sources(main: str = "origin/main") -> dict[str, str]:
+    """Subject -> lane, for commits that exist only on a lane. A main commit with the same subject was copied over."""
+    global _PICKS
+    if _PICKS is None:
+        _PICKS = {}
+        for ref in _git("for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split():
+            lane = ref.removeprefix("origin/")
+            if lane in ("HEAD", "main", "origin") or ref == "origin":
+                continue
+            for subj in _git("log", "--format=%s", ref, "--not", main).splitlines():
+                _PICKS.setdefault(subj.strip(), lane)
+    return _PICKS
+
+
+def lane_from_merge_subject(subject: str) -> str:
+    import re
+
+    for pattern in (
+        r"Merge remote-tracking branch 'origin/([^']+)'",
+        r"Merge branch '([^']+)'",
+        r"Merge pull request #\d+ from [^/\s]+/(\S+)",
+        r"Merge lane [^(:]*\(([^)]+)\)",
+        r"Merge lane ([\w.-]+)",
+        r"Merge ([\w.-]+) ",
+    ):
+        m = re.search(pattern, subject)
+        if m:
+            return m.group(1)
+    return "merge: " + subject[:40]
+
+
+def attribute(name: str, ecosystem: str, ref: str = "origin/main") -> tuple[str, str, str]:
+    """(lane, short sha, subject) of the commit that first put `name` into a lockfile or manifest on `ref`."""
+    for needle, paths in lock_needles(name, ecosystem):
+        sha = first_commit_on(ref, needle, paths)
+        if sha:
+            lane, _ = lane_of(sha, ref)
+            return lane, sha[:7], _git("log", "-1", "--format=%s", sha).strip()
+    return "", "", ""
+
+
+def _parse_npm_lock(text: str) -> set[str]:
+    try:
+        packages = json.loads(text).get("packages", {})
+    except ValueError:
+        return set()
+    return {k.rsplit("node_modules/", 1)[-1] for k in packages if k}
+
+
+def _parse_uv_lock(text: str) -> set[str]:
+    import re
+
+    return set(re.findall(r'^\[\[package\]\]\s*\nname = "([^"]+)"', text, flags=re.M))
+
+
+def _parse_requirements(text: str) -> set[str]:
+    import re
+
+    names = set()
+    for line in text.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line and not line.startswith("-"):
+            names.add(re.split(r"[\s\[<>=!~;]", line, maxsplit=1)[0].lower())
+    return names
+
+
+MANIFESTS = {
+    "frontend/package-lock.json": ("npm", _parse_npm_lock),
+    "backend/uv.lock": ("pypi", _parse_uv_lock),
+    "requirements.txt": ("pypi", _parse_requirements),
+    # Side projects agents added with their own lockfiles; ci.yml does not build them, lane-audit installs them.
+    "verda/uv.lock": ("pypi", _parse_uv_lock),
+    "export/uv.lock": ("pypi", _parse_uv_lock),
+    "genui/package-lock.json": ("npm", _parse_npm_lock),
+}
+
+
+def lockfile_history(ref: str = "origin/main") -> list[dict[str, str]]:
+    """Every package in our lockfiles at `ref`, with the commit and lane that first added it. Git only, no API.
+
+    Walks each lockfile's history oldest first and records the first commit where each name appears.
+    """
+    rows: list[dict[str, str]] = []
+    lane_cache: dict[str, tuple[str, str]] = {}
+    for path, (eco, parse) in MANIFESTS.items():
+        seen: dict[str, str] = {}
+        for sha in _git("log", "--reverse", "--format=%H", ref, "--", path).split():
+            text = subprocess.run(["git", "show", f"{sha}:{path}"], capture_output=True, text=True).stdout
+            for name in parse(text):
+                seen.setdefault(name, sha)
+        current = parse(subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True).stdout)
+        for name in sorted(current):
+            sha = seen.get(name, "")
+            if sha not in lane_cache:
+                lane_cache[sha] = lane_of(sha, ref) if sha else ("", "")
+            rows.append({"file": path, "ecosystem": eco, "name": name, "commit": sha[:7], "lane": lane_cache[sha][0]})
+    return rows
+
+
 def introducing_commit(lane: str, needle: str, base: str = "origin/main", remote: str = "origin") -> tuple[str, str]:
     """Oldest lane-only commit whose lockfile diff adds or removes `needle`. Returns (short sha, subject) or ("", "")."""
     if not needle:

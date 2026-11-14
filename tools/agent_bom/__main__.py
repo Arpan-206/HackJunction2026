@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .analyse import Build, LaneDiff, diff, gate, merge
 from .client import CraciClient, CraciError, load_token
-from .sources import JobRef, audit_jobs, introducing_commit
+from .sources import JobRef, attribute, audit_jobs, introducing_commit, lockfile_history
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPO = "Arpan-206/HackJunction2026"
@@ -178,6 +178,21 @@ def cmd_provenance(args) -> int:
     return 0
 
 
+def cmd_history(args) -> int:
+    """Git only: which lane first put each locked package into main. Needs no token."""
+    from collections import Counter
+
+    rows = lockfile_history(f"origin/{args.base}")
+    counts = Counter((r["lane"] or "unknown", r["file"]) for r in rows)
+    print("| Lane that brought it into main | Lockfile | Packages |")
+    print("|---|---|---|")
+    for (lane, path), n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+        print(f"| `{lane}` | `{path}` | {n} |")
+    if args.json:
+        Path(args.json).write_text(json.dumps(rows, indent=1))
+    return 0
+
+
 def cmd_check(_args) -> int:
     print("CRACI_API_TOKEN: set" if load_token(REPO_ROOT / ".env") else "CRACI_API_TOKEN: missing")
     return 0
@@ -196,6 +211,9 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("gate")
     g.add_argument("lane")
     g.set_defaults(func=cmd_gate)
+    hist = sub.add_parser("history")
+    hist.add_argument("--json", help="also write one row per package here")
+    hist.set_defaults(func=cmd_history)
     prov = sub.add_parser("provenance")
     prov.add_argument("digest")
     prov.set_defaults(func=cmd_provenance)

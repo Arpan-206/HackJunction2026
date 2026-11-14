@@ -84,3 +84,23 @@ jobs:
           npm run lint
           npm test
           npm run build
+      # Side projects the agents added with their own lockfiles. ci.yml does not
+      # build them, so without these steps CRACI would never see their packages.
+      # Install only: no tests, no secrets.
+      - name: verda/ install
+        if: ${{ hashFiles('verda/uv.lock') != '' }}
+        continue-on-error: true
+        working-directory: verda
+        run: uv sync --frozen
+      - name: export/ install
+        if: ${{ hashFiles('export/uv.lock') != '' }}
+        continue-on-error: true
+        working-directory: export
+        run: uv sync --frozen
+      - name: genui/ install
+        if: ${{ hashFiles('genui/package-lock.json') != '' }}
+        continue-on-error: true
+        working-directory: genui
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm ci
