@@ -1,7 +1,7 @@
 # STATUS.md
 
-Written Sat 14 Nov 2026, 05:00 Helsinki time, on branch `core-overnight`
-(not pushed). Everything below runs with no hardware. Read the three lists in
+Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 07:15, on branch
+`core-overnight` (pushed to origin at 07:15, merged with `main` as of `9810bf5`). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
 gloves. Then read DECISIONS.md.
 
@@ -127,7 +127,7 @@ exception to the tick rate):
 
 ## Branch and commits
 
-Eighteen commits on `core-overnight` (`git log --oneline main..core-overnight`),
+Twenty-two commits on `core-overnight` (`git log --oneline main..core-overnight`),
 nothing pushed, nothing of the teammate's touched. Commit signing was disabled
 in this clone only (DECISIONS D12). 88 tests pass (`python -m pytest -q`,
 about 28 s). A code review of the branch found 14 defects at 01:50; all 14
@@ -231,6 +231,19 @@ Effect on the core: none on SPEC.md. `core/compat.py` ignores the new
 `hands` field on `/api/recordings/start` (the core records the master hand
 it finds); add it if route A is chosen. Both stream shapes are unchanged, so
 routes A and B still hold.
+
+Checked at 07:05: twelve more commits by Szymon Arciszewski (authored 05:11
+to 05:57), `ad9822d..9810bf5`: shadow puppet theatre, learner margin of
+error in scoring and hints, a Settings panel, propless skills (shadow
+puppets, surgical grips, crochet), keyframes motion and per-hand hold poses,
+3D and flat score views. Mostly `frontend/src`; `backend/app` scoring gained
+the margin. Stream shapes unchanged.
+
+Merged at 07:10: `origin/main` (`9810bf5`) was merged into `core-overnight`.
+Conflicts were only `.gitignore` (now the union) and `README.md` (his, plus
+a core section). 88 tests pass after the merge. `SPEC.md` was added to the
+repo. The direction agreed on Saturday morning is in `RECONCILE.md`
+section 0: route B, one owner per capability, both contracts frozen.
 
 | Area | What landed | Why it matters to the core |
 | --- | --- | --- |
