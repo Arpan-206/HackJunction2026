@@ -31,18 +31,41 @@ class JobRef:
 
 
 def _gh(args: list[str]) -> object:
-    out = subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout
+    out = subprocess.run(
+        ["gh", *args], check=True, capture_output=True, text=True
+    ).stdout
     return json.loads(out) if out.strip() else None
 
 
-def audit_jobs(repo: str, workflow: str = "lane-audit.yml", runs: int = 5) -> dict[str, JobRef]:
+def audit_jobs(
+    repo: str, workflow: str = "lane-audit.yml", runs: int = 5
+) -> dict[str, JobRef]:
     """Newest finished `lane <name>` job per lane, from the last few runs of the lane-audit workflow."""
     found: dict[str, JobRef] = {}
     run_list = _gh(
-        ["run", "list", "--repo", repo, "--workflow", workflow, "--limit", str(runs), "--json", "databaseId,status"]
+        [
+            "run",
+            "list",
+            "--repo",
+            repo,
+            "--workflow",
+            workflow,
+            "--limit",
+            str(runs),
+            "--json",
+            "databaseId,status",
+        ]
     )
     for run in run_list or []:
-        jobs = _gh(["api", f"repos/{repo}/actions/runs/{run['databaseId']}/jobs?per_page=100"]) or {}
+        jobs = (
+            _gh(
+                [
+                    "api",
+                    f"repos/{repo}/actions/runs/{run['databaseId']}/jobs?per_page=100",
+                ]
+            )
+            or {}
+        )
         for job in jobs.get("jobs", []):
             name = job.get("name", "")
             if not name.startswith("lane ") or job.get("status") != "completed":
@@ -50,7 +73,11 @@ def audit_jobs(repo: str, workflow: str = "lane-audit.yml", runs: int = 5) -> di
             lane = name.removeprefix("lane ").strip()
             if lane not in found:  # runs come newest first
                 found[lane] = JobRef(
-                    str(job["id"]), str(run["databaseId"]), name, job.get("conclusion") or "", job.get("head_sha", "")
+                    str(job["id"]),
+                    str(run["databaseId"]),
+                    name,
+                    job.get("conclusion") or "",
+                    job.get("head_sha", ""),
                 )
     return found
 
@@ -59,8 +86,20 @@ def branch_jobs(repo: str, branch: str, workflow: str = "ci.yml") -> list[JobRef
     """Finished jobs of the newest completed ci run on a branch (core, backend, frontend)."""
     run_list = _gh(
         [
-            "run", "list", "--repo", repo, "--workflow", workflow, "--branch", branch,
-            "--status", "completed", "--limit", "1", "--json", "databaseId",
+            "run",
+            "list",
+            "--repo",
+            repo,
+            "--workflow",
+            workflow,
+            "--branch",
+            branch,
+            "--status",
+            "completed",
+            "--limit",
+            "1",
+            "--json",
+            "databaseId",
         ]
     )
     if not run_list:
@@ -68,28 +107,50 @@ def branch_jobs(repo: str, branch: str, workflow: str = "ci.yml") -> list[JobRef
     run_id = run_list[0]["databaseId"]
     jobs = _gh(["api", f"repos/{repo}/actions/runs/{run_id}/jobs?per_page=100"]) or {}
     return [
-        JobRef(str(j["id"]), str(run_id), j["name"], j.get("conclusion") or "", j.get("head_sha", ""))
+        JobRef(
+            str(j["id"]),
+            str(run_id),
+            j["name"],
+            j.get("conclusion") or "",
+            j.get("head_sha", ""),
+        )
         for j in jobs.get("jobs", [])
         if j.get("status") == "completed"
     ]
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], capture_output=True, text=True).stdout
+    return subprocess.run(
+        ["git", *args], check=False, capture_output=True, text=True
+    ).stdout
 
 
 def lock_needles(name: str, ecosystem: str) -> list[tuple[str, list[str]]]:
     """Exact strings that mark a package in our lockfiles, with the files to search. Lockfiles hold transitive deps."""
     if ecosystem == "npm":
-        return [(f'"node_modules/{name}"', ["frontend/package-lock.json"]), (f'"{name}"', ["frontend/package.json"])]
+        return [
+            (
+                f'"node_modules/{name}"',
+                ["frontend/package-lock.json", "genui/package-lock.json"],
+            ),
+            (f'"{name}"', ["frontend/package.json", "genui/package.json"]),
+        ]
     if ecosystem == "pypi":
-        return [(f'name = "{name}"', ["backend/uv.lock"]), (name, ["requirements.txt", "pyproject.toml"])]
+        return [
+            (
+                f'name = "{name}"',
+                ["backend/uv.lock", "verda/uv.lock", "export/uv.lock"],
+            ),
+            (name, ["requirements.txt", "pyproject.toml"]),
+        ]
     return [(name, LOCKFILES)]
 
 
 def first_commit_on(ref: str, needle: str, paths: list[str]) -> str:
     """Oldest commit reachable from `ref` whose diff of `paths` changes the count of `needle` (git pickaxe)."""
-    out = _git("log", "--reverse", "--format=%H", f"-S{needle}", ref, "--", *paths).split()
+    out = _git(
+        "log", "--reverse", "--format=%H", f"-S{needle}", ref, "--", *paths
+    ).split()
     return out[0] if out else ""
 
 
@@ -101,18 +162,31 @@ def lane_of(sha: str, main: str = "origin/main") -> tuple[str, str]:
     """
     chain = _git("rev-list", "--first-parent", "--reverse", main).split()
     lo, hi = 0, len(chain) - 1
-    if not chain or subprocess.run(["git", "merge-base", "--is-ancestor", sha, chain[hi]]).returncode != 0:
+    if (
+        not chain
+        or subprocess.run(
+            ["git", "merge-base", "--is-ancestor", sha, chain[hi]], check=False
+        ).returncode
+        != 0
+    ):
         return "", ""
     while lo < hi:  # ancestry is monotone along the first-parent chain
         mid = (lo + hi) // 2
-        if subprocess.run(["git", "merge-base", "--is-ancestor", sha, chain[mid]]).returncode == 0:
+        if (
+            subprocess.run(
+                ["git", "merge-base", "--is-ancestor", sha, chain[mid]], check=False
+            ).returncode
+            == 0
+        ):
             hi = mid
         else:
             lo = mid + 1
     subject = _git("log", "-1", "--format=%s", chain[lo]).strip()
     parents = _git("rev-list", "--parents", "-n1", chain[lo]).split()
     if len(parents) <= 2:
-        picked = _cherry_pick_sources().get(_git("log", "-1", "--format=%s", sha).strip())
+        picked = _cherry_pick_sources().get(
+            _git("log", "-1", "--format=%s", sha).strip()
+        )
         return (f"{picked} (cherry-picked)" if picked else "main (direct)"), subject
     return lane_from_merge_subject(subject), subject
 
@@ -125,7 +199,9 @@ def _cherry_pick_sources(main: str = "origin/main") -> dict[str, str]:
     global _PICKS
     if _PICKS is None:
         _PICKS = {}
-        for ref in _git("for-each-ref", "--format=%(refname:short)", "refs/remotes/origin").split():
+        for ref in _git(
+            "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"
+        ).split():
             lane = ref.removeprefix("origin/")
             if lane in ("HEAD", "main", "origin") or ref == "origin":
                 continue
@@ -151,7 +227,9 @@ def lane_from_merge_subject(subject: str) -> str:
     return "merge: " + subject[:40]
 
 
-def attribute(name: str, ecosystem: str, ref: str = "origin/main") -> tuple[str, str, str]:
+def attribute(
+    name: str, ecosystem: str, ref: str = "origin/main"
+) -> tuple[str, str, str]:
     """(lane, short sha, subject) of the commit that first put `name` into a lockfile or manifest on `ref`."""
     for needle, paths in lock_needles(name, ecosystem):
         sha = first_commit_on(ref, needle, paths)
@@ -172,7 +250,9 @@ def _parse_npm_lock(text: str) -> set[str]:
 def _parse_uv_lock(text: str) -> set[str]:
     import re
 
-    return set(re.findall(r'^\[\[package\]\]\s*\nname = "([^"]+)"', text, flags=re.M))
+    return set(
+        re.findall(r'^\[\[package\]\]\s*\nname = "([^"]+)"', text, flags=re.MULTILINE)
+    )
 
 
 def _parse_requirements(text: str) -> set[str]:
@@ -207,27 +287,56 @@ def lockfile_history(ref: str = "origin/main") -> list[dict[str, str]]:
     for path, (eco, parse) in MANIFESTS.items():
         seen: dict[str, str] = {}
         for sha in _git("log", "--reverse", "--format=%H", ref, "--", path).split():
-            text = subprocess.run(["git", "show", f"{sha}:{path}"], capture_output=True, text=True).stdout
+            text = subprocess.run(
+                ["git", "show", f"{sha}:{path}"],
+                check=False,
+                capture_output=True,
+                text=True,
+            ).stdout
             for name in parse(text):
                 seen.setdefault(name, sha)
-        current = parse(subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True).stdout)
+        current = parse(
+            subprocess.run(
+                ["git", "show", f"{ref}:{path}"],
+                check=False,
+                capture_output=True,
+                text=True,
+            ).stdout
+        )
         for name in sorted(current):
             sha = seen.get(name, "")
             if sha not in lane_cache:
                 lane_cache[sha] = lane_of(sha, ref) if sha else ("", "")
-            rows.append({"file": path, "ecosystem": eco, "name": name, "commit": sha[:7], "lane": lane_cache[sha][0]})
+            rows.append(
+                {
+                    "file": path,
+                    "ecosystem": eco,
+                    "name": name,
+                    "commit": sha[:7],
+                    "lane": lane_cache[sha][0],
+                }
+            )
     return rows
 
 
-def introducing_commit(lane: str, needle: str, base: str = "origin/main", remote: str = "origin") -> tuple[str, str]:
+def introducing_commit(
+    lane: str, needle: str, base: str = "origin/main", remote: str = "origin"
+) -> tuple[str, str]:
     """Oldest lane-only commit whose lockfile diff adds or removes `needle`. Returns (short sha, subject) or ("", "")."""
     if not needle:
         return "", ""
     out = subprocess.run(
         [
-            "git", "log", "--reverse", "--format=%h%x09%s", f"-S{needle}",
-            f"{base}..{remote}/{lane}", "--", *LOCKFILES,
+            "git",
+            "log",
+            "--reverse",
+            "--format=%h%x09%s",
+            f"-S{needle}",
+            f"{base}..{remote}/{lane}",
+            "--",
+            *LOCKFILES,
         ],
+        check=False,
         capture_output=True,
         text=True,
     ).stdout

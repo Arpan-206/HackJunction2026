@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import fnmatch
 import urllib.parse
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 SEVERITY_ORDER = ["none", "info", "low", "medium", "moderate", "high", "critical"]
 GATE_SEVERITIES = {"high", "critical"}
@@ -50,7 +51,9 @@ class Build:
 def _purl_parts(purl: str) -> tuple[str, str, str]:
     """Split `pkg:type/namespace/name@version?q#s` into (key, ecosystem, version)."""
     body = purl.split("#", 1)[0].split("?", 1)[0]
-    base, _, version = body.rpartition("@") if "@" in body.split("/", 1)[-1] else (body, "", "")
+    base, _, version = (
+        body.rpartition("@") if "@" in body.split("/", 1)[-1] else (body, "", "")
+    )
     if not base:
         base = body
     ecosystem = base.removeprefix("pkg:").split("/", 1)[0]
@@ -63,7 +66,9 @@ def _walk_components(components: Iterable[dict[str, Any]]) -> Iterable[dict[str,
         yield from _walk_components(comp.get("components") or [])
 
 
-def parse_sbom(doc: dict[str, Any]) -> tuple[dict[str, Package], list[Vulnerability], bool]:
+def parse_sbom(
+    doc: dict[str, Any],
+) -> tuple[dict[str, Package], list[Vulnerability], bool]:
     """Return packages keyed by versionless purl, vulnerabilities, and whether the SBOM had a vulnerabilities field."""
     packages: dict[str, Package] = {}
     by_ref: dict[str, str] = {}
@@ -74,9 +79,19 @@ def parse_sbom(doc: dict[str, Any]) -> tuple[dict[str, Package], list[Vulnerabil
             key, eco, ver = _purl_parts(purl)
         else:
             eco = comp.get("type") or "unknown"
-            key, ver = f"{eco}:{comp.get('group', '')}/{name}".lower(), comp.get("version") or ""
+            key, ver = (
+                f"{eco}:{comp.get('group', '')}/{name}".lower(),
+                comp.get("version") or "",
+            )
         ver = comp.get("version") or ver
-        pkg = Package(key=key, name=name, version=ver, ecosystem=eco, purl=purl, bom_ref=comp.get("bom-ref") or purl)
+        pkg = Package(
+            key=key,
+            name=name,
+            version=ver,
+            ecosystem=eco,
+            purl=purl,
+            bom_ref=comp.get("bom-ref") or purl,
+        )
         packages.setdefault(key, pkg)
         if pkg.bom_ref:
             by_ref[pkg.bom_ref] = key
@@ -94,8 +109,17 @@ def parse_sbom(doc: dict[str, Any]) -> tuple[dict[str, Package], list[Vulnerabil
         source = (vuln.get("source") or {}).get("name", "")
         for affect in vuln.get("affects") or [{"ref": ""}]:
             ref = affect.get("ref", "")
-            key = by_ref.get(ref) or (_purl_parts(ref)[0] if ref.startswith("pkg:") else ref)
-            vulns.append(Vulnerability(id=vuln.get("id", "?"), severity=severity, package_key=key, source=source))
+            key = by_ref.get(ref) or (
+                _purl_parts(ref)[0] if ref.startswith("pkg:") else ref
+            )
+            vulns.append(
+                Vulnerability(
+                    id=vuln.get("id", "?"),
+                    severity=severity,
+                    package_key=key,
+                    source=source,
+                )
+            )
     return packages, vulns, has_vuln_data
 
 
@@ -113,7 +137,10 @@ def trace_hosts(trace: dict[str, Any]) -> tuple[set[str], set[str]]:
         host, was_denied = "", False
         if proto == "http":
             http = obs.get("http") or {}
-            host = (urllib.parse.urlsplit(http.get("originUrl", "")).hostname or http.get("ipAddress", "")).lower()
+            host = (
+                urllib.parse.urlsplit(http.get("originUrl", "")).hostname
+                or http.get("ipAddress", "")
+            ).lower()
             was_denied = bool(http.get("policyDenied"))
         elif proto == "tcp":
             tcp = obs.get("tcp") or {}
@@ -133,7 +160,9 @@ def trace_hosts(trace: dict[str, Any]) -> tuple[set[str], set[str]]:
     return hosts, denied
 
 
-def merge(builds: Iterable[tuple[str, dict[str, Any] | None, dict[str, Any] | None]]) -> Build:
+def merge(
+    builds: Iterable[tuple[str, dict[str, Any] | None, dict[str, Any] | None]],
+) -> Build:
     """Merge (job_id, sbom, trace) triples of one lane into one Build."""
     out = Build()
     for job_id, sbom, trace in builds:
@@ -167,7 +196,10 @@ class LaneDiff:
 
 def diff(lane: str, base: Build, head: Build) -> LaneDiff:
     """What the lane's build has that main's build does not."""
-    new_pkgs = sorted((p for k, p in head.packages.items() if k not in base.packages), key=lambda p: p.key)
+    new_pkgs = sorted(
+        (p for k, p in head.packages.items() if k not in base.packages),
+        key=lambda p: p.key,
+    )
     changed = sorted(
         (
             (p, base.packages[k].version)
@@ -179,7 +211,10 @@ def diff(lane: str, base: Build, head: Build) -> LaneDiff:
     base_vuln_ids = {(v.id, v.package_key) for v in base.vulns}
     new_vulns = sorted(
         {v for v in head.vulns if (v.id, v.package_key) not in base_vuln_ids},
-        key=lambda v: (-SEVERITY_ORDER.index(v.severity) if v.severity in SEVERITY_ORDER else 1, v.id),
+        key=lambda v: (
+            -SEVERITY_ORDER.index(v.severity) if v.severity in SEVERITY_ORDER else 1,
+            v.id,
+        ),
     )
     return LaneDiff(
         lane=lane,
@@ -195,7 +230,11 @@ def diff(lane: str, base: Build, head: Build) -> LaneDiff:
 def gate(d: LaneDiff, allowed_hosts: Iterable[str] = ()) -> list[str]:
     """Reasons to block the merge. An empty list means the lane passes."""
     reasons: list[str] = []
-    patterns = [p.strip().lower() for p in allowed_hosts if p.strip() and not p.strip().startswith("#")]
+    patterns = [
+        p.strip().lower()
+        for p in allowed_hosts
+        if p.strip() and not p.strip().startswith("#")
+    ]
     for v in d.new_vulns:
         if v.severity in GATE_SEVERITIES:
             reasons.append(f"{v.severity} vulnerability {v.id} in {v.package_key}")

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -63,15 +64,41 @@ def _needle(pkg) -> str:
 def render_lane(d: LaneDiff, job: JobRef, reasons: list[str]) -> str:
     lines = [f"### Lane `{d.lane}`", ""]
     lines.append(f"CRACI job {job.job_id} (run {job.run_id}, build {job.conclusion}).")
+    ahead = subprocess.run(
+        ["git", "rev-list", "--count", f"origin/main..origin/{d.lane}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if ahead == "0":
+        lines.append(
+            "The lane has no commit that main lacks: differences are older versions that main has changed."
+        )
     lines.append("")
     if not (d.new_packages or d.new_vulns or d.new_hosts or d.changed_versions):
-        lines += ["Clean: no new dependency, no new vulnerability and no new host against main.", ""]
+        lines += [
+            "Clean: no new dependency, no new vulnerability and no new host against main.",
+            "",
+        ]
     if d.new_packages:
-        lines += ["| New dependency | Version | Ecosystem | Introduced by |", "|---|---|---|---|"]
+        lines += [
+            "| New dependency | Version | Ecosystem | Introduced by |",
+            "|---|---|---|---|",
+        ]
         for p in d.new_packages:
             sha, subject = introducing_commit(d.lane, _needle(p))
-            origin = f"`{sha}` {subject}" if sha else "no lockfile commit found (transitive or unpinned)"
-            lines.append(f"| `{p.name or p.key}` | {p.version} | {p.ecosystem} | {origin} |")
+            origin = f"`{sha}` {subject} (lane-only commit)" if sha else ""
+            if not origin:
+                lane, sha, subject = attribute(
+                    _needle(p), p.ecosystem, f"origin/{d.lane}"
+                )
+                origin = f"`{sha}` {subject} (via {lane})" if sha else ""
+            origin = (
+                origin or "no lockfile commit found (unpinned, or installed by a tool)"
+            )
+            lines.append(
+                f"| `{p.name or p.key}` | {p.version} | {p.ecosystem} | {origin} |"
+            )
         lines.append("")
     if d.changed_versions:
         lines += ["| Changed version | Main | Lane |", "|---|---|---|"]
@@ -79,9 +106,14 @@ def render_lane(d: LaneDiff, job: JobRef, reasons: list[str]) -> str:
             lines.append(f"| `{p.name or p.key}` | {old} | {p.version} |")
         lines.append("")
     if d.new_vulns:
-        lines += ["| Vulnerability | Severity | Package | Source |", "|---|---|---|---|"]
+        lines += [
+            "| Vulnerability | Severity | Package | Source |",
+            "|---|---|---|---|",
+        ]
         for v in d.new_vulns:
-            lines.append(f"| {v.id} | {v.severity} | `{v.package_key}` | {v.source or 'CRACI SBOM'} |")
+            lines.append(
+                f"| {v.id} | {v.severity} | `{v.package_key}` | {v.source or 'CRACI SBOM'} |"
+            )
         lines.append("")
     elif not d.has_vuln_data:
         lines += ["The SBOM carried no vulnerability data.", ""]
@@ -123,14 +155,20 @@ def cmd_report(args) -> int:
         results[lane] = {
             "job_id": jobs[lane].job_id,
             "new_packages": [p.purl or p.key for p in d.new_packages],
-            "changed_versions": [[p.key, old, p.version] for p, old in d.changed_versions],
+            "changed_versions": [
+                [p.key, old, p.version] for p, old in d.changed_versions
+            ],
             "new_vulns": [[v.id, v.severity, v.package_key] for v in d.new_vulns],
             "new_hosts": d.new_hosts,
             "gate": reasons,
         }
-    print(f"Base: `{args.base}` (CRACI job {jobs[args.base].job_id}), {len(base.packages)} packages, "
-          f"{len(base.hosts)} hosts.\n")
-    print("| Lane | New dependencies | Changed versions | New vulnerabilities | New hosts | Gate |")
+    print(
+        f"Base: `{args.base}` (CRACI job {jobs[args.base].job_id}), {len(base.packages)} packages, "
+        f"{len(base.hosts)} hosts.\n"
+    )
+    print(
+        "| Lane | New dependencies | Changed versions | New vulnerabilities | New hosts | Gate |"
+    )
     print("|---|---|---|---|---|---|")
     print("\n".join(summary))
     print()
@@ -143,15 +181,23 @@ def cmd_report(args) -> int:
 def cmd_gate(args) -> int:
     client = _client()
     if client is None:
-        print(f"GATE {args.lane}: no evidence: CRACI_API_TOKEN is missing. Do not merge on this gate.")
+        print(
+            f"GATE {args.lane}: no evidence: CRACI_API_TOKEN is missing. Do not merge on this gate."
+        )
         return 2
     jobs = audit_jobs(args.repo)
     for name in (args.base, args.lane):
         if name not in jobs:
-            print(f"GATE {args.lane}: no evidence: no finished lane-audit job for {name}. "
-                  f"Run: gh workflow run lane-audit.yml --ref craci -f lanes=\"{args.base} {args.lane}\"")
+            print(
+                f"GATE {args.lane}: no evidence: no finished lane-audit job for {name}. "
+                f'Run: gh workflow run lane-audit.yml --ref craci -f lanes="{args.base} {args.lane}"'
+            )
             return 2
-    d = diff(args.lane, _build(client, args.repo, jobs[args.base]), _build(client, args.repo, jobs[args.lane]))
+    d = diff(
+        args.lane,
+        _build(client, args.repo, jobs[args.base]),
+        _build(client, args.repo, jobs[args.lane]),
+    )
     allowed = ALLOWED_HOSTS.read_text().splitlines() if ALLOWED_HOSTS.is_file() else []
     reasons = gate(d, allowed)
     if not d.has_vuln_data:
@@ -161,7 +207,9 @@ def cmd_gate(args) -> int:
         for reason in reasons:
             print(f"  - {reason}")
         return 1
-    print(f"GATE {args.lane}: PASS ({len(d.new_packages)} new dependencies, {len(d.new_hosts)} new hosts, all allowed)")
+    print(
+        f"GATE {args.lane}: PASS ({len(d.new_packages)} new dependencies, {len(d.new_hosts)} new hosts, all allowed)"
+    )
     return 0
 
 
@@ -194,12 +242,18 @@ def cmd_history(args) -> int:
 
 
 def cmd_check(_args) -> int:
-    print("CRACI_API_TOKEN: set" if load_token(REPO_ROOT / ".env") else "CRACI_API_TOKEN: missing")
+    print(
+        "CRACI_API_TOKEN: set"
+        if load_token(REPO_ROOT / ".env")
+        else "CRACI_API_TOKEN: missing"
+    )
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m tools.agent_bom", description=__doc__.split("\n\n")[0])
+    parser = argparse.ArgumentParser(
+        prog="python -m tools.agent_bom", description=__doc__.split("\n\n")[0]
+    )
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--base", default="main")
     sub = parser.add_subparsers(dest="cmd", required=True)

@@ -46,7 +46,9 @@ def load_token(env_file: Path | None = None) -> str | None:
 class CraciClient:
     """One method per spec operation that agent_bom needs."""
 
-    def __init__(self, token: str, base_url: str = BASE_URL, timeout: float = 60.0) -> None:
+    def __init__(
+        self, token: str, base_url: str = BASE_URL, timeout: float = 60.0
+    ) -> None:
         self._token = token
         self._base = base_url.rstrip("/")
         self._timeout = timeout
@@ -74,7 +76,9 @@ class CraciClient:
                 pass
             raise CraciError(err.code, str(title), str(detail), path) from None
 
-    def _json(self, path: str, params: dict[str, Any], accept: str = "application/json") -> Any:
+    def _json(
+        self, path: str, params: dict[str, Any], accept: str = "application/json"
+    ) -> Any:
         return json.loads(self._get(path, params, accept))
 
     # operationId getSbom
@@ -87,7 +91,10 @@ class CraciClient:
 
     # operationId getNetworkTrace
     def network_trace(self, repo: str, job_id: str) -> dict[str, Any]:
-        return self._json("/v1preview1/network-trace", {"provider": PROVIDER, "repo": repo, "job_id": job_id})
+        return self._json(
+            "/v1preview1/network-trace",
+            {"provider": PROVIDER, "repo": repo, "job_id": job_id},
+        )
 
     # operationId listJobs (only status=active exists in the spec)
     def active_jobs(self, since: str | None = None) -> dict[str, Any]:
@@ -98,7 +105,9 @@ class CraciClient:
 
     # operationId getOciManifestProvenance
     def oci_manifest_provenance(self, digest: str) -> dict[str, Any]:
-        return self._json("/v1preview1/artifact-provenance/oci_manifest", {"digest": digest})
+        return self._json(
+            "/v1preview1/artifact-provenance/oci_manifest", {"digest": digest}
+        )
 
     # operationId getOciManifestSbom
     def oci_manifest_sbom(self, digest: str) -> dict[str, Any]:

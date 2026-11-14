@@ -149,7 +149,7 @@ The deploy uses the tag, not the digest. If the tag moves, the coach changes wit
 | `tools/agent_bom/sources.py` | GitHub job ids per lane (through `gh`), lockfile history and lane attribution (through git) |
 | `tools/agent_bom/analyse.py` | SBOM and trace parsing, diff against `main`, the gate rule. No network, no git |
 | `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `history`, `provenance` |
-| `tools/agent_bom/tests/test_agent_bom.py` | 5 tests on spec-shaped fixtures (hand-written, marked as fixtures; no result here comes from them) |
+| `tools/agent_bom/tests/test_agent_bom.py` | 6 tests: 5 on spec-shaped fixtures (hand-written, marked as fixtures; no result here comes from them), 1 on real merge subjects from `main` |
 
 The CRACI API looks a job up by its GitHub job id. Its job list only shows active jobs, so `agent_bom` finds finished jobs through the GitHub Actions API, by the job name `lane <branch>`.
 
