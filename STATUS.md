@@ -14,6 +14,15 @@ and confidence statistics. Tested on a 17 frame capture over WiFi (RGB
 1920x1440, depth and confidence 256x192, about 9 fps); not yet wired into the
 hand tracker. The ARKit app lane (ios/) produces the same `DepthFrame`.
 
+**Our own iPhone app (Sat 15:33), live over USB:** `ios/GeppettoDepth` on the
+iPhone 16 Pro streamed to the Mac through `ios/mac/forward.sh` (iproxy, port
+7700): 296 frames in 9.9 s, 29.8 fps, no gaps, colour 640x480, depth and
+confidence 256x192, table plane in every frame. Recorded with
+`python -m ios.mac.record captures/bench.gdrec.gz --seconds 10`, summarised
+with `python -m ios.mac.replay captures/bench.gdrec.gz --info`. The PathOn
+app is the WiFi fallback only: in its USB mode the phone refuses port 8888 and
+no other port of its own listens.
+
 **On `main` now, all suites green** (core and decisions 203 tests, backend 255,
 frontend 296, lint and build):
 
