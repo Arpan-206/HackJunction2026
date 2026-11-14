@@ -20,6 +20,7 @@ RULE_LINES = {
 }
 
 TASK_KEYWORDS = {
+    "typing": ["typing", "touch typing", "touch-type", "type"],
     "chords": ["chord", "guitar", "ukulele", "fret"],
     "piano": ["piano", "keyboard", "scale", "keys"],
     "boxing": ["box", "punch", "jab", "hook", "uppercut"],
