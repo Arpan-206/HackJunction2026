@@ -25,6 +25,7 @@ dev = [
 ]
 
 [tool.uv]
-# Security override (CRACI): fsspec CVE-2026-104851.
-# datasets 3.6.0 (through lerobot 0.3.3) pins fsspec<=2025.3.0.
-override-dependencies = ["fsspec[http]>=2026.6.0"]
+# Security overrides (CRACI): fsspec CVE-2026-104851, torch CVE-2026-24747.
+# datasets 3.6.0 (through lerobot 0.3.3) pins fsspec<=2025.3.0, and
+# lerobot 0.3.3 pins torch<2.8. torchvision moves with torch.
+override-dependencies = ["fsspec[http]>=2026.6.0", "torch>=2.10.0", "torchvision>=0.25.0"]
