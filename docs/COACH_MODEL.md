@@ -11,28 +11,30 @@ they run. Run book: `coach_tune/RUN.md`.
 | Base model | `google/gemma-4-E2B-it`: the smallest Gemma 4 instruction model. Apache 2.0. The Hugging Face API reports `gated: false` (checked 14 Nov 2026), so no token is needed. |
 | Method | LoRA (a small set of added weights trained on top of a frozen model): rank 16, alpha 32, dropout 0.05, on all attention and MLP projections of the language model, never the vision or audio towers |
 | Training | 3 epochs, batch 16, learning rate 2e-4 with cosine decay and 5% warm-up, seed 0, bf16. Settings saved in `coach_tune/out/adapter/config.json` |
-| Teacher | `google/gemma-4-31B-it` on the same Verda VM. Labels come only from this Gemma. |
+| Teacher | Not run yet. The plan is Gemma 4 31B on the same Verda VM if it fits at full precision. This row will name the model and precision that actually ran. |
 | Job | One coaching line per scored attempt: one sentence, 14 words or fewer, the single most important finger, a physical cue, never degrees. English, German and Finnish. |
 | Served as | `geppetto-coach-e2b` by vLLM, behind `COACH_MODEL=tuned` in the backend (off by default) |
 
 ## Data
 
-The dataset comes from our own glove data, run through our own scorer (`core/scorer.py`). There are 4,187
-examples. Each holds a target pose or step and a learner attempt. The attempt is either a real frame from the 61
-minute capture or a synthetic push of one finger. A synthetic push is kept only when the scorer names that finger
+The dataset comes from our own glove data, run through our own scorer (`core/scorer.py`). There are 4,513
+examples. Each holds a target pose or step and a learner attempt. In train and val the attempt is always a
+synthetic push of one finger. Only the test split also has real frames from the 61 minute capture. A synthetic push is kept only when the scorer names that finger
 and that direction.
 
 | Split | Examples | From the capture | Synthetic | Units |
 | --- | --- | --- | --- | --- |
-| Train | 3,088 | 756 | 2,332 | 33 |
-| Val | 274 | 55 | 219 | 3 |
-| Test | 825 | 210 | 615 | 9 |
+| Train | 3,069 | 0 | 3,069 | 33 |
+| Val | 294 | 0 | 294 | 3 |
+| Test | 1,150 | 333 | 817 | 9 |
+
+Real capture frames are test data only. Training uses synthetic mistakes on target poses.
 
 A unit is one lesson, or one shadow puppet, or one fingerspelling letter. The split is by unit. The test units are
 never seen in training: `fake-demo`, the letters E, K, L, T and Z, the swan puppet, and the replay lessons
 `replay-right-little-out-rest-half-thumb-half-2985` and `replay-right-middle-ring-little-out-rest-half-thumb-open-1244`.
 
-Each finger and each of the four errors (too curled, too flat, too spread, too close) has about 209 examples.
+In training, each finger and each of the four errors (too curled, too flat, too spread, too close) has about 150 examples.
 Languages: 70% English, 15% German, 15% Finnish. Full tables: `coach_tune/out/dataset/report.md`.
 
 ## Label filter
@@ -52,7 +54,7 @@ Each example gets up to three tries. Keep rate: not run yet.
 | --- | --- | --- | --- | --- | --- | --- |
 | E2B untuned | not run | not run | not run | not run | not run | not run |
 | E2B tuned | not run | not run | not run | not run | not run | not run |
-| 31B teacher | not run | not run | not run | not run | not run | not run |
+| Teacher (to be named) | not run | not run | not run | not run | not run | not run |
 
 ## Limits
 

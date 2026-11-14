@@ -42,7 +42,7 @@ def stub(monkeypatch):
         return "Relax and try again with 3 degrees less.", 0.01
 
     async def served_model(base_url=None):
-        return "stub"
+        return "google/gemma-4-31B-it"
 
     monkeypatch.setattr(oai, "complete", complete)
     monkeypatch.setattr(oai, "served_model", served_model)
@@ -50,7 +50,7 @@ def stub(monkeypatch):
 
 def test_label_keeps_only_lines_that_pass(monkeypatch):
     stub(monkeypatch)
-    out = asyncio.run(label.label(ROWS, "stub", tries=2, concurrency=4))
+    out = asyncio.run(label.label(ROWS, "google/gemma-4-31B-it", tries=2, concurrency=4))
     kept = {r["id"] for r in out if r["completion"]}
     assert kept == {"x0", "x1", "x2", "x3"}
     assert len(next(r for r in out if r["id"] == "x9")["attempts"]) == 2

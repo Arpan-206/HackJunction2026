@@ -52,7 +52,7 @@ OUT = LANE / "out"
 POSE_DIR = OUT / "pose_lessons"
 CACHE = OUT / "capture" / "inv5.npz"
 DATASET = OUT / "dataset"
-CAPTURE_SHARE = 0.4  # at most this share of the dataset comes from capture frames
+CAPTURE_TEST_MAX = 600  # real capture frames: test split only, at most this many
 MOVE_TARGETS = 4  # target poses sampled along a move step
 LANG_SPLIT = (("en", 0.70), ("de", 0.15), ("fi", 0.15))
 
@@ -234,12 +234,16 @@ def build(total: int, seed: int) -> list[dict]:
         examples.append(ex)
         cell_count[(body["top_finger"], body["top_hint"])] += 1
 
-    # 1. capture frames against every target, capped per cell so the real data cannot swamp one cell
+    # 1. real capture frames are TEST DATA ONLY (Arpan, 19:05): scored only against held-out test units, capped per
+    #    cell. They never enter train or val; build() fails if one does.
     frames = capture_frames(cfg)
-    cap_cell = int(per_cell * CAPTURE_SHARE * 1.5)
-    cap_budget = int(total * CAPTURE_SHARE)
+    cap_budget = CAPTURE_TEST_MAX
+    cap_cell = max(1, cap_budget // len(cells) * 2)
+    cap_count: Counter = Counter()
     pool = []
     for unit, recs in units.items():
+        if split[unit] != "test":
+            continue
         for rec in recs:
             if rec["hand"] not in frames:
                 continue
@@ -253,15 +257,18 @@ def build(total: int, seed: int) -> list[dict]:
     order = rng.permutation(len(pool))
     n_cap = 0
     per_unit_cap: Counter = Counter()
-    unit_cap_limit = max(10, cap_budget // max(1, len(units)) * 3)
+    n_test_units = sum(1 for u in units if split[u] == "test")
+    unit_cap_limit = max(10, cap_budget // max(1, n_test_units) * 2)
     for j in order:
         unit, rec, body = pool[j]
         cell = (body["top_finger"], body["top_hint"])
         if n_cap >= cap_budget:
             break
-        if cell_count[cell] >= cap_cell or per_unit_cap[unit] >= unit_cap_limit:
+        if cap_count[cell] >= cap_cell or per_unit_cap[unit] >= unit_cap_limit:
             continue
         add(rec, body, "capture", unit)
+        cell_count[cell] -= 1  # capture rows do not count toward the synthetic per-cell quota
+        cap_count[cell] += 1
         per_unit_cap[unit] += 1
         n_cap += 1
 
@@ -284,6 +291,10 @@ def build(total: int, seed: int) -> list[dict]:
                 continue
             add(rec, body, "synthetic", unit)
             need -= 1
+
+    leaked = [e for e in examples if e["source"] == "capture" and e["split"] != "test"]
+    if leaked:
+        raise SystemExit(f"{len(leaked)} real-capture examples outside the test split; captures are test data only")
 
     # 3. ids, languages, prompt check
     examples.sort(key=lambda e: (e["split"], e["unit"], e["source"], e["step_index"], e["score"]))

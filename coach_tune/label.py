@@ -30,7 +30,16 @@ def load(split: str) -> list[dict]:
     return [json.loads(x) for x in (DATA / f"{split}.jsonl").read_text().splitlines() if x.strip()]
 
 
-async def label(rows: list[dict], model: str, tries: int, concurrency: int) -> list[dict]:
+def label_source(model: str, precision: str) -> dict:
+    """Where a label came from. Refuses any model that is not a self-hosted open-weights Gemma 4."""
+    if not model.startswith(oai.TEACHER_PREFIX):
+        raise SystemExit(f"refusing to label with {model!r}: labels come only from our self-hosted Gemma 4 on Verda")
+    return {"model": model, "precision": precision, "host": "verda-vm via ssh tunnel", "self_hosted": True}
+
+
+async def label(rows: list[dict], model: str, tries: int, concurrency: int, precision: str = "bf16") -> list[dict]:
+    source = label_source(model, precision)
+
     async def one(client, ex):
         attempts = []
         for k in range(tries):
@@ -38,8 +47,8 @@ async def label(rows: list[dict], model: str, tries: int, concurrency: int) -> l
             v = prompt.check(line, ex["top_finger"], ex["top_hint"], ex["lang"])
             attempts.append({"line": v["line"], "s": round(dt, 3), **{n: v[n] for n in ("finger_ok", "direction_ok", "style_ok")}})
             if v["ok"]:
-                return {**ex, "completion": v["line"], "try": k + 1, "attempts": attempts}
-        return {**ex, "completion": None, "try": None, "attempts": attempts}
+                return {**ex, "completion": v["line"], "try": k + 1, "attempts": attempts, "label_source": source}
+        return {**ex, "completion": None, "try": None, "attempts": attempts, "label_source": source}
 
     return await oai.run_all(rows, one, concurrency)
 
@@ -70,6 +79,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tries", type=int, default=3)
     ap.add_argument("--concurrency", type=int, default=96)
+    ap.add_argument("--precision", default="bf16", help="the teacher precision as served, recorded on every label")
     ap.add_argument("--limit", type=int, default=0, help="label only the first N per split (smoke test)")
     a = ap.parse_args()
     model = asyncio.run(oai.served_model())
@@ -78,12 +88,12 @@ def main() -> int:
     results = {}
     for split in ("train", "val"):
         rows = load(split)[: a.limit or None]
-        results[split] = asyncio.run(label(rows, model, a.tries, a.concurrency))
+        results[split] = asyncio.run(label(rows, model, a.tries, a.concurrency, a.precision))
         with (OUT / f"{split}.jsonl").open("w") as f:
             for r in results[split]:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         print(split, len(rows), "kept", sum(1 for r in results[split] if r["completion"]), f"{time.time() - t0:.0f} s", flush=True)
-    text = report(results, time.time() - t0, model)
+    text = report(results, time.time() - t0, f"{model} ({a.precision}, self-hosted on Verda)")
     (OUT / "report.md").write_text(text + "\n")
     print(text)
     return 0
