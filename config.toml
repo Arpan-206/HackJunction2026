@@ -99,6 +99,9 @@ max_gain = 2.0
 # Depth step (core/camera/depth_live.py): table, forearm, glove yaw correction, /ws/depth.
 # Off by default; python -m core --depth turns it on. Nothing verified on real depth yet.
 depth_enabled = false
+# Hand root (core/camera/hand_root.py, core/root_fuse.py): the glove wrist moves with the
+# phone's colour plus depth. Off by default; python -m core --root turns it on (and --depth).
+root_tracking = false
 device = 0
 video = ""
 mirror = true
@@ -324,6 +327,46 @@ arm_radius_max_m = 0.07
 cylinder_max_rms_m = 0.012
 require_entry = true
 arm_max_tilt_deg = 40.0
+# Arm gate. "shape" (default, tuned on the first real clip captures/bench-stand-1 with
+# hand-marked spans, tests/fixtures/depth/bench_stand_1_spans.json): the arm enters from the
+# edge, is 12 to 26 cm long, widens from a wrist (taper), is 5 to 15 cm wide at the hand, stays
+# under 15 cm over the table, covers 1200 depth pixels, and passes in 3 of the last 5 frames.
+# "cylinder" is the first gate (the radius, residual and tilt keys above), which accepted a
+# tall object at the edge of that clip in 59 percent of its no-arm frames.
+gate = "shape"
+entry_margin_px = 6
+arm_len_min_m = 0.12
+arm_len_max_m = 0.26
+arm_min_px = 1200
+arm_taper_min = 1.3
+arm_wmax_min_m = 0.05
+arm_wmax_max_m = 0.15
+arm_h95_max_m = 0.15
+arm_confirm_frames = 3
+arm_confirm_window = 5
+# Colour proposes, depth confirms (core/camera/depth_colour.py): MediaPipe hands in the phone's
+# colour image, accepted when their palm lies on or above the table in depth. Off: about 44 ms a
+# frame on this Mac, too slow inline at 30 Hz; the live step runs it in its own thread when on.
+# On bench-stand-1 (same spans): arm found 22 percent alone, 51 percent with the shape gate
+# (either), 0 false accepts. No glove frame is found (no dark-glove outline yet).
+colour_confirm = false
+colour_min_valid = 0.8
+colour_h_min_m = -0.01
+colour_h_max_m = 0.20
+colour_max_range_m = 1.0
+colour_max_age_ms = 150.0
+cloud_fine_band_m = 0.004
+# Gloved hands from depth (core/camera/depth_track.py hand_blobs, used by lane hand-root):
+# confident points above the work surface and nearer to the lens than the body, hand-sized.
+# Tuned on captures/bench-gloves-1 (riser): both hands in 41 percent of frames, one in 37.
+hand_min_confidence = 1
+hand_h_min_m = 0.01
+hand_h_max_m = 0.28
+hand_max_range_m = 1.2
+hand_body_gap_m = 0.06
+hand_body_h_min_m = 0.08
+hand_area_min_m2 = 0.004
+hand_area_max_m2 = 0.08
 # Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
 correct_yaw = true
 side = "right"
@@ -337,5 +380,40 @@ tau_s = 1.5
 outlier_deg = 25.0
 outlier_run = 45
 max_correction_deg = 60.0
+# Rate cap: the correction never turns the glove yaw faster than this (degrees per second).
+# Corrections update only on a confirmed arm (the shape gate); with no arm the last good
+# correction is held, never snapped back to 0.
+max_rate_deg_s = 3.0
 stale_ms = 300.0
 
+
+[camera.root]
+# Hand root (core/camera/hand_root.py): wrist position from MediaPipe on the colour frame plus
+# LiDAR depth, fused into the glove wrist by core/root_fuse.py. Measured on
+# captures/bench-stand-1 (bare hand) and bench-riser-1 (gloves): STATUS-hand-root.md.
+# "auto": depth blobs first (black gloves return solid depth), MediaPipe only when no blob
+# is found (a bare hand). "blobs" or "mediapipe" force one path.
+mode = "auto"
+max_blobs = 2
+use_led = true
+# "auto": turn the image until world up is at the top (the phone streams its sensor image).
+rotate = "auto"
+clahe = true
+min_detection_confidence = 0.3
+min_presence_confidence = 0.3
+min_tracking_confidence = 0.3
+# The riser (phone behind the laptop, facing the person): MediaPipe's label is the person's hand.
+swap_handedness = false
+# "lock": the first fix lands on [rest_pose] and later motion is relative to it.
+# "bench": bench coordinates (y = height above the table) plus bench_offset_m.
+origin = "lock"
+bench_offset_m = [0.0, 0.0, -0.2]
+one_euro_min_cutoff = 2.0
+one_euro_beta = 4.0
+# Fusion: rate cap, jump gate, hold then decay to the glove's rest position.
+fuse_max_speed_m_s = 1.5
+fuse_jump_m = 0.15
+fuse_jump_frames = 3
+fuse_hold_s = 2.0
+fuse_decay_s = 1.5
+fuse_stale_ms = 150.0

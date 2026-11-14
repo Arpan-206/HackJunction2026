@@ -108,6 +108,9 @@ class Session:
         # Depth step (core/camera/depth_live.py), attached by __main__ with --depth; None leaves
         # the frame exactly as before (no "depth" key, no yaw correction).
         self.depth = None
+        # Hand root (core/camera/hand_root.py), attached by __main__ with --root; None leaves
+        # every hand's wrist_p exactly as the glove gave it.
+        self.root = None
 
     def log_attempt(self, summary: dict) -> None:
         """Append a step summary to logs/attempts.jsonl (visitor attempt log, for tuning tolerances later)."""
@@ -588,7 +591,9 @@ class Session:
         }
         if self.depth is not None:
             self.depth.apply(self.hands, t)
-        dec = int(self.cfg.hand.joint_decimals)
+        if self.root is not None:
+            self.root.apply(self.hands, t)
+        dec =int(self.cfg.hand.joint_decimals)
         for side in SIDES:
             h = self.hands.get(side)
             frame["hands"][side] = (

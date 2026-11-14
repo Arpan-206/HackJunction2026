@@ -140,6 +140,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="with --depth: render the fake bench scene in process instead of reading a phone",
     )
+    ap.add_argument(
+        "--root",
+        action="store_true",
+        help="hand root on (core/camera/hand_root.py): move the glove wrist with the phone's colour plus "
+        "depth; turns --depth on (same as [camera] root_tracking = true)",
+    )
     ap.add_argument("--log-level", default="info")
     args = ap.parse_args(argv)
 
@@ -226,7 +232,8 @@ def main(argv: list[str] | None = None) -> int:
         ) as e:  # mediapipe or the model file missing must not stop the server
             log.error("camera source unavailable: %s", e)
 
-    if args.depth or args.depth_fake or bool(cfg.camera.get("depth_enabled", False)):
+    want_root = args.root or bool(cfg.camera.get("root_tracking", False))
+    if args.depth or args.depth_fake or want_root or bool(cfg.camera.get("depth_enabled", False)):
         try:
             from .camera.depth_live import DepthTracking, FakeDepthSource
 
@@ -246,6 +253,15 @@ def main(argv: list[str] | None = None) -> int:
             )
         except Exception as e:  # depth must never stop the server
             log.error("depth step unavailable: %s", e)
+    if want_root and core.session.depth is not None:
+        try:
+            from .camera.hand_root import HandRootLive
+
+            # shares the depth step's source: the phone serves one client at a time
+            core.session.root = HandRootLive.from_config(cfg, core.session.depth.source)
+            log.info("hand root on: the glove wrist follows the phone's colour plus depth")
+        except Exception as e:  # the hand root must never stop the server
+            log.error("hand root unavailable: %s", e)
 
     if args.lesson:
         core.session.load_lesson(args.lesson)

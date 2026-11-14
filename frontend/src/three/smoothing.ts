@@ -31,6 +31,7 @@ export class HandSmoother {
   /** 0 draws the angle pose, 1 the joint pose; eases between them as joints arrive or stop. */
   jointWeight = 0;
   private jointsPrimed = false;
+  private hadPos = false;
   private primed = false;
   private readonly target = new Quaternion();
 
@@ -60,7 +61,9 @@ export class HandSmoother {
     else this.quat.slerp(this.target, aq);
 
     const p = frame.wrist_pos;
-    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed ? a : 1);
+    // the first position after none snaps: the hand root can start or stop sending one mid-stream
+    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed && this.hadPos ? a : 1);
+    this.hadPos = !!p;
     this.coreAngles = isCoreAngleSpread(frame.spread);
 
     if (joints && joints.length >= this.joints.length) {

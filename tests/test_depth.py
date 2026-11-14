@@ -27,6 +27,13 @@ from core.camera.geppetto_depth import ARKIT_TO_OPENCV, parse_packet
 from core.clock import FakeClock
 
 
+# The fake scene shows about 30 cm of a perfect cylinder forearm, and its dark hand is the
+# forearm alone, so it cannot pass the "shape" gate tuned on the real clip (no wrist taper).
+# Tests of direction and correction dynamics on the fake pin the first gate, "cylinder".
+def cyl(**kw):
+    return TrackerConfig(gate="cylinder", entry_margin_px=2, **kw)
+
+
 def frame_at(scene, i, fps=30.0):
     return parse_packet(
         scene.packet(i, fps), 1_700_000_000_000_000 + int(i * 1e6 / fps)
@@ -91,7 +98,7 @@ def test_fake_recording_round_trip(tmp_path):
 )
 def test_tracker_finds_table_arm_and_yaw(dark, plane):
     s = FakeDepthScene(dark_hand=dark, with_plane=plane)
-    tr = DepthTracker()
+    tr = DepthTracker(cyl())
     errs, hand_depth = [], []
     for i in range(0, 180, 6):
         o = tr.process(frame_at(s, i))
@@ -108,23 +115,19 @@ def test_tracker_finds_table_arm_and_yaw(dark, plane):
 
 
 def test_tracker_empty_bench_and_camera_yaw():
-    tr = DepthTracker()
+    tr = DepthTracker(cyl())
     o = tr.process(frame_at(FakeDepthScene(no_arm=True), 0))
     assert o.table is not None and not o.arm_found and o.forearm_yaw_deg is None
     # the same scene seen as if the phone looked the person's way: yaw turns by 180
     s = FakeDepthScene()
-    a = DepthTracker().process(frame_at(s, 30)).forearm_yaw_deg
-    b = (
-        DepthTracker(TrackerConfig(camera_yaw_deg=0.0))
-        .process(frame_at(s, 30))
-        .forearm_yaw_deg
-    )
+    a = DepthTracker(cyl()).process(frame_at(s, 30)).forearm_yaw_deg
+    b = DepthTracker(cyl(camera_yaw_deg=0.0)).process(frame_at(s, 30)).forearm_yaw_deg
     assert abs(wrap_deg(a - b - 180.0)) < 1e-6
 
 
 def test_tracker_cloud_labels():
     s = FakeDepthScene(dark_hand=True)
-    o = DepthTracker().process(frame_at(s, 30), want_cloud=True)
+    o = DepthTracker(cyl()).process(frame_at(s, 30), want_cloud=True)
     c = o.cloud
     assert 1500 <= len(c["labels"]) <= 2000
     counts = np.bincount(c["labels"], minlength=4)
@@ -151,7 +154,9 @@ def test_corrector_locks_then_removes_drift():
 
 def test_corrector_skips_outliers_but_follows_a_real_jump():
     c = YawCorrector(
-        YawCorrectorConfig(lock_s=0.5, tau_s=0.5, outlier_deg=20, outlier_run=30)
+        YawCorrectorConfig(
+            lock_s=0.5, tau_s=0.5, outlier_deg=20, outlier_run=30, max_rate_deg_s=100.0
+        )
     )
     for k in range(30):
         c.update(k * 33_333, 0.0, 0.0)
@@ -161,6 +166,22 @@ def test_corrector_skips_outliers_but_follows_a_real_jump():
     for k in range(32, 200):  # a real 40 deg jump, held
         c.update(k * 33_333, 0.0, 40.0)
     assert abs(c.offset_deg - 40.0) < 3.0
+
+
+def test_corrector_rate_cap():
+    c = YawCorrector(
+        YawCorrectorConfig(lock_s=0.5, tau_s=0.1, outlier_deg=90, max_rate_deg_s=3.0)
+    )
+    for k in range(30):
+        c.update(k * 33_333, 0.0, 0.0)
+    assert c.locked
+    t0 = 30 * 33_333
+    for k in range(30, 60):  # 1 s of a 40 deg disagreement
+        c.update(k * 33_333, 0.0, 40.0)
+    dt_s = (59 * 33_333 - t0) / 1e6
+    assert (
+        0 < c.offset_deg <= 3.0 * dt_s + 0.2
+    )  # at most 3 deg/s, however big the disagreement
 
 
 # -- the live step -------------------------------------------------------------
@@ -181,6 +202,7 @@ def test_apply_turns_each_hand_once():
     clock = FakeClock()
     dt = DepthTracking(
         FakeDepthSource(FakeDepthScene(), clock=clock),
+        cyl(),
         corrector_cfg=YawCorrectorConfig(lock_s=0.0, lock_min_samples=1),
     )
     dt.corrector.ref_deg = 0.0
@@ -201,11 +223,12 @@ def test_live_step_corrects_drift_on_fake_glove():
     scene = FakeDepthScene(dark_hand=True)
     dt = DepthTracking(
         FakeDepthSource(scene, clock=clock, fps=15),
+        cyl(),
         corrector_cfg=YawCorrectorConfig(lock_s=1.0, tau_s=1.0),
     )
     t0 = clock.now_us()
     last = None
-    for k in range(12 * 15):  # 12 s, one tick per depth frame
+    for k in range(int(12 * 15)):  # 12 s, one tick per depth frame
         clock.set_us(t0 + int(k * 1e6 / 15))
         t = k / 15
         drift = 0.0 if t < 1.5 else (t - 1.5) * 2.0  # 2 deg/s, 21 deg by the end
@@ -239,6 +262,7 @@ def test_core_frame_and_ws_depth(tmp_path, schemas):
     core.session.depth = DepthTracking.from_config(
         cfg, core.clock, source=FakeDepthSource(clock=core.clock)
     )
+    core.session.depth.tracker.cfg.gate = "cylinder"
     app = create_app(core)
     with TestClient(app) as client:
         with client.websocket_connect("/ws/depth") as ws:
@@ -273,7 +297,7 @@ def test_depth_check_on_fake_recordings(tmp_path):
     for dark in (False, True):
         rec = tmp_path / f"fake-{dark}.gdrec.gz"
         write_recording(rec, FakeDepthScene(dark_hand=dark), seconds=1.0, fps=10)
-        s = check(rec, tmp_path / f"out-{dark}", n_images=2)
+        s = check(rec, tmp_path / f"out-{dark}", n_images=2, tracker_cfg=cyl())
         assert s["frames"] == 10 and s["bad_packets"] == 0
         assert (
             s["table"]["app_plane_fraction"] == 1.0
@@ -298,5 +322,6 @@ def test_a_box_on_the_bench_is_not_an_arm():
         for x in (-0.04, 0.0, 0.04)
     ]
     s.capsules = lambda t: box
-    o = DepthTracker().process(frame_at(s, 0))
-    assert o.blob_found and not o.arm_found and not o.forearm_ok
+    for gate in ("cylinder", "shape"):
+        o = DepthTracker(TrackerConfig(gate=gate)).process(frame_at(s, 0))
+        assert o.blob_found and not o.arm_found and not o.forearm_ok

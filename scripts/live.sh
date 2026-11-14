@@ -22,6 +22,8 @@
 #                   key is loaded from the repo-root .env, never printed.
 #   GEPPETTO_REPO   repo root (default: the folder above this script).
 #   GEPPETTO_PY     Python with the core's deps (default: $GEPPETTO_REPO/.venv/bin/python).
+#   CORE_EXTRA_ARGS extra words for the core command, for example
+#                   "--root --depth-host 127.0.0.1:7700" for the phone's depth over the cable (iproxy 7700:7700 first).
 #   GEPPETTO_RUN    run folder for logs and captures (default: logs/live/<time>).
 #   ROKOKO_SDK_HOME SDK folder (default: ~/.local/share/rokoko-device-sdk).
 #   GEPPETTO_CORE_PORT core port (default 8765). Change it only when another
@@ -61,6 +63,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="${GEPPETTO_REPO:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 PY="${GEPPETTO_PY:-$REPO/.venv/bin/python}"
 ROKOKO_SDK_HOME="${ROKOKO_SDK_HOME:-$HOME/.local/share/rokoko-device-sdk}"
+CORE_EXTRA_ARGS="${CORE_EXTRA_ARGS:-}"
 SDK_BIN="$ROKOKO_SDK_HOME/bin"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 LIVE_ROOT="$REPO/logs/live"
@@ -106,7 +109,8 @@ start() {
     local pid=$!
     echo "$name $pid" >>"$PIDS"
     LAST_PID=$pid
-    say "started $name (pid $pid): $*"
+    # never log a secret: env words like GEMINI_API_KEY=... are redacted before they reach the run log
+    say "started $name (pid $pid): $(printf '%s ' "$@" | sed -E 's/([A-Z_]*(KEY|TOKEN|SECRET|PASSWORD)[A-Z_]*=)[^ ]*/\1<hidden>/g')"
 }
 
 # --- checks before anything starts ------------------------------------------
@@ -178,9 +182,11 @@ fi
 # --- 4: core ----------------------------------------------------------------
 
 if [ "$FAKE" -eq 1 ]; then
-    start core "$REPO" "$PY" -m core --solver "$HOST:$SOLVER_PORT" --no-rcsp --wearer "$WEARER" --port "$CORE_PORT"
+    # shellcheck disable=SC2086
+    start core "$REPO" "$PY" -m core --solver "$HOST:$SOLVER_PORT" --no-rcsp --wearer "$WEARER" --port "$CORE_PORT" $CORE_EXTRA_ARGS
 else
-    start core "$REPO" "$PY" -m core --solver "$HOST:$SOLVER_PORT" --rcsp "$HOST:$RCSP_PORT" --wearer "$WEARER" --port "$CORE_PORT"
+    # shellcheck disable=SC2086
+    start core "$REPO" "$PY" -m core --solver "$HOST:$SOLVER_PORT" --rcsp "$HOST:$RCSP_PORT" --wearer "$WEARER" --port "$CORE_PORT" $CORE_EXTRA_ARGS
 fi
 wait_port "$CORE_PORT" 40 core "$LAST_PID" || die "core"
 health=""
