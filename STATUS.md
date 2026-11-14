@@ -113,6 +113,46 @@ RCSP button and LED, and the scoring thresholds on real fingers. His
 `backend/app/services/rig/core_link.py` imports `core.rgmp` and `core.rcsp`
 read-only for his glove status screen.
 
+## Learn mode on the real capture (Sat 12:10)
+
+`python -m tools.score_capture backend/tests/fixtures/rgmp/worn_solver.rgmp`
+records a lesson from the right glove in Szymon's capture and scores the
+left glove against it with the real scorer. Read the numbers with care: the
+fixture is trimmed to short slices (126 frames per hand over 25 s), and the
+left hand was not copying the right, it was doing its own thing at the same
+time. So this is the error between two hands of one wearer, not a learner's
+attempt.
+
+| Measure, per-finger absolute angle error, degrees | thumb | index | middle | ring | little |
+| --- | --- | --- | --- | --- | --- |
+| median | 8 | 14 | 13 | 21 | 11 |
+| 90th percentile | 30 | 53 | 47 | 48 | 34 |
+
+| Dead zone `perfect_deg` / `wrong_deg` | mean per-frame overall | frames at or above 0.85 |
+| --- | --- | --- |
+| 8 / 45 (current) | 0.70 | 13% |
+| 12 / 45 | 0.73 | 21% |
+| 15 / 60 | 0.79 | 41% |
+| 20 / 60 | 0.81 | 49% |
+| 25 / 70 | 0.86 | 66% |
+
+What it says about the thresholds:
+
+1. 8 degrees is below the real cross-hand variation (median 12 over all
+   fingers, 21 for the ring). Start the glove slot at `perfect_deg = 12` and
+   `wrong_deg = 50`; move to 15 / 60 if a learner who copies well still sits
+   under 0.85.
+2. The ring finger is the noisiest on both hands. Give it weight 0.5 in
+   `[record] default_weights` for general lessons, or add a per-finger
+   tolerance scale (not built; ten lines in `scorer.py`).
+3. `hold_ms = 500` was reachable: every step was "passed" at some point even
+   by a hand that was not trying. Keep 500 for the demo, raise to 800 once
+   the dead zone is widened.
+4. The real test is the one in the checklist: record with the right glove,
+   copy with the same glove (self-consistency floor), then with the left
+   glove (cross-hand floor). Set `perfect_deg` a little above the self-copy
+   median and `wrong_deg` near 1.5 times its 90th percentile.
+
 ## Written but untested, and why
 
 | Part | Why it is untested | What would test it |
