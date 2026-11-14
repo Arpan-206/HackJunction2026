@@ -27,7 +27,7 @@ struct ContentView: View {
                 Text("sent \(streamer.sent)   skipped \(streamer.dropped)")
                 Text("tracking \(streamer.tracking)")
                 Text("table \(streamer.planeText)")
-                Text("phone port \(String(DepthProtocol.port))")
+                Text("phone port \(String(DepthProtocol.port))   wifi \(FrameServer.wifiAddress() ?? "off")   usb via forward.sh")
                 Text(String(format: "depth colours %.1f m blue to %.1f m red", DepthPreview.near, DepthPreview.far))
             }
             .font(.system(size: 17, design: .monospaced))

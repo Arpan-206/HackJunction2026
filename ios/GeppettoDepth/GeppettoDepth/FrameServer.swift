@@ -134,3 +134,25 @@ final class FrameServer {
         onState?(text, connected)
     }
 }
+
+extension FrameServer {
+    /// The phone's IPv4 address on WiFi (en0), for the screen, so the Mac side can be typed
+    /// into config.toml without leaving the app. Nil when WiFi is off.
+    static func wifiAddress() -> String? {
+        var addr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&addr) == 0, let first = addr else { return nil }
+        defer { freeifaddrs(addr) }
+        var p: UnsafeMutablePointer<ifaddrs>? = first
+        while let i = p {
+            let name = String(cString: i.pointee.ifa_name)
+            if name == "en0", let sa = i.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) {
+                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
+                    return String(cString: host)
+                }
+            }
+            p = i.pointee.ifa_next
+        }
+        return nil
+    }
+}
