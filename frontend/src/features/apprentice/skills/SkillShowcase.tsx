@@ -10,6 +10,7 @@ import type { ReferenceTrack } from '../training/coach/reference';
 import type { KeyPose } from './catalogue';
 import { DISPLAY_POSE } from './SkillParts';
 import { prefersReducedMotion } from '../../shared/settings';
+import { TypingStage } from '../typing/TypingStage';
 
 /** About how long one lesson plays before the showcase moves on: whole cycles of its motion, close to seven seconds. */
 const DWELL_TARGET_S = 7;
@@ -57,6 +58,17 @@ export function SkillShowcase({ course }: { course: Lesson }) {
       <div className="sk-show__stage">
         {course.skill === 'shadow_puppets' && step ? (
           <TheatreShowcase key={step.id} step={step} getFrame={getFrame} />
+        ) : course.skill === 'touch_typing' && step ? (
+          <TypingStage
+            key={step.id}
+            solid={false}
+            style="chalk"
+            hands={{
+              left: side === 'left' ? { getFrame } : { getFrame: guideFrame(step, 'left', startedAt) },
+              right: side === 'right' ? { getFrame } : { getFrame: guideFrame(step, 'right', startedAt) },
+            }}
+            label={`The expert's hands over a keyboard sketched in chalk, playing ${lessonTitle(step, shown)}`}
+          />
         ) : (
           <HandCanvas preset="single" label={step ? `The expert's hand playing ${lessonTitle(step, shown)}` : 'The expert hand'} stage={{ decor: true }}>
             <Hand side={side} style="chalk" getFrame={getFrame} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
@@ -120,6 +132,11 @@ function TheatreShowcase({ step, getFrame }: { step: Step; getFrame: () => HandF
       </p>
     </div>
   );
+}
+
+/** The other hand of a two-handed lesson: its guide motion on the same clock as the replayed hand, so the two take turns. */
+function guideFrame(step: Step, side: 'left' | 'right', startedAt: { current: number }): () => HandFrame | null {
+  return () => (step.motion ? synthFrame(step.motion, (performance.now() - startedAt.current) / 1000, side) : null);
 }
 
 /** The showcase of a workshop skill: its key pose held still, since no expert has recorded it yet. */

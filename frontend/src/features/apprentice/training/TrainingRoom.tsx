@@ -33,6 +33,7 @@ import { Marionette } from './modes/Marionette';
 import { Shadow } from './modes/Shadow';
 import { ShadowPuppets } from './modes/ShadowPuppets';
 import { SideBySide } from './modes/SideBySide';
+import { TypingDesk } from './modes/TypingDesk';
 import { Segmented } from './Segmented';
 import { ScoreCard } from './ScoreCard';
 import { preloadScoreScene } from './score/preload';
@@ -119,6 +120,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const twoHanded = step.hands === 'both';
   // Shadow puppets are learnt on the wall: the lamp's shadow theatre replaces the guidance modes.
   const theatre = lesson.skill === 'shadow_puppets';
+  // Touch typing is learnt at the desk: both hands over a QWERTY keyboard, the expert's as ghosts.
+  const desk = lesson.skill === 'touch_typing';
   const [coached, setCoached] = useState<Side>(stepSide(step));
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
@@ -338,6 +341,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
               <p className="note ap-state">Loading the expert's recording...</p>
             ) : theatre ? (
               <ShadowPuppets {...stageProps} step={step} />
+            ) : desk ? (
+              <TypingDesk {...stageProps} step={step} solid={showProps} />
             ) : guidance === 'marionette' ? (
               <Marionette {...stageProps} />
             ) : guidance === 'shadow' ? (
@@ -406,7 +411,13 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
 
           <Disclosure summary="Room settings" className="ap-settings">
             {(calibration.loading || calibrated) && calPanel}
-            {theatre ? <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p> : <GuidanceModeSwitch />}
+            {theatre ? (
+              <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p>
+            ) : desk ? (
+              <p className="note ap-field__hint">Typing is always shown at the desk: both your hands over the keyboard, the expert's as ghosts over them. The gloves feel which finger strikes, not which key it reaches.</p>
+            ) : (
+              <GuidanceModeSwitch />
+            )}
             <PropSwitch prop={step.prop} />
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>
