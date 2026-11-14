@@ -42,6 +42,26 @@ The app shows the depth preview (near is bright), the camera and send rates, the
 
 A free Apple ID signs the app for 7 days. After that, press Run again.
 
+## Reinstall from the terminal (after the first Xcode run)
+
+Once Xcode has signed the app once, later builds can go on the phone without Xcode's
+window. The team id is read from the app Xcode built. Keep the phone unlocked.
+
+```
+APP=$(ls -d ~/Library/Developer/Xcode/DerivedData/GeppettoDepth-*/Build/Products/Debug-iphoneos/GeppettoDepth.app | head -1)
+TEAM=$(codesign -dv "$APP" 2>&1 | grep TeamIdentifier | cut -d= -f2)
+DEV=$(xcrun devicectl list devices | grep -i iphone | grep -o '[0-9A-F]\{8\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{4\}-[0-9A-F]\{12\}')
+UDID=$(idevice_id -l | head -1)
+xcodebuild -project ios/GeppettoDepth/GeppettoDepth.xcodeproj -scheme GeppettoDepth \
+  -destination "id=$UDID" -allowProvisioningUpdates DEVELOPMENT_TEAM="$TEAM" -derivedDataPath /tmp/gdd build
+xcrun devicectl device install app --device "$DEV" /tmp/gdd/Build/Products/Debug-iphoneos/GeppettoDepth.app
+xcrun devicectl device process launch --device "$DEV" fi.junction.geppetto.depth
+```
+
+`xcodebuild` takes the USB serial (`idevice_id -l`); `devicectl` takes the CoreDevice id from
+`xcrun devicectl list devices`. If that list says "unavailable", unplug and replug the cable.
+Verified Sat 14 Nov 15:50 on the iPhone 16 Pro.
+
 ## Read the stream on the Mac
 
 Run these from the repo root in three terminals.
