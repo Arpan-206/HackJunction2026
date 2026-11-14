@@ -426,12 +426,27 @@
   }
 }
 
-/* ---------- Shared preview canvas ---------- */
-.preview-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
+/* ---------- Still hand pictures (three/HandStill.tsx) ---------- */
+/* The box holds its size and the stage colour until the picture is drawn; the picture is an ordinary image. */
+.hand-still {
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--stage-bg);
+}
+.hand-still__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Only a picture that arrives after the first paint fades in; one already cached is simply there. */
+.hand-still__img--in {
+  animation: hand-still-in 0.25s ease-out;
+}
+@keyframes hand-still-in {
+  from {
+    opacity: 0;
+  }
 }
 /* Settings entry in the rail footer: drawn like a nav link (icon over a word), so it reads as a place to go. */
 .rail__settings {

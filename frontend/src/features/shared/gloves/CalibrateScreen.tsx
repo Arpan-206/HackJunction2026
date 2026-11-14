@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api, ApiError, FINGERS, useGloveStream, type Side, type WearerCalibration } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink, Countdown, Stepper } from '../../../components/ui';
-import { Hand, HandPreview } from '../../../three';
+import { Hand, HandCanvas } from '../../../three';
 import { CalibrationPanel } from '../CalibrationPanel';
 import { useWearer, WEARER_MAX_CHARS } from '../settings';
 import { useCalibration } from '../useCalibration';
@@ -211,9 +211,11 @@ function VerifyStep({ sides, onDone }: { sides: Side[]; onDone: (verified: boole
           return (
             <div key={s} className="gl-glove">
               <h3 className="gl-glove__title">{s === 'left' ? 'Left hand' : 'Right hand'}</h3>
-              <HandPreview className="gl-glove__view" label={`${s} hand, moving with yours`}>
-                <Hand side={s} style="wood" live={gloves.latest} />
-              </HandPreview>
+              <div className="gl-glove__view">
+                <HandCanvas preset="closeup" stage={{ decor: false, showGrid: false, controls: 'none' }} label={`${s} hand, moving with yours`}>
+                  <Hand side={s} style="wood" live={gloves.latest} />
+                </HandCanvas>
+              </div>
               <ul className="gl-fingers" aria-label={`${s} hand fingers`}>
                 {FINGERS.map((f) => (
                   <li key={f} className={followed.includes(f) ? 'gl-finger gl-finger--ok' : 'gl-finger'}>
