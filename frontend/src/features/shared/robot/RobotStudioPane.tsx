@@ -17,11 +17,10 @@ export function RobotStudioPane({ glove, side }: RobotStudioPaneProps) {
   const robot = useRobotStream(on);
   if (!on) return null;
   const state = robotStateLine(robot);
-  const mockApp = typeof window !== 'undefined' && window.__apprenticeMock === true;
   return (
     <Disclosure summary={`Robot hand: ${state.text}`} className="rb-studio" defaultOpen={robot.status === 'open'}>
       <div className="rb-studio__grid">
-        <RobotTwin robot={robot} human={{ side: robot.hand ?? side, style: 'chalk', live: glove.latest, label: 'Your glove' }} decoupled={mockApp && !robot.mock} className="rb-twin--studio" />
+        <RobotTwin robot={robot} human={{ side: robot.hand ?? side, style: 'chalk', live: glove.latest, label: 'Your glove' }} className="rb-twin--studio" />
         <RobotPanel robot={robot} compact />
       </div>
     </Disclosure>

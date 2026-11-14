@@ -183,7 +183,6 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     getFrame: () => (robotSource === 'lesson' ? coach.live.current.master : coach.live.current.learner),
     label: robotSource === 'lesson' ? 'The lesson' : robotSource === 'master' ? 'The expert' : 'You',
   };
-  const robotDecoupled = typeof window !== 'undefined' && window.__apprenticeMock === true && !robot.mock;
 
   useEffect(() => {
     if (step.motion) gloves.setMotion(step.motion);
@@ -371,7 +370,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             </div>
             {robotPane && (
               <div className="ap-stage__canvas ap-stage__canvas--robot">
-                <RobotTwin robot={robot} human={robotHuman} decoupled={robotDecoupled} label="The Dex3-1 robot hand beside the hand that drives it, with a string to each fingertip" />
+                <RobotTwin robot={robot} human={robotHuman} label="The Dex3-1 robot hand beside the hand that drives it, with a string to each fingertip" />
               </div>
             )}
           </div>

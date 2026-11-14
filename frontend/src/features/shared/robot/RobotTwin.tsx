@@ -3,6 +3,7 @@ import { useThree } from '@react-three/fiber';
 import { DESIGN_ASPECT, TWIN_TARGET as TARGET, twinCamera } from './twinFraming';
 import type { GloveFrame, HandFrame, Side } from '../../../api/types';
 import type { RobotStreamHandle } from '../../../api/useRobotStream';
+import { useCoreGloves } from '../../../api/useCoreGloves';
 import { Hand, HandCanvas, RobotHand, RobotStrings, type HandHandle, type HandStyle, type RobotHandHandle } from '../../../three';
 
 export interface TwinHuman {
@@ -18,10 +19,11 @@ export interface TwinHuman {
 
 interface RobotTwinProps {
   robot: RobotStreamHandle;
-  /** The hand that drives the robot, drawn beside it with strings. Null draws the robot alone. */
+  /**
+   * The hand that drives the robot, drawn beside it with strings. Null draws the robot alone. When a real engine drives
+   * the robot, its own glove stream replaces `live` and `getFrame` here.
+   */
   human: TwinHuman | null;
-  /** The robot and the human come from different engines (sample glove, real robot): draw the robot alone and say so. */
-  decoupled?: boolean;
   className?: string;
   label?: string;
 }
@@ -74,11 +76,17 @@ function CameraTo({ position }: { position: [number, number, number] }) {
  * Geppetto and Pinocchio: the human hand on the left, the Dex3-1 twin on the right, a string from each human fingertip
  * to the robot's. The fingers the robot lacks (ring and little) hang their strings loose and show as chalk ghosts.
  */
-export function RobotTwin({ robot, human, decoupled = false, className, label }: RobotTwinProps) {
+export function RobotTwin({ robot, human: given, className, label }: RobotTwinProps) {
   const humanRef = useRef<HandHandle>(null);
   const robotRef = useRef<RobotHandHandle>(null);
-  const showHuman = human !== null && !decoupled;
-  const side: Side = robot.hand ?? human?.side ?? 'right';
+  const side: Side = robot.hand ?? given?.side ?? 'right';
+  // A real engine drives the robot: draw the human hand from that engine's own glove stream, so both hands always come
+  // from one place (the app's glove stream may be the in-browser sample while the robot is real). In lesson mode the
+  // engine plays its own lesson step and sends no human hand, so the robot stands alone.
+  const engineUrl = robot.status === 'open' && robot.hello && !robot.mock ? robot.url : null;
+  const coreLive = useCoreGloves(engineUrl);
+  const human: TwinHuman | null = !given ? null : !engineUrl ? given : robot.source === 'lesson' ? null : { ...given, side, live: coreLive, getFrame: undefined };
+  const showHuman = human !== null;
   const box = useRef<HTMLDivElement>(null);
   const camera = twinCamera(useAspect(box));
   return (
@@ -97,7 +105,6 @@ export function RobotTwin({ robot, human, decoupled = false, className, label }:
         {showHuman && human && <span className="rb-twin__cap">{human.label}</span>}
         <span className="rb-twin__cap rb-twin__cap--robot">Dex3-1</span>
       </div>
-      {decoupled && <p className="note rb-twin__note">The robot follows the engine; the sample glove here does not drive it.</p>}
     </div>
   );
 }

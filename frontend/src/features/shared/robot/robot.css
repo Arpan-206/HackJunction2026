@@ -35,18 +35,6 @@
   padding: 0.15rem 0.7rem;
   border-radius: var(--radius-s);
 }
-.rb-twin__note {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  right: 12px;
-  margin: 0;
-  pointer-events: none;
-  color: var(--text);
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
-  padding: 0.25rem 0.6rem;
-  border-radius: var(--radius-s);
-}
 
 /* ---------- Panel ---------- */
 .rb-panel {

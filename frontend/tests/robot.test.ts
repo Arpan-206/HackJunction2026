@@ -6,6 +6,7 @@ import { handWithRole, parseRobotIncoming, shortJointName, SOURCE_OPTIONS, waiti
 import { angleFeatures, autoSign, describeRobot, limitsOf, pickHand, retargetAngles, retargetHand, robotMessage } from '../src/mock/robot';
 import { fingerOfName, forwardKinematics, linkShapes, pointInRoot, restPose, URDF_TO_SCENE, urdfToHandMatrix } from '../src/three/robot/kinematics';
 import { movableJoints, parseUrdf } from '../src/three/robot/urdf';
+import { coreGlovesUrl, parseGloveFrame } from '../src/api/useCoreGloves';
 import { MAX_PULL, TWIN_CAMERA, TWIN_TARGET, twinCamera } from '../src/features/shared/robot/twinFraming';
 import { DEG, handWith } from './helpers';
 
@@ -260,6 +261,20 @@ describe('robot wire helpers', () => {
     expect(waitingLine('lesson', session)).toMatch(/lesson step/);
     expect(waitingLine('lesson', { lesson_id: null })).toMatch(/No lesson is loaded/);
     expect(waitingLine('off', null)).toBe('The robot rests.');
+  });
+});
+
+describe('the core glove socket beside the robot socket', () => {
+  it('swaps /ws/robot for /ws/gloves on the same host and port', () => {
+    expect(coreGlovesUrl('ws://localhost:8765/ws/robot')).toBe('ws://localhost:8765/ws/gloves');
+    expect(coreGlovesUrl('wss://lab.local/ws/robot?x=1')).toBe('wss://lab.local/ws/gloves');
+    expect(coreGlovesUrl('ws://localhost:8765/ws')).toBeNull();
+  });
+
+  it('reads GloveFrames and drops anything else', () => {
+    expect(parseGloveFrame('{"t":1.5,"source":"glove","hands":[]}')?.t).toBe(1.5);
+    expect(parseGloveFrame('{"type":"hello"}')).toBeNull();
+    expect(parseGloveFrame('not json')).toBeNull();
   });
 });
 

@@ -5,12 +5,6 @@ import { RobotPanel } from './RobotPanel';
 import { RobotTwin, type TwinHuman } from './RobotTwin';
 import './robot.css';
 
-/** The robot and the glove stream come from different places: the sample glove runs in this browser, the robot in the engine. */
-function isDecoupled(mockRobot: boolean): boolean {
-  const mockApp = typeof window !== 'undefined' && window.__apprenticeMock === true;
-  return mockApp && !mockRobot;
-}
-
 /**
  * /robot: the teleoperation view. The glove drives a Unitree Dex3-1 twin, with the source switch (expert, apprentice,
  * lesson, off), the per-finger fidelity and the joint targets, read from the engine's /ws/robot.
@@ -30,7 +24,7 @@ export default function RobotScreen() {
       <PageHeader title="Robot hand" context="Your glove drives a Unitree Dex3-1 twin. Choose who drives it and watch how closely it follows." />
       <div className="rb-screen__grid">
         <section className="rb-screen__stage" aria-label="Robot twin">
-          <RobotTwin robot={robot} human={human} decoupled={isDecoupled(robot.mock)} className="rb-twin--tall" />
+          <RobotTwin robot={robot} human={human} className="rb-twin--tall" />
           <p className="note rb-screen__cap">
             {robot.status === 'open' && robot.hello
               ? 'Strings run from each of your fingertips to the robot’s. The ring and little finger have no robot finger, so their strings hang loose.'
