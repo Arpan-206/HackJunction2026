@@ -4,7 +4,7 @@ import { MARGINS } from '../../api/margin';
 import { Button } from '../../components/ui';
 import { useAssistant } from './assistant';
 import { PROP_NOTE, useShowProps } from './sessionPrefs';
-import { MARGIN_INFO, systemReducesMotion, useMargin, useReducedMotion, useScoreView, type ScoreView } from './settings';
+import { MARGIN_INFO, systemReducesMotion, useDemoMode, useMargin, useReducedMotion, useScoreView, useWearer, WEARER_MAX_CHARS, type ScoreView } from './settings';
 import './settings.css';
 
 const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -77,6 +77,8 @@ export function SettingsDialog({ onClose, returnFocus }: SettingsDialogProps) {
   const [view, setView] = useScoreView();
   const [props, setProps] = useShowProps();
   const [reduce, setReduce] = useReducedMotion();
+  const [demo, setDemo] = useDemoMode();
+  const [wearer, setWearer] = useWearer();
   const deviceReduces = systemReducesMotion();
 
   useEffect(() => {
@@ -157,6 +159,35 @@ export function SettingsDialog({ onClose, returnFocus }: SettingsDialogProps) {
 
           <section className="settings__section">
             <Choices legend="Show the score as" name="score-view" value={view} onChange={setView} options={VIEWS} note="On the score screen you can also click or tap the score to flip between the two." />
+          </section>
+
+          <section className="settings__section" aria-labelledby={`${titleId}-gloves`}>
+            <h3 id={`${titleId}-gloves`} className="settings__h">
+              Gloves
+            </h3>
+            <Switch
+              on={demo}
+              onChange={setDemo}
+              label="Demo mode"
+              note="Skips the full glove calibration. The app loads the wearer's last calibration and asks them to hold still for 2 seconds; if the gloves have drifted it asks for a recalibration, otherwise it goes straight in."
+            />
+            <div className="settings__row">
+              <label className="settings__label" htmlFor={`${titleId}-wearer`}>
+                Who wears the gloves
+              </label>
+              <input
+                id={`${titleId}-wearer`}
+                className="settings__input"
+                value={wearer}
+                maxLength={WEARER_MAX_CHARS}
+                autoComplete="off"
+                onChange={(e) => setWearer(e.target.value)}
+                aria-describedby={`${titleId}-wearer-note`}
+              />
+              <p id={`${titleId}-wearer-note`} className="settings__note">
+                Calibrations are saved under this name.
+              </p>
+            </div>
           </section>
 
           <section className="settings__section" aria-labelledby={`${titleId}-stage`}>
