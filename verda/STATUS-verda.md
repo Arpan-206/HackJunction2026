@@ -19,7 +19,7 @@ nothing prints or stores a key.
 | Lesson from a recording: pictures plus glove trace summary in, backend `Lesson` JSON out | `gemma_client.py` | `lesson_from_recording(folder)` or `uv run python gemma_client.py out/recordings/worn-solver-right` |
 | OpenAI-compatible provider shaped for the backend's `LLMClient` protocol | `openai_compat.py` | imported by `compare.py`; patch below |
 | Three-way comparison and report | `compare.py` | `uv run python compare.py` |
-| Offline tests (18) | `tests/` | `uv run pytest -q` |
+| Offline tests (19) | `tests/` | `uv run pytest -q` |
 
 Decisions taken without asking:
 
@@ -30,6 +30,21 @@ Decisions taken without asking:
 - The "video frames" for a glove-only recording are the core recorder's key pose sketches (`frames/step_XX.jpg`). Camera frames or a video file, when present, are used instead (`recording.video_frames`).
 - Secrets: the HF token (optional, Gemma 4 is ungated) is stored as a Verda secret named `geppetto-hf-token` and injected as `HF_TOKEN`.
 - Scaling for the hackathon: one replica, no scale to zero, torn down between sessions. `--min-replicas 0` turns on scale to zero.
+
+## Results of the measured run (14 Nov, H200)
+
+| Item | Value |
+| --- | --- |
+| Cold start, container start to healthy | 458 s |
+| Lesson call, pictures plus trace | 10.2 s and 19.1 s |
+| Lesson call, text only (Gemma) | 8.2 s and 10.8 s |
+| Same text on Gemini | 1.8 s and 2.5 s |
+| Valid lesson on the first attempt | 6 of 6 calls |
+| Cost of the lane so far | 3.94 USD at list price (balance still 200 EUR) |
+| Deployment now | None. Torn down at 12:32 Helsinki. |
+
+Comparison findings are in `docs/VERDA.md` and `verda/out/compare/summary.md`. Gemma wrote "right" for the
+left-hand take. `gemma_client.finalise` now sets `hands` from the recording. The stored outputs predate that fix.
 
 ## Written but untested
 
@@ -72,7 +87,7 @@ DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"
    with `from app.services.llm.openai_compat import OpenAICompatLLM` among the imports.
 
 5. `backend/.env.example`: add `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL` (names only).
-6. Run with `LLM_PROVIDER=openai OPENAI_BASE_URL=https://containers.verda.com/geppetto-gemma OPENAI_API_KEY=<the Verda inference key> OPENAI_MODEL=google/gemma-4-31B-it`.
+6. Run with `LLM_PROVIDER=openai OPENAI_BASE_URL=https://containers.datacrunch.io/geppetto-gemma (the base_url in verda/out/endpoint.json) OPENAI_API_KEY=<the Verda inference key> OPENAI_MODEL=google/gemma-4-31B-it`.
 
 `test_openai_compat.py::test_backend_lesson_generator_runs_on_the_provider` already proves the backend's
 `LessonGenerator` runs on the provider unchanged. The frontend's `/dev` panel names providers; `openai` would

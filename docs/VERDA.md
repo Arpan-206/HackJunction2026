@@ -20,7 +20,7 @@ cloud. The fast judgements during practice stay on small, quick models.
 | Verda product | Serverless Containers | One container, one GPU, an HTTPS endpoint with a key, a health check, autoscaling down to zero. No instance to keep alive by hand. The REST API and the `verda` Python SDK create and delete it from a script. |
 | Server | vLLM, image `docker.io/vllm/vllm-openai:v0.29.0` | The tag Verda's own vLLM tutorial recommends. It serves the OpenAI chat API, accepts images in the prompt, and constrains output to a JSON schema. |
 | Model | `google/gemma-4-31B-it` | The largest multimodal Gemma. Apache 2.0 and ungated on Hugging Face, so no token is needed to pull it. 62.5 GB of bf16 weights fit one 80 GB GPU. Image and video input. |
-| GPU | 1x H100 SXM5 80 GB (H200 141 GB first choice, none free at deploy time) | The smallest single GPU that holds the bf16 weights. |
+| GPU | 1x H200 SXM5 141 GB (H100 80 GB as fallback) | Holds the 59 GiB of bf16 weights with room for the KV cache (the memory for the prompt). The first try on an H100 failed: a 32768 token context did not fit. The measured run below used the H200. |
 | Output format | JSON Schema constrained decoding | The backend's `LessonBase` pydantic schema is sent as `response_format`, so the answer validates on the first try. |
 | Secrets | `.env` in the main checkout, never in the repo | Verda cloud credentials, the inference key, the Gemini key and an optional HF token. |
 
@@ -56,16 +56,57 @@ uv run python teardown.py                  # delete the deployment: stop paying
 
 ## Measurements
 
-Filled in from `verda/out/endpoint.json` and `verda/out/deploy_log.jsonl` after each run.
+All values come from the H200 run on 14 Nov 2026 (created 10:23:45 UTC, healthy 10:31:23 UTC). Sources:
+`verda/out/deploy_log.jsonl`, the Verda system log, the vLLM log and `verda/out/compare/`.
 
 | Measure | Value | Source |
 | --- | --- | --- |
 | Deploy created to container started | 2 s | Verda system log |
-| Container start to weights loaded (59 GiB) | 170 s | vLLM log |
-| Container start to healthy | to be filled | deploy.py |
-| Cold start to first completion | to be filled | deploy.py |
-| Lesson call latency, pictures plus trace | to be filled | compare.py |
-| Lesson call latency, text only | to be filled | compare.py |
+| Weights download from Hugging Face (62 GB) | 168 s | vLLM log |
+| Weights loaded into GPU memory (59 GiB) | 182 s after container start | vLLM log |
+| Container start to healthy (cold start) | 458 s (7.6 min) | deploy_log.jsonl |
+| First completion after healthy (smoke test) | 0.07 s | deploy.py |
+| Lesson call, pictures plus trace, left take (4 pictures, 2526 in, 764 out tokens) | 19.1 s | compare.py |
+| Lesson call, pictures plus trace, right take (3 pictures, 2220 in, 531 out tokens) | 10.2 s | compare.py |
+| Lesson call, text only, through the backend's LessonGenerator | 10.8 s and 8.2 s | compare.py |
+| Same text on the existing Gemini path (gemini-3.5-flash-lite) | 2.5 s and 1.8 s | compare.py |
+| Output speed, one request at a time | about 40 to 52 tokens per second | usage / latency |
+| Attempts until a valid lesson (JSON schema constrained) | 1 of 1 on every call | compare.py |
+
+The cold start has three parts: about 3 min to download the weights, about 15 s to load them, and about
+4 min for vLLM to compile and warm the model. A volume that keeps the weights would cut the first part.
+
+## Warm-up procedure
+
+A cold endpoint needs about 8 minutes before it answers. Follow these steps before a demo:
+
+1. Start the warm-up 15 minutes before you need the endpoint: `cd verda && ./warm_up.sh`.
+2. Watch the start with `uv run python logs.py`. "Startup probe failed: connection refused" is normal while vLLM loads.
+3. Wait for the script to print "healthy" and the smoke test reply "OK".
+4. Run the demo: `uv run python gemma_client.py out/recordings/worn-solver-right`.
+5. Stop the billing at once: `uv run python teardown.py`. It must print "deployments still up: none".
+
+## Gemma against Gemini on the real captures
+
+`compare.py` sent the real glove capture in the repo (`backend/tests/fixtures/rgmp/worn_solver.rgmp.gz`, worn
+Smartgloves II) through three paths. Each hand of that capture is one recording: the left take and the right take. The full report is `verda/out/compare/summary.md`.
+
+| Recording | Path | Latency s | Steps | Step order follows the trace | Hand field | Move ids from the catalogue |
+| --- | --- | --- | --- | --- | --- | --- |
+| left take | Gemma 4, pictures plus trace | 19.1 | 4 | Yes, all 4 steps | right (wrong) | 3 of 4 |
+| left take | Gemma 4, text only | 10.8 | 3 | No, it merged steps 1 and 3 | right (wrong) | 2 of 3 |
+| left take | Gemini, text only | 2.5 | 4 | Yes, all 4 steps | left | 4 of 4, but shadow puppet moves for plain hand shapes |
+| right take | Gemma 4, pictures plus trace | 10.2 | 3 | Yes | right | 1 of 3 |
+| right take | Gemma 4, text only | 8.2 | 3 | No, it put the open hand first | right | 2 of 3 |
+| right take | Gemini, text only | 1.8 | 3 | Yes | right | 2 of 3 |
+
+Findings:
+
+- The pictures help. With the step sketches, Gemma kept the recorded step order on both takes. Without them, it reordered or merged steps.
+- Gemma ignored "Demonstrating hand: left" in the prompt. The client now takes the hand from the recording itself (`gemma_client.recorded_hand`), with a test. The stored outputs predate this fix.
+- Gemini is 4 to 8 times faster on this short prompt. Gemini has no picture input on this path, so it cannot check the sketches.
+- Gemini picked shadow puppet moves for an open hand and a fist. Gemma picked the plain `general_spread` and `general_fist` moves, which match the trace.
+- Every call on every path gave a valid lesson on the first attempt.
 
 ## Cost so far
 
@@ -73,20 +114,21 @@ Filled in from `verda/out/endpoint.json` and `verda/out/deploy_log.jsonl` after 
 | --- | --- | --- | --- | --- | --- | --- |
 | 14 Nov 11:52 | First deploy, context 32768 | H100 | 0 | 0 | 0 | 200.00 |
 | 14 Nov 12:22 | Teardown: vLLM crash-looped, KV cache too small for 32768 tokens on 80 GB | H100 | 0.50 | 2.86 | 2.86 | 200.00 |
-| 14 Nov 12:25 | Second deploy, context 12288 (an H200 was free this time) | H200 | 0 | 0 | 2.86 | 200.00 |
+| 14 Nov 12:23 | Second deploy, context 12288 (an H200 was free this time) | H200 | 0 | 0 | 2.86 | 200.00 |
+| 14 Nov 12:32 | Teardown after the smoke test and the 6-call comparison | H200 | 0.147 | 1.08 | 3.94 | 200.00 |
 
-The balance column is what the Verda console showed at that moment; Verda posts charges in 10 minute
-aggregates, so it lags the list-price estimate.
+The balance column is what the Verda console showed at that moment. Verda posts charges in 10 minute
+aggregates, so it lags the list-price estimate. Nothing is deployed now, so nothing bills.
 
 ## How this scales to many skills
 
-Every recorded demonstration becomes one call: a handful of pictures and about two thousand characters of
-text in, one lesson out. On one H100 a call takes well under a minute, so one GPU hour turns at least sixty
-recordings into lessons, for less than ten cents each. The container scales to zero when nobody records, and
-Verda bills by the minute, so a school with ten experts and a school with a thousand pay for the same thing:
-the minutes a GPU was busy. When many experts record at once, the deployment's `max_replica_count` lets Verda
-start more identical containers behind the same endpoint and key; the client code does not change. The same
-endpoint can also take the next slow jobs: naming steps from camera video (Gemma 4 reads video), writing the
-coach's end-of-lesson plan, and drafting the dataset cards for the robot demonstrations the export lane
-produces. A fine-tuned Gemma that knows the glove digest format would be a drop-in: same image, same flags,
-a different model id.
+Every recorded demonstration becomes one call. A handful of pictures and about 2500 tokens go in, and one
+lesson comes out. On one H200 a call took 10 to 19 seconds when sent alone. So one GPU hour turns at least
+190 recordings into lessons, at about 4 US cents each, and vLLM can run many calls at the same time. The
+container can scale to zero when nobody records. Verda bills by the minute, so a school pays only for the
+minutes a GPU was busy. Scale to zero adds the 8 minute cold start to the first call, which suits a job that runs
+after a recording, not during practice. When many experts record at once, the deployment's `max_replica_count`
+lets Verda start more identical containers behind the same endpoint and key. The client code does not change.
+The same endpoint can take the next slow jobs: naming steps from camera video (Gemma 4 reads video), writing
+the end-of-lesson plan, and writing the dataset cards for the robot demonstrations. A fine-tuned Gemma that
+knows the glove digest format is a drop-in change: same image, same flags, a different model id.

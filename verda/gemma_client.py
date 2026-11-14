@@ -170,9 +170,25 @@ def build_messages(
     return [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": content}]
 
 
-def finalise(draft: LessonBase, moves: MoveCatalog) -> Lesson:
-    """What the backend's LessonGenerator does: mark generated, drop unknown move ids, assign server fields."""
-    steps = [s.model_copy(update={"move_id": s.move_id if s.move_id and moves.get(s.move_id) else None}) for s in draft.steps]
+def recorded_hand(rec: R.Recording) -> str | None:
+    """The hand the gloves measured ("left" or "right"), or None when the recording does not say."""
+    hand = (rec.lesson.get("master") or {}).get("hand")
+    return hand if hand in ("left", "right") else None
+
+
+def finalise(draft: LessonBase, moves: MoveCatalog, hand: str | None = None) -> Lesson:
+    """What the backend's LessonGenerator does: mark generated, drop unknown move ids, assign server fields.
+
+    `hand` is the hand the gloves measured. The gloves are the ground truth for which hand moved, so a one-hand
+    recording sets `hands` on every step (Gemma 4 wrote "right" for a left-hand take on 14 Nov; Gemini did not).
+    """
+    def fix(s):
+        update: dict[str, Any] = {"move_id": s.move_id if s.move_id and moves.get(s.move_id) else None}
+        if hand:
+            update["hands"] = hand
+        return s.model_copy(update=update)
+
+    steps = [fix(s) for s in draft.steps]
     data = draft.model_copy(update={"source": "generated", "steps": steps}).model_dump()
     return Lesson(**data, id=new_id(), created_at=utc_now_iso())
 
@@ -239,7 +255,7 @@ def generate_lesson(
             errors = str(exc)
             history.append(errors)
             continue
-        lesson = finalise(draft, moves)
+        lesson = finalise(draft, moves, recorded_hand(rec))
         return LessonResult(
             lesson=lesson.model_dump(),
             provider=PROVIDER,

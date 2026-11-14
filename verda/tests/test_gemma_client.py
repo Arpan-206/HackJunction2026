@@ -61,6 +61,16 @@ def test_valid_answer_becomes_a_backend_lesson(folder):
     assert G.lesson_from_recording(folder, chat=chat, max_frames=1)["title"] == "Open, point, fist"
 
 
+def test_recorded_hand_overrides_the_model(folder):
+    # The fixture is a left-hand take; the model answers "right", as Gemma 4 did on 14 Nov.
+    def chat(messages, schema):
+        return G.ChatResult(text=json.dumps(GOOD_LESSON))
+
+    assert G.recorded_hand(R.load_recording(folder)) == "left"
+    lesson = G.lesson_from_recording(folder, chat=chat, max_frames=1)
+    assert [s["hands"] for s in lesson["steps"]] == ["left", "left"]
+
+
 def test_invalid_answer_is_retried_with_the_errors(folder):
     answers = iter(['{"title": "no steps"}', json.dumps(GOOD_LESSON)])
     seen = []
