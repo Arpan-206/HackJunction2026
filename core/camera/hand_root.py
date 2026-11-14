@@ -70,6 +70,11 @@ class RootConfig:
     still_s: float = 1.0             # still this long after a move: re-anchor the bench
     forget_s: float = 0.5            # a hand unseen this long restarts its filter
     camera_yaw_deg: float = 180.0    # from [camera.depth]: 180 when the phone faces the person
+    mode: str = "auto"               # "auto": depth blobs first (gloves), MediaPipe if none; "blobs"; "mediapipe"
+    max_blobs: int = 2
+    min_darkness: float = 0.0        # blobs lighter than this are ignored (0 keeps bare hands too)
+    use_led: bool = True
+    track_gate_m: float = 0.12       # a blob within this of a recent blob is the same track (its filter)
     rotate: str = "auto"             # "auto" (world up to image top) or quarter turns clockwise "0".."3"
     clahe: bool = True               # grey plus local contrast: 12 to 46 percent of frames on the stand clip
     num_hands: int = 2
@@ -107,6 +112,10 @@ class WristFix:
     t_us: int
     frame_id: int
     knuckles_bench: list = field(default_factory=list)
+    darkness: float | None = None  # blob fixes: 1 = black (a glove); None for MediaPipe fixes
+    led: bool = False            # a ring LED was found on this blob
+    source: str = "mediapipe"    # "blob" or "mediapipe"
+    key: str = ""                # the tracker's short-lived track id
 
 
 @dataclass
@@ -268,6 +277,15 @@ class HandRootTracker:
         self._prev_pose: tuple[np.ndarray, np.ndarray] | None = None
         self.moving = False
         self.rot = 0
+        from .hand_root_led import LedConfig
+        self.led_cfg = LedConfig()
+        self._tracks: dict[str, tuple[np.ndarray, int]] = {}
+        self._used_keys: set[str] = set()
+        self._next_key = 0
+        self.blob_source = ""
+        self.blob_frames = 0
+        self.rings_seen = 0
+        self.rings_on_blobs = 0
         # counters for status and the check tool
         self.frames = 0
         self.detections = 0
@@ -367,10 +385,15 @@ class HandRootTracker:
             if not self._update_bench(frame):
                 return out
             self.rot = upright_rotation(frame.transform) if self.cfg.rotate == "auto" else int(self.cfg.rotate) % 4
+            ok = frame.depth_ok(self.cfg.min_confidence)
+            if self.cfg.mode in ("auto", "blobs"):
+                out = self._blob_fixes(frame, ok)
+                self._used_keys.clear()
+                if out or self.cfg.mode == "blobs":
+                    return out
             dets = self.detector(frame.bgr, frame.t_us, self.rot)
             if not dets:
                 return out
-            ok = frame.depth_ok(self.cfg.min_confidence)
             for det in dets:
                 self.detections += 1
                 side = det.label.strip().lower()
@@ -406,13 +429,88 @@ class HandRootTracker:
         finally:
             self.process_ms = (time.perf_counter() - t0) * 1000
 
+    # -- gloved hands: depth blobs first, ring LED for identity -------------------
+    def _track_key(self, pb: np.ndarray, t_us: int) -> str:
+        """A short-lived track id for the filter: the nearest recent blob track, else a new one."""
+        best, bd = None, self.cfg.track_gate_m
+        for k, (q, t) in self._tracks.items():
+            if k in self._used_keys or t_us - t > self.cfg.forget_s * 1e6:
+                continue
+            d = float(np.linalg.norm(pb - q))
+            if d < bd:
+                best, bd = k, d
+        if best is None:
+            self._next_key += 1
+            best = f"blob{self._next_key}"
+        self._tracks[best] = (pb.copy(), t_us)
+        self._used_keys.add(best)
+        return best
+
+    def _blob_fixes(self, frame: DepthFrame, ok: np.ndarray) -> list[WristFix]:
+        from .hand_root_blobs import find_blobs
+        from .hand_root_led import find_rings
+        b = self.bench
+        blobs, self.blob_source = find_blobs(frame, b.table, max_n=self.cfg.max_blobs)
+        blobs = [x for x in blobs if x.darkness >= self.cfg.min_darkness]
+        if not blobs:
+            return []
+        self.blob_frames += 1
+        union = np.zeros_like(blobs[0].mask)
+        for x in blobs:
+            union |= x.mask
+        rings = find_rings(frame.bgr, union, self.led_cfg) if self.cfg.use_led else []
+        self.rings_seen += len(rings)
+        H, W = union.shape
+        pbs = [b.R @ (x.centre_world - b.origin) for x in blobs]
+        if self.offset is None:
+            if self.cfg.origin == "lock":
+                if len(pbs) >= 2:
+                    self.offset = (self.rest_p["left"] + self.rest_p["right"]) / 2 - (pbs[0] + pbs[1]) / 2
+                else:
+                    cam_x = (b.R @ (self.bench.cam - b.origin))[0]
+                    side = "right" if pbs[0][0] > cam_x else "left"
+                    self.offset = self.rest_p[side] - pbs[0]
+            else:
+                self.offset = np.asarray(self.cfg.bench_offset_m, dtype=float)
+        out = []
+        for x, pb in zip(blobs, pbs):
+            ring = None
+            for r in rings:
+                u, v = int(r.uv[0] * W), int(r.uv[1] * H)
+                y0, y1, x0, x1 = max(0, v - 3), v + 4, max(0, u - 3), u + 4
+                if x.mask[y0:y1, x0:x1].any():
+                    ring = r
+                    break
+            px = x.centre_uv
+            if ring is not None:
+                self.rings_on_blobs += 1
+                px = ring.uv
+                z = sample_depth(frame, ok, ring.uv[0], ring.uv[1], self.cfg.window_px, self.cfg.near_pct)
+                if z is not None:
+                    hub = b.R @ (pixel_to_world(frame, ring.uv[0], ring.uv[1], z) - b.origin)
+                    if np.linalg.norm(hub - pb) < 0.12:
+                        pb = 0.5 * pb + 0.5 * hub     # the hub sits on the back of the hand by the wrist
+            key = self._track_key(pb, frame.t_us)
+            if key not in self.filters:
+                self.filters[key] = geom.OneEuroFilter(self.cfg.one_euro_min_cutoff, self.cfg.one_euro_beta,
+                                                       self.cfg.one_euro_d_cutoff)
+            ps = self.filters[key](pb + self.offset, frame.t_us)
+            side = ring.side if ring is not None and ring.side else None
+            out.append(WristFix(side=side or "", score=1.0, p=ps, p_bench=pb, confidence=1.0,
+                                px=(px[0] * frame.bgr.shape[1], px[1] * frame.bgr.shape[0]),
+                                t_us=int(frame.t_us), frame_id=int(frame.frame_id), darkness=float(x.darkness),
+                                led=ring is not None, source="blob", key=key))
+            self.fixes += 1
+        return out
+
     def status(self) -> dict:
         return {"frames": self.frames, "detections": self.detections, "fixes": self.fixes,
                 "no_depth": self.no_depth, "bench": self.bench is not None, "moving": self.moving,
                 "reanchors": self.reanchors, "locked": self.offset is not None, "rotation": self.rot,
                 "camera_height_m": None if self.bench is None else round(self.bench.table.camera_height_m, 3),
                 "table_source": None if self.bench is None else self.bench.table.source,
-                "process_ms": round(self.process_ms, 1)}
+                "blob_frames": self.blob_frames, "blob_source": self.blob_source, "rings_seen": self.rings_seen,
+                "rings_on_blobs": self.rings_on_blobs, "process_ms": round(self.process_ms, 1)}
 
 
 class HandRootLive:

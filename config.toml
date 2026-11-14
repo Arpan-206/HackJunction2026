@@ -347,6 +347,11 @@ stale_ms = 300.0
 # Hand root (core/camera/hand_root.py): wrist position from MediaPipe on the colour frame plus
 # LiDAR depth, fused into the glove wrist by core/root_fuse.py. Measured on
 # captures/bench-stand-1 (bare hand) and bench-riser-1 (gloves): STATUS-hand-root.md.
+# "auto": depth blobs first (black gloves return solid depth), MediaPipe only when no blob
+# is found (a bare hand). "blobs" or "mediapipe" force one path.
+mode = "auto"
+max_blobs = 2
+use_led = true
 # "auto": turn the image until world up is at the top (the phone streams its sensor image).
 rotate = "auto"
 clahe = true
