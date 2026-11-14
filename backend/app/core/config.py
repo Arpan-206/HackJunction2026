@@ -20,12 +20,10 @@ class Settings(BaseSettings):
     gemini_hint_model: str = c.GEMINI_HINT_MODEL
     gemini_rpm_budget: int | None = None
     gemini_rpd_budget: int | None = None
-    ollama_url: str = c.DEFAULT_OLLAMA_URL
-    ollama_model: str = c.DEFAULT_OLLAMA_MODEL
     openai_base_url: str = "http://localhost:8000"
     openai_api_key: str | None = None
     openai_model: str = c.DEFAULT_OPENAI_MODEL
-    llm_provider: Literal["fake", "gemini", "ollama", "openai"] = "fake"
+    llm_provider: Literal["fake", "gemini", "openai"] = "fake"
     # Providers tried after the first one fails, comma separated (gemini, openai); the first one is skipped.
     # openai joins only when OPENAI_BASE_URL is set. After the last one the coach shows its offline note.
     # "none" keeps one provider.

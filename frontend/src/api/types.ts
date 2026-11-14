@@ -400,14 +400,14 @@ export interface VisionHandsResponse {
   hands: { side: Side; wrist_pos: [number, number, number] | null; landmarks: [number, number, number][] }[];
 }
 
-export type LlmProvider = 'fake' | 'gemini' | 'ollama' | 'openai';
+export type LlmProvider = 'fake' | 'gemini' | 'openai';
 
 /**
  * Who answered a model call (the `provider` field): 'gemini', 'openai' (Gemma on Verda), 'fake' or 'fake (rate limited)'
  * (a template after every model failed), 'offline' (the coach's offline note), 'algorithmic' (the rule-based cue) or
  * 'mock'. Show it with features/shared/ModelLabel, never as raw text in user copy.
  */
-export type ModelProvider = 'gemini' | 'openai' | 'ollama' | 'fake' | 'fake (rate limited)' | 'offline' | 'algorithmic' | 'mock' | (string & {});
+export type ModelProvider = 'gemini' | 'openai' | 'fake' | 'fake (rate limited)' | 'offline' | 'algorithmic' | 'mock' | (string & {});
 
 export interface SmoothingState {
   enabled: boolean;

@@ -314,13 +314,13 @@ def test_dev_state_switching(client: TestClient) -> None:
         "/api/dev/state",
         json={
             "smoothing": {"min_cutoff": 0.5, "beta": 0.1, "enabled": False},
-            "llm_provider": "ollama",
+            "llm_provider": "openai",
             "simulator_motion": MOTION,
         },
     ).json()
     assert state["smoothing"] == {"enabled": False, "min_cutoff": 0.5, "beta": 0.1}
     assert (
-        state["llm_provider"] == "ollama"
+        state["llm_provider"] == "openai"
         and state["simulator_motion"]["preset"] == "finger_sequence"
     )
     sdk = client.post("/api/dev/state", json={"glove_source": "rokoko_sdk"})

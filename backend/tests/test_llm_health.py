@@ -36,7 +36,7 @@ def test_openai_unreachable_is_reported_not_deployed(tmp_path: Path) -> None:
 
 def test_secrets_are_scrubbed_from_errors() -> None:
     """A key that leaks into an error message is replaced before printing."""
-    secrets = health._secrets({"GEMINI_API_KEY": "abcdefghijkl", "OLLAMA_URL": "http://x"})
+    secrets = health._secrets({"GEMINI_API_KEY": "abcdefghijkl", "OPENAI_BASE_URL": "http://x"})
     assert secrets == ["abcdefghijkl"]
     assert "abcdefghijkl" not in health._scrub("bad key abcdefghijkl here", secrets)
 
@@ -62,7 +62,7 @@ def test_roles_follow_the_fallback_rules(tmp_path: Path) -> None:
     table = {role: (chain, now) for role, chain, now in health.role_table(state, rows)}
     assert table["lesson generation"] == ("openai then gemini then template", "gemini")
     assert table["coach hint"] == ("gemini then openai then offline note", "gemini")
-    assert "ollama" not in health.render_roles(health.role_table(state, rows))
+    assert "Ollama" not in health.render_roles(health.role_table(state, rows))
 
 
 def test_roles_go_offline_when_nothing_answers(tmp_path: Path) -> None:

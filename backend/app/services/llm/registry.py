@@ -6,7 +6,6 @@ from app.services.llm.base import LLMClient
 from app.services.llm.chain import ChainLLM
 from app.services.llm.fake import FakeLLM
 from app.services.llm.gemini import GeminiLLM
-from app.services.llm.ollama import OllamaLLM
 from app.services.llm.openai_compat import OpenAICompatLLM
 from app.services.llm.rate_limit import RateLimiter
 from app.services.llm.tuned import TunedCoachLLM
@@ -50,8 +49,6 @@ class LLMState:
             return GeminiLLM(
                 self._settings.gemini_api_key, self._settings.gemini_model, self.limiter
             )
-        if name == "ollama":
-            return OllamaLLM(self._settings.ollama_url, self._settings.ollama_model)
         if name == "openai":
             return OpenAICompatLLM(
                 self._settings.openai_base_url, self._settings.openai_api_key, self._settings.openai_model

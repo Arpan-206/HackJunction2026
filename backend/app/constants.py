@@ -184,14 +184,11 @@ LLM_GEMINI_TIMEOUT_S = 20.0
 LLM_GEMINI_HINT_TIMEOUT_S = 4.0
 HTTP_SERVICE_UNAVAILABLE = 503
 LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
-OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
-DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
 DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"  # an OpenAI-compatible endpoint, e.g. Gemma on Verda (verda/)
 # The tuned coach (coach_tune/, COACH_MODEL=tuned): Gemma 4 E2B with our LoRA merged, served by vLLM on Verda.
 DEFAULT_TUNED_MODEL = "geppetto-coach-e2b"
 TUNED_TIMEOUT_S = 2.0
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
 # A field whose json_schema_extra holds {LLM_SCHEMA_SKIP_KEY: True} is left out of every schema sent to a model (the
 # expert's take ids and per-finger tolerance, which only POST /recordings/model fills). Such a field needs a default.

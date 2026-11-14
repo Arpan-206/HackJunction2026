@@ -147,7 +147,7 @@ class HintDraft(BaseModel):
 
 
 class CoachHintResponse(HintDraft):
-    """A short live tip; provider says who wrote it (fake, algorithmic, gemini, ollama or 'fake (rate limited)')."""
+    """A short live tip; provider says who wrote it (fake, algorithmic, gemini, openai or 'fake (rate limited)')."""
 
     provider: str
 
@@ -199,7 +199,7 @@ class DevState(BaseModel):
 
     glove_source: GloveSource
     smoothing: SmoothingState
-    llm_provider: Literal["fake", "gemini", "ollama", "openai"]
+    llm_provider: Literal["fake", "gemini", "openai"]
     simulator_motion: MotionSpec
     gemini_budget: list[GeminiBudget] = Field(default_factory=list)
     llm_chain: list[str] = Field(default_factory=list)
@@ -211,7 +211,7 @@ class DevStatePatch(BaseModel):
 
     glove_source: GloveSource | None = None
     smoothing: SmoothingPatch | None = None
-    llm_provider: Literal["fake", "gemini", "ollama", "openai"] | None = None
+    llm_provider: Literal["fake", "gemini", "openai"] | None = None
     simulator_motion: MotionSpec | None = None
 
 

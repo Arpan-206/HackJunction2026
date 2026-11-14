@@ -48,7 +48,8 @@ export interface ThumbTuning {
   curl: number;
 }
 
-export const THUMB_TUNING: ThumbTuning = { opposition: 0.5, roll: 0.15, curl: 0.9 };
+// The preview thumb flexes 0.8 of the curl table (thumb-align, as the scorer), so opposition, curl and the pinch fade-in are the earlier values divided or multiplied by 0.8 to keep the same hand.
+export const THUMB_TUNING: ThumbTuning = { opposition: 0.625, roll: 0.15, curl: 1.125 };
 /**
  * Where a flexing thumb heads, in palm widths from the palm centre along the palm's distal, palmar and radial axes: in
  * front of the palm, over the middle phalanges of the index and middle fingers, which is where it lies in a fist and
@@ -296,8 +297,8 @@ export const PINCH = {
   reachFrom: -0.4,
   reachTo: -0.25,
   /** Thumb CMC flexion (radians) over which the correction fades in: a thumb still near its rest is not pinching. */
-  thumbFrom: 0.3,
-  thumbTo: 0.42,
+  thumbFrom: 0.24,
+  thumbTo: 0.336,
 };
 
 const _p = new Vector3();

@@ -645,7 +645,7 @@ route('POST', '/dev/state', (req) => {
     if (s.beta !== undefined) store.dev.smoothing.beta = Number(s.beta);
   }
   if (b.llm_provider !== undefined) {
-    if (!['fake', 'gemini', 'ollama', 'openai'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini, ollama or openai');
+    if (!['fake', 'gemini', 'openai'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini or openai');
     store.dev.llm_provider = b.llm_provider as LlmProvider;
   }
   if (b.glove_source !== undefined) {
