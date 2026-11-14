@@ -1,12 +1,28 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './AppShell';
 import { RoleSelect } from './RoleSelect';
-import { HandLab } from './HandLab';
-import { MasterHome } from '../features/master/MasterHome';
-import { MasterGenerate, MasterLesson, MasterScratch, MasterSkill } from '../features/master/pages';
-import { ApprenticeHome, ApprenticeLesson, ApprenticePlay, ApprenticeSkill, ApprenticeStep, ApprenticeTest, ApprenticeTutorial } from '../features/apprentice/pages';
+import { lazyPage, whenIdle } from './lazyPage';
+import './pageStyles';
 import { isKiosk, KIOSK_HOME } from '../features/shared/kiosk';
+
+// The expert and apprentice pages and the hand lab load on demand, then in the background once the first screen is up.
+const masterPages = () => import('../features/master/pages');
+const apprenticePages = () => import('../features/apprentice/pages');
+const HandLab = lazyPage(() => import('./HandLab').then((m) => m.HandLab));
+const MasterHome = lazyPage(() => import('../features/master/MasterHome').then((m) => m.MasterHome));
+const MasterScratch = lazyPage(() => masterPages().then((m) => m.MasterScratch));
+const MasterGenerate = lazyPage(() => masterPages().then((m) => m.MasterGenerate));
+const MasterSkill = lazyPage(() => masterPages().then((m) => m.MasterSkill));
+const MasterLesson = lazyPage(() => masterPages().then((m) => m.MasterLesson));
+const ApprenticeHome = lazyPage(() => apprenticePages().then((m) => m.ApprenticeHome));
+const ApprenticeSkill = lazyPage(() => apprenticePages().then((m) => m.ApprenticeSkill));
+const ApprenticeLesson = lazyPage(() => apprenticePages().then((m) => m.ApprenticeLesson));
+const ApprenticeStep = lazyPage(() => apprenticePages().then((m) => m.ApprenticeStep));
+const ApprenticeTest = lazyPage(() => apprenticePages().then((m) => m.ApprenticeTest));
+const ApprenticeTutorial = lazyPage(() => apprenticePages().then((m) => m.ApprenticeTutorial));
+const ApprenticePlay = lazyPage(() => apprenticePages().then((m) => m.ApprenticePlay));
+const PAGES = [MasterHome, ApprenticeHome, MasterScratch, MasterGenerate, MasterSkill, MasterLesson, ApprenticeSkill, ApprenticeLesson, ApprenticeStep, ApprenticeTest, ApprenticeTutorial, ApprenticePlay, HandLab];
 
 const Playground = lazy(() => import('../playground/Playground'));
 const DesignRoute = lazy(() => import('../design/DesignRoute'));
@@ -29,6 +45,8 @@ function MasterRedirect() {
 export function App() {
   // Read once per load. The flag sticks for the tab; only ?kiosk=0 (the operator) turns it off, and a VITE_KIOSK build never.
   const [kiosk] = useState(isKiosk);
+  // Fetch the pages while the first screen idles, so following a link never waits for code. The kiosk only shows the demo.
+  useEffect(() => (kiosk ? undefined : whenIdle(() => PAGES.forEach((p) => void p.preload().catch(() => undefined)))), [kiosk]);
   if (kiosk) {
     return (
       <Routes>
