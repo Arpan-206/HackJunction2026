@@ -8,7 +8,9 @@ src/
   app/                     App (route table), AppShell (lapis rail), RoleSelect (/), HandLab (/lab), app.css
   features/
     master/                MasterHome (/master) + placeholder pages: scratch, generate, lesson studio
-    apprentice/            skills/ (dashboard, skill page, catalogue), course, training, test
+    apprentice/            skills/ (dashboard, skill page, catalogue), course, training (score/ = 3D and flat score views), test
+    shared/                pieces both sides use: assistant.ts (AI Assistant flag), settings.ts (margin, score view,
+                           reduced motion), SettingsDialog (the Settings panel), sessionPrefs, PropSwitch, calibration
   components/
     ui/                    UI kit: Button, ButtonLink, Card, Badge, Stepper, Countdown, RecordButton, Tabs, Field, TextArea, Toast
     PageHeader.tsx         standard screen header
@@ -17,6 +19,7 @@ src/
   three/                   3D system (see below)
   api/
     types.ts               wire types, mirror of docs/CONTRACT.md
+    margin.ts              margin of error multipliers, mirror of backend/app/constants.py
     client.ts              typed fetch wrapper `api.*`, ApiError
     useGloveStream.ts      shared auto-reconnecting /ws/gloves
     hooks.ts               useLessons, useLesson, useMoves, useDevState
@@ -42,6 +45,8 @@ Routes are defined once in `src/app/App.tsx`. Feature agents replace the page co
 7. Never create a second WebSocket; use `useGloveStream` (it shares one connection).
 8. No em dashes anywhere. UK English in docstrings. Comment the why, not the what.
 9. New screens live in `features/master/` or `features/apprentice/`. Shared pieces go in `components/`; anything 3D goes in `three/`.
+10. Learner settings live in `features/shared/settings.ts` (localStorage, try/catch on every access) and are edited only in the Settings panel. Anything that judges a rep reads the margin of error: send `margin` to the scorer and build live bands with `configFromTolerance(tolerance, margin)`.
+11. Motion: respect `prefersReducedMotion()` from `features/shared/settings.ts` (the learner's choice or the device's) for anything animated in script; CSS transitions are already cut by `data-reduce-motion` and the media query.
 
 ## three/ overview
 

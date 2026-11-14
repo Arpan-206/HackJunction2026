@@ -1,5 +1,5 @@
 // Walks the whole app in mock mode (no Python backend needed): role select, expert scratch (pick, hands and prop set-up,
-// calibrate, record, replay, save), generate steps and save, the assistant switch, learner dashboard and search, skill pages, a training attempt
+// calibrate, record, replay, save), generate steps and save, the AI Assistant switch, learner dashboard and search, skill pages, a training attempt
 // with its score card, both tests.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/mock-*.png.
 // Run: node e2e/mock-walk.mjs   (starts the Vite dev server on :5181 if nothing answers there).
@@ -13,7 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const { chromium } = require(path.resolve(here, '../../genui/node_modules/playwright'));
 
-const PORT = 5181;
+const PORT = Number(process.env.E2E_PORT ?? 5181);
 const BASE = `http://localhost:${PORT}`;
 const OUT = path.resolve(here, '../docs/screens') + path.sep;
 
@@ -94,7 +94,7 @@ try {
   await page.goto(`${BASE}/expert/generate`);
   await page.getByRole('button', { name: 'Five-finger scale for a child' }).click();
   await page.getByRole('button', { name: 'Generate steps' }).click();
-  await expectVisible(page.getByText(/The assistant drafted these steps/), 'generated draft', 20000);
+  await expectVisible(page.getByText(/The AI Assistant drafted these steps/), 'generated draft', 20000);
   await shot('07-generated');
   await page.getByLabel('Lesson title').fill('Mock piano scale');
   await page.getByRole('button', { name: 'Save lesson' }).click();
@@ -105,15 +105,17 @@ try {
   await page.goto(`${BASE}/expert/generate`);
   await page.locator('input[type=file]').setInputFiles({ name: 'rally.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(300_000, 1) });
   await page.getByRole('button', { name: /Draft|video/i }).filter({ hasNotText: /Generate steps/ }).first().click();
-  await expectVisible(page.getByText(/The assistant (watched your clip|could not watch the clip)/), 'video draft', 20000);
+  await expectVisible(page.getByText(/The AI Assistant (watched your clip|could not watch the clip)/), 'video draft', 20000);
   await shot('09-video-draft');
 
-  step('assistant switch: off hides drafting and offers manual steps, on restores it');
+  step('AI Assistant switch (in Settings): off hides drafting and offers manual steps, on restores it');
   await page.goto(`${BASE}/expert/generate`);
-  await page.getByRole('switch', { name: /Assistant on/ }).click();
-  await expectVisible(page.getByText('The assistant is off. Turn it on to draft steps from a sentence.'), 'assistant off note');
-  if (await page.getByRole('button', { name: 'Generate steps' }).count()) throw new Error('Generate steps should be hidden while the assistant is off');
-  await page.getByRole('button', { name: 'Turn the assistant on' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('dialog', { name: 'Settings' }).getByRole('switch', { name: 'Enable AI Assistant' }).click();
+  await page.keyboard.press('Escape');
+  await expectVisible(page.getByText('The AI Assistant is off. Turn it on in Settings to draft steps from a sentence.'), 'AI Assistant off note');
+  if (await page.getByRole('button', { name: 'Generate steps' }).count()) throw new Error('Generate steps should be hidden while the AI Assistant is off');
+  await page.getByRole('button', { name: 'Turn the AI Assistant on' }).click();
   await expectVisible(page.getByRole('button', { name: 'Generate steps' }), 'drafting restored');
 
   step('apprentice: the dashboard lists every skill; search finds the saved lessons by their course titles');
@@ -157,7 +159,9 @@ try {
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button');
   await page.getByRole('button', { name: /Begin (rep|attempt) 1/ }).click();
   await expectVisible(page.getByRole('region', { name: /Score for (attempt|rep) 1/ }), 'score card', 60000);
-  await settle(800);
+  // The 3D score draws a moment after the card appears; wait for its notes before the screenshot.
+  await page.locator('.lead__label').first().waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
+  await settle(1500);
   await shot('13-score');
   const overall = await page.getByLabel(/Overall score/).first().getAttribute('aria-label');
   console.log(`  ${overall}`);

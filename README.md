@@ -1,6 +1,6 @@
 # Apprentice
 
-Apprentice is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), an optional assistant (a language model, Gemini by default) drafts lessons and practice plans, and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
+Apprentice is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), an optional AI Assistant (a language model, Gemini by default) drafts lessons and practice plans, the learner chooses a margin of error from strict to "just trying it", and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
 
 The backend is FastAPI (Python 3.12, uv). The frontend is React, Vite and three.js. The frontend can run alone in mock mode, with no backend.
 
@@ -33,13 +33,19 @@ The frontend carries a port of the backend (`frontend/src/mock/`), with data kep
 - `VITE_MOCK=1` (environment variable at build or dev time) forces it on.
 - It also starts by itself when `/api/health` does not answer. The left rail then shows "Sample data, offline".
 
-## The assistant switch
+## Settings and the AI Assistant
 
-Every language-model feature is "the assistant": drafting steps from a sentence or a video, reading a movement described in words, the practice plan and written hints. The left rail has a plain "Assistant on/off" switch, remembered in the browser (localStorage `apprentice.assistant`, on by default). While it is off the app sends nothing to `/lessons/generate`, `/lessons/generate_from_video`, `/coach/hint`, `/coach/plan` or `/motion/from_text` (the API client refuses them before any request, mock mode included), those entry points show a one-line note instead, and everything else works: steps can be written by hand or recorded from scratch, and scoring, hints from the score and the live corrections are algorithmic and do not need the assistant.
+"Settings" in the left rail (the bottom bar on a phone) opens one accessible panel, remembered in the browser: the AI Assistant switch, the margin of error, how the score is shown (3D scene by default, or a flat high-contrast chart; clicking the score flips between them), "Add a prop" and reduced motion.
+
+Every language-model feature is the AI Assistant: drafting steps from a sentence or a video, reading a movement described in words, the practice plan and written hints. "Enable AI Assistant" in Settings switches it (localStorage `apprentice.assistant`, on by default) and the rail shows "AI Assistant on" or "off". While it is off the app sends nothing to `/lessons/generate`, `/lessons/generate_from_video`, `/coach/hint`, `/coach/plan` or `/motion/from_text` (the API client refuses them before any request, mock mode included), those entry points show a one-line note instead, and everything else works: steps can be written by hand or recorded from scratch, and scoring, hints from the score and the live corrections are algorithmic and do not need the AI Assistant.
+
+## Margin of error
+
+The expert sets each step's room for error; the learner then chooses how strict to be: Strict (0.6 times the room), Standard (the expert's own, the default), Relaxed (1.5 times) or Just trying it (2.5 times). With table tennis, a relaxed margin lets a slightly wrong swing pass with no correction, while strict demands accuracy. The margin widens or narrows the DTW scorer's tolerance and the hint thresholds on the backend (`margin` on `POST /score` and `POST /coach/hint`), the live corrections in the browser use the same multiplier, and the score screen says which margin judged the rep. Relaxed and looser margins stay silent inside the widened band, and gold is kept for the standard or strict margin.
 
 ## Hands and props
 
-The expert chooses one hand (left or right) or two hands for each move or step. Only those gloves are shown and captured (`POST /recordings/start` takes `hands`), and the learner trains with the same set-up; a two-handed step coaches one hand at a time on the stage and scores both, the weaker hand setting the score. Props (racket, keyboard) are off by default because the hands still clip through them; an "Add a prop" switch in the studio and in the training room's Room settings turns them on for the session. The Test your skills games always keep their racket and keyboard.
+The expert chooses one hand (left or right) or two hands for each move or step. Only those gloves are shown and captured (`POST /recordings/start` takes `hands`), and the learner trains with the same set-up; a two-handed step coaches one hand at a time on the stage and scores both, the weaker hand setting the score. Props (racket, keyboard) are off by default because the hands still clip through them; an "Add a prop" switch in the studio, in the training room's Room settings and in Settings turns them on (remembered in the browser). The Test your skills games always keep their racket and keyboard.
 
 ## Demo: two windows
 

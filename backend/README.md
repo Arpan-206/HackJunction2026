@@ -55,6 +55,8 @@ The Gemini free tier is small (about 5 requests per minute and 20 per day for `g
 
 `POST /api/score` accepts `attempt_calibration_id` or `use_latest_calibration` (and optionally `reference_calibration_id`). The attempt is normalised by the learner's flat and fist ranges and mapped into the reference's space, so a stiffer hand is not penalised for a smaller range. Incomplete calibrations are ignored with a message in `warnings`. Tests in `tests/test_scoring.py`.
 
+`POST /api/score` and `POST /api/coach/hint` also take the learner's `margin` (`strict`, `standard`, `relaxed`, `just_trying`). `MARGIN_MULTIPLIERS` in `app/constants.py` scales the step tolerance and every hint threshold (`hints.thresholds`); the relaxed margins (`MARGIN_QUIET`) also stay silent inside the widened band. Without a margin, or with `standard`, every number is unchanged. `ScoreResult.margin` echoes it.
+
 ## Rokoko Studio setup
 
 In Studio: Livestreaming, Custom, UDP, JSON v3 (or v4), port 14043, target the laptop. Then switch the source live with `POST /api/dev/state {"glove_source": "rokoko_udp"}`. The JSON field names are verified (see `../research/09_rokoko.md`); the flexion axis and sign are still to be probed with `scripts/probe_flexion.py` while someone wears a glove. All payload-shape logic is in `app/services/gloves/rokoko_mapper.py` and the axis and sign are in `app/constants.py` (`ROKOKO_FLEX_AXIS`, `ROKOKO_FLEX_SIGN`). The first unrecognised frame shape is logged once.
