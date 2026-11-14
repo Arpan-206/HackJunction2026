@@ -38,8 +38,8 @@ export interface StepPipeline {
 }
 
 /**
- * Drives one step through Watch, then Ghost on and Ghost off (the learner's switch). The starting stage is rebuilt from the attempt log, so a learner
- * returns to where they left off; every scored rep is logged with its stage so ranks and review dates can be derived later.
+ * Drives one step through Watch, then Ghost on and Ghost off (the learner's switch). A step always opens on Watch (the showcase), except a due review; mastery
+ * is rebuilt from the attempt log; every scored rep is logged with its stage so ranks and review dates can be derived later.
  */
 export function useStepPipeline(lessonId: string, step: Step, demo: boolean, ask: OpenStage | null = null): StepPipeline {
   const logged = useLoggedAttempts(lessonId);
@@ -52,7 +52,9 @@ export function useStepPipeline(lessonId: string, step: Step, demo: boolean, ask
     const sp = startingPoint(base.stage, mastery, dayKey(new Date()));
     const resumed = sp.stage === base.stage ? base : { ...initialState(sp.stage), mastered: base.mastered || sp.review };
     // A link may ask for a stage (the skill page's timeline): Watch or Ghost on set a due review aside, Ghost off keeps it.
-    const machine = openAt(resumed, ask);
+    // With no ask the step opens on Watch, the showcase with no ghost (mastery kept); the ghost comes with "Try it out". A
+    // review that is due still opens as the blind try it is.
+    const machine = openAt(resumed, ask ?? (sp.review ? null : 'watch'));
     return { machine, review: sp.review && (ask === null || ask === 'blind') };
   });
 
