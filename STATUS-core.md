@@ -79,6 +79,7 @@ Calibrated angles, 92 right-pose frames and 450 wrong-pose frames, pass at 0.85.
 
 4. **Run `calibrate` once per wearer** after the backend capture, then check `/health`.
 5. **No patch is needed in `backend/` or `frontend/`.** The core reads the existing files as they are.
+6. **Robot twin (merged lane robot-view):** with a calibration loaded, `/ws/robot` is driven by calibrated angles. The twin's human hand comes from `/ws/gloves`, which stays raw. So a flat hand opens the robot fully, while the drawn hand keeps the glove's small flat curl. Check that this reads well on screen. Start the core with `--no-calibration` to compare.
 
 ## Commits
 
