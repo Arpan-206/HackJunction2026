@@ -96,6 +96,10 @@ FINGER_WEIGHT = 0.8
 TIMING_WEIGHT = 0.2
 MIN_SCORE_FRAMES = 2
 
+# A reference whose every finger moves less than this much total flexion (peak to peak) is a held pose: its timing is
+# not scored, since aligning two near-constant series says nothing about when the learner moved.
+STATIC_REFERENCE_RANGE_DEG = 12.0
+STATIC_PRESETS = ("hold_pose", "idle")
 # Hint wording thresholds.
 HINT_MIN_DEVIATION_DEG = 4.0
 HINT_TIMING_MS = 120.0

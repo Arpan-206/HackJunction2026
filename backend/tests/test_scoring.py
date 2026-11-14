@@ -103,3 +103,83 @@ def test_use_latest_and_unknown_calibration(client: TestClient) -> None:
     body = {"reference_motion": FIST, "attempt_frames": attempt}
     assert client.post("/api/score", json={**body, "use_latest_calibration": True}).json()["overall"] > 85
     assert client.post("/api/score", json={**body, "attempt_calibration_id": "nope"}).status_code == 404
+
+
+def _two_handed_recording(client: TestClient) -> str:
+    """Store a recording whose frames carry both hands, the left one listed first, and return its id."""
+    spec = FingerSequence.model_validate(MOTION)
+    recorder = client.app.state.services.recorder
+    recording_id = recorder.start(None, None)
+    for i in range(int(DURATION_S * FPS)):
+        t = i / FPS
+        left = synthesiser.frame_at(spec, t, ("left",)).hands[0]
+        both = synthesiser.frame_at(spec, t, ("right",))
+        recorder.push(both.model_copy(update={"hands": [left, both.hands[0]]}))
+    return recorder.stop(recording_id).id
+
+
+def _right_attempt() -> list[dict]:
+    """Right-handed attempt frames that follow the reference exactly."""
+    spec = FingerSequence.model_validate(MOTION)
+    return [synthesiser.frame_at(spec, i / FPS, ("right",)).model_dump(mode="json") for i in range(int(DURATION_S * FPS))]
+
+
+def test_right_attempt_scores_against_two_handed_reference_with_left_first(client: TestClient) -> None:
+    """A one-handed right attempt must score against a two-handed reference whose left hand is listed first."""
+    reference_id = _two_handed_recording(client)
+    stored = client.get(f"/api/recordings/{reference_id}").json()
+    assert [h["side"] for h in stored["frames"][0]["hands"]] == ["left", "right"]
+    response = client.post("/api/score", json={"reference_recording_id": reference_id, "attempt_frames": _right_attempt()})
+    assert response.status_code == 200, response.text
+    assert response.json()["overall"] > 90
+
+
+def test_explicit_side_picks_the_hand_to_score(client: TestClient) -> None:
+    """An explicit side wins, and asking for a side the attempt lacks is a clear 400."""
+    reference_id = _two_handed_recording(client)
+    body = {"reference_recording_id": reference_id, "attempt_frames": _right_attempt()}
+    assert client.post("/api/score", json={**body, "side": "right"}).status_code == 200
+    missing = client.post("/api/score", json={**body, "side": "left"})
+    assert missing.status_code == 400
+    assert "left hand" in missing.json()["detail"]
+
+
+GRIP = {"preset": "hold_pose", "pose": {"thumb": 0.62, "index": 0.8, "middle": 0.84, "ring": 0.86, "little": 0.88}}
+
+
+def _hold_frames(duration_s: float, phase_s: float = 0.0, index_extra_rad: float = 0.0) -> list[dict]:
+    """Frames of a held grip; phase_s offsets the breathing ripple, index_extra_rad over-curls each index joint."""
+    spec = HoldPose.model_validate(GRIP)
+    out = []
+    for i in range(int(duration_s * FPS)):
+        frame = synthesiser.frame_at(spec, i / FPS + phase_s, ("right",)).model_copy(update={"t": i / FPS})
+        hand = frame.hands[0]
+        index = tuple(v + index_extra_rad for v in hand.flexion["index"])
+        out.append(frame.model_copy(update={"hands": [hand.model_copy(update={"flexion": {**hand.flexion, "index": index}})]}).model_dump(mode="json"))
+    return out
+
+
+def test_held_pose_has_no_timing_penalty(client: TestClient) -> None:
+    """A held grip has no beat: a different breathing phase must not score as early or late (was timing 51, 435 ms early)."""
+    result = client.post("/api/score", json={"reference_motion": GRIP, "attempt_frames": _hold_frames(3.0, phase_s=2.0)}).json()
+    assert result["timing"] == 100.0 and result["within_tolerance"] is True
+    assert result["overall"] > 99 and "early" not in result["hint"] and "late" not in result["hint"]
+
+
+def test_held_pose_recording_is_detected_without_a_preset(client: TestClient) -> None:
+    """A recorded take that barely moves is treated as a held pose, whatever its length differs from the attempt."""
+    recorder = client.app.state.services.recorder
+    recording_id = recorder.start(None, None)
+    spec = HoldPose.model_validate(GRIP)
+    for i in range(int(4.0 * FPS)):
+        recorder.push(synthesiser.frame_at(spec, i / FPS + 1.0, ("right",)).model_copy(update={"t": i / FPS}))
+    reference_id = recorder.stop(recording_id).id
+    result = client.post("/api/score", json={"reference_recording_id": reference_id, "attempt_frames": _hold_frames(3.0)}).json()
+    assert result["timing"] == 100.0 and result["overall"] > 99 and "ms" not in result["hint"]
+
+
+def test_held_pose_still_scores_finger_errors(client: TestClient) -> None:
+    """Dropping the timing score for a held pose must not hide a wrong finger: the hint names it, not timing."""
+    result = client.post("/api/score", json={"reference_motion": GRIP, "attempt_frames": _hold_frames(3.0, phase_s=2.0, index_extra_rad=0.2)}).json()
+    assert result["worst_finger"] == "index" and result["per_finger"]["index"] < 90 and result["within_tolerance"] is False
+    assert "index" in result["hint"] and "ms" not in result["hint"]

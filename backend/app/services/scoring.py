@@ -62,11 +62,20 @@ def dtw_path(a: np.ndarray, b: np.ndarray, window_fraction: float = c.DTW_WINDOW
     return path
 
 
-def compare(reference: np.ndarray, attempt: np.ndarray, fps: float = c.SCORE_FPS) -> Comparison:
+def is_static(reference: np.ndarray) -> bool:
+    """Return True when no finger's total flexion moves more than the static range, i.e. the reference is a held pose."""
+    total = reference.sum(axis=2)
+    return math.degrees(float((total.max(axis=0) - total.min(axis=0)).max())) < c.STATIC_REFERENCE_RANGE_DEG
+
+
+def compare(reference: np.ndarray, attempt: np.ndarray, fps: float = c.SCORE_FPS, static: bool | None = None) -> Comparison:
     """Align each finger separately and measure total-flexion error, signed deviation and timing offset.
 
     DTW aligns on per-joint angles, but the error and deviation are of each finger's total flexion (the sum of its
     three joints), the same metric the frontend live coach compares against the tolerance.
+
+    A held pose (static=True, or static unset and the reference barely moves) has no beat to be early or late for: the
+    warp path on a near-constant series is arbitrary, so the timing offset is reported as 0 instead of that noise.
     """
     errors: dict[str, float] = {}
     deviations: dict[str, float] = {}
@@ -83,6 +92,8 @@ def compare(reference: np.ndarray, attempt: np.ndarray, fps: float = c.SCORE_FPS
         lags.append(float(np.abs(ai - ri).mean()))
     signed = float(np.mean(lags[0::2])) / fps * 1000.0
     absolute = float(np.mean(lags[1::2])) / fps * 1000.0
+    if is_static(reference) if static is None else static:
+        signed = absolute = 0.0
     return Comparison(errors, deviations, absolute, signed)
 
 
@@ -163,9 +174,9 @@ class ScoringService:
         attempt = self._attempt(request)
         if request.reference_recording_id is not None:
             reference = self._recorder.get(request.reference_recording_id)
-            side = self._side_of(reference)
+            side = request.side or self._side_of(attempt, reference)
         else:
-            side = self._side_of(attempt)
+            side = request.side or self._side_of(attempt)
             reference = self._synthesised(request, attempt, side)
         reference_data = resample(reference.frames, side)
         attempt_data = resample(attempt.frames, side)
@@ -173,8 +184,14 @@ class ScoringService:
         own, ref_cal = self._calibrations_for(request, side)
         if own is not None:
             attempt_data = calibrate_attempt(attempt_data, own, ref_cal, warnings)
-        result = to_result(compare(reference_data, attempt_data), request.tolerance)
+        result = to_result(compare(reference_data, attempt_data, static=self._static(request)), request.tolerance)
         return result.model_copy(update={"warnings": warnings})
+
+    @staticmethod
+    def _static(request: ScoreRequest) -> bool | None:
+        """Return True when the request's reference motion is declared a held pose; None lets the motion range decide."""
+        motion = request.reference_motion
+        return True if motion is not None and motion.preset in c.STATIC_PRESETS else None
 
     def _calibrations_for(self, request: ScoreRequest, side: Side) -> tuple[Calibration | None, Calibration | None]:
         """Resolve the attempt and reference calibrations the request asks for."""
@@ -202,12 +219,18 @@ class ScoringService:
         return self._recorder.get(request.attempt_recording_id)
 
     @staticmethod
-    def _side_of(recording: Recording) -> Side:
-        """Return the side of the first hand in a recording."""
-        for frame in recording.frames:
-            if frame.hands:
-                return frame.hands[0].side
-        raise BadRequestError("recording contains no hand frames")
+    def _side_of(recording: Recording, reference: Recording | None = None) -> Side:
+        """Return the side to score: the first hand in the attempt, preferring one the reference also has.
+
+        A two-handed reference must never make a one-handed attempt fail, so the attempt decides the side.
+        """
+        wanted = [h.side for frame in recording.frames for h in frame.hands]
+        if not wanted:
+            raise BadRequestError("recording contains no hand frames")
+        if reference is not None:
+            present = {h.side for frame in reference.frames for h in frame.hands}
+            wanted = [side for side in wanted if side in present] or wanted
+        return wanted[0]
 
     @staticmethod
     def _synthesised(request: ScoreRequest, attempt: Recording, side: Side) -> Recording:

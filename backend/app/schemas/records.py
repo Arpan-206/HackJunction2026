@@ -50,6 +50,7 @@ class ScoreRequest(BaseModel):
     reference_motion: MotionSpec | None = None
     attempt_recording_id: str | None = None
     attempt_frames: list[GloveFrame] | None = Field(default=None, max_length=c.MAX_RECORDING_FRAMES)
+    side: Side | None = None
     tolerance: Tolerance = Field(default_factory=Tolerance)
     use_latest_calibration: bool = False
     attempt_calibration_id: str | None = None
