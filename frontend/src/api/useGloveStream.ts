@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
 import type { GloveFrame, MotionSpec, SetMotionMessage } from './types';
 
 export type GloveStatus = 'connecting' | 'open' | 'closed';
@@ -151,5 +151,8 @@ export function useGloveStream(enabled = true): GloveStreamHandle {
 
   const onFrame = useCallback((cb: FrameListener) => store.onFrame(cb), []);
   const setMotion = useCallback((m: MotionSpec) => store.sendMotion(m), []);
-  return { status: enabled ? status : 'closed', latest, onFrame, setMotion };
+  // One handle per status: effects that depend on the handle (set_motion, onFrame subscriptions) run when the status
+  // changes, not on every render of a screen that re-renders at 10 to 17 Hz.
+  const shown: GloveStatus = enabled ? status : 'closed';
+  return useMemo(() => ({ status: shown, latest, onFrame, setMotion }), [shown, onFrame, setMotion]);
 }
