@@ -5,8 +5,8 @@ import { PROP_NOTE, useShowProps } from './sessionPrefs';
 const NAMES: Record<Prop, string> = { none: 'prop', racket: 'racket', keyboard: 'keyboard', ball: 'ball' };
 
 /**
- * The quiet "Add a prop" switch: draws the move's prop (racket, keyboard) with the hands. Off by default and remembered for
- * the session. Renders nothing for a move without a prop.
+ * The quiet "Add a prop" switch: draws the move's prop (racket, keyboard) with the hands. Off by default and remembered on this
+ * device; the same default is in Settings. Renders nothing for a move without a prop.
  */
 export function PropSwitch({ prop, className }: { prop: Prop | undefined; className?: string }) {
   const [on, setOn] = useShowProps();

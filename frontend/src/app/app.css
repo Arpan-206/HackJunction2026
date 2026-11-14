@@ -128,8 +128,17 @@
     padding: 0.25rem 0.5rem;
     z-index: 20;
   }
-  .rail__brand,
+  .rail__brand {
+    display: none;
+  }
+  /* On a phone the foot keeps only Settings, as the last item of the bottom bar. */
   .rail__foot {
+    margin: 0;
+    display: flex;
+    flex: 1;
+    max-width: 25%;
+  }
+  .rail__foot > :not(.rail__settings) {
     display: none;
   }
   .rail__nav {
@@ -424,23 +433,23 @@
   z-index: 3;
   pointer-events: none;
 }
-/* The assistant switch: plain text in the rail footer, no pill. The word on or off carries the state. */
-.rail__assistant {
-  min-height: 44px;
-  padding: 0.2rem 0.3rem;
+/* Settings entry in the rail footer: drawn like a nav link (icon over a word), so it reads as a place to go. */
+.rail__settings {
   border: 0;
   background: none;
-  color: var(--rail-text);
-  font: 700 1rem var(--font-ui);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.25em;
   cursor: pointer;
 }
-.rail__assistant[aria-checked='false'] {
-  color: var(--rail-text-2);
+.rail__settings[aria-expanded='true'] {
+  color: var(--rail-text);
+  background: color-mix(in srgb, var(--rail-text) 16%, transparent);
 }
-.rail__assistant:focus-visible {
+.rail__settings:focus-visible {
   outline: 3px solid var(--rail-text);
   outline-offset: 2px;
+}
+/* The AI Assistant state, plain text under Settings: the word on or off carries it, no pill. */
+.rail__state {
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--rail-text-2);
 }

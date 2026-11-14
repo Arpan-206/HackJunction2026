@@ -4,6 +4,7 @@ import { Button, Card, Disclosure, Field, Stepper } from '../../../components/ui
 import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { PropSwitch } from '../../shared/PropSwitch';
 import { handsLabel, shownProp, useShowProps } from '../../shared/sessionPrefs';
+import { prefersReducedMotion } from '../../shared/settings';
 import { FingerLanes } from '../components/FingerLanes';
 import { HandsControl } from '../components/HandsControl';
 import { LiveHandStage } from '../components/LiveHandStage';
@@ -38,7 +39,7 @@ export function ScratchStudio() {
   const choiceId = choice?.id;
   useEffect(() => {
     if (!choiceId) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = prefersReducedMotion();
     stageTop.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }, [choiceId]);
 

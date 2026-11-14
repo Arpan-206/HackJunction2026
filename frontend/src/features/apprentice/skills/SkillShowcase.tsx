@@ -7,6 +7,7 @@ import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import type { ReferenceTrack } from '../training/coach/reference';
 import type { KeyPose } from './catalogue';
 import { DISPLAY_POSE } from './SkillParts';
+import { prefersReducedMotion } from '../../shared/settings';
 
 /** About how long one lesson plays before the showcase moves on: whole cycles of its motion, close to seven seconds. */
 const DWELL_TARGET_S = 7;
@@ -14,10 +15,6 @@ const DWELL_TARGET_S = 7;
 function dwellSeconds(track: ReferenceTrack | null): number {
   const period = track?.period ?? DWELL_TARGET_S;
   return Math.max(4, period * Math.max(1, Math.round(DWELL_TARGET_S / period)));
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 type Choice = 'both' | 0 | 1;

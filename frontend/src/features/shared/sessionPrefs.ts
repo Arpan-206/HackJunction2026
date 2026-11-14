@@ -2,8 +2,9 @@ import { useSyncExternalStore } from 'react';
 import type { Hands, Prop, Side } from '../../api/types';
 
 /**
- * Per-session stage preferences shared by the expert studio and the learner: whether props are drawn with the hands, and the
- * last hands set-up the expert chose. Kept in sessionStorage (cleared when the tab closes) and safe without it.
+ * Stage preferences shared by the expert studio and the learner: whether props are drawn with the hands (a default set in
+ * Settings or with any "Add a prop" switch, kept in localStorage), and the last hands set-up the expert chose (per
+ * session, in sessionStorage). Safe without either storage.
  */
 
 const PROPS_KEY = 'apprentice.showProps';
@@ -25,6 +26,22 @@ function write(key: string, value: string): void {
   }
 }
 
+function readLocal(key: string): string | null {
+  try {
+    return typeof window === 'undefined' ? null : window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocal(key: string, value: string): void {
+  try {
+    if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+  } catch {
+    /* storage blocked: the preference lasts until reload */
+  }
+}
+
 const listeners = new Set<() => void>();
 const subscribe = (cb: () => void) => {
   listeners.add(cb);
@@ -37,17 +54,17 @@ let propsOn: boolean | null = null;
 
 /** Whether props (racket, keyboard) are drawn with the hands. Off by default: the hands still clip through them. */
 export function getShowProps(): boolean {
-  propsOn ??= read(PROPS_KEY) === '1';
+  propsOn ??= readLocal(PROPS_KEY) === '1';
   return propsOn;
 }
 
 export function setShowProps(on: boolean): void {
   propsOn = on;
-  write(PROPS_KEY, on ? '1' : '0');
+  writeLocal(PROPS_KEY, on ? '1' : '0');
   listeners.forEach((l) => l());
 }
 
-/** The session's prop preference and its setter; every stage that uses it re-renders together. */
+/** The prop preference and its setter; every stage that uses it (and the Settings panel) re-renders together. */
 export function useShowProps(): [boolean, (on: boolean) => void] {
   return [useSyncExternalStore(subscribe, getShowProps, () => false), setShowProps];
 }

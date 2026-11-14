@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useGloveStream } from "../api";
 import { PreviewHost } from "../three/Preview";
 import { useAssistant } from "../features/shared/assistant";
+import { SettingsButton } from "../features/shared/SettingsDialog";
 
 const stroke = {
   fill: "none",
@@ -65,10 +66,10 @@ const links = [
   },
 ];
 
-/** Lapis rail navigation with glove status and theme switch, wrapping every routed screen except the role select. */
+/** Lapis rail navigation with Settings, the AI Assistant state and glove status, wrapping every routed screen except the role select. */
 export function AppShell() {
   const { status } = useGloveStream(true);
-  const [assistant, setAssistant] = useAssistant();
+  const [assistant] = useAssistant();
   // Mock mode switches itself on when /api/health does not answer; say so, so fake data is never mistaken for a live session.
   const mock = typeof window !== "undefined" && window.__apprenticeMock === true;
   return (
@@ -102,16 +103,10 @@ export function AppShell() {
           </div>
           <div className="rail__foot">
             {mock && <span className="rail__mock">Sample data, offline</span>}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={assistant}
-              className="rail__assistant"
-              title="The assistant drafts steps, reads movements described in words and writes practice plans. Scoring works without it."
-              onClick={() => setAssistant(!assistant)}
-            >
-              Assistant {assistant ? "on" : "off"}
-            </button>
+            <SettingsButton className="rail__link rail__settings" />
+            <span className="rail__state">
+              AI Assistant {assistant ? "on" : "off"}
+            </span>
             <span role="status">
               <span
                 className={`glove-dot glove-dot--${mock ? "sim" : status}`}

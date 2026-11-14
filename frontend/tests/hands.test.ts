@@ -36,7 +36,7 @@ describe('combineHandScores (two-handed reps)', () => {
   });
 });
 
-describe('session preferences', () => {
+describe('stage preferences', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('props are off by default and shownProp hides the prop until switched on', () => {
@@ -48,7 +48,11 @@ describe('session preferences', () => {
 
   it('hands default: session choice for the move, else the catalogue, else the last choice, else right', () => {
     const store = new Map<string, string>();
-    vi.stubGlobal('window', { sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) } });
+    const local = new Map<string, string>();
+    vi.stubGlobal('window', {
+      sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) },
+      localStorage: { getItem: (k: string) => local.get(k) ?? null, setItem: (k: string, v: string) => local.set(k, v) },
+    });
     expect(defaultHands(null)).toBe('right');
     expect(defaultHands('tt_serve_toss_pinch', 'left')).toBe('left');
     rememberHands('general_pinch', 'both');
@@ -56,7 +60,9 @@ describe('session preferences', () => {
     expect(defaultHands('tt_forehand_swing', 'right')).toBe('right');
     expect(defaultHands(null)).toBe('both');
     setShowProps(true);
-    expect(store.get('apprentice.showProps')).toBe('1');
+    // The prop default outlives the session (localStorage); the hands memory does not.
+    expect(local.get('apprentice.showProps')).toBe('1');
+    expect(store.get('apprentice.showProps')).toBeUndefined();
     expect(getShowProps()).toBe(true);
     setShowProps(false);
   });
