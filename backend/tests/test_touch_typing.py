@@ -16,11 +16,15 @@ def _strikes(spec: Keyframes) -> list[tuple[str, str]]:
     """The (side, finger) of every strike key: a key where one finger is curled clearly past the hover pose."""
     out: list[tuple[str, str]] = []
     fingers = ("thumb", "index", "middle", "ring", "little")
-    for i, (right, left) in enumerate(zip(spec.keys, spec.left_keys or spec.keys, strict=True)):
+    for i, (right, left) in enumerate(
+        zip(spec.keys, spec.left_keys or spec.keys, strict=True)
+    ):
         for side, key in (("right", right), ("left", left)):
             curls = key.pose.as_list()
             rest = (0.2, 0.35, 0.35, 0.35, 0.3)
-            hit = [f for f, c, r in zip(fingers, curls, rest, strict=True) if c - r > 0.2]
+            hit = [
+                f for f, c, r in zip(fingers, curls, rest, strict=True) if c - r > 0.2
+            ]
             assert len(hit) <= 1, f"key {i} of {side} strikes more than one finger"
             if hit:
                 out.append((side, hit[0]))
@@ -32,7 +36,13 @@ def test_typing_moves_load_two_handed_with_the_keyboard() -> None:
     assert len(TYPING) == 8
     assert all(m.hands == "both" and m.prop == "keyboard" for m in TYPING)
     assert all("estimates" in m.description for m in TYPING)
-    assert {m.id for m in TYPING} >= {"ty_home_row", "ty_index_fj", "ty_thumb_space", "ty_index_reach", "ty_rhythm_alternate"}
+    assert {m.id for m in TYPING} >= {
+        "ty_home_row",
+        "ty_index_fj",
+        "ty_thumb_space",
+        "ty_index_reach",
+        "ty_rhythm_alternate",
+    }
 
 
 def test_home_row_is_a_curved_hover_for_both_hands() -> None:
@@ -53,11 +63,17 @@ def test_home_row_is_a_curved_hover_for_both_hands() -> None:
         ("ty_index_reach", [("left", "index")] * 2 + [("right", "index")] * 2),
         (
             "ty_rhythm_alternate",
-            [(s, f) for f in ("index", "middle", "ring", "little") for s in ("left", "right")],
+            [
+                (s, f)
+                for f in ("index", "middle", "ring", "little")
+                for s in ("left", "right")
+            ],
         ),
     ],
 )
-def test_each_drill_strikes_the_touch_typing_finger(move_id: str, expected: list[tuple[str, str]]) -> None:
+def test_each_drill_strikes_the_touch_typing_finger(
+    move_id: str, expected: list[tuple[str, str]]
+) -> None:
     """F and J are the index fingers, D and K the middle, S and L the ring, A and ; the little, space the thumb."""
     spec = next(m for m in TYPING if m.id == move_id).default_motion
     assert isinstance(spec, Keyframes) and spec.left_keys
@@ -92,7 +108,9 @@ def test_typing_moves_synthesise_for_both_hands(move) -> None:
             assert all(math.isfinite(v) for v in hand.wrist_quat)
     fj = next(m for m in TYPING if m.id == "ty_index_fj").default_motion
     # 0.6 s beat, strike key 210 ms: late in the first strike slot the left index is down and the right one at rest.
-    assert synthesiser.pose_at(fj, 0.2, "left").curls[1] == pytest.approx(HOVER_INDEX + 0.3)
+    assert synthesiser.pose_at(fj, 0.2, "left").curls[1] == pytest.approx(
+        HOVER_INDEX + 0.3
+    )
     assert synthesiser.pose_at(fj, 0.2, "right").curls[1] == pytest.approx(HOVER_INDEX)
 
 
