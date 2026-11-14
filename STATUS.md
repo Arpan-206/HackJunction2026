@@ -18,6 +18,14 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**Second batch (Sat 18:05 to 18:40), merged on main, suites green** (core 190,
+backend 375, frontend 359, lint, build):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| thumb-align | the preview's thumb now uses the scorer's 0.8 scale (`frontend/src/three/motion.ts`); a pose copied from the preview scores 99 or more; tests over every letter, both words and five puppets within 5 degrees. Open: `finger_sequence`, `pinch`, `idle` and `grip_and_swing` presets still differ between preview and scorer target | `STATUS-thumb-align.md` |
+| replay-demo | capture inventory (`tools/capture_inventory.py`, 553 still stretches in `docs/replay-demo/still-stretches.md`); `python -m core --replay` gains `--replay-start`, `--replay-seconds`, `--replay-speed`, `--replay-stream`, `--replay-continuous`; `scripts/replay_demo.sh CAPTURE [--start S --seconds D]` plays a capture through the whole stack, looping; a REPLAY corner mark from the core's own `/ws/gloves` source that no setting, kiosk flag or dev panel hides; ten held-pose lessons in `lessons/replay-*` (same pose 99 to 100, wrong pose fails 9 of 10); an offline thumb-folded calibration from capture 2969 to 2978.5 s makes the right thumb usable without changing any pass or fail | `STATUS-replay-demo.md` |
+
 Core fixes from the batch: a glove button press records that glove
 (`record_start` takes a hand), and the thumb-folded capture sets the thumb
 range (`core/calibration.py`).
