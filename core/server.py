@@ -246,6 +246,16 @@ class Core:
     def stop(self) -> None:
         self._stop.set()
 
+    async def close_clients(self) -> None:
+        """Close every viewer, compat and robot socket so uvicorn's graceful shutdown has nothing to wait for."""
+        for group in (self.clients, self.compat_clients, self.robot_clients):
+            for c in list(group.values()):
+                try:
+                    await asyncio.wait_for(c.ws.close(), 1.0)
+                except Exception:
+                    pass
+            group.clear()
+
     # ------------------------------------------------------------------ websocket
     async def handle_ws(self, ws: WebSocket) -> None:
         await ws.accept()
@@ -484,11 +494,19 @@ def create_app(core: Core) -> FastAPI:
             yield
         finally:
             core.stop()
+            await core.close_clients()
             for src in (core.glove_source, core.camera_source, core.rcsp_client):
                 if src is not None and hasattr(src, "stop"):
-                    await src.stop()
+                    try:
+                        await asyncio.wait_for(src.stop(), 3.0)
+                    except Exception:
+                        log.warning("source %s did not stop in time", type(src).__name__)
             if core._task is not None:
                 core._task.cancel()
+                try:
+                    await core._task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
     app = FastAPI(title="Geppetto core", lifespan=lifespan)
     # the viewer dev server (another origin, e.g. :5173) fetches /lessons and /schema

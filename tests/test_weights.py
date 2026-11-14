@@ -140,9 +140,9 @@ def test_unusable_joint_error_is_ignored(cfg):
     b[H.ANGLE_NAMES.index("ring_mcp")] += 60  # only the unusable joint differs
     sw = np.ones(H.N_ANGLES)
     sw[H.ANGLE_NAMES.index("ring_mcp")] = 0
-    fs, _, _ = score_frame("right", b, a, ONES, tol(cfg), slot_weights=sw)
+    fs, _, _ = score_frame("right", b, a, ONES, Tolerances(8, 45), slot_weights=sw)
     assert fs.fingers["ring"] == 1.0 and fs.overall == 1.0
-    fs, _, _ = score_frame("right", b, a, ONES, tol(cfg))
+    fs, _, _ = score_frame("right", b, a, ONES, Tolerances(8, 45))
     assert fs.fingers["ring"] < 1.0
 
 

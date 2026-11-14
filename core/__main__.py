@@ -188,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
         port,
         "  FAKE MODE" if args.fake else "",
     )
-    uvicorn.run(app, host=host, port=port, log_level=args.log_level)
+    # bounded graceful shutdown: open sockets are closed by the lifespan; anything left is cut after 3 s
+    uvicorn.run(app, host=host, port=port, log_level=args.log_level, timeout_graceful_shutdown=3)
     return 0
 
 

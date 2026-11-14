@@ -1,5 +1,6 @@
 """Shared constants for the Apprentice backend: protocol values, motion maths, scoring and smoothing defaults."""
 
+import sys
 from pathlib import Path
 
 APP_TITLE = "Apprentice backend"
@@ -163,6 +164,7 @@ LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
 OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
+DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"  # an OpenAI-compatible endpoint, e.g. Gemma on Verda (verda/)
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
 
@@ -239,8 +241,9 @@ VIDEO_FAKE_NOTE = "The AI Assistant could not watch the video, so this is a gene
 REPO_ROOT = BACKEND_ROOT.parent
 ROKOKO_SDK_DIRNAME = "Rokoko Device SDK"
 ROKOKO_SDK_BIN = "bin"
-ROKOKO_SOLVER_EXE = "rkk-hand-solver.exe"
-ROKOKO_DRIVER_EXE = "rokoko-sdk.exe"
+_EXE = ".exe" if sys.platform == "win32" else ""
+ROKOKO_SOLVER_EXE = f"rkk-hand-solver{_EXE}"
+ROKOKO_DRIVER_EXE = f"rokoko-sdk{_EXE}"
 ROKOKO_STUDIO_PROCESS = "Rokoko Studio.exe"
 ROKOKO_DRIVER_HOST = "127.0.0.1"
 ROKOKO_DRIVER_RGMP_PORT = 12276

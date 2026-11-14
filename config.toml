@@ -124,8 +124,10 @@ pinch_off_m = 0.030
 joint_decimals = 4
 
 [score]
-perfect_deg = 8
-wrong_deg = 45
+# 15 / 60 from the real-capture study on calibrated angles (STATUS-core.md): the
+# right pose passes 100%, the wrong pose 3%. SPEC's 8 / 45 passed the right pose 67%.
+perfect_deg = 15
+wrong_deg = 60
 pass_score = 0.85
 ema_tau_ms = 150
 move_window_ms = 250

@@ -54,12 +54,24 @@ def test_is_a_coach_client(log_file, cfg):
 
 
 # ---------------------------------------------------------------------- offline, inside the core's Coach
+def _drain(coach, t_us, wait_s: float = 2.0):
+    """The core's Coach runs a model client off the tick; collect its line like the session does on later ticks."""
+    import time
+    end = time.monotonic() + wait_s
+    while time.monotonic() < end:
+        lines = coach.poll(t_us)
+        if lines:
+            return lines[0]
+        time.sleep(0.005)
+    return None
+
+
 def test_offline_lines_validate_for_every_recorded_summary(log_file, cfg, schemas, summaries):
     dc = offline_coach(log_file, cfg)
     coach = Coach(dc, cfg.coach, cfg.score.timing_hint_ms)
     produced = 0
     for i, s in enumerate(summaries):
-        line = coach.on_summary(1_000_000 * (i + 1), s, force=True)
+        line = coach.on_summary(1_000_000 * (i + 1), s, force=True) or _drain(coach, 1_000_000 * (i + 1))
         if line is None:
             continue
         produced += 1
@@ -70,7 +82,7 @@ def test_offline_lines_validate_for_every_recorded_summary(log_file, cfg, schema
         assert msg["hand"] == s["hand"] and msg["step"] == s["step"]["index"]
     assert produced >= len(summaries) - 1  # a summary with no finger below the mark and not passed gives no line
     passed = next(s for s in summaries if s["passed"])
-    assert coach.on_summary(99_000_000, passed, force=True).kind == "praise"
+    assert (coach.on_summary(99_000_000, passed, force=True) or _drain(coach, 99_000_000)).kind == "praise"
     assert len(read_log(log_file)) == len(summaries) + 1
 
 

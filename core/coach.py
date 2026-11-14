@@ -6,8 +6,12 @@ No network calls live in this module or anywhere else in the core.
 from __future__ import annotations
 
 import itertools
+import logging
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Protocol
+
+log = logging.getLogger("geppetto.coach")
 
 RULE_LINES = {
     "too_flat": "Curl your {finger} finger more.",
@@ -146,6 +150,9 @@ class Coach:
         self._ids = itertools.count(1)
         self._last_tip_us: dict[str, int] = {}
         self.pending: dict[str, dict] = {}
+        self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="coach")
+        self.inflight: dict[str, Future] = {}
+        self._inflight_summary: dict[str, dict] = {}
 
     def _stamp(self, line: CoachLine) -> CoachLine:
         line.id = f"k-{next(self._ids)}"
@@ -155,23 +162,54 @@ class Coach:
     def on_summary(
         self, t_us: int, summary: dict, force: bool = False
     ) -> CoachLine | None:
-        """One tip per learner at most every min_interval_s. A newer summary replaces a queued one."""
+        """One tip per learner at most every min_interval_s. A newer summary replaces a queued one.
+
+        Rule lines come back at once. A model client runs in a worker thread and its
+        line is collected by poll() on a later tick, so a slow call never stalls the
+        frame loop. While a call is in flight for a hand, newer summaries queue.
+        """
         hand = summary.get("hand") or "any"
         last = self._last_tip_us.get(hand)
         if not force and last is not None and t_us - last < self.min_interval_us:
             self.pending[hand] = summary
             return None
-        line = self.client.tip(summary)
-        if line is None and self.client is not self.rules:
-            line = self.rules.tip(summary)
-        if line is None:
+        if hand in self.inflight and not self.inflight[hand].done():
+            self.pending[hand] = summary
             return None
+        if self.client is self.rules:
+            line = self.rules.tip(summary)
+            if line is None:
+                return None
+            self._last_tip_us[hand] = int(t_us)
+            self.pending.pop(hand, None)
+            return self._stamp(line)
         self._last_tip_us[hand] = int(t_us)
         self.pending.pop(hand, None)
-        return self._stamp(line)
+        self.inflight[hand] = self._pool.submit(self.client.tip, summary)
+        self._inflight_summary[hand] = summary
+        return None
+
+    def poll(self, t_us: int) -> list[CoachLine]:
+        """Lines from model calls that finished since the last tick; the rule line when a call failed."""
+        out: list[CoachLine] = []
+        for hand, fut in list(self.inflight.items()):
+            if not fut.done():
+                continue
+            summary = self._inflight_summary.pop(hand, {})
+            del self.inflight[hand]
+            try:
+                line = fut.result()
+            except Exception as e:
+                log.warning("coach model call failed, using the rule line: %s", e)
+                line = None
+            if line is None:
+                line = self.rules.tip(summary)
+            if line is not None:
+                out.append(self._stamp(line))
+        return out
 
     def flush_pending(self, t_us: int) -> list[CoachLine]:
-        out = []
+        out = self.poll(t_us)
         for hand, summary in list(self.pending.items()):
             line = self.on_summary(t_us, summary)
             if line is not None:

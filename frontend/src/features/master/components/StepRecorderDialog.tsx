@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useDevState, useGloveStream, type Hands, type Side, type Step } from '../../../api';
+import { api, useDevState, useGloveStream, type FingerWeights, type Hands, type Side, type Step } from '../../../api';
+import { resample, takeWeights } from '../../../mock/scoring';
 import { useCalibration } from '../../shared/useCalibration';
 import { useSimulatorMotion } from '../hooks/useSimulatorMotion';
 import type { RecorderPhase } from '../hooks/useRecorder';
@@ -24,6 +25,8 @@ interface StepRecorderDialogProps {
   onReference: (recordingId: string) => void;
   /** Changes the step's hands set-up (allowed until the first take in this dialog). */
   onHands: (hands: Hands) => void;
+  /** Called with per-finger weights derived from the kept takes' consistency (two or more takes). */
+  onWeights?: (weights: FingerWeights) => void;
   onClose: () => void;
 }
 
@@ -31,7 +34,7 @@ interface StepRecorderDialogProps {
  * "Record this step": the same live stage, calibration and recorder the scratch studio uses, opened in a dialog
  * for one lesson step. The kept reference take is written back to the step as you go.
  */
-export function StepRecorderDialog({ step, lessonId, book, onReference, onHands, onClose }: StepRecorderDialogProps) {
+export function StepRecorderDialog({ step, lessonId, book, onReference, onHands, onWeights, onClose }: StepRecorderDialogProps) {
   const glove = useGloveStream();
   const { state } = useDevState(0);
   const [side, setSide] = useState<Side>(primarySide(step.hands));
@@ -54,6 +57,28 @@ export function StepRecorderDialog({ step, lessonId, book, onReference, onHands,
   useEffect(() => {
     if (reference && reference !== step.reference_recording_id) onReference(reference);
   }, [reference, step.reference_recording_id, onReference]);
+
+  // Step.weights from the kept takes: fingers the expert repeats consistently count fully, the rest less
+  // (backend mirror: scoring.take_weights). Recomputed whenever the set of kept takes changes.
+  const keptIds = takes.filter((t) => t.kept).map((t) => t.id).join(',');
+  useEffect(() => {
+    if (!onWeights) return;
+    const ids = keptIds ? keptIds.split(',') : [];
+    if (ids.length < 2) return;
+    let cancelled = false;
+    Promise.all(ids.map((id) => api.recording(id)))
+      .then((recs) => {
+        if (cancelled) return;
+        const series = recs.map((r) => resample(r.frames, side));
+        onWeights(takeWeights(series).weights);
+      })
+      .catch(() => {
+        /* a take with too few frames, or the backend away: keep the step's current weights */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [keptIds, side, onWeights]);
 
   return (
     <Modal title={`Record: ${step.title}`} onClose={onClose} wide>

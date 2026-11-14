@@ -121,6 +121,7 @@ export function LessonEditor({ lesson, onSave, saveLabel, extraActions }: Lesson
           lessonId={draft.id}
           book={book}
           onReference={(id) => d.updateStep(recStep.id, { reference_recording_id: id })}
+          onWeights={(weights) => d.updateStep(recStep.id, { weights })}
           onHands={(hands) => hands !== recStep.hands && d.updateStep(recStep.id, { hands, reference_recording_id: null })}
           onClose={() => setRecording(null)}
         />

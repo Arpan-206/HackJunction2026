@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     gemini_rpd_budget: int | None = None
     ollama_url: str = c.DEFAULT_OLLAMA_URL
     ollama_model: str = c.DEFAULT_OLLAMA_MODEL
-    llm_provider: Literal["fake", "gemini", "ollama"] = "fake"
+    openai_base_url: str = "http://localhost:8000"
+    openai_api_key: str | None = None
+    openai_model: str = c.DEFAULT_OPENAI_MODEL
+    llm_provider: Literal["fake", "gemini", "ollama", "openai"] = "fake"
     glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
         "simulator"
     )
