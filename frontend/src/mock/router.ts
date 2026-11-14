@@ -1,6 +1,9 @@
 import type {
+  CalibrationCapturePhase,
   Calibration,
   Finger,
+  LlmProvider,
+  FingerWeights,
   GloveFrame,
   JointTriple,
   Lesson,
@@ -23,11 +26,12 @@ import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
 import { MOVES } from './seed';
-import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, fingerThresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
+import { applyCalibrationMasks, buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, fingerThresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
 import { modelFromFrames, TAKES_HARD_MIN, TAKES_MAX } from './takes';
 import { DEFAULT_MARGIN, isMargin } from '../api/margin';
 import { getStore } from './store';
 import { deleteMedia, getMedia, putMedia } from './media';
+import { FINGERS } from '../api/types';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
 import * as persist from './persist';
@@ -62,8 +66,7 @@ export class HttpError extends Error {
 }
 
 const SIDES: Side[] = ['left', 'right'];
-const FINGERS: Finger[] = ['thumb', 'index', 'middle', 'ring', 'little'];
-const SKILLS: Skill[] = ['table_tennis', 'piano', 'finnish_fingerspelling', 'shadow_puppets', 'general'];
+const SKILLS: Skill[] = ['table_tennis', 'piano', 'finnish_fingerspelling', 'fingerspelling', 'shadow_puppets', 'general'];
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 /** MEDIA_MAX_BYTES and MEDIA_MAX_OFFSET_S in backend/app/constants.py. */
@@ -173,7 +176,21 @@ function normaliseStep(raw: unknown): Step {
     tolerance: tolerance(raw.tolerance),
     video_url: (raw.video_url as string | null | undefined) ?? null,
     tutorial_video: mediaRef(raw.tutorial_video, 'tutorial_video'),
+    weights: fingerWeights(raw.weights),
   };
+}
+
+/** Optional per-finger weights (Step.weights, ScoreRequest.weights): five numbers, or null. */
+function fingerWeights(v: unknown): FingerWeights | null {
+  if (v === undefined || v === null) return null;
+  if (!isObj(v)) return invalid('weights must be an object of five finger numbers');
+  const out = {} as FingerWeights;
+  for (const f of FINGERS) {
+    const n = v[f] === undefined ? 0 : Number(v[f]);
+    if (!Number.isFinite(n)) return invalid(`weights.${f} must be a number`);
+    out[f] = n;
+  }
+  return out;
 }
 
 function normaliseLesson(raw: unknown): LessonDraftBody {
@@ -197,16 +214,16 @@ function normaliseLesson(raw: unknown): LessonDraftBody {
  * person does, so the captured pose is the guide hand at curl 0 (flat) or curl 1 (fist), which keeps the calibrated
  * range meaningful and makes calibrated scoring behave like it would with a real glove.
  */
-async function captureFlexion(sideName: Side, phase: 'flat' | 'fist', durationS: number): Promise<Record<Finger, JointTriple>> {
+async function captureFlexion(sideName: Side, phase: CalibrationCapturePhase, durationS: number): Promise<Record<Finger, JointTriple>> {
   await sleep(durationS * 1000);
   const level = phase === 'fist' ? 1 : 0;
-  const pose = { thumb: level, index: level, middle: level, ring: level, little: level };
+  const pose = { thumb: phase === 'flat' ? 0 : 1, index: level, middle: level, ring: level, little: level };
   const hand = handFrame({ preset: 'hold_pose', pose }, sideName, 0);
   return hand.flexion;
 }
 
 const zeroFlexion = (): Record<Finger, JointTriple> => ({ thumb: [0, 0, 0], index: [0, 0, 0], middle: [0, 0, 0], ring: [0, 0, 0], little: [0, 0, 0] });
-const pendingPhases = new Map<Side, Partial<Record<'flat' | 'fist', Record<Finger, JointTriple>>>>();
+const pendingPhases = new Map<Side, Partial<Record<CalibrationCapturePhase, Record<Finger, JointTriple>>>>();
 
 interface Take {
   lesson_id: string | null;
@@ -289,6 +306,8 @@ function score(b: Record<string, unknown>): ScoreResult {
   }
 
   const warnings: string[] = [];
+  let weights: Partial<Record<Finger, number>> | null = fingerWeights(b.weights);
+  let jointMask: number[][] | null = null;
   const reference = resample(referenceFrames, sideName);
   let attempt = resample(attemptFrames, sideName);
   const ownId = b.attempt_calibration_id as string | undefined;
@@ -296,10 +315,15 @@ function score(b: Record<string, unknown>): ScoreResult {
   if (ownId || refId || b.use_latest_calibration === true) {
     const own = ownId ? getCalibration(ownId) : b.use_latest_calibration === true ? latestCalibration(sideName) : null;
     const refCal = refId ? getCalibration(refId) : null;
-    if (own) attempt = calibrateAttempt(attempt, own, refCal, warnings);
+    if (own) {
+      attempt = calibrateAttempt(attempt, own, refCal, warnings);
+      const masked = applyCalibrationMasks(own, weights, warnings);
+      jointMask = masked.jointMask;
+      weights = masked.weights;
+    }
   }
   const declaredStatic = hasRefMotion && STATIC_PRESETS.includes((b.reference_motion as { preset?: string }).preset ?? '') ? true : undefined;
-  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic), tol, chosen), warnings };
+  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic, jointMask), tol, chosen, weights), warnings };
 }
 
 type Handler = (req: MockRequest, params: string[]) => Promise<MockResponse> | MockResponse;
@@ -349,14 +373,14 @@ route('PUT', '/lessons/([^/]+)', (req, [id]) => {
 route('POST', '/calibrations', async (req) => {
   const b = body(req);
   const sideName = side(b.side);
-  if (b.phase !== 'flat' && b.phase !== 'fist') invalid("phase must be 'flat' or 'fist'");
+  if (b.phase !== 'flat' && b.phase !== 'fist' && b.phase !== 'thumb') invalid("phase must be 'flat', 'fist' or 'thumb'");
   const duration = b.duration_s === undefined ? 1.5 : Number(b.duration_s);
   if (!(duration > 0 && duration <= 10)) invalid('duration_s must be greater than 0 and at most 10');
-  const averaged = await captureFlexion(sideName, b.phase as 'flat' | 'fist', duration);
+  const averaged = await captureFlexion(sideName, b.phase as CalibrationCapturePhase, duration);
   const phases = pendingPhases.get(sideName) ?? {};
-  phases[b.phase as 'flat' | 'fist'] = averaged;
+  phases[b.phase as CalibrationCapturePhase] = averaged;
   pendingPhases.set(sideName, phases);
-  const cal: Calibration = { id: newId(), side: sideName, flat: phases.flat ?? zeroFlexion(), fist: phases.fist ?? zeroFlexion(), created_at: nowIso() };
+  const cal: Calibration = { id: newId(), side: sideName, flat: phases.flat ?? zeroFlexion(), fist: phases.fist ?? zeroFlexion(), thumb: phases.thumb ?? null, created_at: nowIso() };
   return ok(getStore().saveCalibration(cal));
 });
 route('GET', '/calibrations/latest', (req) => ok(latestCalibration(side(req.query.get('side') ?? undefined))));
@@ -621,8 +645,8 @@ route('POST', '/dev/state', (req) => {
     if (s.beta !== undefined) store.dev.smoothing.beta = Number(s.beta);
   }
   if (b.llm_provider !== undefined) {
-    if (!['fake', 'gemini', 'ollama'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini or ollama');
-    store.dev.llm_provider = b.llm_provider as 'fake' | 'gemini' | 'ollama';
+    if (!['fake', 'gemini', 'ollama', 'openai'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini, ollama or openai');
+    store.dev.llm_provider = b.llm_provider as LlmProvider;
   }
   if (b.glove_source !== undefined) {
     if (b.glove_source !== 'simulator' && b.glove_source !== 'external') {

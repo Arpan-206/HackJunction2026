@@ -1,6 +1,9 @@
 import type { Lesson, Step } from '../../../api/types';
 import seedShadowPuppets from '../../../mock/data/seed-shadow-puppets.json';
 import seedFinnishFingerspelling from '../../../mock/data/seed-finnish-fingerspelling.json';
+import seedFingerspellingAM from '../../../mock/data/seed-fingerspelling-a-m.json';
+import seedFingerspellingNZ from '../../../mock/data/seed-fingerspelling-n-z.json';
+import seedFingerspellingWords from '../../../mock/data/seed-fingerspelling-words.json';
 
 const tol = { angle_deg: 18, timing_ms: 250 };
 
@@ -39,5 +42,5 @@ export const LOCAL_LESSONS: Lesson[] = [
       step('seed-piano-scale', 'Lesson 2: Five-finger scale', 'Press each key in turn with fingers 1 2 3 4 5, then back down 4 3 2 1, at an even pace.', 'piano_five_finger_scale', 'keyboard', { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5, 4, 3, 2, 1], beat_ms: 620 }, 3),
     ],
   },
-  ...([seedFinnishFingerspelling, seedShadowPuppets] as unknown as Lesson[]),
+  ...([seedFinnishFingerspelling, seedShadowPuppets, seedFingerspellingAM, seedFingerspellingNZ, seedFingerspellingWords] as unknown as Lesson[]),
 ];

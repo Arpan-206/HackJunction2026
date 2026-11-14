@@ -1,0 +1,187 @@
+{
+  "recording": "worn-solver-left",
+  "path": "gemma-pictures",
+  "t": "2026-11-14T10:32:09+00:00",
+  "input_text": "Teach the hand skill shown in this recording.\n\nRECORDED DEMONSTRATION (measured by the gloves):\nRecording title: Worn Smartgloves II capture, left hand.\nDemonstrating hand: left. Duration 25.1 s, 67 glove samples. The recorder cut it into 4 step(s) at the moments the hand was still.\nFinger travel over the whole take (flexion range, degrees): thumb 37, index 69, middle 75, ring 66, little 52.\nSteps, in order:\n1. Step 1 (held still, 6.3 s): thumb half bent, index straight, middle straight, ring straight, little half bent. Most bent: little at 26 degrees. Picture: step_00.jpg.\n2. Step 2 (held still, 6.3 s): thumb half bent, index curled, middle curled, ring curled, little curled. Most bent: middle at 83 degrees. Picture: step_01.jpg.\n3. Step 3 (held still, 6.3 s): thumb half bent, index straight, middle straight, ring straight, little half bent. Most bent: little at 28 degrees. Picture: step_02.jpg.\n4. Step 4 (held still, 6.3 s): thumb half bent, index straight, middle half bent, ring curled, little half bent. Most bent: ring at 55 degrees. Picture: step_03.jpg.",
+  "lesson": {
+    "title": "Hand Sequence Exercise",
+    "skill": "general",
+    "summary": "",
+    "master_name": "Master",
+    "source": "generated",
+    "steps": [
+      {
+        "id": "b11fa90af4ba",
+        "title": "Lesson 1: Open Hand",
+        "instruction": "Keep your index, middle, and ring fingers straight while slightly bending your thumb and little finger.",
+        "move_id": "general_spread",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 26.0
+          },
+          "left_pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 26.0
+          }
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "c9d983f53475",
+        "title": "Lesson 2: Closed Fist",
+        "instruction": "Curl all four fingers into your palm and keep your thumb half bent.",
+        "move_id": "general_fist",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 37.0,
+            "index": 69.0,
+            "middle": 83.0,
+            "ring": 66.0,
+            "little": 52.0
+          },
+          "left_pose": {
+            "thumb": 37.0,
+            "index": 69.0,
+            "middle": 83.0,
+            "ring": 66.0,
+            "little": 52.0
+          }
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "666625f44cef",
+        "title": "Lesson 3: Return to Open",
+        "instruction": "Straighten your index, middle, and ring fingers again, leaving the thumb and little finger slightly bent.",
+        "move_id": "general_spread",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 28.0
+          },
+          "left_pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 28.0
+          }
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "80af2fe2f2ba",
+        "title": "Lesson 4: Partial Curl",
+        "instruction": "Curl your ring finger fully, half-bend your middle and little fingers, and keep your index finger straight.",
+        "move_id": null,
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 40.0,
+            "ring": 55.0,
+            "little": 30.0
+          },
+          "left_pose": {
+            "thumb": 37.0,
+            "index": 0.0,
+            "middle": 40.0,
+            "ring": 55.0,
+            "little": 30.0
+          }
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      }
+    ],
+    "test": null,
+    "id": "36c9eab8d1e9",
+    "created_at": "2026-11-14T10:31:56.090638+00:00"
+  },
+  "provider": "verda-gemma",
+  "model": "google/gemma-4-31B-it",
+  "attempts": 1,
+  "latency_s": 19.12068241694942,
+  "usage": {
+    "prompt_tokens": 2526,
+    "total_tokens": 3290,
+    "completion_tokens": 764
+  },
+  "schema_mode": "json_schema",
+  "frames": [
+    "step_00.jpg",
+    "step_01.jpg",
+    "step_02.jpg",
+    "step_03.jpg"
+  ],
+  "prompt_chars": 3928,
+  "errors": [],
+  "digest": {
+    "title": "Hand Sequence Exercise",
+    "skill": "general",
+    "steps": 4,
+    "step_titles": [
+      "Lesson 1: Open Hand",
+      "Lesson 2: Closed Fist",
+      "Lesson 3: Return to Open",
+      "Lesson 4: Partial Curl"
+    ],
+    "move_ids": [
+      "general_spread",
+      "general_fist",
+      "general_spread",
+      null
+    ],
+    "presets": [
+      "hold_pose",
+      "hold_pose",
+      "hold_pose",
+      "hold_pose"
+    ]
+  }
+}

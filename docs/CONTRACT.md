@@ -10,7 +10,7 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'shadow_puppets' | 'general';   // the four demo skills, plus general
+type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'fingerspelling' | 'shadow_puppets' | 'general';   // the four demo skills shown in the catalogue, plus general; 'fingerspelling' is the American alphabet drill (moves `fs_*`, seed courses), reachable at /apprentice/fingerspelling and not listed in the catalogue
 type Prop = 'none' | 'racket' | 'keyboard' | 'ball';   // keyboard: a piano keyboard (or a computer keyboard for the air typing test)
 type Hands = Side | 'both';   // one hand (left or right) or two
 
@@ -80,6 +80,7 @@ interface Step {
   repetitions: number;       // how many takes the master should record
   tolerance: Tolerance;
   video_url: string | null;  // older single video link; read as a tutorial video at offset 0 when tutorial_video is absent
+  weights?: Record<Finger, number> | null;  // how much each finger counts, 0..1; null or absent counts every finger fully
   tutorial_video?: MediaRef | null;  // the expert talking the step through (POST /media), synced to the reference take; null by default
 }
 
@@ -120,6 +121,7 @@ interface Calibration {
   side: Side;
   flat: Record<Finger, [number, number, number]>;  // averaged flexion with the hand flat
   fist: Record<Finger, [number, number, number]>;  // averaged flexion in a loose fist
+  thumb: Record<Finger, [number, number, number]> | null;  // additive: flat hand, thumb folded; null until captured
   created_at: string;
 }
 
@@ -222,7 +224,7 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | PUT | `/lessons/{id}` | `Lesson` | `Lesson` |
 | POST | `/lessons/generate` | `{prompt: string, skill?: Skill}` | `{lesson: Lesson, provider: string, attempts: number}` |
 | POST | `/lessons/generate_from_video` | multipart: `video` (mp4, webm or mov, max 50 MB), `prompt?`, `skill?` | `{lesson: Lesson, provider: string, attempts: number}` (413 too large, 415 wrong type; non-Gemini providers return the template with `provider: "fake"` and a summary note) |
-| POST | `/calibrations` | `{side, phase: 'flat' or 'fist', duration_s?: number}` | `Calibration` (partial until both phases captured) |
+| POST | `/calibrations` | `{side, phase: 'flat' or 'fist' or 'thumb', duration_s?: number}` | `Calibration` (partial until both phases captured) |
 | GET | `/calibrations/latest?side=right` | | `Calibration` or 404 |
 | POST | `/recordings/start` | `{lesson_id?, step_id?, hands?: 'left' or 'right' or 'both'}` (default `both`) | `{recording_id}` |
 | POST | `/recordings/{id}/stop` | | `Recording` |
@@ -236,13 +238,13 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | DELETE | `/media/{id}` | | 204; 404 when unknown. Steps or takes that still point at it show their still instead |
 | POST | `/recordings/model` | `TakesModelRequest` | `TakesModel` (see Takes model in the notes); 422 for 1, more than 5 or repeated ids, 404 for an unknown id |
 | POST | `/motion/preview` | `{motion: MotionSpec, side: Side, duration_s: number}` | `{frames: GloveFrame[]}` (synthesised guide hands) |
-| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], side?: "left" or "right", tolerance, margin?: Margin, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string}` (at least one attempt source; calibration fields and `margin` optional, see notes) | `ScoreResult` |
+| POST | `/score` | `{reference_recording_id or reference_motion, attempt_recording_id?, attempt_frames?: GloveFrame[], side?: "left" or "right", tolerance, margin?: Margin, use_latest_calibration?: boolean, attempt_calibration_id?: string, reference_calibration_id?: string, weights?: Record<Finger, number> | null}` (at least one attempt source; calibration fields, `margin` and `weights` optional, see notes) | `ScoreResult` |
 | POST | `/coach/hint` | `CoachHintRequest`: `{step_id?, instruction, deviations: Record<Finger, number>, timing_ms, move_name?, joint_deviations?: Record<Finger, [knuckle, middle, tip]>, wrist_error_deg?, wrist_axis?: "pitch"\|"yaw"\|"roll", tolerance_deg?, finger_tolerance_deg?: Partial<Record<Finger, number>>, margin?: Margin, attempt?: number, last_hint?: string}` (only the first four are needed) | `{hint, focus_finger: Finger\|null, cue_type: "curl"\|"extend"\|"timing"\|"wrist"\|"praise", severity: "low"\|"medium"\|"high", provider}` |
 | POST | `/coach/plan` | `CoachPlanRequest` | `CoachPlanResponse` (Gemini practice plan; fake derives drills from the worst fingers) |
 | POST | `/motion/from_text` | `{text: string (max 200 chars), side?: Side}` | `MotionFromTextResponse` (LLM picks a preset; fake uses keyword rules) |
 | POST | `/vision/hands` | multipart `image` (jpeg) | `{hands: {side, wrist_pos, landmarks: [x,y,z][]}[]}` (MediaPipe) |
 | POST | `/ingest/frames` | one `GloveFrame`, one `HandFrame` (`wrist_quat` defaults to identity) or `{frames: GloveFrame[]}` (max 600); optional `?activate=1` switches the source to `external` first | `{accepted: number}`; 409 if the source is not `external` and `activate` is absent, 422 on an invalid frame |
-| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[]}` (`gemini_budget` is read-only, ignored on POST) |
+| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[], llm_chain: string[], llm_answered_by: string \| null}` (`gemini_budget`, `llm_chain` and `llm_answered_by` are read-only, ignored on POST; `llm_provider` may also be `openai`) |
 | POST | `/dev/state` | partial of the above | new state |
 | GET | `/gloves/status` | | `GloveRigStatus` (see Real gloves) |
 | POST | `/gloves/driver` | `{action: 'start' or 'stop'}` | `GloveRigStatus` after the action; 409 while Rokoko Studio is open, 503 when the SDK is not found |
@@ -265,6 +267,8 @@ Routes are thin: validate input, call one service, return a schema. No business 
 
 `/coach/plan` and `/motion/from_text` use the same providers, validation and retry rules; oversize input is a 422, and `provider` is `fake` when the offline fallback answered.
 
+Fallback chain (additive, docs/MODELS.md): every real provider runs in a chain with a short time cap per call (hint 5 s, `openai` 20 s, others 30 s). `gemini` and `openai` (Gemma on Verda, only when `OPENAI_BASE_URL` is set) back each other up, and `LLM_ROUTES` may send a role to `openai` first. `provider` names the provider that answered. When no model answers, `/coach/hint` returns the one-sentence offline note as `hint` with `provider: "offline"` (focus, cue and severity still come from the measurements), and the other routes return their template with `provider: "fake"` without retrying. The UI shows `provider` only through `ModelLabel`: "AI Assistant" or "AI Assistant offline", with model names only in dev mode (`?dev=1`). `ollama` is not in any chain.
+
 ## Smoothing
 
 The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angle and normalised-lerp smoothing on the wrist quaternion, with a small deadband to remove the natural micro-tremor. Parameters are live-tunable via `/dev/state`. The frontend additionally interpolates between frames for rendering only.
@@ -281,12 +285,13 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 - `POST /coach/hint`: `deviations` are signed degrees of TOTAL finger flexion per finger (positive = curled more than the reference); `timing_ms` is positive when the learner is late; `wrist_error_deg` is signed about `wrist_axis` (pitch positive = too high, yaw positive = turned too far right, roll positive = rolled clockwise). `hint` is one imperative sentence of at most 14 words naming one finger or the wrist and one direction, for example "Lift your index finger slightly." `cue_type` is `extend` when the finger is curled too much, `curl` when too straight. `provider` is `fake`, `algorithmic` (the model failed, was rejected or nothing needed fixing), `gemini`, `ollama`, or `fake (rate limited)` when the Gemini budget was spent. Identical requests within 60 s are served from a cache; pass the previous `hint` as `last_hint` so the wording changes.
 - Gemini free tier budget: the backend spends at most about 80 percent of the free RPM and RPD per model (limits in `app/constants.py`), persists the day count in `DATA_DIR/gemini_usage.json`, and when spent answers with the offline fallback and provider `fake (rate limited)` (also on `/lessons/generate`, `/coach/plan`, `/motion/from_text`). Hints use `GEMINI_HINT_MODEL` (default `gemini-3.5-flash-lite`), everything else `GEMINI_MODEL` (default also `gemini-3.5-flash-lite`, 500 requests per day free; both share its budget).
 - Calibrated scoring: with `attempt_calibration_id` (or `use_latest_calibration: true`, which uses the latest calibration for the attempt's side), each attempt joint is normalised to 0..1 as `(x - flat) / (fist - flat)`, clipped, then mapped into the reference's angle space using `reference_calibration_id` if given, otherwise the nominal range (flat and fist of the guide hand at curl 0 and 1). The reference is never altered. Joints with a calibrated range under 0.05 rad, or a calibration with an uncaptured phase, are left uncalibrated and a message is added to `ScoreResult.warnings`. Without these fields scoring is unchanged. `reference_calibration_id` has no effect on its own. Unknown ids give 404.
+- Step weights (additive): `weights` on `/score` (the step's `Step.weights`) are clipped to 0..1. The finger part of `overall` becomes their weighted mean, a finger with weight 0 never breaks `within_tolerance`, and `worst_finger` and `hint` only name a finger weighted at least 0.3 (`FOCUS_MIN_WEIGHT`; with none that heavy, the heaviest non-zero fingers). With an attempt calibration, joints it cannot read (range under 0.05 rad) leave the finger's total flexion on both sides, and a finger with no readable joint gets weight 0 plus a warning. Without `weights` and with every joint readable, scoring is unchanged.
 - `POST /lessons/generate_from_video` stores nothing: the upload goes to a temporary file that is deleted after the call. Gemini uploads the file, waits until it is ACTIVE (60 s), then generates with a 120 s budget; on timeout or repeated invalid output it falls back to the fake template. Ollama and fake cannot read video.
 - Expert media: videos live in `DATA_DIR/media` as `{id}.{webm|mp4|mov}` plus `{id}.json` (`MediaInfo`), limits in `app/constants.py` (`MEDIA_*`). Two kinds per step, both optional. A tutorial video (`Step.tutorial_video`): the expert talking, shown on the learner's Tutorial beside the chalk hand playing the step's reference take at `video time - offset_s` (clamped at 0, the take looping while the video runs on). A take video (`Recording.video`): the webcam filmed during that take, so it is synced by construction; the practice screen plays the reference take's video small beside the stage in lockstep with the ghost. `Step.video_url` stays for older lessons and is read as a tutorial video at offset 0 when `tutorial_video` is absent. The lesson generator never fills `tutorial_video` (left out of the model's schema). Deleting a take or a lesson does not delete its media. In mock mode the clips live in the browser (IndexedDB, falling back to memory) and the player gets an object URL for `/api/media/{id}` (`useMediaSrc` in `frontend/src/api/media.ts`).
 - `POST /lessons/generate` returns an unsaved lesson (it has an `id` and `created_at`). `PUT /lessons/{id}` creates the lesson if the id is unknown, so the generated lesson can be saved after editing. `POST /lessons` returns 201.
 - Step ids are optional in `POST`/`PUT` bodies (the server assigns them); `Step.tolerance`, `repetitions`, `hands` and `prop` have defaults.
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
-- `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros.
+- `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros. The `thumb` phase (added 14 Nov for the demo kiosk, additive) is a flat hand with the thumb folded across the palm: the thumb barely moves between flat and a loose fist, so this pose holds its real range. It is stored as `thumb` (null until captured) and nothing scores with it yet.
 - Errors are `{detail: string}` with 404 (missing), 501 (rokoko_sdk stub), 503 (optional dependency or LLM provider missing), 409 (UDP port busy, or ingest while the source is not `external`), 422 (invalid ingested frame).
 
 ## Real gloves: status, calibration area, demo mode

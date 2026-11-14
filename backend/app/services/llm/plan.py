@@ -8,6 +8,7 @@ from app import constants as c
 from app.core.errors import LLMTimeoutError, RateLimitedError
 from app.schemas.api import CoachPlanDraft, CoachPlanRequest, CoachPlanResponse
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import answered_by
 from app.services.llm.fake import template_plan
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -50,7 +51,7 @@ class PlanService:
 
     async def plan(self, request: CoachPlanRequest) -> CoachPlanResponse:
         """Return a practice plan and the provider that wrote it."""
-        client = self._llm.client
+        client = self._llm.client_for("plan")
         errors: str | None = None
         fallback_provider = "fake"
         for attempt in range(1, 2 + c.LLM_MAX_RETRIES):
@@ -83,7 +84,7 @@ class PlanService:
                 errors = f"{type(exc).__name__}: {exc}"
                 log.warning("Plan LLM call failed on attempt %d: %s", attempt, exc)
             else:
-                return CoachPlanResponse(**draft.model_dump(), provider=client.name)
+                return CoachPlanResponse(**draft.model_dump(), provider=answered_by(client.name))
         log.warning("Falling back to the fake plan after failed attempts")
         return CoachPlanResponse(
             **template_plan(request).model_dump(), provider=fallback_provider

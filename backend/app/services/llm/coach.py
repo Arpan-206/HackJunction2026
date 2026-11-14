@@ -10,6 +10,7 @@ from app.core.errors import RateLimitedError
 from app.schemas.api import CoachHintRequest, CoachHintResponse, HintDraft
 from app.services import hints
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import OFFLINE, LLMOfflineError, answered_by
 from app.services.llm.rate_limit import TTLCache
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -17,6 +18,8 @@ from app.services.llm.schema import llm_schema
 log = logging.getLogger(__name__)
 
 ALGORITHMIC = "algorithmic"
+# Shown when no model answers in time. One sentence; user copy names only "the AI Assistant" (CLAUDE.md rule 6).
+OFFLINE_NOTE = "The AI Assistant is offline, so follow the finger corrections for now."
 
 _SYSTEM_TEMPLATE = f"""<role>
 You are the live coach inside a smart-glove hand-skill trainer. A learner is copying a guide hand while you watch
@@ -170,7 +173,7 @@ class CoachService:
     def __init__(self, llm: LLMState) -> None:
         """Use the active provider from llm."""
         self._llm = llm
-        self._cache: TTLCache[HintDraft] = TTLCache(
+        self._cache: TTLCache[tuple[HintDraft, str]] = TTLCache(
             c.HINT_CACHE_TTL_S, c.HINT_CACHE_MAX_ENTRIES
         )
 
@@ -190,14 +193,15 @@ class CoachService:
     async def hint(self, request: CoachHintRequest) -> CoachHintResponse:
         """Return one short cue for the learner."""
         fallback = hints.build_hint_draft(request)
-        client = self._llm.client
+        client = self._llm.client_for("hint")
         fake = client.name == "fake"
         if fallback.cue_type == "praise" and not fake:
             return CoachHintResponse(**fallback.model_dump(), provider=ALGORITHMIC)
         prompt = build_prompt(request, fallback)
         cached = self._cache.get(prompt)
         if cached is not None:
-            return CoachHintResponse(**cached.model_dump(), provider=client.name)
+            draft, provider = cached
+            return CoachHintResponse(**draft.model_dump(), provider=provider)
         llm_request = LLMRequest(
             SYSTEM_PROMPT,
             prompt,
@@ -210,6 +214,11 @@ class CoachService:
         try:
             draft = HintDraft.model_validate_json(
                 await client.generate_json(llm_request)
+            )
+        except LLMOfflineError as exc:
+            log.info("Coach offline (%s); showing the offline note", exc)
+            return CoachHintResponse(
+                **{**fallback.model_dump(), "hint": OFFLINE_NOTE}, provider=OFFLINE
             )
         except RateLimitedError as exc:
             log.info("Coach LLM rate limited (%s); using algorithmic hint", exc)
@@ -227,5 +236,6 @@ class CoachService:
         if not self._accept(draft, fallback, request):
             log.warning("Coach LLM hint rejected: %s", json.dumps(draft.model_dump()))
             return CoachHintResponse(**fallback.model_dump(), provider=ALGORITHMIC)
-        self._cache.put(prompt, draft)
-        return CoachHintResponse(**draft.model_dump(), provider=client.name)
+        provider = answered_by(client.name)
+        self._cache.put(prompt, (draft, provider))
+        return CoachHintResponse(**draft.model_dump(), provider=provider)

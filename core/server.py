@@ -88,6 +88,8 @@ class Core:
         self.clients: dict[int, ClientState] = {}
         self.compat_clients: dict[int, ClientState] = {}
         self.robot_clients: dict[int, ClientState] = {}
+        self.depth_clients: dict[int, ClientState] = {}   # /ws/depth, point clouds (depth step only)
+        self._last_cloud_us = 0
         self.started = time.time()
         self.frames = 0
         self._tick_times: deque[float] = deque(maxlen=90)
@@ -179,6 +181,8 @@ class Core:
                     text = json.dumps(msg, separators=(",", ":"))
                     for c in list(self.robot_clients.values()):
                         self._enqueue(c, text)
+                if self.depth_clients and self.session.depth is not None:
+                    self.send_depth_cloud(t)
                 if self.glove_control is not None:
                     self.glove_control.on_messages(msgs)
                     if self.frames % 10 == 0:
@@ -191,6 +195,26 @@ class Core:
                 next_t = time.monotonic()
                 delay = 0
             await asyncio.sleep(delay)
+
+    def send_depth_cloud(self, t: int) -> None:
+        """/ws/depth: the newest point cloud, at most [camera.depth] cloud_hz."""
+        dep = self.session.depth
+        if t - self._last_cloud_us < 1e6 / max(0.5, dep.cloud_hz) - 1000:
+            return
+        msg = dep.cloud_message(t)
+        if msg is None:
+            return
+        self._last_cloud_us = t
+        if self.validate:
+            try:
+                self.schemas.validate("depth", msg)
+            except Exception as e:
+                self.validation_errors += 1
+                self.last_validation_error = f"depth: {str(e)[:300]}"
+                log.error("message failed schema: %s", self.last_validation_error)
+        text = json.dumps(msg, separators=(",", ":"))
+        for c in list(self.depth_clients.values()):
+            self._enqueue(c, text)
 
     def _check(self, msg: dict) -> None:
         if not self.validate:
@@ -248,6 +272,16 @@ class Core:
 
     def stop(self) -> None:
         self._stop.set()
+
+    async def close_clients(self) -> None:
+        """Close every viewer, compat and robot socket so uvicorn's graceful shutdown has nothing to wait for."""
+        for group in (self.clients, self.compat_clients, self.robot_clients):
+            for c in list(group.values()):
+                try:
+                    await asyncio.wait_for(c.ws.close(), 1.0)
+                except Exception:
+                    pass
+            group.clear()
 
     # ------------------------------------------------------------------ websocket
     async def handle_ws(self, ws: WebSocket) -> None:
@@ -312,6 +346,24 @@ class Core:
         finally:
             sender.cancel()
             self.robot_clients.pop(key, None)
+
+    async def handle_depth_ws(self, ws: WebSocket) -> None:
+        """/ws/depth: point clouds from the depth step (schema/depth.json). Incoming text is ignored."""
+        await ws.accept()
+        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz))
+        key = id(ws)
+        self.depth_clients[key] = c
+        sender = asyncio.create_task(self._sender(c))
+        try:
+            while True:
+                await ws.receive_text()
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            log.exception("depth websocket closed with error")
+        finally:
+            sender.cancel()
+            self.depth_clients.pop(key, None)
 
     async def handle_compat_ws(self, ws: WebSocket) -> None:
         """/ws/gloves: the teammate frontend's GloveFrame stream (core/compat.py)."""
@@ -469,6 +521,7 @@ class Core:
                 "detections": self.camera_source.detections,
                 "error": self.camera_source.error,
             },
+            "depth": None if self.session.depth is None else self.session.depth.status(),
             "validation_errors": self.validation_errors,
             "last_validation_error": self.last_validation_error,
             "mode": self.session.mode,
@@ -483,15 +536,33 @@ def create_app(core: Core) -> FastAPI:
         for src in (core.glove_source, core.camera_source, core.rcsp_client):
             if src is not None and hasattr(src, "start"):
                 await src.start()
+        if core.session.depth is not None:
+            core.session.depth.start()     # its own threads; returns at once
         try:
             yield
         finally:
             core.stop()
+            await core.close_clients()
+            for c in list(core.depth_clients.values()):
+                try:
+                    await asyncio.wait_for(c.ws.close(), 1.0)
+                except Exception:
+                    pass
+            core.depth_clients.clear()
+            if core.session.depth is not None:
+                core.session.depth.stop()
             for src in (core.glove_source, core.camera_source, core.rcsp_client):
                 if src is not None and hasattr(src, "stop"):
-                    await src.stop()
+                    try:
+                        await asyncio.wait_for(src.stop(), 3.0)
+                    except Exception:
+                        log.warning("source %s did not stop in time", type(src).__name__)
             if core._task is not None:
                 core._task.cancel()
+                try:
+                    await core._task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
     app = FastAPI(title="Geppetto core", lifespan=lifespan)
     # the viewer dev server (another origin, e.g. :5173) fetches /lessons and /schema
@@ -510,6 +581,17 @@ def create_app(core: Core) -> FastAPI:
     @app.websocket("/ws/robot")
     async def ws_robot(ws: WebSocket):
         await core.handle_robot_ws(ws)
+
+    @app.websocket("/ws/depth")
+    async def ws_depth(ws: WebSocket):
+        await core.handle_depth_ws(ws)
+
+    @app.get("/depth")
+    def depth_view():
+        p = REPO_ROOT / "tools" / "depth_view.html"
+        if not p.exists():
+            return JSONResponse({"error": "tools/depth_view.html missing"}, status_code=404)
+        return FileResponse(p, media_type="text/html")
 
     @app.get("/health")
     def health():

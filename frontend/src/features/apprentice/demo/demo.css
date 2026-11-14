@@ -1,0 +1,251 @@
+/* /demo, the kiosk flow. Read from 3 m: nothing under 16 px, the score as large as the screen allows. Gold only for a
+   mastered lesson, malachite for a matching hand, vermilion only for the correction line. */
+
+.demo {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--step-0);
+}
+
+.demo__head {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.demo__brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  letter-spacing: 0.04em;
+}
+.demo__steps {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--step-1);
+  color: var(--text-2);
+}
+.demo__step--now {
+  color: var(--text);
+  font-weight: 700;
+  border-bottom: 3px solid var(--accent);
+}
+.demo__next {
+  margin-left: auto;
+}
+
+.demo__body {
+  flex: 1;
+  display: flex;
+  padding: 1.5rem 2rem 2rem;
+  min-height: 0;
+}
+
+.demo__panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.demo__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-3);
+  line-height: 1.15;
+}
+.demo__lead {
+  margin: 0;
+  font-size: var(--step-2);
+  line-height: 1.35;
+  max-width: 40ch;
+}
+
+.demo__welcome {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.demo__welcome .demo__lead {
+  max-width: 34ch;
+}
+.demo__go {
+  min-width: 14rem;
+  min-height: 84px;
+  font-size: var(--step-3);
+}
+
+.demo__cal {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 2rem;
+}
+.demo__cal-text {
+  flex: 1 1 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.2rem;
+}
+.demo__count {
+  margin: 0;
+  min-height: 1em;
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 14vw, 11rem);
+  line-height: 1;
+}
+.demo__cal-hand {
+  flex: 1 1 50%;
+  min-height: 22rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+}
+.demo__bar {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  overflow: hidden;
+  max-width: 36rem;
+}
+.demo__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.9s linear;
+}
+
+.demo__lessons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.demo__lesson {
+  width: 100%;
+  min-height: 7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem 1.4rem;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.demo__lesson:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.demo__lesson:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.demo__lesson-title {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  line-height: 1.2;
+}
+.demo__lesson-meta {
+  font-size: var(--step-0);
+  color: var(--text-2);
+}
+.demo__op {
+  font-size: var(--step--1);
+  color: var(--text-2);
+}
+
+.demo__live {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(20rem, 1fr);
+  gap: 2rem;
+  min-height: 0;
+}
+.demo__stage {
+  min-height: 0;
+}
+.demo__twin {
+  height: clamp(420px, calc(100vh - 12rem), 1000px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.demo__side {
+  gap: 0.8rem;
+}
+.demo__lesson-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  line-height: 1.2;
+}
+.demo__score {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 13vw, 12rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.demo__score--match {
+  color: var(--ok);
+}
+.demo__mastered {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-4);
+  line-height: 1.1;
+  color: var(--gold-text);
+  border-bottom: 4px solid var(--gold);
+  align-self: flex-start;
+}
+.demo__hint {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: var(--step-2);
+}
+.demo__correction {
+  color: var(--danger);
+  font-weight: 700;
+}
+.demo__target {
+  flex: 1;
+  min-height: 12rem;
+  max-height: 22rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+}
+.demo__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .demo__cal,
+  .demo__live {
+    display: flex;
+    flex-direction: column;
+  }
+  .demo__twin {
+    height: 60vh;
+  }
+}

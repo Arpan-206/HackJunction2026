@@ -27,7 +27,7 @@ def raw_angles(curl: dict, side: str = "right") -> np.ndarray:
     return H.synth_hand(side=side, curl=curl).angles
 
 
-def write_range(d, cid, side, flat, fist, created_at):
+def write_range(d, cid, side, flat, fist, created_at, thumb=None):
     """A backend `Calibration` file (backend/app/schemas/records.py)."""
     (d / "calibrations").mkdir(parents=True, exist_ok=True)
     body = {
@@ -37,6 +37,8 @@ def write_range(d, cid, side, flat, fist, created_at):
         "fist": fist,
         "created_at": created_at,
     }
+    if thumb is not None:
+        body["thumb"] = thumb
     (d / "calibrations" / f"{cid}.json").write_text(json.dumps(body))
 
 
@@ -328,3 +330,34 @@ def test_gain_cap_keeps_a_small_range_from_amplifying_noise(ccfg, tmp_path):
     assert out[0] == pytest.approx(14.0, abs=0.1)
     # index: range 60 is above full / 2 = 45, so the gain is 90 / 60
     assert out[2] == pytest.approx(7.0 * 90 / 60, abs=0.1)
+
+
+def test_thumb_folded_capture_sets_the_thumb_range(ccfg, tmp_path):
+    """The demo table's thumb-folded phase replaces the fist's thumb as the closed end."""
+    d = tmp_path / "data"
+    flat, fist = raw_angles(FLAT), raw_angles(FIST)
+    loose = fist.copy()
+    for s in H.FLEXION_SLOTS["thumb"]:
+        loose[s] = flat[s] + 8.0  # a loose fist barely moves the thumb
+    folded = flat.copy()
+    for s in H.FLEXION_SLOTS["thumb"]:
+        folded[s] = flat[s] + 40.0
+    write_range(
+        d,
+        "r1",
+        "right",
+        angles_to_triples(flat),
+        angles_to_triples(loose),
+        "2026-11-14T10:00:00Z",
+        thumb=angles_to_triples(folded),
+    )
+    cal = load_hand(d, "right", "", ccfg.calibration, ccfg.hand)
+    assert cal is not None and cal.origin["thumb"] == "measured"
+    for s in H.FLEXION_SLOTS["thumb"]:
+        assert cal.fist[s] == pytest.approx(folded[s], abs=0.1)
+        assert cal.usable[s]
+    top = cal.apply(folded)
+    for s in H.FLEXION_SLOTS["thumb"]:
+        assert top[s] == pytest.approx(ccfg.hand.curl_full_thumb_deg, abs=0.1)
+    for s in H.FLEXION_SLOTS["index"]:
+        assert cal.fist[s] == pytest.approx(fist[s], abs=0.1)

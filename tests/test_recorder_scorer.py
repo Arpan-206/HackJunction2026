@@ -18,6 +18,10 @@ def tol(cfg):
     return Tolerances(cfg.score.perfect_deg, cfg.score.wrong_deg)
 
 
+# SPEC.md's own numbers, for the tests that pin the scoring formula; config.toml carries the tuned 15 / 60.
+SPEC_TOL = Tolerances(8, 45)
+
+
 def test_identical_hands_score_one(cfg):
     a = H.angle_features(H.synth_joints({"index": 0.5, "thumb": 0.3}))
     fs, _, _ = score_frame("right", a, a, {f: 1.0 for f in H.FINGERS}, tol(cfg))
@@ -30,7 +34,7 @@ def test_45_degree_offset_scores_zero_on_that_finger(cfg):
     b = a.copy()
     for s in H.FLEXION_SLOTS["index"] + H.FINGER_SPREAD_SLOTS["index"]:
         b[s] += 45.0
-    fs, _, _ = score_frame("right", b, a, {f: 1.0 for f in H.FINGERS}, tol(cfg))
+    fs, _, _ = score_frame("right", b, a, {f: 1.0 for f in H.FINGERS}, SPEC_TOL)
     assert fs.fingers["index"] == 0.0
     assert fs.worst == "index" and fs.hint == "too_curled"
     assert fs.fingers["ring"] == 1.0 and fs.fingers["little"] == 1.0
@@ -41,23 +45,23 @@ def test_hint_directions(cfg):
     a = H.angle_features(H.synth_joints({"index": 0.5}))
     flat = a.copy()
     flat[H.FLEXION_SLOTS["index"]] -= 30
-    fs, _, _ = score_frame("right", flat, a, {}, tol(cfg))
+    fs, _, _ = score_frame("right", flat, a, {}, SPEC_TOL)
     assert fs.worst == "index" and fs.hint == "too_flat"
     # spread slots are shared half and half, so push both of the middle finger's
     spread = a.copy()
     spread[[15, 16]] += 60
-    fs, _, _ = score_frame("right", spread, a, {}, tol(cfg))
+    fs, _, _ = score_frame("right", spread, a, {}, SPEC_TOL)
     assert fs.worst == "middle" and fs.hint == "too_spread"
     closed = a.copy()
     closed[[15, 16]] -= 60
-    fs, _, _ = score_frame("right", closed, a, {}, tol(cfg))
+    fs, _, _ = score_frame("right", closed, a, {}, SPEC_TOL)
     assert fs.hint == "too_closed"
 
 
 def test_under_8_degrees_is_perfect(cfg):
     a = np.zeros(18)
     b = a + 7.9
-    fs, _, _ = score_frame("right", b, a, {}, tol(cfg))
+    fs, _, _ = score_frame("right", b, a, {}, SPEC_TOL)
     assert fs.overall == 1.0
 
 
@@ -312,3 +316,38 @@ def test_dtw_small():
     b = np.array([[0.0], [1.0], [1.0], [2.0], [3.0]])
     c = dtw_path_costs(a, b)
     assert c is not None and c.shape == (4,) and np.all(c < 1e-9)
+
+
+def test_coach_model_call_never_blocks_the_tick(cfg):
+    """A slow model client runs off the tick; its line lands on a later poll; a failing one falls back to rules."""
+    import time
+    from core.coach import CoachClient, CoachLine
+
+    class SlowClient:
+        def __init__(self, delay, fail=False):
+            self.delay, self.fail = delay, fail
+        def tip(self, summary):
+            time.sleep(self.delay)
+            if self.fail:
+                raise RuntimeError("model down")
+            return CoachLine("tip", "Model says: curl it.", "ring", 0, True, "gemma", hand=summary.get("hand"))
+        def name_steps(self, lesson_json, digests): return None
+        def configure(self, text, task_names): return None
+        def phrase_question(self, context): return None
+
+    summary = {"hand": "right", "step": {"index": 0}, "passed": False, "timing_ms": None,
+               "fingers": {"ring": {"score": 0.3, "err_deg": 34, "hint": "too_flat"}}}
+    coach = Coach(SlowClient(0.3), cfg.coach, cfg.score.timing_hint_ms)
+    t0 = time.perf_counter()
+    assert coach.on_summary(0, summary) is None
+    assert time.perf_counter() - t0 < 0.05            # returned at once
+    assert coach.poll(10_000) == []                   # not ready yet
+    time.sleep(0.45)
+    lines = coach.poll(500_000)
+    assert len(lines) == 1 and lines[0].source == "gemma" and lines[0].text.startswith("Model says")
+    # a failing model call gives the rule line, still off the tick
+    coach = Coach(SlowClient(0.05, fail=True), cfg.coach, cfg.score.timing_hint_ms)
+    assert coach.on_summary(0, summary) is None
+    time.sleep(0.2)
+    lines = coach.poll(300_000)
+    assert len(lines) == 1 and lines[0].source == "rule" and lines[0].text == "Curl your ring finger more."

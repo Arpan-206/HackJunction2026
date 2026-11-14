@@ -11,7 +11,7 @@
       "id": "seed-fs-a",
       "title": "Lesson 1: Letter A",
       "instruction": "Close your fist and rest the thumb straight up along the side of the index finger.",
-      "move_id": "fs_a",
+      "move_id": "fi_a",
       "hands": "right",
       "prop": "none",
       "motion": {
@@ -36,7 +36,7 @@
       "id": "seed-fs-i",
       "title": "Lesson 2: Letter I",
       "instruction": "Curl the index, middle and ring finger into the palm, fold the thumb over them and raise the little finger.",
-      "move_id": "fs_i",
+      "move_id": "fi_i",
       "hands": "right",
       "prop": "none",
       "motion": {
@@ -61,7 +61,7 @@
       "id": "seed-fs-l",
       "title": "Lesson 3: Letter L",
       "instruction": "Raise the index finger and hold the thumb straight out to the side, the other fingers curled.",
-      "move_id": "fs_l",
+      "move_id": "fi_l",
       "hands": "right",
       "prop": "none",
       "motion": {
@@ -86,7 +86,7 @@
       "id": "seed-fs-v",
       "title": "Lesson 4: Letter V",
       "instruction": "Raise the index and middle finger apart, fold the thumb over the curled ring and little finger.",
-      "move_id": "fs_v",
+      "move_id": "fi_v",
       "hands": "right",
       "prop": "none",
       "motion": {
@@ -111,7 +111,7 @@
       "id": "seed-fs-y",
       "title": "Lesson 5: Letter Y",
       "instruction": "Hold the thumb and the little finger straight out, the three middle fingers curled.",
-      "move_id": "fs_y",
+      "move_id": "fi_y",
       "hands": "right",
       "prop": "none",
       "motion": {
