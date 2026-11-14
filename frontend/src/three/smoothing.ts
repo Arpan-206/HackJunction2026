@@ -21,6 +21,7 @@ export class HandSmoother {
   readonly spread = new Float32Array(N_SPREAD);
   readonly quat = new Quaternion();
   readonly pos: [number, number, number] = [0, 0, 0];
+  private hadPos = false;
   private primed = false;
   private readonly target = new Quaternion();
 
@@ -47,7 +48,9 @@ export class HandSmoother {
     else this.quat.slerp(this.target, aq);
 
     const p = frame.wrist_pos;
-    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed ? a : 1);
+    // the first position after none snaps: the hand root can start or stop sending one mid-stream
+    if (p) for (let k = 0; k < 3; k++) this.pos[k] += (p[k] - this.pos[k]) * (this.primed && this.hadPos ? a : 1);
+    this.hadPos = !!p;
     this.primed = true;
   }
 
