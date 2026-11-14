@@ -56,6 +56,7 @@
   --rail-ok: #5cc496;
   --scrim: #172259;
   --ink-sea: #0b1138;
+  --walnut-ink: #3b2716;
 }
 
 :root[data-theme='notte'] {
@@ -92,6 +93,7 @@
   --rail-ok: #5cc496;
   --scrim: #070b24;
   --ink-sea: #070b24;
+  --walnut-ink: #f1ebdc;
 }
 
 :root[data-theme='affresco'] {
@@ -128,6 +130,7 @@
   --rail-ok: #b7d79a;
   --scrim: #3a4a63;
   --ink-sea: #2a2b22;
+  --walnut-ink: #3b2716;
 }
 
 /*

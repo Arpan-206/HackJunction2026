@@ -378,3 +378,53 @@ textarea.field__control {
   font: italic 400 var(--step-0) var(--font-note);
   color: var(--text-2);
 }
+
+/* ---------- Disclosure: secondary settings behind one plain line ---------- */
+.disclosure {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.disclosure__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--target);
+  padding: 0.4rem 0.2rem;
+  cursor: pointer;
+  list-style: none;
+  font: 600 var(--step-0) var(--font-ui);
+  color: var(--text);
+}
+.disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure__summary::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.disclosure[open] > .disclosure__summary::before {
+  transform: rotate(45deg);
+}
+.disclosure__summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.disclosure__summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.disclosure__body {
+  display: grid;
+  gap: 1rem;
+  padding: 0.5rem 0 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .disclosure__summary::before {
+    transition: none;
+  }
+}

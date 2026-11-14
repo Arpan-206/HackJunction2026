@@ -8,6 +8,7 @@ import { TakeList } from './TakeList';
 interface RecorderPanelProps {
   /** Key the takes are stored under in the book. */
   slot: string;
+  /** Card title when idle; while a take records it reads "Recording take N" instead. */
   title: string;
   /** How many kept takes the master is aiming for. */
   targetReps: number;
@@ -28,11 +29,17 @@ export function RecorderPanel({ slot, title, targetReps, book, contextFor, onRep
   useEffect(() => onPhase?.(recorder.phase), [recorder.phase, onPhase]);
 
   return (
-    <Card title={title} className="mst-rec">
+    <Card title={recorder.phase === 'recording' ? `Recording take ${nextRep}` : title} className="mst-rec">
       <div className="mst-rec__goal">
         <span className="mst-rec__count" aria-live="polite">
-          {kept === 0 ? 'None' : kept}
-          <small> of {targetReps} takes kept</small>
+          {kept > 0 ? (
+            <>
+              {kept}
+              <small> of {targetReps} takes kept</small>
+            </>
+          ) : (
+            <span className="mst-rec__none">{takes.length === 0 ? 'No takes yet' : 'No takes kept yet'}</span>
+          )}
         </span>
         {kept >= targetReps && <span className="mst-ok">Target reached</span>}
       </div>

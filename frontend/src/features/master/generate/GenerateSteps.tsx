@@ -59,7 +59,7 @@ export function GenerateSteps() {
               Skill (optional)
             </label>
             <select id={skillId} className="field__control" value={g.skill} onChange={(e) => g.setSkill(e.target.value as typeof g.skill)}>
-              <option value="">Let the maestro decide</option>
+              <option value="">Let the AI decide</option>
               {SKILLS.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -78,7 +78,7 @@ export function GenerateSteps() {
             <label className="field__label" htmlFor={videoId}>
               A clip of the movement
             </label>
-            <span className="field__hint">mp4, webm or mov, up to {VIDEO_MAX_MB} MB. Any words above guide what the maestro looks for.</span>
+            <span className="field__hint">mp4, webm or mov, up to {VIDEO_MAX_MB} MB. Any words above guide what the AI looks for.</span>
             <input
               id={videoId}
               className="mst-video__file"
@@ -110,7 +110,7 @@ export function GenerateSteps() {
         {g.busy && g.progress !== null && (
           <div className="mst-busy" role="status">
             <p className="note">
-              {g.progress < 100 ? `Handing the clip to the maestro, ${g.progress} per cent.` : 'The maestro is watching your clip and sketching the steps. This can take up to two minutes.'}
+              {g.progress < 100 ? `Handing the clip to the AI, ${g.progress} per cent.` : 'The AI is watching your clip and sketching the steps. This can take up to two minutes.'}
             </p>
             <div className="mst-video__progress" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={g.progress}>
               <div className="mst-video__bar" style={{ transform: `scaleX(${Math.max(g.progress, 2) / 100})` }} />
@@ -119,7 +119,7 @@ export function GenerateSteps() {
         )}
         {g.busy && g.progress === null && (
           <p className="note mst-busy" role="status">
-            The maestro is sketching your lesson on the cartone. This can take a few seconds.
+            The AI is sketching your lesson on the cartone. This can take a few seconds.
           </p>
         )}
         {g.error && (

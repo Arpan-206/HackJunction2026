@@ -15,7 +15,7 @@ export function useBotSkill(lesson: Lesson | undefined): number {
 }
 
 /**
- * Logs a finished duel once (while `finished` is true) and returns the Master's Seal card when the result earns the seal.
+ * Logs a finished duel once (while `finished` is true) and returns the seal card when the result earns the seal.
  * `passed` and `overall` describe the learner's result.
  */
 export function useDuelOutcome(lesson: Lesson | undefined, finished: boolean, passed: boolean, overall: number) {

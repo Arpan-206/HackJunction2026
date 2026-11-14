@@ -10,14 +10,15 @@ interface SealCardProps {
 }
 
 /**
- * The Master's Seal: a gold wax seal drawn in SVG with the master's name round its rim, and the lesson, date and blind
- * score beside it. This is the one place gold is used freely; it is only shown once the lesson is earned.
+ * The seal: a gold wax seal drawn in SVG with the expert's name round its rim, and the lesson, date and blind score beside
+ * it. This is the one place gold is used freely; it is only shown once the lesson is earned. `master` is the wire field
+ * `master_name`, shown to people as the expert.
  */
 export function SealCard({ master, lesson, at, score }: SealCardProps) {
   const rim = `SEALED BY ${master.toUpperCase()}`;
   const initial = master.trim().charAt(0).toUpperCase() || 'M';
   return (
-    <section className="ap-seal" aria-label={`Master's Seal, awarded by ${master}`}>
+    <section className="ap-seal" aria-label={`Seal awarded by ${master}`}>
       <svg className="ap-seal__wax" viewBox="0 0 200 200" role="img" aria-label="Gold wax seal">
         <defs>
           <radialGradient id="ap-seal-g" cx="38%" cy="32%" r="80%">
@@ -45,7 +46,7 @@ export function SealCard({ master, lesson, at, score }: SealCardProps) {
         </text>
       </svg>
       <div className="ap-seal__body">
-        <h2 className="ap-seal__title">Sealed by the Master</h2>
+        <h2 className="ap-seal__title">Sealed by {master}</h2>
         <p className="ap-seal__line">
           {master} vouches for you in <em>{lesson}</em>.
         </p>

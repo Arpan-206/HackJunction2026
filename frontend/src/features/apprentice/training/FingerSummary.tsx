@@ -14,7 +14,7 @@ interface FingerSummaryProps {
  */
 export function FingerSummary({ coach, policy }: FingerSummaryProps) {
   const view = useCoachView(coach);
-  const guiding = policy.liveCoach && view.hasLearner;
+  const guiding = policy.liveCoach && !policy.rehearsal && view.hasLearner;
   const off = FINGERS.filter((f) => view.status[f] === 'off');
   const text = !guiding
     ? ''

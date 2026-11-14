@@ -119,7 +119,8 @@ export function Strings({ master, learner, coach, policy, combo }: StringsProps)
       const attr = line.geometry.attributes.instanceStart as unknown as { data: InstancedInterleavedBuffer };
       attr.data.array.set(seg);
       attr.data.needsUpdate = true;
-      colours.mix.lerpColors(colours.slack, colours.taut, Math.pow(t, 0.7));
+      // A rehearsal (between reps) still pulls the strings, but never colours them: only a running rep is judged.
+      colours.mix.lerpColors(colours.slack, colours.taut, policy.rehearsal ? 0 : Math.pow(t, 0.7));
       const mat = line.material as LineMaterial;
       mat.color.copy(colours.mix);
       const level = snapped ? 0 : (fray?.[i] ?? 0);

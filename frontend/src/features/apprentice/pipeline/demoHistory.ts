@@ -37,7 +37,7 @@ function mastered(stepId: string, daysAgo: number, hour: number, now: Date): Log
 
 /**
  * Believable demo history, as if the learner had been practising for a fortnight: the first lesson is mid-way with two
- * reviews due today, the second (when there is one) is Sealed by the Master. Nothing is logged for today, so the day is open.
+ * reviews due today, the second (when there is one) is Sealed. Nothing is logged for today, so the day is open.
  */
 export function buildDemoHistory(lessons: LessonLike[], now = new Date()): DemoHistory {
   const history: DemoHistory = { attempts: {}, tests: {} };

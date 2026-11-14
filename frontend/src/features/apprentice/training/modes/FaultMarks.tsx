@@ -104,7 +104,7 @@ export function FaultMarks({ hand, coach, policy, toleranceDeg }: FaultMarksProp
   useFrame(({ camera, size }, dt) => {
     const h = hand.current;
     const live = coach.live.current;
-    const guiding = Boolean(h) && policy.liveCoach && live.hasLearner;
+    const guiding = Boolean(h) && policy.liveCoach && !policy.rehearsal && live.hasLearner;
     const worstAny = guiding ? worstFinger(live.deviation, toleranceDeg) : null;
     const worst = worstAny && (!policy.focus || policy.focus.includes(worstAny.finger)) ? worstAny : null;
     FINGERS.forEach((f: Finger, i) => {

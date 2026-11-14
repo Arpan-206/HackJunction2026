@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../../components/PageHeader';
-import { Button, Card, Field, Stepper } from '../../../components/ui';
+import { Button, Card, Disclosure, Field, Stepper } from '../../../components/ui';
 import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { FingerLanes } from '../components/FingerLanes';
 import { LiveHandStage } from '../components/LiveHandStage';
@@ -69,24 +69,26 @@ export function ScratchStudio() {
               <ReplayPlayer items={replayItems} side={primarySide(choice?.hands ?? 'right')} prop={choice?.prop} onClose={() => s.setReplay(null)} />
             ) : (
               <>
-                <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={choice?.prop}>
+                <LiveHandStage glove={glove} showJoints={s.showJoints} showTrails={s.showTrails} prop={choice?.prop} live={recPhase === 'recording'}>
                   {choice && <span className="mst-stage__tag">{choice.name}</span>}
-                  {recPhase === 'recording' && <span className="mst-recmark">REC</span>}
                 </LiveHandStage>
-                <div className="mst-toggles" role="group" aria-label="Live view options">
-                  <Button variant="toggle" aria-pressed={s.showJoints} onClick={() => s.setShowJoints(!s.showJoints)}>
-                    Joint rings
-                  </Button>
-                  <Button variant="toggle" aria-pressed={s.showTrails} onClick={() => s.setShowTrails(!s.showTrails)}>
-                    Fingertip trails
-                  </Button>
-                </div>
                 {glove.status !== 'open' && (
                   <p className="mst-alert" role="status">
                     The glove stream is not connected. Is the backend running on port 8000? The hand shows a resting pose until it is.
                   </p>
                 )}
-                <FingerLanes getHand={() => glove.latest.current?.hands.find((h) => h.side === s.side) ?? glove.latest.current?.hands[0] ?? null} />
+                <Disclosure summary="Signal" className="mst-signal">
+                  <div className="mst-toggles" role="group" aria-label="Live view options">
+                    <Button variant="toggle" aria-pressed={s.showJoints} onClick={() => s.setShowJoints(!s.showJoints)}>
+                      Joint rings
+                    </Button>
+                    <Button variant="toggle" aria-pressed={s.showTrails} onClick={() => s.setShowTrails(!s.showTrails)}>
+                      Fingertip trails
+                    </Button>
+                  </div>
+                  <FingerLanes getHand={() => glove.latest.current?.hands.find((h) => h.side === s.side) ?? glove.latest.current?.hands[0] ?? null} />
+                  <SteadinessControl control={s.steadiness} />
+                </Disclosure>
               </>
             )}
           </div>
@@ -108,7 +110,6 @@ export function ScratchStudio() {
               </Card>
             )}
             <CalibrationPanel side={s.side} onSide={s.setSide} cal={s.calibration} />
-            <SteadinessControl control={s.steadiness} />
           </div>
         </div>
       </section>
@@ -124,7 +125,7 @@ export function ScratchStudio() {
             <ol className="mst-plan" aria-label="Lesson plan">
               {s.planned.map((c) => (
                 <li key={c.id}>
-                  <strong>{c.name}</strong> <span className="note">{s.book.takesFor(c.id).filter((t) => t.kept).length} takes kept</span>
+                  <strong>{c.name}</strong> <span className="note">{((n) => `${n} ${n === 1 ? 'take' : 'takes'} kept`)(s.book.takesFor(c.id).filter((t) => t.kept).length)}</span>
                 </li>
               ))}
             </ol>

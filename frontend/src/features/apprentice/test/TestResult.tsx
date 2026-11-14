@@ -10,7 +10,7 @@ interface TestResultProps {
   verdictText: string;
   bestMoment: string;
   details?: ReactNode;
-  /** Shown under the best moment, such as the Master's Seal. */
+  /** Shown under the best moment, such as the expert's seal. */
   footer?: ReactNode;
   onAgain: () => void;
 }

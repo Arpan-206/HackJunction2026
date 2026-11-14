@@ -162,35 +162,17 @@
   pointer-events: none;
 }
 .mst-stage__tag {
-  padding: 0.1em 0.7em;
-  border-radius: var(--radius-s);
-  background: var(--surface);
   color: var(--text);
-  font: italic 500 var(--step-0) var(--font-note);
+  font: italic 500 var(--step-1) var(--font-note);
 }
-.mst-recmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.15em 0.8em;
-  border-radius: var(--radius-s);
-  background: var(--text);
-  color: var(--bg);
-  font: 700 var(--step-0) var(--font-ui);
-  letter-spacing: 0.12em;
-}
-.mst-recmark::before {
+/* While a take records, a walnut-ink rule is drawn inside the stage frame; the panel title says "Recording take N". */
+.mst-stage--live::after {
   content: '';
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  background: var(--bg);
-  animation: mst-blink 1s ease-in-out infinite;
-}
-@keyframes mst-blink {
-  50% {
-    opacity: 0.55;
-  }
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 3px var(--walnut-ink);
+  pointer-events: none;
 }
 .mst-toggles {
   display: flex;
@@ -305,6 +287,10 @@
 .mst-rec__count {
   font: 700 var(--step-3) / 1 var(--font-ui);
 }
+.mst-rec__none {
+  font: italic 500 var(--step-1) / 1.2 var(--font-note);
+  color: var(--text-2);
+}
 .mst-rec__count small {
   font: 700 var(--step-0) var(--font-ui);
   color: var(--text-2);
@@ -393,6 +379,17 @@
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+}
+/* Delete sits at the far end of the row, away from Replay and Keep, and asks once inline before removing anything. */
+.mst-take__delete,
+.mst-take__confirm {
+  margin-left: auto;
+}
+.mst-take__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: 600 var(--step-0) var(--font-ui);
 }
 .mst-takes__compare {
   display: flex;
@@ -616,9 +613,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mst-recmark::before {
-    animation: none;
-  }
   .mst-move {
     transition: none;
   }

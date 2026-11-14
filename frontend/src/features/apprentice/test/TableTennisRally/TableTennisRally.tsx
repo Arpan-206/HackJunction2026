@@ -122,17 +122,21 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
   const seal = useDuelOutcome(lesson, stage === 'result' && !twoPlayer, youWon, share);
 
   if (stage === 'result') {
-    const mine = twoPlayer ? Math.max(g.totals.a, g.totals.b) : g.totals.a;
+    const winner: PlayerId = g.winner ?? 'a';
+    const loser: PlayerId = winner === 'a' ? 'b' : 'a';
+    const played = g.rounds.a + g.rounds.b;
+    const roundWord = (n: number) => `${n} ${n === 1 ? 'round' : 'rounds'}`;
+    const byRounds = `${roundWord(g.rounds[winner])} to ${g.rounds[loser]}`;
     return (
       <TestResult
         title={twoPlayer ? 'Two-player rally' : 'Rally against the bot'}
         score={`${g.totals[left]} : ${g.totals[right]}`}
-        scoreLabel={`Points won, ${leftName} against ${rightName}`}
+        scoreLabel={`${twoPlayer ? `${leftName}, then ${rightName}: ` : ''}${g.totals[left]} points to ${g.totals[right]} over ${roundWord(played)}`}
         verdict={twoPlayer ? 'win' : youWon ? 'win' : 'lose'}
-        verdictText={twoPlayer ? `${g.name(g.winner ?? 'a')} wins the match` : youWon ? 'You win the match' : 'The bot wins the match'}
+        verdictText={`${g.name(winner)} ${winner === 'a' && !twoPlayer ? 'win' : 'wins'} the match, ${byRounds}`}
         bestMoment={g.best.text || (g.longestRally > 0 ? `A rally of ${g.longestRally} returns` : '')}
         footer={seal}
-        details={<p className="note">Longest rally: {g.longestRally} returns. {twoPlayer ? `Winner took ${mine} points.` : `You won ${mine} points.`}</p>}
+        details={<p className="note">Longest rally: {g.longestRally} {g.longestRally === 1 ? 'return' : 'returns'}.</p>}
         onAgain={() => setStage('intro')}
       />
     );
@@ -156,6 +160,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
             Round {snap.round} of {spec.rounds}
           </span>
           <span className="ap-board__first">First to 5</span>
+          {snap.rally > 1 && <span className="ap-board__rally">Rally of {snap.rally}</span>}
         </div>
         <div className={`ap-board__side ${snap.points[right] > snap.points[left] ? 'ap-board__side--lead' : ''}`}>
           <span className="ap-board__name">{rightName}</span>
@@ -179,9 +184,6 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
               </p>
             )}
             {snap.phase === 'round' && <p className="ap-replay ap-replay--round">Round {snap.round} complete. Next round starts shortly.</p>}
-            <p className="ap-rally" aria-live="off">
-              Rally {snap.rally}
-            </p>
           </>
         )}
         {stage === 'intro' && (

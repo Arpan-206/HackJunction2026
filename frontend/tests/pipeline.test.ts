@@ -279,3 +279,18 @@ describe('duel bot scaled to rank', () => {
     expect(high).toBeGreaterThanOrEqual(low);
   });
 });
+
+describe('learner copy after the design review', () => {
+  it('formats a review day as today, tomorrow or day and short month', async () => {
+    const { formatDueDay, RANK_LABEL } = await import('../src/features/apprentice/pipeline/progress');
+    expect(formatDueDay('2026-11-14', '2026-11-14')).toBe('today');
+    expect(formatDueDay('2026-11-15', '2026-11-14')).toBe('tomorrow');
+    expect(formatDueDay('2026-11-21', '2026-11-14')).toBe('21 Nov');
+    expect(RANK_LABEL.sealed).toBe('Sealed');
+  });
+
+  it('never says "Follow the expert" twice: the strings blurb is one sentence', () => {
+    expect(policyForStage('strings').blurb).toBe('Every finger is guided.');
+    expect(policyForStage('strings').rehearsal).toBeUndefined();
+  });
+});

@@ -10,7 +10,7 @@ import {
   type Launch,
   type Vec3,
 } from './ball';
-import { decideReturn, type ReturnDecision, type SwingReading } from './swing';
+import { decideReturn, swingWord, type ReturnDecision, type SwingReading } from './swing';
 
 /** a stands at the near end (+z, the right glove), b at the far end (-z): the bot or the left glove. */
 export type PlayerId = 'a' | 'b';
@@ -175,7 +175,7 @@ export class RallyGame {
     this.paddle[who] = { x: this.ball.p.x, y: this.ball.p.y };
     events.push({ type: 'contact', who, decision, reading, bot: !human });
     if (human && reading && decision.outcome === 'good') {
-      if (reading.peakSpeed > this.best.value && who === 'a') this.best = { text: `Return at ${reading.peakSpeed.toFixed(1)} rad/s in a rally of ${this.rally + 1}`, value: reading.peakSpeed };
+      if (reading.peakSpeed > this.best.value && who === 'a') this.best = { text: `A ${swingWord(reading.peakSpeed)} return${this.rally > 0 ? ` in a rally of ${this.rally + 1}` : ''}`, value: reading.peakSpeed };
     }
     if (decision.outcome === 'good') this.rally += 1;
     this.longestRally = Math.max(this.longestRally, this.rally);
@@ -206,7 +206,9 @@ export class RallyGame {
     this.totals[winner] += 1;
     const why = this.lastDecision ? this.lastDecision.reason : 'the serve was lost';
     const subject = this.lastBotMiss ? '' : `${this.name(loser)}: `;
-    this.caption = `${this.name(winner)} win${winner === 'a' && !this.opts.twoPlayer ? '' : 's'} the point. ${subject}${why}.`;
+    // The reason opens a sentence when no name precedes it, so it takes a capital ("The bot overhits it long").
+    const reason = subject ? why : why.charAt(0).toUpperCase() + why.slice(1);
+    this.caption = `${this.name(winner)} win${winner === 'a' && !this.opts.twoPlayer ? '' : 's'} the point. ${subject}${reason}.`;
     this.phase = 'point';
     this.timer = POINT_PAUSE_S;
     this.incoming = null;

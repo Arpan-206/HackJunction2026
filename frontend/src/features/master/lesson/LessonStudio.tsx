@@ -14,7 +14,7 @@ export function LessonStudio() {
 
   return (
     <>
-      <PageHeader kicker="Il maestro" title={lesson?.title ?? 'Lesson studio'} />
+      <PageHeader title={lesson?.title ?? 'Lesson studio'} />
       {loading && <p className="note">Unrolling the lesson...</p>}
       {error && (
         <div className="mst-alert" role="alert">

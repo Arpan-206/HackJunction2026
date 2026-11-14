@@ -20,7 +20,7 @@ function useFingerTints(hand: RefObject<HandHandle>, coach: Coach, policy: Attem
     const live = coach.live.current;
     for (const f of FINGERS) {
       let want: string | null = null;
-      if (policy.showMaster && policy.strings !== 'none' && live.hasLearner) {
+      if (policy.showMaster && policy.strings !== 'none' && !policy.rehearsal && live.hasLearner) {
         if (live.status[f] === 'off' && (!policy.focus || policy.focus.includes(f))) want = stage.vermilion;
         else if (goodTint && policy.strings === 'all') want = stage.malachite;
       }

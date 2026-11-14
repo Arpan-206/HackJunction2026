@@ -49,9 +49,7 @@ export function StepRecorderDialog({ step, lessonId, book, onReference, onClose 
             <ReplayPlayer items={replay.map((id) => ({ id, label: `Take ${takes.find((t) => t.id === id)?.n ?? ''}`.trim() }))} side={side} prop={step.prop} onClose={() => setReplay(null)} />
           ) : (
             <>
-              <LiveHandStage glove={glove} showJoints showTrails={false} prop={step.prop}>
-                {phase === 'recording' && <span className="mst-recmark">REC</span>}
-              </LiveHandStage>
+              <LiveHandStage glove={glove} showJoints showTrails={false} prop={step.prop} live={phase === 'recording'} />
               <FingerLanes getHand={() => glove.latest.current?.hands.find((h) => h.side === side) ?? glove.latest.current?.hands[0] ?? null} />
             </>
           )}

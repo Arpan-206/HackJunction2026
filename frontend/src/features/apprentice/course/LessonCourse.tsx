@@ -7,7 +7,8 @@ import { ButtonLink, Card } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { useProgress } from '../hooks/useProgress';
 import { PlanCard } from './PlanCard';
-import { dayKey, isDue } from '../pipeline/progress';
+import { dayKey, formatDueDay, isDue } from '../pipeline/progress';
+import { useLoggedAttempts } from '../../shared/practiceLog';
 import { useLessonProgress } from '../pipeline/useRank';
 import { RankLine } from './RankLine';
 import { SealCard } from './SealCard';
@@ -28,6 +29,7 @@ export function LessonCourse() {
   const { lessonId = '' } = useParams();
   const { data: lesson, loading, error, offline } = useLessonById(lessonId);
   const progress = useProgress(lessonId);
+  const logged = useLoggedAttempts(lessonId);
   const lp = useLessonProgress(lesson);
   const today = dayKey(new Date());
 
@@ -44,9 +46,21 @@ export function LessonCourse() {
     );
   }
 
-  const done = lesson.steps.filter((s) => progress.get(s.id).best >= 70).length;
+  // One source of truth with the rank and the seal: the pipeline's practice log (with the older per-step store as a fallback
+  // for attempts made before the log existed). A lesson is done once it is mastered blind.
+  const stepState = lesson.steps.map((s, i) => {
+    const mine = logged.filter((a) => a.step_id === s.id);
+    const legacy = progress.get(s.id);
+    const attempts = Math.max(mine.length, legacy.attempts);
+    const best = Math.max(legacy.best, ...mine.map((a) => Math.round(a.score.overall)));
+    const mastery = lp?.steps[i] ?? null;
+    return { attempts, best, mastery, done: Boolean(mastery?.mastered_at) };
+  });
+  const done = stepState.filter((st) => st.done).length;
   const pct = lesson.steps.length ? Math.round((done / lesson.steps.length) * 100) : 0;
   const test = lesson.test ? TEST_COPY[lesson.test.kind] : null;
+  /** Only the first unfinished lesson (not mastered yet, or with its review due) gets the large primary button. */
+  const nextIndex = stepState.findIndex((st) => !st.done || (st.mastery !== null && isDue(st.mastery, today)));
 
   return (
     <>
@@ -59,7 +73,7 @@ export function LessonCourse() {
         <p className="note ap-course__lede">{lesson.summary}</p>
         <div className="ap-course__progress" role="group" aria-label="Course progress">
           <span>
-            {done} of {lesson.steps.length} lessons passed
+            <span className="ap-num">{done}</span> of <span className="ap-num">{lesson.steps.length}</span> {lesson.steps.length === 1 ? 'lesson' : 'lessons'} mastered
           </span>
           <span className="ap-bar__track" role="presentation">
             <span className="ap-bar__fill ap-bar__fill--ok" style={{ width: `${pct}%` }} />
@@ -70,7 +84,8 @@ export function LessonCourse() {
       {lesson.steps.length === 0 && <p className="note ap-state">This course has no lessons yet.</p>}
       <ol className="ap-syllabus">
         {lesson.steps.map((s, i) => {
-          const p = progress.get(s.id);
+          const st = stepState[i];
+          const primary = i === nextIndex;
           return (
             <li key={s.id}>
               <Card as="article" className="ap-lesson">
@@ -87,14 +102,21 @@ export function LessonCourse() {
                   </ul>
                   <div className="ap-lesson__foot">
                     <span className="ap-lesson__prog">
-                      {p.attempts === 0 ? 'Not started' : `Best ${p.best} in ${p.attempts} ${p.attempts === 1 ? 'attempt' : 'attempts'}`}
-                      {p.best >= 70 && <strong className="ap-lesson__passed">Passed</strong>}
-                      {lp?.steps[i]?.mastered_at && (
-                        <span className="ap-lesson__mastery">{isDue(lp.steps[i], today) ? 'Mastered blind. Review due.' : `Mastered blind. Next review ${lp.steps[i].next_due}.`}</span>
+                      {st.attempts === 0 ? (
+                        'Not started'
+                      ) : (
+                        <span>
+                          Best <span className="ap-num">{st.best}</span> in <span className="ap-num">{st.attempts}</span> {st.attempts === 1 ? 'attempt' : 'attempts'}
+                        </span>
+                      )}
+                      {st.done && st.mastery && (
+                        <span className="ap-lesson__mastery">
+                          {isDue(st.mastery, today) ? 'Mastered blind. Review due.' : `Mastered blind. Next review ${st.mastery.next_due ? formatDueDay(st.mastery.next_due, today) : 'soon'}.`}
+                        </span>
                       )}
                     </span>
-                    <ButtonLink to={`/apprentice/lessons/${lesson.id}/steps/${i}`} large>
-                      {p.attempts === 0 ? 'Start practising' : 'Practise again'}
+                    <ButtonLink to={`/apprentice/lessons/${lesson.id}/steps/${i}`} variant={primary ? 'primary' : 'secondary'} large={primary}>
+                      {st.done ? 'Review' : st.attempts === 0 ? 'Start practising' : 'Practise again'}
                     </ButtonLink>
                   </div>
                 </div>
@@ -113,8 +135,8 @@ export function LessonCourse() {
                   <li>{lesson.test?.rounds} rounds</li>
                 </ul>
                 <div className="ap-lesson__foot">
-                  <span className="ap-lesson__prog">{done < lesson.steps.length ? 'Best after the lessons, but open to everyone.' : 'You have passed every lesson.'}</span>
-                  <ButtonLink to={`/apprentice/lessons/${lesson.id}/test`} large>
+                  <span className="ap-lesson__prog">{done < lesson.steps.length ? 'Best after the lessons, but open to everyone.' : 'You have mastered every lesson.'}</span>
+                  <ButtonLink to={`/apprentice/lessons/${lesson.id}/test`} variant={nextIndex < 0 ? 'primary' : 'secondary'} large={nextIndex < 0}>
                     Test your skills
                   </ButtonLink>
                 </div>

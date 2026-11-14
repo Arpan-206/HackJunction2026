@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api, useGloveStream, type Lesson, type ScoreResult, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApHeader } from '../ApHeader';
-import { Button, ButtonLink, Countdown } from '../../../components/ui';
+import { Button, ButtonLink, Countdown, Disclosure } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { recordAttempt } from '../hooks/useProgress';
 import { CalibrationPanel } from '../../shared/CalibrationPanel';
@@ -15,7 +15,7 @@ import { localScore } from './coach/localScore';
 import { attemptRetryLine, checkAttempt } from './coach/attemptGuard';
 import { useCoach, type PracticeMode } from './coach/useCoach';
 import { goalLine, repLine } from '../pipeline/coachLines';
-import { isDemo } from '../pipeline/flags';
+import { isDemo, isDev } from '../pipeline/flags';
 import type { RepOutcome } from '../pipeline/stages';
 import { PlanCard } from '../course/PlanCard';
 import { usePracticePlan } from '../hooks/usePracticePlan';
@@ -55,8 +55,7 @@ function attemptLength(period: number): number {
  */
 export function TrainingRoom() {
   const { lessonId, stepIndex } = useParams();
-  const [params] = useSearchParams();
-  const dev = params.get('dev') === '1';
+  const dev = useMemo(() => isDev(), []);
   const { data: lesson, loading, error, offline } = useLessonById(lessonId);
   const index = Number(stepIndex ?? 0);
   const step = lesson?.steps[index] ?? null;
@@ -110,7 +109,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const calibrated = calibration.latest !== null;
 
   const [mode, setMode] = useState<PracticeMode>('flow');
-  const [clumsy, setClumsy] = useState(dev);
+  // The clumsy simulation starts on only when this very URL asks for ?dev=1; the remembered dev flag just offers the switch.
+  const [clumsy, setClumsy] = useState(() => dev && new URLSearchParams(window.location.search).get('dev') === '1');
   const demo = useMemo(() => isDemo(), []);
   const pipe = useStepPipeline(lessonId, step, demo);
   const plan = usePracticePlan(lesson);
@@ -124,8 +124,10 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const recordingId = useRef<string | null>(null);
   const endTimer = useRef<number | null>(null);
 
-  const policy = pipe.policy;
   const watching = pipe.stage === 'watch';
+  // Before a rep starts (and during its countdown) the room is a rehearsal: hands and strings move, nothing is judged.
+  const rehearsing = !watching && (phase === 'ready' || phase === 'countdown');
+  const policy = useMemo(() => (rehearsing ? { ...pipe.policy, rehearsal: true } : pipe.policy), [pipe.policy, rehearsing]);
 
   const finishRef = useRef<() => void>(() => {});
   const recordStartRef = useRef<() => void>(() => {});
@@ -253,6 +255,17 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const nextTo = index + 1 < total ? `/apprentice/lessons/${lessonId}/steps/${index + 1}` : hasTest ? `/apprentice/lessons/${lessonId}/test` : `/apprentice/lessons/${lessonId}`;
   const nextLabel = index + 1 < total ? 'Next lesson' : hasTest ? 'Test your skills' : 'Finish';
   const busy = phase === 'countdown' || phase === 'running' || phase === 'scoring';
+  const calPanel = (
+    <CalibrationPanel
+      side={side}
+      onSide={() => undefined}
+      cal={calibration}
+      compact
+      hideSide
+      title="Calibrate your glove"
+      missingNote="Not calibrated yet. Scores assume an average hand until you do."
+    />
+  );
 
   return (
     <div className="ap-room">
@@ -301,9 +314,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           <FingerSummary coach={coach} policy={policy} />
           <p className="ap-stage__cap">
             {phase === 'running' && <span className="ap-stage__dot" aria-hidden="true" />}
-            {phase === 'running' ? `Recording rep ${pipe.reps + 1}. ` : watching ? `Watch, ${watchRate < 1 ? 'half speed' : 'full speed'}. ` : `${policy.label}. `}
+            {phase === 'running' ? `Recording rep ${pipe.reps + 1}. ` : watching ? `Watch, ${watchRate < 1 ? 'half speed' : 'full speed'}. ` : ''}
             {policy.blurb}
-            {track && <> {track.source === 'recording' ? "The expert's recording is the guide." : 'A mock guide stands in for the expert.'}</>}
+            {watching && track && track.source !== 'recording' && ' A sample guide plays the expert here.'}
           </p>
         </section>
 
@@ -312,7 +325,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             <StageLadder machine={pipe.machine} cfg={pipe.cfg} review={pipe.review} goal={goal} />
             <p className="ap-instruction">{step.instruction}</p>
             <p className="ap-tolerance">
-              Room for error: {config.toleranceDeg}&deg; per finger, {config.timingMs} ms of timing.
+              Room for error: <span className="ap-num">{config.toleranceDeg}&deg;</span> per finger, <span className="ap-num">{config.timingMs}</span> ms of timing.
             </p>
             <div className="ap-actions">
               {phase === 'running' ? (
@@ -336,20 +349,14 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           </div>
 
           <div className="card ap-panel">
-            <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running'} />
+            <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running' || phase === 'scoring'} />
           </div>
 
-          <CalibrationPanel
-            side={side}
-            onSide={() => undefined}
-            cal={calibration}
-            compact
-            hideSide
-            title="Calibrate your glove"
-            missingNote="Not calibrated yet. Scores assume an average hand until you do."
-          />
+          {/* Calibration is prominent only while the glove has never been calibrated; after that it lives in the settings. */}
+          {!calibration.loading && !calibrated && calPanel}
 
-          <div className="card ap-panel">
+          <Disclosure summary="Room settings" className="ap-settings">
+            {(calibration.loading || calibrated) && calPanel}
             <GuidanceModeSwitch />
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>
@@ -363,7 +370,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
                 <span className="note">ring finger lags 300 ms, under-curls 25&deg;</span>
               </label>
             )}
-          </div>
+          </Disclosure>
         </aside>
       </div>
       )}

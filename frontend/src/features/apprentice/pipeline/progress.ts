@@ -8,7 +8,7 @@ export const MAX_BOX = LEITNER_DAYS.length - 1;
 
 export type Rank = 'apprentice' | 'journeyman' | 'sealed';
 
-export const RANK_LABEL: Record<Rank, string> = { apprentice: 'Apprentice', journeyman: 'Journeyman', sealed: 'Sealed by the Master' };
+export const RANK_LABEL: Record<Rank, string> = { apprentice: 'Apprentice', journeyman: 'Journeyman', sealed: 'Sealed' };
 
 /** How hard the duel bot plays for each rank, from 0 (clumsy) to 1 (expert). The default 0.5 is the original difficulty. */
 export const BOT_SKILL: Record<Rank, number> = { apprentice: 0.25, journeyman: 0.5, sealed: 0.85 };
@@ -34,6 +34,15 @@ export function daysBetween(a: string, b: string): number {
     return Date.UTC(y, m - 1, d);
   };
   return Math.round((t(b) - t(a)) / 86400000);
+}
+
+/** A review day as people say it: "today", "tomorrow", or "15 Nov" (day and short month, like the other dates). */
+export function formatDueDay(day: string, today: string): string {
+  const gap = daysBetween(today, day);
+  if (gap <= 0) return 'today';
+  if (gap === 1) return 'tomorrow';
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d, 12).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export interface StepMastery {

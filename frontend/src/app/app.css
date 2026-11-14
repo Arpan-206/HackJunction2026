@@ -370,15 +370,39 @@
   font: italic 400 1.05rem var(--font-note);
   color: var(--text-2);
 }
-.roles__foot .theme-select {
-  width: auto;
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--line-strong);
-  padding: 0 0.6rem;
+.theme-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.9rem;
+  font: 400 var(--step-0) var(--font-note);
+  color: var(--text-2);
 }
-.roles__foot .theme-select option {
+.theme-switch__label {
+  font-style: italic;
+}
+.theme-switch__opt {
+  min-height: var(--target);
+  padding: 0 0.15rem;
+  background: none;
+  border: 0;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.theme-switch__opt[aria-pressed='true'] {
   color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3em;
+}
+.theme-switch__opt:hover {
+  color: var(--text);
+}
+.theme-switch__opt:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 @media (max-width: 860px) {
   .roles__stage {

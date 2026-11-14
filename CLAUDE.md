@@ -15,7 +15,7 @@ Apprentice: experts record hand skills with Rokoko gloves, learners train agains
 
 - Backend (in `backend/`): `uv sync`, then `uv run uvicorn app.main:app --port 8000 --reload`. Tests: `uv run pytest -q`.
 - Frontend (in `frontend/`): `npm install`, `npm run dev` (port 5173), `npm run build`, `npm run lint`, `npm test`, `npm run e2e` (backend up), `node e2e/mock-walk.mjs` (no backend), `node e2e/learner-real.mjs` (backend with `GLOVE_SOURCE=simulator`, `LLM_PROVIDER=fake`).
-- Local runs: `LLM_PROVIDER=fake`. Mock mode: `?mock=1` / `?mock=0` / `VITE_MOCK=1`, automatic when `/api/health` fails. Dev panel `?dev=1`. Routes: `/expert`, `/apprentice`, `/playground`, `/lab`.
+- Local runs: `LLM_PROVIDER=fake`. Mock mode: `?mock=1` / `?mock=0` / `VITE_MOCK=1`, automatic when `/api/health` fails. Dev panel `?dev=1` (per tab, sessionStorage; `?dev=0` clears). Routes: `/expert`, `/apprentice`, `/playground`, `/lab`.
 - Python uses uv only. Never write `pip install` or manual venvs.
 
 ## Hard rules
@@ -25,7 +25,7 @@ Apprentice: experts record hand skills with Rokoko gloves, learners train agains
 3. Never call paid APIs in tests. `backend/tests/conftest.py` blanks the Gemini key. Never print or copy a key from `backend/.env`; name variables only (`backend/.env.example`). Never commit `.env`.
 4. No em dashes anywhere (code, docs, commits). Use a hyphen, comma or colon.
 5. Design: Renaissance bottega theme. Gold only for mastery. Vermilion only for corrections. Malachite for correct. No status pills, no kicker labels. Text at least 16px, readable from 3 m.
-6. User-facing copy says "expert", not "master", except the rank "Sealed by the Master". Wire fields such as `master_name` and code paths under `features/master` keep their names.
+6. User-facing copy says "expert", not "master" (the top rank is "Sealed", and the seal reads "Sealed by {expert name}"). Wire fields such as `master_name` and code paths under `features/master` keep their names.
 7. Commit only when asked; then push to the branch remote, authored as the user only, no Claude trailers. Ask before force push or push to main.
 
 ## Unverified

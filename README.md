@@ -31,13 +31,13 @@ The frontend carries a port of the backend (`frontend/src/mock/`), with data kep
 
 - `?mock=1` turns it on and remembers it. `?mock=0` turns it off again and beats `VITE_MOCK`.
 - `VITE_MOCK=1` (environment variable at build or dev time) forces it on.
-- It also starts by itself when `/api/health` does not answer. The left rail then shows "Demo data, no backend".
+- It also starts by itself when `/api/health` does not answer. The left rail then shows "Sample data, offline".
 
 ## Demo: two windows
 
 Open `http://localhost:5173/expert` in one window (record or generate a lesson) and `http://localhost:5173/apprentice` in another (train, score, test). `/` is the role picker. `/lab` is a hand lab page.
 
-- Dev panel: add `?dev=1` (remembered) to show it, `?dev=0` to hide it.
+- Dev panel: add `?dev=1` to show it (remembered for the tab only, never across sessions), `?dev=0` to hide it.
 - Playground: `/playground` is a sandbox for the 3D hand and overlays.
 
 ## Glove sources

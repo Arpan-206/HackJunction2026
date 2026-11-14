@@ -8,4 +8,5 @@ export { Countdown } from './Countdown';
 export { RecordButton } from './RecordButton';
 export { Tabs, type TabDef } from './Tabs';
 export { Field, TextArea } from './Field';
+export { Disclosure } from './Disclosure';
 export { ToastProvider, useToast } from './Toast';

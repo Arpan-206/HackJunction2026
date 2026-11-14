@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { HandCanvas, Hand } from '../three';
 import type { MotionSpec } from '../api';
-import { ThemeSelect } from '../components/ThemeSelect';
+import { ThemeSwitch } from '../components/ThemeSelect';
 
 const masterMotion: MotionSpec = { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5, 4, 3, 2], beat_ms: 700 };
 const apprenticeMotion: MotionSpec = { preset: 'finger_sequence', sequence: [5, 4, 3, 2, 1, 2, 3, 4], beat_ms: 900 };
@@ -65,7 +65,7 @@ export function RoleSelect() {
 
       <footer className="roles__foot">
         <span>Junction 2026 &middot; Rokoko Smartgloves</span>
-        <ThemeSelect />
+        <ThemeSwitch />
       </footer>
     </div>
   );

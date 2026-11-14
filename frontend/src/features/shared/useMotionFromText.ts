@@ -32,7 +32,7 @@ export function useMotionFromText(side?: Side): MotionFromTextHandle {
       setResult(r);
       return r;
     } catch (e) {
-      setError(e instanceof ApiError && e.isNetwork ? 'The maestro could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
+      setError(e instanceof ApiError && e.isNetwork ? 'The AI could not be reached. Check that the backend is running.' : e instanceof ApiError ? e.message : String(e));
       return null;
     } finally {
       setBusy(false);

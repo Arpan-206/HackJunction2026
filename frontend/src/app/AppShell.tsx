@@ -99,7 +99,7 @@ export function AppShell() {
             ))}
           </div>
           <div className="rail__foot">
-            {mock && <span className="rail__mock">Demo data, no backend</span>}
+            {mock && <span className="rail__mock">Sample data, offline</span>}
             <span role="status">
               <span
                 className={`glove-dot glove-dot--${mock ? "sim" : status}`}

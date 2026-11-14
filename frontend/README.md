@@ -11,7 +11,7 @@ npm run build    # tsc -b && vite build
 npm run lint
 ```
 
-Developer panel: renders only when switched on. Open any page with `?dev=1` to show it (the flag is remembered in localStorage under `apprentice.devpanel`, so it stays on for later visits). Open `/?dev=0` to clear the flag and hide it; presenters should do this before going on stage. The panel docks as a small tab on the right edge, and it also holds the theme switch. `VITE_DEV_PANEL` no longer forces it on.
+Developer panel: renders only when switched on. Open any page with `?dev=1` to show it. The flag is remembered for that browser tab only (sessionStorage key `apprentice.flag.dev`), so a new tab or a new session starts without it; `?dev=0` clears it at once. The old sticky localStorage key `apprentice.devpanel` is deleted on sight. The same flag shows the "Load demo history" button on the library and the clumsy-apprentice switch in the training room's settings. The panel docks as a small tab on the right edge, and it also holds the theme switch. `VITE_DEV_PANEL` no longer forces it on.
 
 `/lab` is a gallery of every hand style, pose, prop and grip camera. Use it when touching `src/three/`.
 

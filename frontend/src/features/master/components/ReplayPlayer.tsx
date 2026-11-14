@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { GloveFrame, Prop, Side } from '../../../api';
-import { Button, Badge } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 import { Hand, HandCanvas, Racket } from '../../../three';
 import { framesDuration, usePlayback } from '../../shared/playback';
 import { useRecording } from '../hooks/useRecording';
@@ -62,9 +62,9 @@ export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: 
         </HandCanvas>
         <div className="mst-stage__overlay">
           {items.map((it) => (
-            <Badge key={it.id} tone="lapis">
+            <span key={it.id} className="mst-stage__tag">
               {it.label}
-            </Badge>
+            </span>
           ))}
           {loading && <span className="note">Fetching the take...</span>}
         </div>
@@ -77,7 +77,7 @@ export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: 
       )}
 
       <div className="mst-replay__controls">
-        <Button onClick={() => apply((p) => p.toggle())} aria-label={pa.playing ? 'Pause' : 'Play'} disabled={!duration}>
+        <Button variant={pa.playing ? 'primary' : 'secondary'} onClick={() => apply((p) => p.toggle())} aria-label={pa.playing ? 'Pause' : 'Play'} disabled={!duration}>
           {pa.playing ? 'Pause' : 'Play'}
         </Button>
         <label className="mst-scrub">
@@ -97,12 +97,12 @@ export function ReplayPlayer({ items, side = 'right', prop = 'none', onClose }: 
         </label>
         <div className="mst-seg" role="group" aria-label="Playback speed">
           {RATES.map((r) => (
-            <Button key={r} variant={pa.rate === r ? 'primary' : 'secondary'} aria-pressed={pa.rate === r} onClick={() => apply((p) => p.setRate(r))}>
+            <Button key={r} variant="toggle" aria-pressed={pa.rate === r} onClick={() => apply((p) => p.setRate(r))}>
               {r}x
             </Button>
           ))}
         </div>
-        <Button variant={loop ? 'primary' : 'secondary'} aria-pressed={loop} onClick={() => setLoop((v) => !v)}>
+        <Button variant="toggle" aria-pressed={loop} onClick={() => setLoop((v) => !v)}>
           Loop
         </Button>
         {onClose && (

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useDevState, useGloveStream, type GloveSource, type LlmProvider, type MotionSpec } from '../api';
 import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
 import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
+import { isDev } from '../features/apprentice/pipeline/flags';
 import './devPanel.css';
 
-const STORAGE_KEY = 'apprentice.devpanel';
+/** The old, sticky localStorage flag. It is cleared on sight so a dev panel switched on long ago never resurfaces. */
+const LEGACY_KEY = 'apprentice.devpanel';
 
 const MOTIONS: Record<string, MotionSpec> = {
   finger_sequence: { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5], beat_ms: 620 },
@@ -14,22 +16,14 @@ const MOTIONS: Record<string, MotionSpec> = {
   idle: { preset: 'idle' },
 };
 
-/** Shown only when the URL carries ?dev=1 (remembered in localStorage until ?dev=0). */
+/** Shown only once the URL has carried ?dev=1 in this tab (sessionStorage, cleared by ?dev=0 or by closing the tab). */
 function shouldShow(): boolean {
   try {
-    const flag = new URLSearchParams(location.search).get('dev');
-    if (flag === '1') {
-      localStorage.setItem(STORAGE_KEY, '1');
-      return true;
-    }
-    if (flag === '0') {
-      localStorage.removeItem(STORAGE_KEY);
-      return false;
-    }
-    return localStorage.getItem(STORAGE_KEY) === '1';
+    localStorage.removeItem(LEGACY_KEY);
   } catch {
-    return false;
+    /* storage unavailable */
   }
+  return isDev();
 }
 
 /**

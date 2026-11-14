@@ -90,13 +90,21 @@ export class SwingTracker {
   }
 }
 
+/** The wrist speed in plain words, for captions: players never see rad/s. */
+export function swingWord(peakSpeed: number): string {
+  if (peakSpeed < RULES.swingSpeed) return 'barely moving';
+  if (peakSpeed < 5) return 'steady';
+  if (peakSpeed < 7.5) return 'quick';
+  return 'fast';
+}
+
 /** Turns a reading into a return: no swing or a closed face finds the net, an open face or a loose grip sails long. */
 export function decideReturn(r: SwingReading): ReturnDecision {
   const deg = Math.round(r.faceAngle * RAD2DEG);
-  if (!r.swinging) return { outcome: 'net', reason: `no swing (${r.peakSpeed.toFixed(1)} rad/s): the ball drops into the net`, quality: 0 };
+  if (!r.swinging) return { outcome: 'net', reason: 'no swing, the wrist was barely moving: the ball drops into the net', quality: 0 };
   if (r.faceAngle < RULES.closedFace) return { outcome: 'net', reason: `racket face too closed (${deg}°): into the net`, quality: 0.2 };
   if (r.faceAngle > RULES.openFace) return { outcome: 'long', reason: `racket face too open (+${deg}°): long`, quality: 0.2 };
   if (r.gripDeg < RULES.firmGrip) return { outcome: 'long', reason: `loose grip (${Math.round(r.gripDeg)}° curl): the racket twisted, long`, quality: 0.3 };
   const quality = Math.max(0.3, Math.min(1, r.peakSpeed / 9));
-  return { outcome: 'good', reason: `clean stroke at ${r.peakSpeed.toFixed(1)} rad/s, face ${deg >= 0 ? '+' : ''}${deg}°`, quality };
+  return { outcome: 'good', reason: `clean stroke, a ${swingWord(r.peakSpeed)} wrist, face ${deg >= 0 ? '+' : ''}${deg}°`, quality };
 }

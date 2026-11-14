@@ -5,7 +5,7 @@ import { MOTION_TEXT_MAX, motionProviderLine, useMotionFromText } from '../../sh
 interface DescribeMotionProps {
   side: Side;
   stepNumber: number;
-  /** Receives the motion the maestro chose, to replace the step's mock guide. */
+  /** Receives the motion the AI chose, to replace the step's mock guide. */
   onMotion: (motion: MotionSpec) => void;
 }
 

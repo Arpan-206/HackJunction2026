@@ -35,7 +35,14 @@ export function StageLadder({ machine, cfg, review, goal }: StageLadderProps) {
               <i key={i} className={i < machine.combo ? 'is-on' : ''} />
             ))}
           </span>
-          {review ? 'Review: one blind try.' : `${machine.combo} of ${cfg.cleanReps} clean reps in a row. Rep ${machine.repsInSet + 1} of ${cfg.setSize}.`}
+          {review ? (
+            'Review: one blind try.'
+          ) : (
+            <span>
+              <span className="ap-num">{machine.combo}</span> of <span className="ap-num">{cfg.cleanReps}</span> clean reps in a row. Rep{' '}
+              <span className="ap-num">{machine.repsInSet + 1}</span> of <span className="ap-num">{cfg.setSize}</span>.
+            </span>
+          )}
         </p>
       )}
       <p className="ap-ladder__goal">{goal}</p>

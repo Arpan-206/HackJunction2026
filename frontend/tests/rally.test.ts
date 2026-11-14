@@ -247,3 +247,13 @@ describe('RallyGame', () => {
     expect(game.clock).toBeLessThanOrEqual(0.1 + STEP);
   });
 });
+
+describe('rally copy in plain words', () => {
+  it('captions never show rad/s', () => {
+    const good = decideReturn({ swinging: true, peakSpeed: 6.5, faceAngle: 0.1, gripDeg: 200 });
+    const none = decideReturn({ swinging: false, peakSpeed: 0.4, faceAngle: 0, gripDeg: 200 });
+    expect(good.reason).toMatch(/quick wrist/);
+    expect(good.reason).not.toMatch(/rad\/s/);
+    expect(none.reason).not.toMatch(/rad\/s/);
+  });
+});

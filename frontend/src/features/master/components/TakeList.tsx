@@ -21,11 +21,13 @@ const OFF_BELOW = 60;
  */
 export function TakeList({ takes, referenceId, onToggleKept, onDelete, onSetReference, onReplay }: TakeListProps) {
   const [picked, setPicked] = useState<string[]>([]);
+  /** The take whose Delete was pressed: its row asks "Delete take N? Yes / Keep" before anything is removed. */
+  const [confirming, setConfirming] = useState<string | null>(null);
   const live = picked.filter((id) => takes.some((t) => t.id === id));
 
   const togglePick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id].slice(-2)));
 
-  if (!takes.length) return <p className="note mst-empty">No takes yet. Record one and it will appear here.</p>;
+  if (!takes.length) return <p className="note mst-empty">Recorded takes appear here, ready to replay and compare.</p>;
 
   return (
     <div className="mst-takes">
@@ -66,9 +68,27 @@ export function TakeList({ takes, referenceId, onToggleKept, onDelete, onSetRefe
                 <Button variant="ghost" aria-pressed={t.kept} onClick={() => onToggleKept(t.id)}>
                   {t.kept ? 'Set aside' : 'Keep'}
                 </Button>
-                <Button variant="ghost" onClick={() => onDelete(t.id)} aria-label={`Delete take ${t.n}`}>
-                  Delete
-                </Button>
+                {confirming === t.id ? (
+                  <span className="mst-take__confirm" role="group" aria-label={`Delete take ${t.n}?`}>
+                    <span>Delete take {t.n}?</span>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setConfirming(null);
+                        onDelete(t.id);
+                      }}
+                    >
+                      Yes
+                    </Button>
+                    <Button variant="ghost" autoFocus onClick={() => setConfirming(null)}>
+                      Keep
+                    </Button>
+                  </span>
+                ) : (
+                  <Button variant="ghost" className="mst-take__delete" onClick={() => setConfirming(t.id)} aria-label={`Delete take ${t.n}`}>
+                    Delete
+                  </Button>
+                )}
               </div>
             </li>
           );
