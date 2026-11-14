@@ -1,8 +1,10 @@
-"""A fallback chain of LLM providers: try each in order, move on after any failure, report who answered.
+"""A fallback chain of LLM providers: try each in order with a short time cap, report who answered.
 
-The usual chain is gemini, then ollama, then fake (rule lines). Any exception moves to the next link: a timeout,
-a spent budget (RateLimitedError), a 429 or 503, a missing key or an unreachable server. The fake provider never
-fails, so a chain that ends in fake always answers.
+The chain is gemini then the OpenAI-compatible endpoint (Gemma on Verda) when it is configured, or the other way
+round when a role is routed to Verda first. Any failure
+moves to the next link: a timeout, a spent budget (RateLimitedError), a 429 or 503, a missing key or an
+unreachable server. When every link fails the chain raises LLMOfflineError at once, so no caller hangs or retries:
+the coach shows the offline note, and lessons, plans and motions use their templates.
 
 Who answered is kept in a context variable, so concurrent requests never see each other's provider. Callers read
 it with answered_by() right after the call returns.
@@ -12,21 +14,31 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import replace
 from typing import Literal
 
-from app.core.errors import LLMTimeoutError, ServiceUnavailableError
+from app.core.errors import LLMTimeoutError
 from app.services.llm.base import LLMClient, LLMRequest
 
 log = logging.getLogger(__name__)
 
-# Time caps for the links after the first one. A live hint is useless after a few seconds, so a fallback model
-# gets a short cap there; lessons, plans and motions may wait longer.
-FALLBACK_HINT_TIMEOUT_S = 8.0
-FALLBACK_TIMEOUT_S = 60.0
+# Time caps on every model call in the chain. A live hint is useless after a few seconds. Gemma on Verda (the
+# openai provider) gets 20 s, then the same request goes to Gemini. A video lesson keeps the provider's own longer
+# limit, because Gemini must upload and process the video first.
+HINT_TIMEOUT_S = 5.0
+CALL_TIMEOUT_S = 30.0
+OPENAI_TIMEOUT_S = 20.0
+
+OFFLINE = "offline"
 
 _answered: ContextVar[str | None] = ContextVar("llm_answered_by", default=None)
+
+
+class LLMOfflineError(LLMTimeoutError):
+    """Every provider in the chain failed or timed out. Callers fall back at once, without retrying."""
 
 
 def answered_by(default: str) -> str:
@@ -42,15 +54,16 @@ def reset_answered() -> None:
 class ChainLLM:
     """Calls each provider in turn until one answers. Its name is the first link's name."""
 
-    def __init__(self, links: list[LLMClient]) -> None:
-        """Keep the links in order; at least one is required."""
+    def __init__(self, links: list[LLMClient], on_answer: Callable[[str, str], None] | None = None) -> None:
+        """Keep the links in order; at least one is required. on_answer(role, provider) hears every outcome."""
         if not links:
             raise ValueError("a chain needs at least one provider")
         self.links = links
         self.name = links[0].name
-        self.supports_video = bool(getattr(links[0], "supports_video", False))
+        self.supports_video = any(getattr(link, "supports_video", False) for link in links)
         self.last_answered: str | None = None
         self.last_errors: list[str] = []
+        self._on_answer = on_answer
 
     @property
     def names(self) -> list[str]:
@@ -63,47 +76,62 @@ class ChainLLM:
             return request
         return replace(request, model=None)
 
-    def _usable(self, link: LLMClient, request: LLMRequest) -> bool:
-        """A video request skips links that cannot watch video, except the fake template."""
-        if not request.video_path or link.name == "fake":
-            return True
-        return bool(getattr(link, "supports_video", False))
+    @staticmethod
+    def _usable(link: LLMClient, request: LLMRequest) -> bool:
+        """A video request skips links that cannot watch video."""
+        return not request.video_path or bool(getattr(link, "supports_video", False))
+
+    @staticmethod
+    def _limit(link: LLMClient, request: LLMRequest) -> float | None:
+        """The time cap for one call: short for hints, 20 s for Verda, none extra for video."""
+        if request.video_path:
+            return None
+        if request.task == "hint":
+            return HINT_TIMEOUT_S
+        return OPENAI_TIMEOUT_S if link.name == "openai" else CALL_TIMEOUT_S
 
     async def _run(self, method: Literal["generate_json", "generate_text"], request: LLMRequest) -> str:
         """Try every usable link in order and return the first answer."""
         reset_answered()
         errors: list[str] = []
-        last_exc: Exception | None = None
+        first_failure: tuple[str, str, float] | None = None
         for index, link in enumerate(self.links):
             if not self._usable(link, request):
                 continue
+            limit = self._limit(link, request)
             call = getattr(link, method)(self._request_for(index, request))
+            start = time.perf_counter()
             try:
-                if index == 0:
-                    text = await call
-                else:
-                    limit = FALLBACK_HINT_TIMEOUT_S if request.task == "hint" else FALLBACK_TIMEOUT_S
-                    text = await asyncio.wait_for(call, timeout=limit)
+                text = await asyncio.wait_for(call, timeout=limit)
             except TimeoutError:
-                last_exc = LLMTimeoutError(f"{link.name} fallback did not answer in time")
-                errors.append(f"{link.name}: timeout")
+                first_failure = first_failure or (link.name, f"timeout after {limit:g} s", time.perf_counter() - start)
+                errors.append(f"{link.name}: timeout after {limit:g} s")
                 log.warning("LLM chain: %s timed out on %s; trying the next provider", link.name, request.task)
                 continue
             except Exception as exc:  # noqa: BLE001 - any failure moves to the next link
-                last_exc = exc
+                first_failure = first_failure or (link.name, f"{type(exc).__name__}: {exc}", time.perf_counter() - start)
                 errors.append(f"{link.name}: {type(exc).__name__}: {exc}")
                 log.warning("LLM chain: %s failed on %s (%s); trying the next provider", link.name, request.task, exc)
                 continue
-            self.last_answered = link.name
+            self._note(request.task, link.name)
             self.last_errors = errors
             _answered.set(link.name)
-            if index:
-                log.info("LLM chain: %s answered %s after %s", link.name, request.task, "; ".join(errors))
+            if first_failure is not None:
+                failed, reason, failed_s = first_failure
+                log.warning(
+                    "LLM fallback: role=%s from=%s to=%s reason=%s failed_after=%.2fs answered_in=%.2fs",
+                    request.task, failed, link.name, reason, failed_s, time.perf_counter() - start,
+                )
             return text
+        self._note(request.task, OFFLINE)
         self.last_errors = errors
-        if last_exc is None:
-            raise ServiceUnavailableError("no provider in the chain can serve this request")
-        raise last_exc
+        raise LLMOfflineError("no model answered: " + ("; ".join(errors) or "no provider can serve this request"))
+
+    def _note(self, role: str, provider: str) -> None:
+        """Remember who answered and tell the listener."""
+        self.last_answered = provider
+        if self._on_answer is not None:
+            self._on_answer(role, provider)
 
     async def generate_json(self, request: LLMRequest) -> str:
         """Return schema-constrained JSON text from the first provider that answers."""

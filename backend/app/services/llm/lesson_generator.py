@@ -89,7 +89,7 @@ class LessonGenerator:
         filename: str,
     ) -> GenerateLessonResponse:
         """Generate a lesson from a video; providers without video support get the template plus a note."""
-        client = self._llm.client
+        client = self._llm.client_for("lesson")
         if not getattr(client, "supports_video", False):
             draft = template_lesson(f"{text} {filename}", skill)
             draft = draft.model_copy(
@@ -106,7 +106,7 @@ class LessonGenerator:
         self, text: str, skill: Skill | None, video: tuple[str, str] | None = None
     ) -> GenerateLessonResponse:
         """Return a lesson, the provider that produced it, and the number of model attempts used."""
-        client = self._llm.client
+        client = self._llm.client_for("lesson")
         video_path, video_mime = video if video else (None, None)
         errors: str | None = None
         fallback_provider = "fake"

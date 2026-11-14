@@ -51,7 +51,7 @@ class PlanService:
 
     async def plan(self, request: CoachPlanRequest) -> CoachPlanResponse:
         """Return a practice plan and the provider that wrote it."""
-        client = self._llm.client
+        client = self._llm.client_for("plan")
         errors: str | None = None
         fallback_provider = "fake"
         for attempt in range(1, 2 + c.LLM_MAX_RETRIES):
