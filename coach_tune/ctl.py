@@ -34,7 +34,7 @@ def client() -> httpx.Client:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["status", "upload", "train", "exec", "serve", "fetch", "wait-vllm"])
+    ap.add_argument("cmd", choices=["status", "upload", "upload-adapter", "train", "exec", "serve", "fetch", "wait-vllm"])
     ap.add_argument("what", nargs="?", default="")
     ap.add_argument("--args", default="")
     a = ap.parse_args()
@@ -47,6 +47,18 @@ def main() -> int:
                 t.add(vm.LANE / "train_lora.py", arcname="train_lora.py")
                 t.add(vm.OUT / "sft", arcname="sft")
             print(c.post("/ctl/upload", content=buf.getvalue()).json())
+        elif a.cmd == "upload-adapter":
+            # The saved adapter plus the merge scripts: then `exec merge.sh` and `serve tuned`.
+            buf = io.BytesIO()
+            with tarfile.open(fileobj=buf, mode="w:gz") as t:
+                t.add(vm.LANE / "train_lora.py", arcname="train_lora.py")
+                t.add(vm.LANE / "remote" / "merge_adapter.py", arcname="merge_adapter.py")
+                t.add(vm.LANE / "remote" / "merge.sh", arcname="merge.sh")
+                src = vm.OUT / (a.what or "adapter")
+                for f in sorted(src.iterdir()):
+                    if f.name.startswith("adapter_") or f.name in ("config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja"):
+                        t.add(f, arcname=f"adapter/{f.name}")
+            print(f"{len(buf.getvalue()) / 1e6:.1f} MB", c.post("/ctl/upload", content=buf.getvalue()).json())
         elif a.cmd == "train":
             print(c.post("/ctl/train", params={"args": a.args}).json())
         elif a.cmd == "exec":

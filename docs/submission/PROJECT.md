@@ -120,6 +120,20 @@ Gemma 4 31B ran on a Verda Serverless Container with one H200 GPU, behind vLLM (
 
 With the sketches, Gemma kept the recorded step order on both takes. Without them, it reordered or merged steps (docs/VERDA.md). The deployment is torn down (verda/STATUS-verda.md). The backend can now use the endpoint as an `openai` provider (source: git log, commit `4785ddd`; STATUS.md still lists it as a patch).
 
+### Our own coach model (coach-tune lane)
+
+No Gemini model was distilled. No output from Gemini or the Gemini Decisions API was used as training data at any point. Our tuned coach was trained only on text written by Gemma 4 31B (google/gemma-4-31B-it, bf16), an open-weights model we hosted ourselves on Verda. Gemini and the Decisions API are used only at run time, for live answers.
+
+We fine-tuned a small Gemma 4 (`google/gemma-4-E2B-it`, LoRA) on our own glove data, labelled by Gemma 4 31B on Verda. Everything ran on Verda Serverless Containers with one H100 each (docs/COACH_MODEL.md, docs/VERDA.md).
+
+| Measure | Value |
+| --- | --- |
+| Held-out coaching lines right on finger, direction and style | tuned 89.0%, untuned 55.5%, 31B teacher 85.7% |
+| Same, real capture frames only | tuned 62.2%, untuned 43.5%, teacher 66.7% |
+| Latency p50 from Helsinki | tuned 0.108 s, teacher 0.311 s |
+| Training time | 167 s on one H100 |
+| Total spend for labels, training and evaluation | 5.72 USD at list price |
+
 ## Other parts built during the weekend
 
 | Part | Status | Source |
