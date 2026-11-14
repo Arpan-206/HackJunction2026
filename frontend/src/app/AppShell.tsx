@@ -93,7 +93,7 @@ export function AppShell() {
     <PreviewHost className="shell">
       <div className="rail-col">
         <nav className="rail" aria-label="Main">
-          <NavLink to="/" className="rail__brand" aria-label="Apprentice home">
+          <NavLink to="/" className="rail__brand" aria-label="Geppetto home">
             <svg
               width="40"
               height="40"

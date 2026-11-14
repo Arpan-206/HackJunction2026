@@ -122,6 +122,8 @@ export interface Calibration {
   side: Side;
   flat: Record<Finger, JointTriple>;
   fist: Record<Finger, JointTriple>;
+  /** Additive (demo kiosk): flat hand, thumb folded across the palm. Null or absent until captured. */
+  thumb?: Record<Finger, JointTriple> | null;
   created_at: string;
 }
 
@@ -171,9 +173,12 @@ export interface GenerateLessonResponse {
   attempts: number;
 }
 
+/** `thumb` (flat hand, thumb folded) is additive, for the demo kiosk's guest calibration. */
+export type CalibrationCapturePhase = 'flat' | 'fist' | 'thumb';
+
 export interface CalibrationRequest {
   side: Side;
-  phase: 'flat' | 'fist';
+  phase: CalibrationCapturePhase;
   duration_s?: number;
 }
 

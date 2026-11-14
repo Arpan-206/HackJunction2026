@@ -39,6 +39,8 @@ export function PreviewHost({
   const [count, setCount] = useState(0);
   const [epoch, setEpoch] = useState(0);
   const host = useRef<HTMLDivElement>(null);
+  // The canvas now on screen. A disposed canvas fires its own context loss later; that must not rebuild the new one.
+  const current = useRef<HTMLCanvasElement | null>(null);
   const api = useMemo<PreviewApi>(
     () => ({
       register: () => {
@@ -63,8 +65,10 @@ export function PreviewHost({
               style={{ pointerEvents: "none" }}
               onCreated={({ gl }) => {
                 const el = gl.domElement;
+                current.current = el;
                 el.addEventListener("webglcontextlost", (e) => {
                   e.preventDefault();
+                  if (current.current !== el) return;
                   window.setTimeout(() => setEpoch((n) => n + 1), 250);
                 });
               }}

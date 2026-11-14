@@ -218,6 +218,33 @@ def test_calibration_phases(client: TestClient) -> None:
     latest = client.get("/api/calibrations/latest", params={"side": "right"}).json()
     assert latest["id"] == fist["id"]
     assert latest["fist"]["index"][0] > latest["flat"]["index"][0]
+    assert latest["thumb"] is None
+
+
+def test_calibration_thumb_phase(client: TestClient) -> None:
+    """The additive thumb-folded phase merges with flat and fist and keeps them."""
+    flat = client.post(
+        "/api/calibrations", json={"side": "right", "phase": "flat", "duration_s": 0.3}
+    ).json()
+    client.post(
+        "/api/dev/state",
+        json={
+            "simulator_motion": {
+                "preset": "hold_pose",
+                "pose": {"thumb": 1.0, "index": 0.0, "middle": 0.0, "ring": 0.0, "little": 0.0},
+            }
+        },
+    )
+    time.sleep(0.2)
+    thumb = client.post(
+        "/api/calibrations", json={"side": "right", "phase": "thumb", "duration_s": 0.4}
+    )
+    assert thumb.status_code == 200
+    body = thumb.json()
+    assert body["flat"] == flat["flat"]
+    assert sum(body["thumb"]["thumb"]) > sum(body["flat"]["thumb"])
+    bad = client.post("/api/calibrations", json={"side": "right", "phase": "pinky"})
+    assert bad.status_code == 422
 
 
 def _perturbed(client: TestClient, recording: dict, delta: float) -> str:
