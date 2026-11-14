@@ -62,6 +62,7 @@ Lane "rokoko-setup", branch `rokoko-setup`, Sat 14 Nov 2026. Goal: the Rokoko De
 
 ```python
 import sys
+
 _EXE = ".exe" if sys.platform == "win32" else ""
 ROKOKO_SOLVER_EXE = f"rkk-hand-solver{_EXE}"
 ROKOKO_DRIVER_EXE = f"rokoko-sdk{_EXE}"
