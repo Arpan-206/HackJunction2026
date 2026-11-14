@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { tutorialVideoOf, useMediaSrc, type Lesson, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
@@ -12,6 +12,7 @@ import { presetFor } from '../training/modes/Shadow';
 import type { ReferenceTrack } from '../training/coach/reference';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
 import { clockLabel, takeTimeAt, useLoopClock, useVideoClock, type TutorialClock } from './useTutorialClock';
+import { tutorialTrack } from './formingTrack';
 
 /** Route `/apprentice/lessons/:lessonId/steps/:stepIndex/tutorial`: the first part of a lesson, before practice. */
 export function TutorialPage() {
@@ -45,7 +46,10 @@ interface TutorialProps {
 function Tutorial({ lesson, step, index, offline }: TutorialProps) {
   const navigate = useNavigate();
   const side = stepSide(step);
-  const { track, loading } = useReferenceTrack(step, side);
+  const reference = useReferenceTrack(step, side);
+  const loading = reference.loading;
+  // A held shape forms from a relaxed hand and lets go again, so the tutorial never shows a hand standing still.
+  const track = useMemo(() => (reference.track ? tutorialTrack(reference.track) : null), [reference.track]);
   const video = tutorialVideoOf(step);
   const src = useMediaSrc(video?.url);
   const practiceTo = `/apprentice/lessons/${lesson.id}/steps/${index}`;
