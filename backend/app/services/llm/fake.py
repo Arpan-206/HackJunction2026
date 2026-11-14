@@ -5,10 +5,11 @@ import re
 
 from app import constants as c
 from app.core.utils import new_id
-from app.schemas.api import CoachPlanDraft, CoachPlanRequest, Drill, MotionDraft
+from app.schemas.api import CoachHintRequest, CoachPlanDraft, CoachPlanRequest, Drill, MotionDraft
 from app.schemas.common import FingerValues, Skill
 from app.schemas.lesson import LessonBase, Step
 from app.schemas.motion import FingerSequence, GripAndSwing, HoldPose, Idle, Pinch
+from app.services import hints
 from app.services.llm.base import LLMRequest
 from app.services.moves import MoveCatalog
 from app.services.storage.seed import load_seed_lessons
@@ -128,6 +129,8 @@ class FakeLLM:
 
     async def generate_json(self, request: LLMRequest) -> str:
         """Return the template lesson, plan or motion for the request as JSON."""
+        if request.task == "hint":
+            return hints.build_hint_draft(CoachHintRequest.model_validate_json(request.user_text)).model_dump_json()
         if request.task == "plan":
             return template_plan(CoachPlanRequest.model_validate(json.loads(request.user_text))).model_dump_json()
         if request.task == "motion":

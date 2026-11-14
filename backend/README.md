@@ -26,6 +26,8 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 | `LLM_PROVIDER` | `fake` | `fake`, `gemini` or `ollama` |
 | `GEMINI_API_KEY` | none | Required for `gemini` |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model name |
+| `GEMINI_HINT_MODEL` | `gemini-3.5-flash-lite` | Model for live coach hints (its own free quota) |
+| `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET` | 80% of the free limit | Override the request budgets |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `OLLAMA_MODEL` | `gemma4:e4b` | Use `gemma4:12b` with 12 to 16 GB of VRAM |
 | `GLOVE_SOURCE` | `simulator` | `simulator`, `rokoko_udp`, `rokoko_sdk` (stub) or `external` |
@@ -44,6 +46,10 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 `POST /api/lessons/generate`, `POST /api/coach/plan` (practice plan and master note from scored attempts) and `POST /api/motion/from_text` (free text to a `MotionSpec`) share one pattern: a prompt in `app/services/llm`, pydantic validation, up to 2 retries with errors fed back, then the deterministic fake fallback (`provider: "fake"`). Tests in `tests/test_llm_features.py`.
 
 `POST /api/lessons/generate_from_video` takes a multipart `video` (mp4, webm or mov, up to 50 MB; 413 and 415 otherwise) plus optional `prompt` and `skill`, and returns the same shape. Gemini uploads the file with the google-genai Files API, polls until it is ACTIVE, then generates with the video as a part (own 120 s timeout); other providers return the template with a note that video analysis needs Gemini. The temporary file is always deleted. Tests in `tests/test_video.py`.
+
+## Gemini request budget
+
+The Gemini free tier is small (about 5 requests per minute and 20 per day for `gemini-3.8-flash`, 10 and 500 for Flash-Lite; see `../research/06_gemini.md`). `app/services/llm/rate_limit.py` counts every Gemini call per model with a sliding 60 s window and a per-day counter (Pacific date, as Google resets), saved in `DATA_DIR/gemini_usage.json` so a restart does not reset the day. Budgets are 80 percent of the limits in `app/constants.py` (`GEMINI_FREE_LIMITS`). When a budget is spent, or Google answers 429 or 503, the call is skipped and the offline answer is returned with provider `fake (rate limited)`, without retries. `POST /api/coach/hint` also caches identical requests for 60 s and answers praise algorithmically. Remaining budget is in `GET /api/dev/state` (`gemini_budget`). Tests stub the SDK and `tests/conftest.py` blanks the key and blocks `genai.Client`, so the suite never reaches Gemini.
 
 ## Calibrated scoring
 

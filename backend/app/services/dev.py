@@ -21,6 +21,7 @@ class DevService:
             smoothing=SmoothingState(enabled=params.enabled, min_cutoff=params.min_cutoff, beta=params.beta),
             llm_provider=self._llm.name,  # type: ignore[arg-type]
             simulator_motion=self._gloves.simulator_motion,
+            gemini_budget=self._llm.budgets(),
         )
 
     async def apply(self, patch: DevStatePatch) -> DevState:

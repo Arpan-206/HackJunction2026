@@ -15,9 +15,10 @@ class LLMRequest:
     user_text: str
     skill: Skill | None = None
     schema: dict[str, Any] | None = None
-    task: Literal["lesson", "plan", "motion"] = "lesson"
+    task: Literal["lesson", "plan", "motion", "hint"] = "lesson"
     video_path: str | None = None
     video_mime: str | None = None
+    model: str | None = None
 
 
 class LLMClient(Protocol):

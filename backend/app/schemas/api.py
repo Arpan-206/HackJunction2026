@@ -70,19 +70,52 @@ class MotionPreviewResponse(BaseModel):
     frames: list[GloveFrame]
 
 
+CueType = Literal["curl", "extend", "timing", "wrist", "praise"]
+Severity = Literal["low", "medium", "high"]
+
+
 class CoachHintRequest(BaseModel):
-    """POST /coach/hint. Deviations are signed degrees per finger: positive means curled too much."""
+    """POST /coach/hint. Deviations are signed degrees per finger of TOTAL flexion: positive means curled more than the guide.
+
+    Only instruction, deviations and timing_ms are needed; the other fields make the hint more specific.
+    """
 
     step_id: str | None = None
-    instruction: str = ""
+    instruction: str = Field(default="", max_length=c.HINT_TEXT_MAX_CHARS)
+    move_name: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
     deviations: FingerValues = Field(default_factory=FingerValues)
+    joint_deviations: dict[Finger, list[float]] | None = Field(
+        default=None, description="Optional per finger [knuckle, middle joint, fingertip] signed degrees."
+    )
     timing_ms: float = 0.0
+    wrist_error_deg: float | None = Field(default=None, description="Signed wrist error about wrist_axis, in degrees.")
+    wrist_axis: Literal["pitch", "yaw", "roll"] | None = None
+    tolerance_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
+    attempt: int = Field(default=1, ge=1, le=c.HINT_MAX_ATTEMPT)
+    last_hint: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
 
 
-class CoachHintResponse(BaseModel):
-    """A short spoken-style tip."""
+class HintDraft(BaseModel):
+    """One live coaching cue: the model-written (or algorithmic) part of a hint response."""
 
-    hint: str
+    hint: str = Field(description=f"One imperative sentence of at most {c.HINT_MAX_WORDS} words naming one finger (or the wrist) and one direction.")
+    focus_finger: Finger | None = Field(default=None, description="The single finger the hint is about; null for timing, wrist or praise.")
+    cue_type: CueType = Field(description="curl: bend more. extend: straighten or lift. timing: early or late. wrist: wrist angle. praise: nothing to fix.")
+    severity: Severity = Field(description="low: within tolerance, medium: up to twice the tolerance, high: beyond that.")
+
+    @field_validator("hint")
+    @classmethod
+    def _short_hint(cls, value: str) -> str:
+        """Reject empty hints and hints over the word limit."""
+        value = value.strip()
+        if not value or len(value.split()) > c.HINT_MAX_WORDS:
+            raise ValueError(f"hint must be 1 to {c.HINT_MAX_WORDS} words")
+        return value
+
+
+class CoachHintResponse(HintDraft):
+    """A short live tip; provider says who wrote it (fake, algorithmic, gemini, ollama or 'fake (rate limited)')."""
+
     provider: str
 
 
@@ -116,6 +149,18 @@ class SmoothingPatch(BaseModel):
     beta: float | None = Field(default=None, ge=0)
 
 
+class GeminiBudget(BaseModel):
+    """Read-only Gemini request budget for one model (see services/llm/rate_limit.py)."""
+
+    model: str
+    rpm_budget: int
+    rpm_remaining: int
+    rpd_budget: int
+    rpd_remaining: int
+    free_rpm: int
+    free_rpd: int
+
+
 class DevState(BaseModel):
     """GET /dev/state."""
 
@@ -123,6 +168,7 @@ class DevState(BaseModel):
     smoothing: SmoothingState
     llm_provider: Literal["fake", "gemini", "ollama"]
     simulator_motion: MotionSpec
+    gemini_budget: list[GeminiBudget] = Field(default_factory=list)
 
 
 class DevStatePatch(BaseModel):

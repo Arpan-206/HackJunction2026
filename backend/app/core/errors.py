@@ -53,6 +53,10 @@ class LLMTimeoutError(ServiceUnavailableError):
     """An LLM provider call exceeded its time budget; callers fall back without retrying."""
 
 
+class RateLimitedError(LLMTimeoutError):
+    """The Gemini request budget is spent (or Google answered 429); callers fall back without retrying."""
+
+
 class NotImplementedFeatureError(AppError):
     """The feature exists as a stub only."""
 

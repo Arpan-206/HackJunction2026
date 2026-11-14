@@ -130,13 +130,51 @@ FLEXION_MAX_RAD = 2.2
 # LLM.
 LLM_MAX_RETRIES = 2
 LLM_TIMEOUT_S = 90.0
-LLM_GEMINI_TIMEOUT_S = 8.0
+LLM_GEMINI_TIMEOUT_S = 20.0
+LLM_GEMINI_HINT_TIMEOUT_S = 4.0
+HTTP_SERVICE_UNAVAILABLE = 503
 LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
 OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
+
+# Gemini free tier (per project and per model; the day resets at midnight Pacific). The figures are not in the public
+# docs, they come from the AI Studio rate-limit screen as reported by third parties (research/06_gemini.md).
+# Unknown models get the strictest figures. Budgets are a fraction of the limit so the demo never hits a real 429.
+GEMINI_FREE_LIMITS = {
+    "gemini-3.8-flash": (5, 20),
+    "gemini-3.6-flash": (5, 20),
+    "gemini-3.5-flash-lite": (10, 500),
+    "gemini-3.1-flash-lite": (10, 500),
+}
+GEMINI_DEFAULT_LIMITS = (5, 20)
+GEMINI_BUDGET_FRACTION = 0.8
+GEMINI_HINT_MODEL = "gemini-3.5-flash-lite"
+GEMINI_THINKING_LEVEL = "low"
+GEMINI_USAGE_FILE = "gemini_usage.json"
+GEMINI_MINUTE_WINDOW_S = 60.0
+GEMINI_PACIFIC_FALLBACK_OFFSET_H = -8
+GEMINI_PACIFIC_TZ = "America/Los_Angeles"
+PROVIDER_RATE_LIMITED = "fake (rate limited)"
+HTTP_TOO_MANY_REQUESTS = 429
+
+# Live coach hint.
+HINT_MAX_WORDS = 14
+HINT_WRIST_MIN_DEG = 8.0
+HINT_WRIST_TOLERANCE_DEG = 15.0
+HINT_CACHE_TTL_S = 60.0
+HINT_CACHE_MAX_ENTRIES = 256
+HINT_PROMPT_DEG_STEP = 2
+HINT_PROMPT_MS_STEP = 20
+HINT_SLIGHT_DEG = 8.0
+HINT_LOT_DEG = 20.0
+HINT_JOINT_SHARE = 0.6
+HINT_SEVERITY_MEDIUM = 1.0
+HINT_SEVERITY_HIGH = 2.0
+HINT_MAX_ATTEMPT = 1000
+HINT_TEXT_MAX_CHARS = 200
 
 # Practice plan and text-to-motion.
 PLAN_MAX_STEPS = 20

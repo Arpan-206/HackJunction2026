@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = None
     gemini_model: str = c.DEFAULT_GEMINI_MODEL
+    gemini_hint_model: str = c.GEMINI_HINT_MODEL
+    gemini_rpm_budget: int | None = None
+    gemini_rpd_budget: int | None = None
     ollama_url: str = c.DEFAULT_OLLAMA_URL
     ollama_model: str = c.DEFAULT_OLLAMA_MODEL
     llm_provider: Literal["fake", "gemini", "ollama"] = "fake"

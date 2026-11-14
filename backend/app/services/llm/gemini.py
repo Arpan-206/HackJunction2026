@@ -6,8 +6,9 @@ import time
 from typing import Any
 
 from app import constants as c
-from app.core.errors import LLMTimeoutError, ServiceUnavailableError
+from app.core.errors import LLMTimeoutError, RateLimitedError, ServiceUnavailableError
 from app.services.llm.base import LLMRequest
+from app.services.llm.rate_limit import RateLimiter
 
 log = logging.getLogger(__name__)
 
@@ -24,10 +25,11 @@ class GeminiLLM:
     name = "gemini"
     supports_video = True
 
-    def __init__(self, api_key: str | None, model: str) -> None:
-        """Remember credentials; nothing is contacted until a call is made."""
+    def __init__(self, api_key: str | None, model: str, limiter: RateLimiter | None = None) -> None:
+        """Remember credentials; nothing is contacted until a call is made. Every generate call spends from limiter."""
         self._api_key = api_key
         self._model = model
+        self._limiter = limiter
         self._client: Any = None
 
     def _get_client(self) -> Any:
@@ -42,7 +44,10 @@ class GeminiLLM:
 
     async def _call(self, request: LLMRequest, as_json: bool) -> str:
         """Run one generate_content call, raising LLMTimeoutError if it takes too long."""
-        limit = c.LLM_GEMINI_VIDEO_TIMEOUT_S if request.video_path else c.LLM_GEMINI_TIMEOUT_S
+        if request.video_path:
+            limit = c.LLM_GEMINI_VIDEO_TIMEOUT_S
+        else:
+            limit = c.LLM_GEMINI_HINT_TIMEOUT_S if request.task == "hint" else c.LLM_GEMINI_TIMEOUT_S
         try:
             return await asyncio.wait_for(self._generate(request, as_json), timeout=limit)
         except TimeoutError as exc:
@@ -66,11 +71,18 @@ class GeminiLLM:
         """Run the underlying generate_content call without a time limit."""
         from google.genai import types  # noqa: PLC0415
 
-        config: dict[str, Any] = {"system_instruction": request.system, "temperature": c.LLM_TEMPERATURE}
+        model = request.model or self._model
+        client = self._get_client()
+        if self._limiter is not None and not self._limiter.try_acquire(model):
+            raise RateLimitedError(f"Gemini request budget for {model} is spent")
+        # Gemini 3.6+ ignores temperature, top_p and top_k (and will reject them later), so only thinking is tuned.
+        config: dict[str, Any] = {
+            "system_instruction": request.system,
+            "thinking_config": types.ThinkingConfig(thinking_level=c.GEMINI_THINKING_LEVEL),
+        }
         if as_json:
             config["response_mime_type"] = "application/json"
             config["response_json_schema"] = request.schema
-        client = self._get_client()
         contents: Any = request.prompt
         uploaded = None
         if request.video_path:
@@ -79,8 +91,16 @@ class GeminiLLM:
             contents = [video, request.prompt]
         try:
             response = await client.aio.models.generate_content(
-                model=self._model, contents=contents, config=types.GenerateContentConfig(**config)
+                model=model, contents=contents, config=types.GenerateContentConfig(**config)
             )
+        except Exception as exc:
+            if getattr(exc, "code", None) == c.HTTP_TOO_MANY_REQUESTS:
+                if self._limiter is not None:
+                    self._limiter.penalise(model)
+                raise RateLimitedError(f"Gemini answered 429 for {model}") from exc
+            if getattr(exc, "code", None) == c.HTTP_SERVICE_UNAVAILABLE:
+                raise LLMTimeoutError(f"Gemini model {model} is overloaded (503)") from exc  # retrying only burns quota
+            raise
         finally:
             if uploaded is not None:
                 await self._forget(client, uploaded)
