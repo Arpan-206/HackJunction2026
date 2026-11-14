@@ -10,6 +10,8 @@ from pathlib import Path
 
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["LLM_PROVIDER"] = "fake"
+# The Verda inference key (an alias of OPENAI_API_KEY) never reaches a test either.
+os.environ["VERDA_INFERENCE_KEY"] = ""
 
 import pytest
 from app.core.config import Settings

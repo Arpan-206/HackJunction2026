@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app import constants as c
@@ -20,9 +20,20 @@ class Settings(BaseSettings):
     gemini_hint_model: str = c.GEMINI_HINT_MODEL
     gemini_rpm_budget: int | None = None
     gemini_rpd_budget: int | None = None
-    openai_base_url: str = "http://localhost:8000"
-    openai_api_key: str | None = None
-    openai_model: str = c.DEFAULT_OPENAI_MODEL
+    # Gemma on Verda (or any OpenAI-compatible server). The Verda lane's own names work too: VERDA_GEMMA_URL for the
+    # base URL (verda/out/endpoint.json "base_url"), VERDA_INFERENCE_KEY for the key, VERDA_GEMMA_MODEL for the model.
+    openai_base_url: str = Field(
+        default="http://localhost:8000",
+        validation_alias=AliasChoices("openai_base_url", "verda_gemma_url"),
+    )
+    openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("openai_api_key", "verda_inference_key"),
+    )
+    openai_model: str = Field(
+        default=c.DEFAULT_OPENAI_MODEL,
+        validation_alias=AliasChoices("openai_model", "verda_gemma_model"),
+    )
     llm_provider: Literal["fake", "gemini", "openai"] = "fake"
     # Providers tried after the first one fails, comma separated (gemini, openai); the first one is skipped.
     # openai joins only when OPENAI_BASE_URL is set. After the last one the coach shows its offline note.
@@ -54,6 +65,10 @@ class Settings(BaseSettings):
     glove_autostart: Literal["auto", "on", "off"] = "auto"
     # Dev file reveal (POST /api/dev/reveal, GET /api/dev/locate): localhost only, and only while this is on.
     dev_reveal: bool = c.DEV_REVEAL_ENABLED
+    # Every take and lesson is also written locally as a core lesson folder for Arpan's local tools and the Verda
+    # request context (services/core_export.py); nothing is uploaded. None keeps the folders under <data_dir>/core_lessons.
+    core_export: bool = True
+    core_export_dir: Path | None = None
 
 
 @lru_cache
