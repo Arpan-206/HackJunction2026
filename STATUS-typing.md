@@ -142,3 +142,7 @@ or judge the finger by hand pose instead of a press (which finger is lowest
 or most bent at the keydown), and re-measure. The typist typed with 25 slips
 on the home row and 9 on the words, so the chart finger itself was not
 always used; a drill with an expert typist would set a cleaner upper bound.
+
+Second clean run (14:18 to 14:19, 153 keys, 146 on the chart, 1 slip on the
+words): clear finger 31%, match 4% (2 of 45), the wrong finger most often the
+left thumb. Same conclusion, with a better typist.
