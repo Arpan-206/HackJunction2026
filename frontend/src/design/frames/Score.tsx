@@ -26,14 +26,14 @@ function ScoreScene({ learned }: { learned: boolean }) {
         { id: 'ring', side: 'left', top: 240, width: 190, tone: 'ok', title: 'Ring 90' },
         { id: 'middle', side: 'left', top: 330, width: 190, tone: 'ok', title: 'Middle 95' },
         { id: 'index', side: 'left', top: 420, width: 190, tone: 'ok', title: 'Index 92' },
-        { id: 'thumb', side: 'left', top: 540, width: 190, tone: 'ok', title: 'Thumb 94' },
+        { id: 'thumb', side: 'left', top: 660, width: 190, tone: 'ok', title: 'Thumb 94' },
       ]
     : [
         { id: 'little', side: 'left', top: 130, width: 190, tone: 'ok', title: 'Little 85' },
         { id: 'ring', side: 'left', top: 210, width: 230, tone: 'fix', title: 'Ring 71', body: 'Pressed late, 14 degrees short.' },
         { id: 'middle', side: 'left', top: 340, width: 190, tone: 'ok', title: 'Middle 90' },
         { id: 'index', side: 'left', top: 420, width: 190, tone: 'ok', title: 'Index 88' },
-        { id: 'thumb', side: 'left', top: 540, width: 190, tone: 'ok', title: 'Thumb 92' },
+        { id: 'thumb', side: 'left', top: 660, width: 190, tone: 'ok', title: 'Thumb 92' },
       ];
   return (
     <section className="dz-stage" aria-label="Score">
