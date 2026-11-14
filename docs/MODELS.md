@@ -112,7 +112,24 @@ Names only. The values are in the root `.env`.
 | `LLM_PROVIDER`, `LLM_FALLBACK`, `LLM_ROUTES` | The chain |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_HINT_MODEL`, `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET` | Gemini |
 | `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL` | Gemma on Verda |
-| `VERDA_INFERENCE_KEY` | The health check uses it when `OPENAI_API_KEY` is empty |
+| `VERDA_GEMMA_URL`, `VERDA_INFERENCE_KEY`, `VERDA_GEMMA_MODEL` | The Verda lane's names for the same three. The backend uses each one when its `OPENAI_` name is absent |
+
+## All inference on Verda
+
+Verda hosts the model only (inference). Training and tuning run locally. To send every role to Gemma on Verda first, with Gemini behind it, put this in `backend/.env` (names only here):
+
+```
+LLM_PROVIDER=openai
+LLM_FALLBACK=gemini
+VERDA_GEMMA_URL=<base_url from verda/out/endpoint.json>
+VERDA_INFERENCE_KEY=<already in backend/.env>
+```
+
+The deployment must be up (`cd verda && uv run python deploy.py`, about 8 minutes of start-up, billed per hour; `uv run python teardown.py` after). While it is down every call falls through to Gemini, then to the offline note.
+
+### Recordings as request context
+
+The model on Verda keeps no files, so a recording travels in the request. Every take and lesson the expert records is also written locally as a core lesson folder (`backend/README.md`, "Core lesson export"). `backend/scripts/verda_lesson.py <take or lesson id>` hands that folder to `verda/gemma_client.py`, which sends the key pose sketches as pictures and a glove trace summary as text, and validates the answer as a backend `Lesson`. The same folders are what the local tools read (`coach_tune/`, `weights/`).
 
 ## Tests
 

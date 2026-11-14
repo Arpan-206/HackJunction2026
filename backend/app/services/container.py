@@ -32,6 +32,7 @@ from app.services.smoothing.one_euro import GloveSmoother
 from app.services.storage.json_store import JsonStore
 from app.services.storage.seed import install_seed_lessons
 from app.services.takes import TakesService
+from app.services.core_export import CoreLessonExporter
 from app.services.vision.mediapipe_hands import MediaPipeHands
 
 
@@ -62,6 +63,8 @@ class Services:
     bundles: BundleService
     # Dev aid: stored files by kind and id, for "Open file location".
     files: FileLocator
+    # Every take and lesson also as a local core lesson folder (services/core_export.py).
+    core_export: CoreLessonExporter
 
 
 log = logging.getLogger(__name__)
@@ -107,6 +110,9 @@ def build_services(settings: Settings) -> Services:
     lessons = LessonService(lesson_store)
     media = MediaService(data / c.MEDIA_DIR_NAME)
     bundles = BundleService(data, TakesService(recorder), drafts)
+    core_export = CoreLessonExporter(data, settings.core_export_dir, settings.core_export)
+    recorder.on_change.append(core_export.notify)
+    lessons.on_change.append(core_export.notify)
     return Services(
         settings=settings,
         moves=moves,
@@ -134,4 +140,5 @@ def build_services(settings: Settings) -> Services:
         drafts=drafts,
         bundles=bundles,
         files=FileLocator(data, media, lessons, bundles),
+        core_export=core_export,
     )

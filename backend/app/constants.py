@@ -426,3 +426,27 @@ DEV_REVEAL_DIRS = {
 }
 # An export id is a file name in <data_dir>/exports (with or without .geppetto.json), or a lesson id for its newest backup.
 DEV_EXPORT_NAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,159}$"
+
+# Core lesson export (services/core_export.py): every stored take and lesson is also written, locally, as a core lesson
+# folder (SPEC.md "Lesson files": lesson.json, trace.npz, frames/step_XX.jpg), the format Arpan's local tools read
+# (coach_tune/build_dataset.py, weights/check_lessons.py) and the one verda/gemma_client.py turns into the prompt for the
+# model hosted on Verda. Nothing is uploaded. The folders live under <data_dir>/<CORE_EXPORT_DIR_NAME> unless
+# CORE_EXPORT_DIR names another folder; CORE_EXPORT=false turns the export off.
+CORE_EXPORT_DIR_NAME = "core_lessons"
+CORE_EXPORT_TAKES_DIR = "takes"
+CORE_EXPORT_LESSONS_DIR = "lessons"
+CORE_EXPORT_MANIFEST_FILE = "manifest.json"
+CORE_EXPORT_SCHEMA = "geppetto.core-export/1"
+CORE_LESSON_SCHEMA = "geppetto.lesson/1"
+CORE_LESSON_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_-]*$"
+# The worker re-checks the stored files this often, and at once when a take or lesson is saved or deleted.
+CORE_EXPORT_SYNC_INTERVAL_S = 30.0
+# After a save the worker waits this long, so a burst of saves (several takes, a lesson publish) becomes one sync.
+CORE_EXPORT_DEBOUNCE_S = 0.5
+# The repo root that holds Arpan's core/ and config.toml; the export borrows the core's recorder from it, read only.
+REPO_ROOT = BACKEND_ROOT.parent
+VERDA_LANE_DIR = REPO_ROOT / "verda"
+# Lesson steps recorded as separate takes are joined into one trace with this gap between them, in seconds.
+CORE_EXPORT_STEP_GAP_S = 0.02
+# Who demonstrated, when the take has no lesson to name the expert.
+CORE_EXPORT_DEFAULT_EXPERT = "expert"
