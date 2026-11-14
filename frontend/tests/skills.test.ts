@@ -30,11 +30,11 @@ function lesson(id: string, skill: string, title: string, steps: Step[], created
 const byId = (skills: SkillView[], id: string) => skills.find((s) => s.id === id) as SkillView;
 
 describe('buildSkills: catalogue merged with lessons', () => {
-  it('makes table tennis and piano live from the seed lessons and keeps the rest in the workshop', () => {
+  it('makes the seeded skills live from the seed lessons and keeps the rest in the workshop', () => {
     const skills = buildSkills(LOCAL_LESSONS);
-    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano']);
+    expect(skills.filter((s) => s.live).map((s) => s.id)).toEqual(['table_tennis', 'piano', 'shadow_puppets', 'surgical_grips', 'crochet']);
     expect(skills.filter((s) => !s.live).map((s) => s.id)).toEqual([
-      'shadow_puppets', 'fingerspelling', 'boxing', 'guitar_chords', 'rock_paper_scissors', 'hand_therapy',
+      'fingerspelling', 'boxing', 'guitar_chords', 'rock_paper_scissors', 'hand_therapy',
     ]);
     expect(byId(skills, 'table_tennis').lessonCount).toBe(3);
     expect(byId(skills, 'piano').courses.map((c) => c.id)).toEqual(['seed-piano']);
@@ -55,7 +55,7 @@ describe('buildSkills: catalogue merged with lessons', () => {
     const q = byId(skills, 'calligraphy_quill');
     expect(q).toMatchObject({ live: true, name: 'Calligraphy quill', difficulty: 'beginner', hands: 'two', description: 'Quill grip summary', lessonCount: 1 });
     expect(q.timeToLearn).toMatch(/1 day/);
-    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(2);
+    expect(skills.map((s) => s.id).indexOf('calligraphy_quill')).toBe(5);
   });
 
   it('turns a workshop skill live when an expert records a lesson for it, and ignores empty courses', () => {
@@ -82,6 +82,38 @@ describe('buildSkills: catalogue merged with lessons', () => {
   });
 });
 
+describe('the propless seeded skills: shadow puppets, surgical grips and crochet', () => {
+  const skills = buildSkills(LOCAL_LESSONS);
+
+  it('shadow puppets: a live beginner skill for two hands, five named animals, a picture for its card', () => {
+    const sp = byId(skills, 'shadow_puppets');
+    expect(sp).toMatchObject({ live: true, name: 'Shadow puppets', difficulty: 'beginner', hands: 'two', lessonCount: 5, still: '/stills/shadow-puppets.png' });
+    expect(sp.wouldTeach).toBeUndefined();
+    expect(sp.courses[0].steps.map((s) => s.title.replace(/^Lesson \d+: /, ''))).toEqual(['The rabbit', 'The talking dog', 'The swan', 'The flapping bird', 'The snail']);
+    expect(sp.courses[0].steps.filter((s) => s.hands === 'both').map((s) => s.move_id)).toEqual(['sp_flapping_bird', 'sp_snail']);
+  });
+
+  it('surgical grips: two courses, grips then ties; crochet: one two-handed course', () => {
+    expect(byId(skills, 'surgical_grips').courses.map((c) => c.id)).toEqual(['seed-surgical-grips', 'seed-surgical-ties']);
+    expect(byId(skills, 'surgical_grips').lessonCount).toBe(8);
+    expect(byId(skills, 'crochet')).toMatchObject({ name: 'Crochet basics', hands: 'two', lessonCount: 5 });
+    expect(byId(skills, 'crochet').courses[0].steps.every((s) => s.hands === 'both')).toBe(true);
+  });
+
+  it('needs no prop for any of their lessons', () => {
+    for (const id of ['shadow_puppets', 'surgical_grips', 'crochet']) {
+      for (const c of byId(skills, id).courses) expect(c.steps.every((s) => s.prop === 'none')).toBe(true);
+    }
+  });
+
+  it('is found by its animals, instruments and stitches', () => {
+    const find = (q: string) => filterSkills(skills, { ...NO_FILTER, query: q }).map((s) => s.id);
+    expect(find('rabbit')).toEqual(['shadow_puppets']);
+    expect(find('needle')).toEqual(['surgical_grips']);
+    expect(find('double crochet')).toEqual(['crochet']);
+  });
+});
+
 describe('filterSkills: search and toggles', () => {
   const skills = buildSkills(LOCAL_LESSONS);
   const ids = (f: Partial<typeof NO_FILTER>) => filterSkills(skills, { ...NO_FILTER, ...f }).map((s) => s.id);
@@ -93,7 +125,7 @@ describe('filterSkills: search and toggles', () => {
   it('matches on name, description and keywords, ignoring case and punctuation', () => {
     expect(ids({ query: 'music' })).toEqual(['piano', 'guitar_chords']);
     expect(ids({ query: 'SIGN' })).toEqual(['fingerspelling']);
-    expect(ids({ query: 'grip' })).toEqual(['table_tennis', 'hand_therapy']);
+    expect(ids({ query: 'grip' })).toEqual(['table_tennis', 'surgical_grips', 'hand_therapy']);
     expect(ids({ query: 'candlelight' })).toEqual(['shadow_puppets']);
     expect(ids({ query: 'ping-pong' })).toEqual(['table_tennis']);
   });
@@ -109,7 +141,7 @@ describe('filterSkills: search and toggles', () => {
 
   it('filters by difficulty and by hands, combined with the query', () => {
     expect(ids({ difficulty: 'advanced' })).toEqual(['guitar_chords']);
-    expect(ids({ hands: 'two' })).toEqual(['shadow_puppets', 'boxing']);
+    expect(ids({ hands: 'two' })).toEqual(['shadow_puppets', 'surgical_grips', 'crochet', 'boxing']);
     expect(ids({ query: 'music', difficulty: 'beginner' })).toEqual(['piano']);
     expect(ids({ query: 'xyz' })).toEqual([]);
   });

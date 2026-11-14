@@ -20,7 +20,7 @@ def test_health(client: TestClient) -> None:
 def test_moves_catalogue_and_filter(client: TestClient) -> None:
     """The catalogue serves all skills and filters by skill."""
     everything = client.get("/api/moves").json()
-    assert {m["skill"] for m in everything} == {"table_tennis", "piano", "general"}
+    assert {m["skill"] for m in everything} == {"table_tennis", "piano", "shadow_puppets", "surgical_grips", "crochet", "general"}
     piano = client.get("/api/moves", params={"skill": "piano"}).json()
     assert len(piano) == 3 and all(m["skill"] == "piano" for m in piano)
 

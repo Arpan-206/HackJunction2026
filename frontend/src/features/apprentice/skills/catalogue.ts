@@ -37,6 +37,8 @@ export interface CatalogueEntry {
   /** A rough, honest time to learn, in words. */
   timeToLearn: string;
   keyPose: KeyPose;
+  /** A picture for the card instead of the key pose on a chalk hand, for a skill whose look is not the hand itself. */
+  still?: string;
   /** For a skill in the workshop: what its lessons would cover once an expert records them. */
   wouldTeach?: string[];
 }
@@ -71,13 +73,33 @@ export const CATALOGUE: CatalogueEntry[] = [
   {
     id: 'shadow_puppets',
     name: 'Shadow puppets',
-    description: 'Make the rabbit, the dog and the bird by candlelight, and hold each shape steady on the plaster wall.',
+    description: "The oil lamp throws your hands onto the plaster wall: match the expert's rabbit, dog, swan, bird and snail by candlelight.",
     difficulty: 'beginner',
-    keywords: ['play', 'shapes', 'animals', 'wall', 'candle', 'theatre', 'children', 'story'],
+    keywords: ['play', 'shapes', 'animals', 'wall', 'candle', 'candlelight', 'theatre', 'children', 'story', 'rabbit', 'dog', 'swan', 'bird', 'snail'],
     hands: 'two',
     timeToLearn: 'An evening',
-    keyPose: hold(-0.2, 0, 0, 0, 0.75),
-    wouldTeach: ['The dog: a flat hand with a dropped jaw', 'The rabbit: two ears up, the rest folded', 'The bird: two hands, thumbs locked'],
+    keyPose: hold(0.7, 0, 0, 0.9, 0.9),
+    still: '/stills/shadow-puppets.png',
+  },
+  {
+    id: 'surgical_grips',
+    name: 'Surgical grips',
+    description: 'Hold the scalpel, needle driver and forceps the way surgeons are taught, then tie with the instrument and drive the needle with the wrist.',
+    difficulty: 'intermediate',
+    keywords: ['surgery', 'medical', 'scalpel', 'needle', 'suture', 'knot', 'forceps', 'grip', 'doctor', 'health'],
+    hands: 'one',
+    timeToLearn: 'Two weeks at 15 minutes a day',
+    keyPose: hold(0.45, 0.2, 0.4, 0.55, 0.8),
+  },
+  {
+    id: 'crochet',
+    name: 'Crochet basics',
+    description: 'Hold the hook in one hand and the yarn in the other, then chain, slip stitch, single and double crochet in an even rhythm.',
+    difficulty: 'beginner',
+    keywords: ['craft', 'yarn', 'hook', 'stitch', 'knitting', 'textile', 'wool', 'making'],
+    hands: 'two',
+    timeToLearn: 'A week at 15 minutes a day',
+    keyPose: hold(0.45, 0.4, 0.5, 0.8, 0.85),
   },
   {
     id: 'fingerspelling',

@@ -1,4 +1,8 @@
 import type { Lesson, Step } from '../../../api/types';
+import seedShadowPuppets from '../../../mock/data/seed-shadow-puppets.json';
+import seedSurgicalGrips from '../../../mock/data/seed-surgical-grips.json';
+import seedSurgicalTies from '../../../mock/data/seed-surgical-ties.json';
+import seedCrochet from '../../../mock/data/seed-crochet.json';
 
 const tol = { angle_deg: 18, timing_ms: 250 };
 
@@ -6,7 +10,7 @@ function step(id: string, title: string, instruction: string, move_id: string, p
   return { id, title, instruction, move_id, hands: 'right', prop, motion, reference_recording_id: null, repetitions, tolerance: tol, video_url: null };
 }
 
-/** Offline copies of the two seed lessons, so the apprentice screens still work when the backend is down. */
+/** Offline copies of the seed lessons, so the apprentice screens still work when the backend is down. */
 export const LOCAL_LESSONS: Lesson[] = [
   {
     id: 'seed-table-tennis',
@@ -37,4 +41,5 @@ export const LOCAL_LESSONS: Lesson[] = [
       step('seed-piano-scale', 'Lesson 2: Five-finger scale', 'Press each key in turn with fingers 1 2 3 4 5, then back down 4 3 2 1, at an even pace.', 'piano_five_finger_scale', 'keyboard', { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5, 4, 3, 2, 1], beat_ms: 620 }, 3),
     ],
   },
+  ...([seedShadowPuppets, seedSurgicalGrips, seedSurgicalTies, seedCrochet] as unknown as Lesson[]),
 ];
