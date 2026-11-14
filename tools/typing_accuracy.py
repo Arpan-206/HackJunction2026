@@ -39,8 +39,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.config import load_config
-from core.tasks.typing import CHART_ROWS, normalize_key, SPACE, TALLY_ROWS, TypingTask, tally_label
 from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA
+from core.tasks.typing import (
+    CHART_ROWS,
+    SPACE,
+    TALLY_ROWS,
+    TypingTask,
+    normalize_key,
+    tally_label,
+)
 from tools.replay import split_capture
 from tools.score_capture import hands_from_capture
 
@@ -91,7 +98,9 @@ def key_for(side: str, finger: str) -> str:
     return CHART_ROWS[(side, finger)][-1 if side == "left" else 0]
 
 
-def replay(cfg, tl, keys_abs: list[tuple[int, str]], params: dict) -> tuple[TypingTask, list[dict]]:
+def replay(
+    cfg, tl, keys_abs: list[tuple[int, str]], params: dict
+) -> tuple[TypingTask, list[dict]]:
     """Feed the capture and the keystrokes through one TypingTask. keys_abs: [(t_us core, key)]."""
     tt = TypingTask(cfg.typing, params)
     keys = sorted(keys_abs)
@@ -129,7 +138,9 @@ def detector_presses(cfg, tl, params: dict) -> list[int]:
     return out
 
 
-def best_lag_us(press_t: list[int], key_t: list[int], sweep_s: float, window_us: int) -> tuple[int, int]:
+def best_lag_us(
+    press_t: list[int], key_t: list[int], sweep_s: float, window_us: int
+) -> tuple[int, int]:
     """(lag_us, keys matched): the shift subtracted from key times that puts most keys near a press."""
     import bisect
 
@@ -149,7 +160,9 @@ def best_lag_us(press_t: list[int], key_t: list[int], sweep_s: float, window_us:
 
 
 def report(verdicts: list[dict]) -> dict:
-    rows = {r: {"keys": 0, "good": 0, "wrong_finger": 0, "unclear": 0} for r in TALLY_ROWS}
+    rows = {
+        r: {"keys": 0, "good": 0, "wrong_finger": 0, "unclear": 0} for r in TALLY_ROWS
+    }
     confusion: dict[str, dict[str, int]] = {}
     for v in verdicts:
         r = rows[tally_label(v["key"])]
@@ -159,7 +172,10 @@ def report(verdicts: list[dict]) -> dict:
             got = f"{v['detected']['hand']}.{v['detected']['finger']}"
             c = confusion.setdefault(tally_label(v["key"]), {})
             c[got] = c.get(got, 0) + 1
-    tot = {k: sum(r[k] for r in rows.values()) for k in ("keys", "good", "wrong_finger", "unclear")}
+    tot = {
+        k: sum(r[k] for r in rows.values())
+        for k in ("keys", "good", "wrong_finger", "unclear")
+    }
     for r in list(rows.values()) + [tot]:
         judged = r["good"] + r["wrong_finger"]
         r["match_rate"] = round(r["good"] / judged, 3) if judged else None
@@ -168,31 +184,65 @@ def report(verdicts: list[dict]) -> dict:
 
 
 def print_table(rep: dict) -> None:
-    print(f"{'finger':14s} {'keys':>5s} {'good':>5s} {'wrong':>5s} {'unclear':>7s} {'match':>6s} {'clear':>6s}")
+    print(
+        f"{'finger':14s} {'keys':>5s} {'good':>5s} {'wrong':>5s} {'unclear':>7s} {'match':>6s} {'clear':>6s}"
+    )
     for name, r in list(rep["rows"].items()) + [("all", rep["total"])]:
         if not r["keys"]:
             continue
         m = "-" if r["match_rate"] is None else f"{r['match_rate'] * 100:.0f}%"
         c = "-" if r["clear_rate"] is None else f"{r['clear_rate'] * 100:.0f}%"
-        print(f"{name:14s} {r['keys']:5d} {r['good']:5d} {r['wrong_finger']:5d} {r['unclear']:7d} {m:>6s} {c:>6s}")
+        print(
+            f"{name:14s} {r['keys']:5d} {r['good']:5d} {r['wrong_finger']:5d} {r['unclear']:7d} {m:>6s} {c:>6s}"
+        )
     if rep["confusion"]:
         print("\nwrong finger, chart finger -> detected:")
         for exp, got in rep["confusion"].items():
-            print(f"  {exp}: " + ", ".join(f"{g} x{n}" for g, n in sorted(got.items(), key=lambda kv: -kv[1])))
-    print("\nmatch = good / (good + wrong), over keys with a clear finger. clear = share of keys with a clear finger.")
+            print(
+                f"  {exp}: "
+                + ", ".join(
+                    f"{g} x{n}" for g, n in sorted(got.items(), key=lambda kv: -kv[1])
+                )
+            )
+    print(
+        "\nmatch = good / (good + wrong), over keys with a clear finger. clear = share of keys with a clear finger."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("capture")
     ap.add_argument("--keys", help="keystroke log, JSON lines {t_ms, key}")
-    ap.add_argument("--synth", action="store_true", help="build the keystroke log from the capture's own presses")
+    ap.add_argument(
+        "--synth",
+        action="store_true",
+        help="build the keystroke log from the capture's own presses",
+    )
     ap.add_argument("--synth-offset-ms", type=float, default=30.0)
-    ap.add_argument("--lag-ms", type=float, default=0.0, help="subtract from every logged t_ms")
-    ap.add_argument("--capture-start-wall-us", type=int, default=None, help="align the log by its wall_us field")
-    ap.add_argument("--from-s", type=float, default=None, help="judge only this part of the capture: start, seconds")
-    ap.add_argument("--to-s", type=float, default=None, help="end, seconds from the capture's first frame")
-    ap.add_argument("--sweep-s", type=float, default=None, help="fit the lag within +-S seconds")
+    ap.add_argument(
+        "--lag-ms", type=float, default=0.0, help="subtract from every logged t_ms"
+    )
+    ap.add_argument(
+        "--capture-start-wall-us",
+        type=int,
+        default=None,
+        help="align the log by its wall_us field",
+    )
+    ap.add_argument(
+        "--from-s",
+        type=float,
+        default=None,
+        help="judge only this part of the capture: start, seconds",
+    )
+    ap.add_argument(
+        "--to-s",
+        type=float,
+        default=None,
+        help="end, seconds from the capture's first frame",
+    )
+    ap.add_argument(
+        "--sweep-s", type=float, default=None, help="fit the lag within +-S seconds"
+    )
     ap.add_argument("--pre-ms", type=int, default=None)
     ap.add_argument("--post-ms", type=int, default=None)
     ap.add_argument("--min-peak", type=float, default=None, help="min_peak_deg_s")
@@ -225,7 +275,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     if a.synth:
         keys = synth_keys(cfg, tl, a.synth_offset_ms, params)
-        print(f"synthetic keystroke log: {len(keys)} keys from the capture's own presses (pipeline check, not accuracy)")
+        print(
+            f"synthetic keystroke log: {len(keys)} keys from the capture's own presses (pipeline check, not accuracy)"
+        )
     else:
         keys = []
         for ln in Path(a.keys).read_text().splitlines():
@@ -233,7 +285,9 @@ def main(argv: list[str] | None = None) -> int:
                 d = json.loads(ln)
                 if a.capture_start_wall_us is not None:
                     # the first kept frame sits from_s into the capture
-                    rel_ms = (int(d["wall_us"]) - a.capture_start_wall_us) / 1000 - (a.from_s or 0.0) * 1000
+                    rel_ms = (int(d["wall_us"]) - a.capture_start_wall_us) / 1000 - (
+                        a.from_s or 0.0
+                    ) * 1000
                 else:
                     rel_ms = float(d["t_ms"])
                 keys.append((t0 + int((rel_ms - a.lag_ms) * 1000), str(d["key"])))
@@ -242,8 +296,12 @@ def main(argv: list[str] | None = None) -> int:
         keys = on_chart
         if a.sweep_s:
             post = int(params.get("post_ms", cfg.typing.post_ms)) * 1000
-            lag, hit = best_lag_us(detector_presses(cfg, tl, params), [k[0] for k in keys], a.sweep_s, post)
-            print(f"fitted lag {lag / 1000:+.0f} ms: {hit} of {len(keys)} keys sit within {post // 1000} ms of a press (fitted, flatters the result)")
+            lag, hit = best_lag_us(
+                detector_presses(cfg, tl, params), [k[0] for k in keys], a.sweep_s, post
+            )
+            print(
+                f"fitted lag {lag / 1000:+.0f} ms: {hit} of {len(keys)} keys sit within {post // 1000} ms of a press (fitted, flatters the result)"
+            )
             keys = [(t - lag, k) for t, k in keys]
     _, verdicts = replay(cfg, tl, keys, params)
     rep = report(verdicts)

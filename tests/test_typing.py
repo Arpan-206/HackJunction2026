@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from core import fake
 from core import hand as H
 from core.clock import FakeClock
 from core.coach import Coach
@@ -111,9 +110,7 @@ def test_two_fingers_alike_is_unclear(cfg):
 def test_sympathetic_neighbour_does_not_spoil_a_clear_press(cfg):
     tt = TypingTask(cfg.typing)
     presses = [("left", "index", 500_000), ("left", "middle", 500_000)]
-    out = run(
-        tt, presses, [("f", 560_000)], scale={("left", "middle", 500_000): 0.4}
-    )
+    out = run(tt, presses, [("f", 560_000)], scale={("left", "middle", 500_000): 0.4})
     assert out[0]["verdict"] == "good"
 
 
@@ -175,7 +172,12 @@ def tick_hands(s, clock, curls, n=1, dt_us=33_333):
     for _ in range(n):
         clock.advance_us(dt_us)
         for side in ("left", "right"):
-            h = H.synth_hand(side=side, curl=curls(side, clock.now_us()), t_us=clock.now_us(), device_id=2)
+            h = H.synth_hand(
+                side=side,
+                curl=curls(side, clock.now_us()),
+                t_us=clock.now_us(),
+                device_id=2,
+            )
             H.finish_hand(h, s.cfg.hand)
             s.update_hand(side, h)
         s.tick(clock.now_us())
@@ -216,14 +218,20 @@ def test_session_keystroke_end_to_end(sess, schemas):
 
 def test_fake_simulation_drives_the_screen(sess, schemas):
     s, clock = sess
-    s.handle_command("set_task", {"task": "typing", "config": {"simulate": True, "sim_seed": 3}})
+    s.handle_command(
+        "set_task", {"task": "typing", "config": {"simulate": True, "sim_seed": 3}}
+    )
     tick_hands(s, clock, lambda side, t: {}, n=10)
     text = "asdf jkl; " * 4
     verdicts = []
     for ch in text:
         s.handle_command("keystroke", {"key": ch})
         msgs = tick_hands(s, clock, lambda side, t: {}, n=12)
-        verdicts += [m["data"]["verdict"] for m in msgs if m["type"] == "event" and m["name"] == "keystroke"]
+        verdicts += [
+            m["data"]["verdict"]
+            for m in msgs
+            if m["type"] == "event" and m["name"] == "keystroke"
+        ]
     assert len(verdicts) == len(text)
     assert verdicts.count("good") >= len(text) * 0.6
     assert "wrong_finger" in verdicts
@@ -271,8 +279,16 @@ def test_accuracy_report_counts():
     from tools.typing_accuracy import report
 
     vs = [
-        {"key": "f", "verdict": "good", "detected": {"hand": "left", "finger": "index"}},
-        {"key": "f", "verdict": "wrong_finger", "detected": {"hand": "left", "finger": "middle"}},
+        {
+            "key": "f",
+            "verdict": "good",
+            "detected": {"hand": "left", "finger": "index"},
+        },
+        {
+            "key": "f",
+            "verdict": "wrong_finger",
+            "detected": {"hand": "left", "finger": "middle"},
+        },
         {"key": "j", "verdict": "unclear", "detected": None},
     ]
     rep = report(vs)
@@ -290,7 +306,11 @@ def test_accuracy_tool_with_a_key_log(tmp_path, monkeypatch):
             self.t_us, self.angles, self.tracked = t, angles, True
 
     t0 = 1_700_000_000_000_000
-    presses = [("left", "index", 300_000), ("right", "index", 800_000), ("right", "middle", 1_300_000)]
+    presses = [
+        ("left", "index", 300_000),
+        ("right", "index", 800_000),
+        ("right", "middle", 1_300_000),
+    ]
     hands = {"left": [], "right": []}
     for i in range(0, 2_000_000, 10_000):
         for side in ("left", "right"):
@@ -301,7 +321,9 @@ def test_accuracy_tool_with_a_key_log(tmp_path, monkeypatch):
             hands[side].append(FakeHand(t0 + i, a))
     monkeypatch.setattr(ta, "load_hands", lambda cfg, path, *a: hands)
     log = tmp_path / "keys.jsonl"
-    log.write_text('{"t_ms": 360, "key": "f"}\n{"t_ms": 860, "key": "j"}\n{"t_ms": 1360, "key": "j"}\n')
+    log.write_text(
+        '{"t_ms": 360, "key": "f"}\n{"t_ms": 860, "key": "j"}\n{"t_ms": 1360, "key": "j"}\n'
+    )
     out = tmp_path / "rep.json"
     assert ta.main(["x.rgmp", "--keys", str(log), "--json", str(out)]) == 0
     rep = json.loads(out.read_text())

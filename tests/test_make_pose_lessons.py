@@ -27,7 +27,13 @@ def built(tmp_path_factory, cfg):
 
 def _session(cfg, lessons_dir, tmp_path):
     clock = FakeClock()
-    s = Session(cfg, clock, lessons_dir, Coach(None, cfg.coach, cfg.score.timing_hint_ms), fake=True)
+    s = Session(
+        cfg,
+        clock,
+        lessons_dir,
+        Coach(None, cfg.coach, cfg.score.timing_hint_ms),
+        fake=True,
+    )
     s.attempts_log = tmp_path / "attempts.jsonl"
     return s, clock
 
@@ -62,9 +68,16 @@ def test_one_lesson_per_course_and_word(built):
         "The flapping bird",
         "The snail",
     ]
-    letters = lessons["pose-fingerspelling-a-m"].steps + lessons["pose-fingerspelling-n-z"].steps
-    assert [s.name for s in letters] == [f"The letter {c}" for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"]
-    assert [s.name for s in lessons["pose-spell-junction"].steps] == [f"Letter {c}" for c in "JUNCTION"]
+    letters = (
+        lessons["pose-fingerspelling-a-m"].steps
+        + lessons["pose-fingerspelling-n-z"].steps
+    )
+    assert [s.name for s in letters] == [
+        f"The letter {c}" for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ]
+    assert [s.name for s in lessons["pose-spell-junction"].steps] == [
+        f"Letter {c}" for c in "JUNCTION"
+    ]
     # The dog's jaw moves the thumb, so its step is a move; held shapes are holds.
     kinds = {s.name: s.kind for s in lessons["pose-shadow-puppets"].steps}
     assert kinds["The talking dog"] == "move" and kinds["The snail"] == "hold"
@@ -80,7 +93,10 @@ def test_lessons_load_and_hold_the_seeded_curls(built, cfg):
     lesson = Lesson.load(out / "pose-fingerspelling-a-m")
     assert lesson.trace is not None and len(lesson.steps) == 13
     b = next(s for s in lesson.steps if s.name == "The letter B")
-    want = H.synth_hand(side="right", curl={"thumb": 0.8, "index": 0, "middle": 0, "ring": 0, "little": 0})
+    want = H.synth_hand(
+        side="right",
+        curl={"thumb": 0.8, "index": 0, "middle": 0, "ring": 0, "little": 0},
+    )
     assert np.abs(b.key_angles - want.angles).max() < 1.0
     assert b.note.startswith("A flat hand")
 
@@ -91,16 +107,27 @@ def test_the_tool_reads_the_seed_courses_the_frontend_mock_copies():
         d = json.loads(f.read_text())
         if d["skill"] not in mpl.SKILLS:
             continue
-        mock = repo / "frontend" / "src" / "mock" / "data" / f"seed-{f.stem.replace('_', '-')}.json"
+        mock = (
+            repo
+            / "frontend"
+            / "src"
+            / "mock"
+            / "data"
+            / f"seed-{f.stem.replace('_', '-')}.json"
+        )
         assert json.loads(mock.read_text()) == d, mock.name
 
 
 def test_pose_at_matches_the_backend_keyframe_rule():
-    dog = next(m for m in json.loads(mpl.MOVES_FILE.read_text()) if m["id"] == "sp_talking_dog")["default_motion"]
+    dog = next(
+        m for m in json.loads(mpl.MOVES_FILE.read_text()) if m["id"] == "sp_talking_dog"
+    )["default_motion"]
     assert mpl.motion_period_s(dog) == pytest.approx(1.2)
     assert mpl.pose_at(dog, 1.1).curl["thumb"] == pytest.approx(0.60)
     assert mpl.pose_at(dog, 0.5).curl["thumb"] == pytest.approx(0.10)
-    assert mpl.pose_at(dog, 0.6 + 0.6 * mpl.KEYFRAME_BLEND / 2).curl["thumb"] == pytest.approx(0.35)
+    assert mpl.pose_at(dog, 0.6 + 0.6 * mpl.KEYFRAME_BLEND / 2).curl[
+        "thumb"
+    ] == pytest.approx(0.35)
 
 
 def test_a_learner_holding_each_letter_spells_junction(built, cfg, tmp_path, schemas):
@@ -132,7 +159,9 @@ def test_a_wrong_shape_does_not_pass(built, cfg, tmp_path):
     s.handle_command("set_mode", {"mode": "learn"})
     s.drain()
     # Step 0 is A (a fist with the thumb up); a flat B hand must not pass it.
-    msgs = _feed(s, clock, {"thumb": 0.8, "index": 0, "middle": 0, "ring": 0, "little": 0}, n=120)
+    msgs = _feed(
+        s, clock, {"thumb": 0.8, "index": 0, "middle": 0, "ring": 0, "little": 0}, n=120
+    )
     assert not _events(msgs, "step_passed")
     assert s.step_index == 0
 
@@ -178,8 +207,14 @@ def test_a_replay_of_the_take_passes_every_puppet(built, cfg, tmp_path):
 def test_cli_list_and_write(tmp_path, capsys):
     assert mpl.main(["--list", "--skill", "shadow_puppets"]) == 0
     listed = capsys.readouterr().out
-    assert "pose-shadow-puppets | The rabbit, The talking dog" in listed and "spell" not in listed
-    assert mpl.main(["--out", str(tmp_path), "--skill", "fingerspelling", "--word", "hi"]) == 0
+    assert (
+        "pose-shadow-puppets | The rabbit, The talking dog" in listed
+        and "spell" not in listed
+    )
+    assert (
+        mpl.main(["--out", str(tmp_path), "--skill", "fingerspelling", "--word", "hi"])
+        == 0
+    )
     assert (tmp_path / "pose-spell-hi" / "lesson.json").exists()
     assert not (tmp_path / "pose-shadow-puppets").exists()
 
@@ -192,25 +227,46 @@ def _packs_with(asl_unrecorded=(), fi_recorded=None):
     for p in packs:
         for x in p["letters"]:
             if p["id"] == "asl" and x["letter"] in asl_unrecorded:
-                x.update(status="not_recorded", recorded_by=None, reference=None, recorded_at=None, move_id=None)
+                x.update(
+                    status="not_recorded",
+                    recorded_by=None,
+                    reference=None,
+                    recorded_at=None,
+                    move_id=None,
+                )
             if p["id"] == "fi" and fi_recorded and x["letter"] in fi_recorded:
-                x.update(status="recorded", recorded_by="Aino", reference="https://suvi.viittomat.net/alphabet.php",
-                         recorded_at="2026-11-15T10:00:00", lesson_id="take-1", pose=fi_recorded[x["letter"]])
+                x.update(
+                    status="recorded",
+                    recorded_by="Aino",
+                    reference="https://suvi.viittomat.net/alphabet.php",
+                    recorded_at="2026-11-15T10:00:00",
+                    lesson_id="take-1",
+                    pose=fi_recorded[x["letter"]],
+                )
     return packs
 
 
 def test_the_repo_packs_emit_every_asl_letter_and_no_finnish_lesson(built):
     _, lessons = built
     assert not any(lid.startswith("pose-pack-") for lid in lessons)
-    assert lessons["pose-spell-junction"].title == "ASL fingerspelling alphabet: spell JUNCTION"
+    assert (
+        lessons["pose-spell-junction"].title
+        == "ASL fingerspelling alphabet: spell JUNCTION"
+    )
 
 
 def test_an_unrecorded_letter_is_never_emitted():
     packs = _packs_with(asl_unrecorded=("B", "J"))
     recorded = mpl.recorded_letter_moves(packs)
-    course = next(c for c in mpl.load_courses(("fingerspelling",)) if c["id"] == "seed-fingerspelling-a-m")
+    course = next(
+        c
+        for c in mpl.load_courses(("fingerspelling",))
+        if c["id"] == "seed-fingerspelling-a-m"
+    )
     names = [s.name for s in mpl.course_steps(course, recorded)]
-    assert "The letter B" not in names and "The letter J" not in names and len(names) == 11
+    assert (
+        "The letter B" not in names and "The letter J" not in names and len(names) == 11
+    )
     with pytest.raises(ValueError, match="J is not recorded yet"):
         mpl.word_steps("JUNCTION", mpl.load_moves(), recorded)
 
@@ -223,7 +279,10 @@ def test_letters_a_person_recorded_become_a_pack_lesson(tmp_path, cfg, monkeypat
     assert [s.name for s in steps] == ["Ä"]  # the six unrecorded slots give no step
     assert steps[0].motion == {"preset": "hold_pose", "pose": pose}
     monkeypatch.setattr(mpl, "load_packs", lambda path=mpl.PACKS_FILE: packs)
-    lessons = {l.id: l for l in mpl.build_all(cfg, tmp_path, skills=("fingerspelling",), words=())}
+    lessons = {
+        l.id: l
+        for l in mpl.build_all(cfg, tmp_path, skills=("fingerspelling",), words=())
+    }
     lesson = lessons["pose-pack-fi"]
     assert lesson.title == "Sormiaakkoset: the recorded letters"
     assert "fingerspell" not in lesson.title.lower()

@@ -41,8 +41,13 @@ FLEX = [s for f in H.FINGERS for s in H.FLEXION_SLOTS[f]]
 T0_US = 1_700_000_000_000_000
 
 
-def walk(path: Path, rate_hz: float = 20.0, start_s: float = 0.0, seconds: float = float("inf"),
-         cfg=None) -> dict:
+def walk(
+    path: Path,
+    rate_hz: float = 20.0,
+    start_s: float = 0.0,
+    seconds: float = float("inf"),
+    cfg=None,
+) -> dict:
     """Hands sampled at rate_hz per side -> {side: {t_s, angles, cmc_deg, curl, wrist_q, tracked}} plus totals."""
     cfg = cfg or load_config(None)
     clock = FakeClock()
@@ -79,7 +84,13 @@ def walk(path: Path, rate_hz: float = 20.0, start_s: float = 0.0, seconds: float
             continue
         nd = next_due.get(side, t) + step_us
         next_due[side] = nd if nd > t else t + step_us
-        r = rows.setdefault(side, {k: [] for k in ("t_s", "angles", "cmc_deg", "wrist_q", "tracked", "device")})
+        r = rows.setdefault(
+            side,
+            {
+                k: []
+                for k in ("t_s", "angles", "cmc_deg", "wrist_q", "tracked", "device")
+            },
+        )
         r["t_s"].append(t / 1e6)
         r["angles"].append(np.asarray(h.angles, dtype=float))
         r["cmc_deg"].append(float(thumb_cmc_deg(h.joints_local)))
@@ -105,7 +116,9 @@ def walk(path: Path, rate_hz: float = 20.0, start_s: float = 0.0, seconds: float
     return out
 
 
-def flex_speed(t_s: np.ndarray, angles: np.ndarray, smooth_s: float = SMOOTH_S) -> np.ndarray:
+def flex_speed(
+    t_s: np.ndarray, angles: np.ndarray, smooth_s: float = SMOOTH_S
+) -> np.ndarray:
     """Per sample: the fastest finger flexion slot's speed in deg/s, over a smooth_s window (forward difference)."""
     n = len(t_s)
     if n < 2:
@@ -130,7 +143,10 @@ def curl_of(angles: np.ndarray, cfg=None) -> dict[str, float]:
 
 def describe_pose(curl: dict[str, float]) -> str:
     """A short pose name from the curls (0 flat .. 1 closed). Raw angles: a flat hand reads 0.3 to 0.4 on these gloves."""
-    word = {f: ("open" if c < 0.45 else "half" if c < 0.75 else "closed") for f, c in curl.items()}
+    word = {
+        f: ("open" if c < 0.45 else "half" if c < 0.75 else "closed")
+        for f, c in curl.items()
+    }
     fingers = ["index", "middle", "ring", "little"]
     closed = [f for f in fingers if word[f] == "closed"]
     open_ = [f for f in fingers if word[f] == "open"]
@@ -146,8 +162,13 @@ def describe_pose(curl: dict[str, float]) -> str:
     return f"{base}, thumb {thumb}"
 
 
-def still_stretches(t_s: np.ndarray, angles: np.ndarray, tracked: np.ndarray,
-                    still_deg_s: float = STILL_DEG_S, min_s: float = MIN_STILL_S) -> list[tuple[int, int]]:
+def still_stretches(
+    t_s: np.ndarray,
+    angles: np.ndarray,
+    tracked: np.ndarray,
+    still_deg_s: float = STILL_DEG_S,
+    min_s: float = MIN_STILL_S,
+) -> list[tuple[int, int]]:
     """[(i0, i1)] index ranges (inclusive) where the fingers stay still for min_s or more."""
     sp = flex_speed(t_s, angles)
     still = (sp < still_deg_s) & tracked
@@ -166,7 +187,9 @@ def still_stretches(t_s: np.ndarray, angles: np.ndarray, tracked: np.ndarray,
     return out
 
 
-def activity(t_s: np.ndarray, angles: np.ndarray, tracked: np.ndarray, bucket_s: float = 60.0) -> list[dict]:
+def activity(
+    t_s: np.ndarray, angles: np.ndarray, tracked: np.ndarray, bucket_s: float = 60.0
+) -> list[dict]:
     """Per bucket: tracked share, still share, median flexion speed, mean curl and pose spread."""
     sp = flex_speed(t_s, angles)
     rows = []
@@ -177,21 +200,28 @@ def activity(t_s: np.ndarray, angles: np.ndarray, tracked: np.ndarray, bucket_s:
         if m.sum() < 5:
             continue
         a = angles[m][:, FLEX]
-        rows.append({
-            "start_s": float(b0),
-            "samples": int(m.sum()),
-            "tracked": float(tracked[m].mean()),
-            "still": float(np.mean(sp[m] < STILL_DEG_S)),
-            "speed_med": float(np.median(sp[m])),
-            "speed_p90": float(np.percentile(sp[m], 90)),
-            "flex_mean": float(a.mean()),
-            "flex_range": float(np.percentile(a.mean(axis=1), 95) - np.percentile(a.mean(axis=1), 5)),
-        })
+        rows.append(
+            {
+                "start_s": float(b0),
+                "samples": int(m.sum()),
+                "tracked": float(tracked[m].mean()),
+                "still": float(np.mean(sp[m] < STILL_DEG_S)),
+                "speed_med": float(np.median(sp[m])),
+                "speed_p90": float(np.percentile(sp[m], 90)),
+                "flex_mean": float(a.mean()),
+                "flex_range": float(
+                    np.percentile(a.mean(axis=1), 95) - np.percentile(a.mean(axis=1), 5)
+                ),
+            }
+        )
     return rows
 
 
 def save_cache(path: Path, w: dict) -> None:
-    flat = {"messages": w["messages"], "devices": json.dumps({str(k): v for k, v in w["devices"].items()})}
+    flat = {
+        "messages": w["messages"],
+        "devices": json.dumps({str(k): v for k, v in w["devices"].items()}),
+    }
     for side in ("left", "right"):
         if side in w:
             for k, v in w[side].items():
@@ -205,7 +235,10 @@ def load_cache(path: Path) -> dict:
     w: dict = {"messages": int(z["messages"]), "devices": json.loads(str(z["devices"]))}
     for side in ("left", "right"):
         if f"{side}_t_s" in z:
-            w[side] = {k: z[f"{side}_{k}"] for k in ("t_s", "angles", "cmc_deg", "wrist_q", "tracked")}
+            w[side] = {
+                k: z[f"{side}_{k}"]
+                for k in ("t_s", "angles", "cmc_deg", "wrist_q", "tracked")
+            }
     return w
 
 
@@ -216,17 +249,22 @@ def stretch_rows(w: dict, cfg=None) -> list[dict]:
             continue
         d = w[side]
         for i0, i1 in still_stretches(d["t_s"], d["angles"], d["tracked"]):
-            a = np.median(d["angles"][i0:i1 + 1], axis=0)
+            a = np.median(d["angles"][i0 : i1 + 1], axis=0)
             c = curl_of(a, cfg)
-            rows.append({
-                "side": side,
-                "start_s": round(float(d["t_s"][i0]), 1),
-                "length_s": round(float(d["t_s"][i1] - d["t_s"][i0]), 1),
-                "pose": describe_pose(c),
-                "curl": {f: round(float(v), 2) for f, v in c.items()},
-                "flex_deg": {f: round(float(np.mean(a[H.FLEXION_SLOTS[f]])), 0) for f in H.FINGERS},
-                "cmc_deg": round(float(np.median(d["cmc_deg"][i0:i1 + 1])), 0),
-            })
+            rows.append(
+                {
+                    "side": side,
+                    "start_s": round(float(d["t_s"][i0]), 1),
+                    "length_s": round(float(d["t_s"][i1] - d["t_s"][i0]), 1),
+                    "pose": describe_pose(c),
+                    "curl": {f: round(float(v), 2) for f, v in c.items()},
+                    "flex_deg": {
+                        f: round(float(np.mean(a[H.FLEXION_SLOTS[f]])), 0)
+                        for f in H.FINGERS
+                    },
+                    "cmc_deg": round(float(np.median(d["cmc_deg"][i0 : i1 + 1])), 0),
+                }
+            )
     rows.sort(key=lambda r: (r["start_s"], r["side"]))
     return rows
 
@@ -256,14 +294,28 @@ def markdown(report: dict, wall_start: str | None = None) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("capture", type=Path)
-    ap.add_argument("--rate", type=float, default=20.0, help="samples per second per hand")
-    ap.add_argument("--cache", type=Path, help="write (or with --reuse, read) the sampled hands here")
+    ap.add_argument(
+        "--rate", type=float, default=20.0, help="samples per second per hand"
+    )
+    ap.add_argument(
+        "--cache",
+        type=Path,
+        help="write (or with --reuse, read) the sampled hands here",
+    )
     ap.add_argument("--reuse", action="store_true")
-    ap.add_argument("--json", type=Path, help="write the summary, activity and stretches here")
+    ap.add_argument(
+        "--json", type=Path, help="write the summary, activity and stretches here"
+    )
     ap.add_argument("--md", type=Path, help="write the stretch table here as Markdown")
-    ap.add_argument("--wall-start", default=None, help="wall clock of capture second 0, HH:MM:SS, for the md table")
+    ap.add_argument(
+        "--wall-start",
+        default=None,
+        help="wall clock of capture second 0, HH:MM:SS, for the md table",
+    )
     a = ap.parse_args()
     cfg = load_config(None)
     if a.reuse and a.cache and a.cache.exists():
@@ -272,16 +324,29 @@ def main() -> int:
         w = walk(a.capture, a.rate, cfg=cfg)
         if a.cache:
             save_cache(a.cache, w)
-    summary = {"capture": str(a.capture), "bytes": a.capture.stat().st_size, "messages": w["messages"],
-               "devices": w["devices"], "hands": {}}
+    summary = {
+        "capture": str(a.capture),
+        "bytes": a.capture.stat().st_size,
+        "messages": w["messages"],
+        "devices": w["devices"],
+        "hands": {},
+    }
     for side in ("left", "right"):
         if side in w:
             d = w[side]
-            summary["hands"][side] = {"samples": len(d["t_s"]), "first_s": float(d["t_s"][0]),
-                                      "last_s": float(d["t_s"][-1]), "tracked": float(d["tracked"].mean())}
+            summary["hands"][side] = {
+                "samples": len(d["t_s"]),
+                "first_s": float(d["t_s"][0]),
+                "last_s": float(d["t_s"][-1]),
+                "tracked": float(d["tracked"].mean()),
+            }
     report = {
         "summary": summary,
-        "activity": {s: activity(w[s]["t_s"], w[s]["angles"], w[s]["tracked"]) for s in ("left", "right") if s in w},
+        "activity": {
+            s: activity(w[s]["t_s"], w[s]["angles"], w[s]["tracked"])
+            for s in ("left", "right")
+            if s in w
+        },
         "stretches": stretch_rows(w, cfg),
     }
     print(json.dumps(summary, indent=1, default=str))
