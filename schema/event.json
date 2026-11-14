@@ -14,7 +14,8 @@
         "pinch_down", "pinch_up", "button",
         "recording_started", "step_marked", "recording_stopped",
         "step_started", "step_passed", "lesson_complete", "step_restarted",
-        "finger_down", "note", "strike", "round_won", "device", "calibrated", "stuck"
+        "finger_down", "note", "strike", "round_won", "device", "calibrated", "stuck",
+        "keystroke"
       ]
     },
     "hand": { "oneOf": [{ "$ref": "common.json#/$defs/side" }, { "type": "null" }] },

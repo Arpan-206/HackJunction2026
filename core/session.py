@@ -18,6 +18,7 @@ from .robot import Retargeter
 from .scorer import FrameScore, MirrorScorer, StepScorer, Tolerances
 from .tasks import TASKS, task_state
 from .tasks.piano import PianoTask
+from .tasks.typing import TypingTask
 
 log = logging.getLogger("geppetto.session")
 
@@ -88,6 +89,7 @@ class Session:
         self._pinch_fired: dict[str, bool] = {"left": False, "right": False}
         self.answers: dict[str, str] = {}
         self.piano: PianoTask | None = None
+        self.typing: TypingTask | None = None
         self.seq = 0
         root = Path(cfg.get_path("_root", "."))
         self.robot: Retargeter | None = None
@@ -645,6 +647,8 @@ class Session:
 
         if self.task == "piano":
             self._piano_tick(t)
+        if self.task == "typing":
+            self._typing_tick(t)
         frame["task"] = task_state(self)
         frame["robot"] = self.robot_block(t)
         self.emit_coach_flush(t)
@@ -761,6 +765,43 @@ class Session:
             if self.task == "piano"
             else None
         )
+        self.typing = (
+            TypingTask(
+                self.cfg.get_path("typing", self.cfg.piano), self.task_config, self.fake
+            )
+            if self.task == "typing"
+            else None
+        )
+
+    def _typing_tick(self, t_us: int) -> None:
+        if self.typing is None:
+            return
+        for side in SIDES:
+            h = self.hands.get(side)
+            self.typing.feed(t_us, side, h.angles if (h is not None and h.tracked) else None)
+        for v in self.typing.due(t_us):
+            hand = v["detected"]["hand"] if v["detected"] else None
+            self.emit_event("keystroke", hand, v)
+
+    def cmd_keystroke(self, args: dict) -> dict:
+        """Typing task: one keydown from the viewer. The verdict follows as a `keystroke` event."""
+        if self.typing is None:
+            raise CommandError("bad_state", "keystroke needs the typing task")
+        key = args.get("key")
+        t = args.get("t", self.now())
+        if not isinstance(t, int) or isinstance(t, bool):
+            raise CommandError("bad_args", "t must be an integer in core microseconds")
+        ks = self.typing.keystroke(key, t)
+        if ks is None:
+            raise CommandError("bad_args", f"no chart key {key!r}")
+        return {"id": ks.id, "key": ks.key, "due_ms": int(self.typing.p["post_ms"])}
+
+    def cmd_typing_reset(self, args: dict) -> dict:
+        """Typing task: clear the per-finger tally."""
+        if self.typing is None:
+            raise CommandError("bad_state", "typing_reset needs the typing task")
+        self.typing.reset_tally()
+        return {"ok": True}
 
     def _piano_tick(self, t_us: int) -> None:
         if self.piano is None:

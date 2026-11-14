@@ -211,6 +211,20 @@ good_ms = 120
 near_ms = 300
 default_tempo_bpm = 70
 
+[typing]
+# Typing task (core/tasks/typing.py). Keystrokes move a finger far less than a
+# piano press: the first real-glove typing capture (14 Nov) gave 2 presses in 64 s
+# with the [piano] thresholds and 46 with these. Still unvalidated: no clean capture yet.
+press_velocity_deg_s = 60
+press_min_deg = 4
+release_deg = 2
+rest_tau_ms = 2000
+# Window around each keydown, and how a finger wins it.
+pre_ms = 150
+post_ms = 120
+min_peak_deg_s = 40.0
+clear_ratio = 1.5
+
 [robot]
 # Robot hand output: the 18 angle features retargeted to joint targets.
 # Joint names and limits come from the URDF files, never from code.
