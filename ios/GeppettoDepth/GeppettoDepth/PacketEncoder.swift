@@ -49,7 +49,7 @@ final class PacketEncoder {
         let conf = depth.confidenceMap.flatMap { Self.bytes8($0) }
         guard let (jpeg, jw, jh) = jpeg(frame.capturedImage) else { return nil }
         let res = frame.camera.imageResolution
-        let plane = Self.largestHorizontalPlane(frame.anchors)
+        let plane = Self.largestHorizontalPlane(frame.anchors, cameraY: frame.camera.transform.columns.3.y)
         var flags: UInt16 = 0
         if plane != nil { flags |= DepthProtocol.flagPlane }
         if conf != nil { flags |= DepthProtocol.flagConfidence }
@@ -88,18 +88,30 @@ final class PacketEncoder {
         return out.data
     }
 
-    /// The largest horizontal plane by area: pose moved to its centre and turned by rotationOnYAxis.
-    static func largestHorizontalPlane(_ anchors: [ARAnchor]) -> (pose: simd_float4x4, extent: SIMD2<Float>)? {
+    /// The bench: the highest horizontal plane that faces up, lies below the camera and is at
+    /// least 0.04 m2, so a ceiling (normal down) or the floor (lower) does not win. Falls back to
+    /// the largest horizontal plane of any kind. Pose moved to the plane centre and turned by
+    /// rotationOnYAxis.
+    static func largestHorizontalPlane(_ anchors: [ARAnchor], cameraY: Float = .greatestFiniteMagnitude)
+        -> (pose: simd_float4x4, extent: SIMD2<Float>)? {
         var best: ARPlaneAnchor?
-        var bestArea: Float = 0
+        var bestY: Float = -.greatestFiniteMagnitude
+        var largest: ARPlaneAnchor?
+        var largestArea: Float = 0
         for case let p as ARPlaneAnchor in anchors where p.alignment == .horizontal {
             let area = p.planeExtent.width * p.planeExtent.height
-            if area > bestArea {
+            if area > largestArea {
+                largest = p
+                largestArea = area
+            }
+            let facesUp = p.transform.columns.1.y > 0
+            let y = p.transform.columns.3.y + p.center.y
+            if facesUp && y < cameraY && area >= 0.04 && y > bestY {
                 best = p
-                bestArea = area
+                bestY = y
             }
         }
-        guard let p = best else { return nil }
+        guard let p = best ?? largest else { return nil }
         var centre = matrix_identity_float4x4
         centre.columns.3 = SIMD4<Float>(p.center.x, p.center.y, p.center.z, 1)
         let turn = simd_float4x4(simd_quatf(angle: p.planeExtent.rotationOnYAxis, axis: SIMD3<Float>(0, 1, 0)))

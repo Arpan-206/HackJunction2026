@@ -96,7 +96,7 @@ final class DepthStreamer: NSObject, ObservableObject, ARSessionDelegate {
             let ar = Self.rate(arTimes)
             let tx = (sentTimes.last.map { t - $0 < 1.0 } ?? false) ? Self.rate(sentTimes) : 0
             let track = Self.describe(frame.camera.trackingState)
-            let plane = PacketEncoder.largestHorizontalPlane(frame.anchors)
+            let plane = PacketEncoder.largestHorizontalPlane(frame.anchors, cameraY: frame.camera.transform.columns.3.y)
             let planeText = plane.map { p in
                 String(format: "%.2f x %.2f m, %.2f m below camera", p.extent.x, p.extent.y,
                        frame.camera.transform.columns.3.y - p.pose.columns.3.y)
