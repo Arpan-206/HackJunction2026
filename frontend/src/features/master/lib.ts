@@ -6,6 +6,7 @@ export const SKILLS: { id: Skill; label: string }[] = [
   { id: 'shadow_puppets', label: 'Shadow puppets' },
   { id: 'surgical_grips', label: 'Surgical grips' },
   { id: 'crochet', label: 'Crochet' },
+  { id: 'touch_typing', label: 'Touch typing' },
   { id: 'general', label: 'General' },
 ];
 
