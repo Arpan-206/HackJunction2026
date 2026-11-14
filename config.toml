@@ -293,3 +293,10 @@ timeout_s = 5.0
 usb = false
 # depth pixels with confidence below this count as missing (0 low, 1 medium, 2 high)
 min_confidence = 1
+
+[camera.geppetto_depth]
+# Our own iPhone app (ios/GeppettoDepth) over the USB cable. Run ios/mac/forward.sh first.
+host = "127.0.0.1"
+port = 7700
+timeout_s = 5.0
+min_confidence = 1
