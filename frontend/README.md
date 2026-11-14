@@ -11,7 +11,7 @@ npm run build    # tsc -b && vite build
 npm run lint
 ```
 
-Developer panel: open any page with `?dev=1` (remembered in localStorage, `?dev=0` forgets it) or set `VITE_DEV_PANEL=true`. To remove it for the demo, delete the `DevPanel` import and element in `src/main.tsx`.
+Developer panel: renders only when switched on. Open any page with `?dev=1` to show it (the flag is remembered in localStorage under `apprentice.devpanel`, so it stays on for later visits). Open `/?dev=0` to clear the flag and hide it; presenters should do this before going on stage. The panel docks as a small tab on the right edge, and it also holds the theme switch. `VITE_DEV_PANEL` no longer forces it on.
 
 `/lab` is a gallery of every hand style, pose, prop and grip camera. Use it when touching `src/three/`.
 
@@ -45,3 +45,40 @@ To add a theme:
 Wood textures live in `public/textures/wood/` (source and licence in `SOURCE.md`).
 
 Pose input, in priority order: `getFrame(t)`, `live` (a ref to the latest GloveFrame), `frame`, `motion` (local preview synthesiser), then a relaxed rest pose. Frames pass through `HandSmoother` (exponential smoothing, time constant `tau`, default 45 ms, `smoothing={false}` to disable).
+
+## Component playground
+
+Open `/playground` (for example http://localhost:5173/playground; deep links such as `/playground#marionette` work) to play with every UI piece and the 3D hands. It needs no backend. The left list picks a section, the right panel holds plain React controls, and "Copy JSX" copies the current props as a snippet.
+
+- Foundations: typography and colour tokens, with a live bottega, notte and affresco switch.
+- Components: buttons, fields, tabs, stepper, countdown, record button, toast, card, page header.
+- 3D: the Hand (style, motion preset and its parameters, beat, smoothing, joint rings, trails, focus finger, tint, opacity), stage presets with the racket and keyboard props, and the marionette guidance (real Strings, Crossbar and FaultMarks fed by a hand-made coach, with an error slider per finger).
+
+Only the active section is mounted, so at most one WebGL context is alive. Code lives in `src/playground/`; the only outside edit is the lazy `/playground` route in `src/app/App.tsx`. Screenshots are `docs/screens/playground-*.png`.
+
+## Mock mode (no Python backend)
+
+Mock mode runs the whole app against an in-browser implementation of every route in `docs/CONTRACT.md`, so the product owner can test everything without starting the backend. It lives in `src/mock/` and works at the transport layer: `fetch`, `XMLHttpRequest` (video upload progress) and `WebSocket` (`/ws/gloves` only) are patched before the app renders, so no feature code knows about it.
+
+Turn it on any of these ways:
+
+- Open any page with `?mock=1`. This is remembered in localStorage; `?mock=0` clears it and returns to the real backend.
+- Start the dev server or build with `VITE_MOCK=1` (`?mock=0` still overrides it).
+- Do nothing: if `/api/health` is unreachable at startup, mock mode switches on by itself. The only sign is one console line and `window.__apprenticeMock === true`.
+
+Static demo with no backend at all:
+
+```bash
+VITE_MOCK=1 npm run build     # PowerShell: $env:VITE_MOCK=1; npm run build
+npm run preview               # serve dist/ with Vite, no proxy and no Python needed
+```
+
+What it does:
+
+- Lessons (with the two seed lessons), calibrations, recordings and the dev state persist in localStorage (memory if storage is blocked). Clear the keys starting `apprentice.mock.v1.` to reset.
+- A simulated glove stream at about 60 Hz with two hands, `set_motion` support, and a light 9 to 11 Hz tremor that the steadiness and smoothing settings (One Euro filter, same as the backend) reduce. Recording and calibration capture from this stream.
+- `/score` is a pure TypeScript port of `backend/app/services/scoring.py` (per-finger DTW, total-flexion error, Gaussian mapping, calibration, hints). `tests/mock-scoring.test.ts` pins it to numbers produced by the Python scorer.
+- LLM routes (`lessons/generate`, `generate_from_video`, `motion/from_text`, `coach/plan`) use the deterministic templates of the backend fake provider and report `provider: "mock"`. `/coach/hint` is algorithmic. `/vision/hands` answers 503. `/ingest/frames` feeds frames into the mock stream once the source is `external`.
+- Errors use the backend's status codes and `{detail}` body; unknown routes give 404.
+
+Walk the whole app in mock mode with `node e2e/mock-walk.mjs` (screenshots go to `docs/screens/mock-*.png`). The move catalogue and seed lessons in `src/mock/data/` are copies of `backend/app/data`; refresh them if the backend ones change.

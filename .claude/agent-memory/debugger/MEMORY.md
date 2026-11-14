@@ -1,0 +1,2 @@
+- [anyio cancel message vs gather](anyio_cancel_message_gather.md) — flaky websocket TestClient CancelledError; use anyio task group, not gather
+- [synth breathing vs global clock](synth_breathing_global_clock.md) — breathing must be periodic in motion period; e2e flakes from shared simulator/CPU
