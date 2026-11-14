@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGloveStream, type Lesson, type Side, type TestSpec } from '../../../../api';
 import { Button, Card } from '../../../../components/ui';
+import { PropSwitch } from '../../../shared/PropSwitch';
+import { useShowProps } from '../../../shared/sessionPrefs';
 import { useStreamClock } from '../../hooks/useStreamClock';
 import { flexionDegrees } from '../../training/coach/deviation';
 import { TestResult } from '../TestResult';
@@ -39,6 +41,7 @@ export function PianoPlayAlong({ spec, lesson }: { spec: TestSpec; lesson?: Less
   const botSkill = useBotSkill(lesson);
   const gloves = useGloveStream(true);
   const clock = useStreamClock(gloves);
+  const [showProps] = useShowProps();
   const [stage, setStage] = useState<'intro' | 'playing' | 'result'>('intro');
   const [live, setLive] = useState<Live>({ scores: { left: ZERO, right: ZERO }, callout: { left: '', right: '' }, next: null });
   const [round, setRound] = useState(1);
@@ -141,7 +144,7 @@ export function PianoPlayAlong({ spec, lesson }: { spec: TestSpec; lesson?: Less
   return (
     <div className={`ap-arena ap-arena--piano ${stage === 'playing' ? 'ap-arena--live' : ''}`}>
       <div className="ap-arena__scene">
-        <PianoScene gloves={gloves} twoPlayer={twoPlayer} />
+        <PianoScene gloves={gloves} twoPlayer={twoPlayer} showProp={showProps} />
         {stage === 'playing' && live.next && (
           <div className="ap-next" role="status" aria-live="polite">
             <span className="ap-next__round">
@@ -163,6 +166,7 @@ export function PianoPlayAlong({ spec, lesson }: { spec: TestSpec; lesson?: Less
               </li>
             </ul>
             <div className="ap-intro__foot">
+              <PropSwitch prop="keyboard" className="ap-intro__prop" />
               <Button large onClick={start}>
                 Start playing
               </Button>

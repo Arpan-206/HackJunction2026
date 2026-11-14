@@ -1,6 +1,7 @@
 export { Hand, type HandProps, type HandHandle } from './Hand';
 export { HandCanvas, Stage, PRESETS, type HandCanvasProps, type StageProps, type CameraPreset } from './Stage';
 export { Racket, Keyboard } from './props';
+export { BallSketch, KeysSketch, PropCue, RacketSketch } from './sketchProps';
 export { JointRings, FingertipTrails } from './overlays';
 export { useStageColors } from './stageContext';
 export { synthFrame, restFrame, curlsToFlexion } from './motion';

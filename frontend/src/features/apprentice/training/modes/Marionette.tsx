@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { HandCanvas, Keyboard, type HandHandle } from '../../../../three';
+import { HandCanvas, Keyboard, PropCue, type HandHandle } from '../../../../three';
 import { FaultMarks } from './FaultMarks';
 import { LearnerHand, MasterHand } from './LearnerHand';
 import { Crossbar, Strings } from './Strings';
@@ -10,7 +10,7 @@ import { FingerTinter } from './useFingerTints';
  * Pinocchio guidance: the master's ghost hand hovers above the wooden hand, hung from a crossbar, and a string joins each
  * ghost fingertip to the matching learner fingertip. Slack means right; taut and vermilion means correct me.
  */
-export function Marionette({ coach, gloves, side, prop, policy, toleranceDeg, combo }: ModeProps) {
+export function Marionette({ coach, gloves, side, prop, cue, policy, toleranceDeg, combo }: ModeProps) {
   const learner = useRef<HandHandle>(null);
   const master = useRef<HandHandle>(null);
   return (
@@ -21,7 +21,8 @@ export function Marionette({ coach, gloves, side, prop, policy, toleranceDeg, co
     >
       <FingerTinter hand={master} coach={coach} policy={policy} goodTint={false} />
       {prop === 'keyboard' && <Keyboard handRef={learner} />}
-      <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} />
+      <PropCue prop={cue} hand={learner} />
+      <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} />
       <FaultMarks hand={learner} coach={coach} policy={policy} toleranceDeg={toleranceDeg} />
       {policy.showMaster && (
         <>

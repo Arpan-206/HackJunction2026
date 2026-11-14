@@ -8,7 +8,10 @@ export interface ModeProps {
   coach: Coach;
   gloves: GloveStreamHandle;
   side: Side;
+  /** The prop drawn as a solid model: the step's prop when "Add a prop" is on, else 'none'. */
   prop: Prop;
+  /** The prop drawn as a chalk sketch instead: the step's prop when "Add a prop" is off, else 'none'. */
+  cue: Prop;
   policy: AttemptPolicy;
   /** Tolerance in degrees per finger, used to decide which fingers get a correction mark. */
   toleranceDeg: number;

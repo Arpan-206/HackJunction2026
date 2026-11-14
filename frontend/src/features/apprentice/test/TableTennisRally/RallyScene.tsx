@@ -13,7 +13,7 @@ import {
   DoubleSide,
 } from 'three';
 import type { GloveStreamHandle } from '../../../../api';
-import { Hand, HandCanvas, Racket } from '../../../../three';
+import { Hand, HandCanvas, Racket, RacketSketch } from '../../../../three';
 import { toonGradient } from '../../../../three/materials';
 import { TABLE } from './ball';
 import { PADDLE_Z, type RallyGame } from './rally';
@@ -139,10 +139,12 @@ interface PlayerHandProps {
   gloves: GloveStreamHandle;
   who: 'a' | 'b';
   side: 'left' | 'right';
+  /** Draw the solid racket; otherwise its chalk outline marks where the blade is. */
+  showProp: boolean;
 }
 
 /** A wooden hand holding a racket whose blade is kept on the ball; the glove supplies the wrist and finger pose. */
-function PlayerHand({ game, gloves, who, side }: PlayerHandProps) {
+function PlayerHand({ game, gloves, who, side, showProp }: PlayerHandProps) {
   const group = useRef<Group>(null);
   useFrame(() => {
     const p = game.paddle[who];
@@ -152,7 +154,7 @@ function PlayerHand({ game, gloves, who, side }: PlayerHandProps) {
   return (
     <group ref={group}>
       <Hand side={side} style="wood" live={gloves.latest} scale={HAND_SCALE} rotation={who === 'a' ? [0, Math.PI, 0] : [0, 0, 0]}>
-        <Racket />
+        {showProp ? <Racket /> : <RacketSketch weight={2.4} />}
       </Hand>
     </group>
   );
@@ -162,10 +164,12 @@ interface RallySceneProps {
   game: RallyGame;
   gloves: GloveStreamHandle;
   twoPlayer: boolean;
+  /** Draw the solid racket in each hand, or a chalk outline of it when props are off. */
+  showProp?: boolean;
 }
 
 /** The 3D court: lapis table with white lines and net, the ball, the bot paddle or two gloved players. */
-export function RallyScene({ game, gloves, twoPlayer }: RallySceneProps) {
+export function RallyScene({ game, gloves, twoPlayer, showProp = true }: RallySceneProps) {
   return (
     <HandCanvas
       preset="single"
@@ -174,8 +178,8 @@ export function RallyScene({ game, gloves, twoPlayer }: RallySceneProps) {
     >
       <Table />
       <BallMesh game={game} />
-      <PlayerHand game={game} gloves={gloves} who="a" side="right" />
-      {twoPlayer ? <PlayerHand game={game} gloves={gloves} who="b" side="left" /> : <BotPaddle game={game} />}
+      <PlayerHand game={game} gloves={gloves} who="a" side="right" showProp={showProp} />
+      {twoPlayer ? <PlayerHand game={game} gloves={gloves} who="b" side="left" showProp={showProp} /> : <BotPaddle game={game} />}
     </HandCanvas>
   );
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGloveStream, type Lesson, type TestSpec } from '../../../../api';
 import { Button, Card } from '../../../../components/ui';
+import { PropSwitch } from '../../../shared/PropSwitch';
+import { useShowProps } from '../../../shared/sessionPrefs';
 import { useStreamClock } from '../../hooks/useStreamClock';
 import { TestResult } from '../TestResult';
 import { useBotSkill, useDuelOutcome } from '../useDuelOutcome';
@@ -38,6 +40,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
   const botSkill = useBotSkill(lesson);
   const gloves = useGloveStream(true);
   const clock = useStreamClock(gloves);
+  const [showProps] = useShowProps();
   const [stage, setStage] = useState<'intro' | 'playing' | 'result'>('intro');
   const [snap, setSnap] = useState<Snapshot>(EMPTY);
   const [cue, setCue] = useState(false);
@@ -174,7 +177,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
       </div>
       )}
       <div className="ap-arena__scene">
-        <RallyScene key={runKey} game={g} gloves={gloves} twoPlayer={twoPlayer} />
+        <RallyScene key={runKey} game={g} gloves={gloves} twoPlayer={twoPlayer} showProp={showProps} />
         {stage === 'playing' && (
           <>
             {cue && <p className="ap-cue">SWING!</p>}
@@ -196,6 +199,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
               <li>No gloves? Press Space to swing.</li>
             </ul>
             <div className="ap-intro__foot">
+              <PropSwitch prop="racket" className="ap-intro__prop" />
               <Button large onClick={start}>
                 Start the rally
               </Button>
@@ -203,7 +207,7 @@ export function TableTennisRally({ spec, lesson }: { spec: TestSpec; lesson?: Le
           </Card>
         )}
       </div>
-      <p className="note ap-arena__hint">The racket in the picture follows your wrist. Hold the face level for a clean return: tilted closed it finds the net, tilted open it goes long.</p>
+      <p className="note ap-arena__hint">The racket, drawn in chalk unless you add it, follows your wrist. Hold the face level for a clean return: tilted closed it finds the net, tilted open it goes long.</p>
     </div>
   );
 }
