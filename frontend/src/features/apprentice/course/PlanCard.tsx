@@ -6,6 +6,7 @@ import { formatWhen } from '../../master/lib';
 import { usePracticePlan } from '../hooks/usePracticePlan';
 import { useAssistant } from '../../shared/assistant';
 import { FINGER_LABEL } from '../training/coach/tips';
+import { ModelLabel } from '../../shared/ModelLabel';
 
 /** Who wrote the plan, in plain words. Provider names stay in the developer panel. */
 const sourceLine = (provider: string): string =>
@@ -45,6 +46,7 @@ export function PlanCard({ lesson }: { lesson: Lesson }) {
             <p className="ap-plan__source">
               {sourceLine(p.stored.plan.provider)} Asked for {formatWhen(p.stored.at)}.
             </p>
+            <ModelLabel provider={p.stored.plan.provider} />
           </>
         ) : (
           <p className="note">

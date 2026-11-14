@@ -199,6 +199,7 @@ def test_coach_shows_the_offline_note(client: TestClient, monkeypatch: pytest.Mo
     assert body["provider"] == "offline" and body["hint"] == OFFLINE_NOTE
     assert body["focus_finger"] == "index" and body["cue_type"] == "extend"
     assert llm.last_answered == "offline"
+    assert client.get("/api/dev/state").json()["llm_answered_by"] == "offline"
 
 
 def test_offline_note_is_user_copy() -> None:

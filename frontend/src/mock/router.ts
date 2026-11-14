@@ -1,6 +1,7 @@
 import type {
   Calibration,
   Finger,
+  LlmProvider,
   FingerWeights,
   GloveFrame,
   JointTriple,
@@ -523,8 +524,8 @@ route('POST', '/dev/state', (req) => {
     if (s.beta !== undefined) store.dev.smoothing.beta = Number(s.beta);
   }
   if (b.llm_provider !== undefined) {
-    if (!['fake', 'gemini', 'ollama'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini or ollama');
-    store.dev.llm_provider = b.llm_provider as 'fake' | 'gemini' | 'ollama';
+    if (!['fake', 'gemini', 'ollama', 'openai'].includes(b.llm_provider as string)) invalid('llm_provider must be fake, gemini, ollama or openai');
+    store.dev.llm_provider = b.llm_provider as LlmProvider;
   }
   if (b.glove_source !== undefined) {
     if (b.glove_source !== 'simulator' && b.glove_source !== 'external') {

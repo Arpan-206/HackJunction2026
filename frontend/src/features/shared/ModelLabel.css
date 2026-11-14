@@ -1,0 +1,7 @@
+/* Who answered: a margin note in the bottega hand, not a pill or a badge. */
+.model-label {
+  display: block;
+  margin-top: 0.25rem;
+  font: italic 400 var(--step--1) var(--font-note);
+  color: var(--text-2);
+}

@@ -180,7 +180,7 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/motion/from_text` | `{text: string (max 200 chars), side?: Side}` | `MotionFromTextResponse` (LLM picks a preset; fake uses keyword rules) |
 | POST | `/vision/hands` | multipart `image` (jpeg) | `{hands: {side, wrist_pos, landmarks: [x,y,z][]}[]}` (MediaPipe) |
 | POST | `/ingest/frames` | one `GloveFrame`, one `HandFrame` (`wrist_quat` defaults to identity) or `{frames: GloveFrame[]}` (max 600); optional `?activate=1` switches the source to `external` first | `{accepted: number}`; 409 if the source is not `external` and `activate` is absent, 422 on an invalid frame |
-| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[]}` (`gemini_budget` is read-only, ignored on POST) |
+| GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[], llm_chain: string[], llm_answered_by: string \| null}` (`gemini_budget`, `llm_chain` and `llm_answered_by` are read-only, ignored on POST; `llm_provider` may also be `openai`) |
 | POST | `/dev/state` | partial of the above | new state |
 | GET | `/gloves/status` | | `GloveRigStatus` (see Real gloves) |
 | POST | `/gloves/driver` | `{action: 'start' or 'stop'}` | `GloveRigStatus` after the action; 409 while Rokoko Studio is open, 503 when the SDK is not found |
@@ -202,6 +202,8 @@ Routes are thin: validate input, call one service, return a schema. No business 
 `fake` (deterministic templates, offline, default in tests), `gemini` (Gemini Flash via google-genai, structured output with the JSON schema of `Lesson`), `ollama` (local Gemma 4 via Ollama `format` = JSON schema). Every provider's output is validated with the same pydantic model and retried up to 2 times with the validation errors fed back; on final failure the `fake` provider's template is returned and `provider` says so.
 
 `/coach/plan` and `/motion/from_text` use the same providers, validation and retry rules; oversize input is a 422, and `provider` is `fake` when the offline fallback answered.
+
+Fallback chain (additive, docs/MODELS.md): every real provider runs in a chain with a short time cap per call (hint 5 s, `openai` 20 s, others 30 s). `gemini` and `openai` (Gemma on Verda, only when `OPENAI_BASE_URL` is set) back each other up, and `LLM_ROUTES` may send a role to `openai` first. `provider` names the provider that answered. When no model answers, `/coach/hint` returns the one-sentence offline note as `hint` with `provider: "offline"` (focus, cue and severity still come from the measurements), and the other routes return their template with `provider: "fake"` without retrying. The UI shows `provider` only through `ModelLabel`: "AI Assistant" or "AI Assistant offline", with model names only in dev mode (`?dev=1`). `ollama` is not in any chain.
 
 ## Smoothing
 
