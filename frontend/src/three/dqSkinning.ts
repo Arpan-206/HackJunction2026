@@ -115,6 +115,7 @@ const _s = new Vector3();
 export function skinWithDualQuaternions(skeleton: Skeleton, mesh: SkinnedMesh): void {
   skeleton.update = function update(this: Skeleton) {
     const out = this.boneMatrices;
+    if (!out) return;
     for (let i = 0; i < this.bones.length; i++) {
       _m.multiplyMatrices(mesh.bindMatrixInverse, this.bones[i].matrixWorld).multiply(this.boneInverses[i]).multiply(mesh.bindMatrix);
       _m.decompose(_t, _q, _s);
@@ -144,8 +145,10 @@ const _c = new Vector3();
  * the bone texture's dual quaternions as matrices.
  */
 export function applyDualQuaternionBoneTransform(mesh: SkinnedMesh): void {
+  // three.js only calls it with a Vector3 (getVertexPosition), hence the narrower signature.
   mesh.applyBoneTransform = function applyBoneTransform(this: SkinnedMesh, index: number, target: Vector3): Vector3 {
     const m = this.skeleton.boneMatrices;
+    if (!m) return target;
     const si = this.geometry.attributes.skinIndex;
     const sw = this.geometry.attributes.skinWeight;
     let rx = 0;
@@ -182,5 +185,5 @@ export function applyDualQuaternionBoneTransform(mesh: SkinnedMesh): void {
     const ty = 2 * (_real.w * _c.y - _dual.w * _v.y + (_v.z * _c.x - _v.x * _c.z));
     const tz = 2 * (_real.w * _c.z - _dual.w * _v.z + (_v.x * _c.y - _v.y * _c.x));
     return target.applyQuaternion(_real).add(_v.set(tx, ty, tz));
-  };
+  } as SkinnedMesh['applyBoneTransform'];
 }
