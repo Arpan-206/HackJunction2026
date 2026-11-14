@@ -4,7 +4,7 @@ import { AppShell } from './AppShell';
 import { RoleSelect } from './RoleSelect';
 import { HandLab } from './HandLab';
 import { MasterHome } from '../features/master/MasterHome';
-import { MasterGenerate, MasterLesson, MasterScratch } from '../features/master/pages';
+import { MasterGenerate, MasterLesson, MasterScratch, MasterSkill } from '../features/master/pages';
 import { ApprenticeHome, ApprenticeLesson, ApprenticePlay, ApprenticeSkill, ApprenticeStep, ApprenticeTest, ApprenticeTutorial } from '../features/apprentice/pages';
 
 const Playground = lazy(() => import('../playground/Playground'));
@@ -33,6 +33,7 @@ export function App() {
         <Route path="/expert" element={<MasterHome />} />
         <Route path="/expert/scratch" element={<MasterScratch />} />
         <Route path="/expert/generate" element={<MasterGenerate />} />
+        <Route path="/expert/skills/:skillKey" element={<MasterSkill />} />
         <Route path="/expert/lessons/:lessonId" element={<MasterLesson />} />
         <Route path="/master/*" element={<MasterRedirect />} />
         <Route path="/apprentice" element={<ApprenticeHome />} />
