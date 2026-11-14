@@ -1,0 +1,38 @@
+{
+  "id": "seed-piano",
+  "title": "Piano: first fingering",
+  "skill": "piano",
+  "summary": "Set your hand position and play a five-finger scale up and back down.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-13T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-piano-position",
+      "title": "Lesson 1: Hand position",
+      "instruction": "Rest your fingers on five neighbouring keys, curved like you are holding a small ball, wrist level.",
+      "move_id": "piano_chord_c_major",
+      "hands": "right",
+      "prop": "keyboard",
+      "motion": {"preset": "hold_pose", "pose": {"thumb": 0.2, "index": 0.2, "middle": 0.2, "ring": 0.2, "little": 0.2}},
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "video_url": null
+    },
+    {
+      "id": "seed-piano-scale",
+      "title": "Lesson 2: Five-finger scale",
+      "instruction": "Press each key in turn with fingers 1 2 3 4 5, then back down 4 3 2 1, at an even pace.",
+      "move_id": "piano_five_finger_scale",
+      "hands": "right",
+      "prop": "keyboard",
+      "motion": {"preset": "finger_sequence", "sequence": [1, 2, 3, 4, 5, 4, 3, 2, 1], "beat_ms": 620},
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {"angle_deg": 18, "timing_ms": 250},
+      "video_url": null
+    }
+  ],
+  "test": {"kind": "piano_play_along", "opponent": "bot", "rounds": 3}
+}
