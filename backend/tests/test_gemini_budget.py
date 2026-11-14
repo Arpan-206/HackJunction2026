@@ -180,10 +180,15 @@ def test_429_marks_rate_limited(client: TestClient) -> None:
 
 
 def test_dev_state_exposes_budget(client: TestClient) -> None:
-    """GET /dev/state lists the remaining budget for the main and hint models."""
-    budgets = {b["model"]: b for b in client.get("/api/dev/state").json()["gemini_budget"]}
-    assert budgets[MODEL]["rpd_budget"] == 16 and budgets[MODEL]["rpm_remaining"] == 4
-    assert budgets[c.GEMINI_HINT_MODEL]["rpd_remaining"] == 400
+    """GET /dev/state lists the remaining budget for the configured models, once each.
+
+    Both default to Flash-Lite (500 requests per day free), so they share one 400 per day budget.
+    """
+    rows = client.get("/api/dev/state").json()["gemini_budget"]
+    budgets = {b["model"]: b for b in rows}
+    assert c.DEFAULT_GEMINI_MODEL == c.GEMINI_HINT_MODEL == "gemini-3.5-flash-lite"
+    assert len(rows) == len(budgets)
+    assert budgets[c.GEMINI_HINT_MODEL]["rpd_budget"] == 400 and budgets[c.GEMINI_HINT_MODEL]["rpm_remaining"] == 8
 
 
 def test_no_real_client_in_tests() -> None:

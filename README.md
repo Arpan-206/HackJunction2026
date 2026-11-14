@@ -61,8 +61,8 @@ Gemini free-tier limiter (`backend/app/services/llm/rate_limit.py`, numbers in `
 
 | Model | Free limit (per minute, per day) |
 |---|---|
-| gemini-3.8-flash (default `GEMINI_MODEL`), gemini-3.6-flash | 5, 20 |
-| gemini-3.5-flash-lite (default `GEMINI_HINT_MODEL`), gemini-3.1-flash-lite | 10, 500 |
+| gemini-3.8-flash, gemini-3.6-flash | 5, 20 |
+| gemini-3.5-flash-lite (default for `GEMINI_MODEL` and `GEMINI_HINT_MODEL`), gemini-3.1-flash-lite | 10, 500 |
 | any other model | 5, 20 |
 
 These limits are third-party reports, not Google documentation (see `research/06_gemini.md`).

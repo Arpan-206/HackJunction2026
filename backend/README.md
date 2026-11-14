@@ -25,8 +25,8 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 |---|---|---|
 | `LLM_PROVIDER` | `fake` | `fake`, `gemini` or `ollama` |
 | `GEMINI_API_KEY` | none | Required for `gemini` |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model name |
-| `GEMINI_HINT_MODEL` | `gemini-3.5-flash-lite` | Model for live coach hints (its own free quota) |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model name |
+| `GEMINI_HINT_MODEL` | `gemini-3.5-flash-lite` | Model for live coach hints (same model by default, so both share its 500 per day free quota) |
 | `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET` | 80% of the free limit | Override the request budgets |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `OLLAMA_MODEL` | `gemma4:e4b` | Use `gemma4:12b` with 12 to 16 GB of VRAM |
