@@ -102,6 +102,16 @@ export const CATALOGUE: CatalogueEntry[] = [
     keyPose: hold(0.45, 0.4, 0.5, 0.8, 0.85),
   },
   {
+    id: 'touch_typing',
+    name: 'Touch typing',
+    description: 'Rest both hands on the home row and give every key its finger. The gloves feel which finger strikes and when, so they catch the wrong finger even when the right key goes down.',
+    difficulty: 'beginner',
+    keywords: ['typing', 'keyboard', 'keys', 'home row', 'words per minute', 'wpm', 'office', 'computer', 'fingering', 'qwerty'],
+    hands: 'two',
+    timeToLearn: 'Two weeks at 15 minutes a day',
+    keyPose: hold(0.2, 0.35, 0.35, 0.35, 0.3),
+  },
+  {
     id: 'fingerspelling',
     name: 'Fingerspelling',
     description: 'Spell words letter by letter in sign language, with each finger checked. Taught by Deaf teachers.',
