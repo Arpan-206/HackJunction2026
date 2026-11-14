@@ -1,0 +1,120 @@
+{
+  "recording": "worn-solver-right",
+  "path": "gemma-text",
+  "t": "2026-11-14T10:32:29+00:00",
+  "input_text": "Teach the hand skill shown in this recording.\n\nRECORDED DEMONSTRATION (measured by the gloves):\nRecording title: Worn Smartgloves II capture, right hand.\nDemonstrating hand: right. Duration 25.1 s, 67 glove samples. The recorder cut it into 3 step(s) at the moments the hand was still.\nFinger travel over the whole take (flexion range, degrees): thumb 35, index 64, middle 71, ring 69, little 58.\nSteps, in order:\n1. Step 1 (held still, 8.4 s): thumb half bent, index half bent, middle half bent, ring half bent, little half bent. Most bent: little at 37 degrees. Picture: step_00.jpg.\n2. Step 2 (held still, 8.4 s): thumb straight, index straight, middle straight, ring straight, little straight. Most bent: little at 21 degrees. Picture: step_01.jpg.\n3. Step 3 (held still, 8.4 s): thumb half bent, index straight, middle straight, ring curled, little half bent. Most bent: ring at 71 degrees. Picture: step_02.jpg.",
+  "lesson": {
+    "title": "Hand Flexibility Sequence",
+    "skill": "general",
+    "summary": "",
+    "master_name": "Master",
+    "source": "generated",
+    "steps": [
+      {
+        "id": "bc7a7e7d06a9",
+        "title": "Lesson 1: Open Hand",
+        "instruction": "Straighten all your fingers and keep your palm open.",
+        "move_id": "general_spread",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 0.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 0.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "1525c0bc7c07",
+        "title": "Lesson 2: Relaxed Curl",
+        "instruction": "Bend all your fingers slightly into a relaxed, half-closed position.",
+        "move_id": "general_fist",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 35.0,
+            "index": 35.0,
+            "middle": 35.0,
+            "ring": 35.0,
+            "little": 35.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "629404a5a03d",
+        "title": "Lesson 3: Partial Grip",
+        "instruction": "Keep your index and middle fingers straight while curling your ring finger tightly and bending your thumb and little finger.",
+        "move_id": null,
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 35.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 71.0,
+            "little": 35.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      }
+    ],
+    "test": null,
+    "id": "439a0e0ff680",
+    "created_at": "2026-11-14T10:32:27.749237+00:00"
+  },
+  "provider": "openai",
+  "attempts": 1,
+  "latency_s": 8.15,
+  "model": "google/gemma-4-31B-it",
+  "digest": {
+    "title": "Hand Flexibility Sequence",
+    "skill": "general",
+    "steps": 3,
+    "step_titles": [
+      "Lesson 1: Open Hand",
+      "Lesson 2: Relaxed Curl",
+      "Lesson 3: Partial Grip"
+    ],
+    "move_ids": [
+      "general_spread",
+      "general_fist",
+      null
+    ],
+    "presets": [
+      "hold_pose",
+      "hold_pose",
+      "hold_pose"
+    ]
+  }
+}
