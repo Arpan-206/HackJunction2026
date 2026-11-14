@@ -1,6 +1,6 @@
 import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Group, Mesh, Vector3, type Material } from 'three';
+import { Group, Mesh, Vector3, type Quaternion, type Material } from 'three';
 import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER } from './anatomy';
 import { loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
@@ -60,6 +60,21 @@ const FLAT_TOLERANCE = 0.2;
  * the centre holds still while the wrist and fingers animate. With no anchor, or a hand that is raised or tipped, the
  * wrist stays at `position`.
  */
+/** True when `centredPosition` actually centres the hand (a flat hand on a stage with a ring centre), so the wrist is not where it is held. */
+export function isCentred(rotation: readonly [number, number, number], anchor: readonly [number, number] | null): boolean {
+  return !!anchor && Math.abs(rotation[0]) <= FLAT_TOLERANCE && Math.abs(rotation[2]) <= FLAT_TOLERANCE;
+}
+
+/**
+ * Where the wrist group sits so that turning it by `q` leaves the hand's visual centre `c` (wrist space) where it is:
+ * t = c - q c. A hand turned about its wrist swings its fingers wherever the glove points, out of the frame or at the
+ * camera; turned about its centre it stays on the ring at its own size whatever the wrist heading.
+ */
+export function pivotOffset(q: Quaternion, c: readonly [number, number, number], out: Vector3): Vector3 {
+  out.set(c[0], c[1], c[2]).applyQuaternion(q);
+  return out.set(c[0] - out.x, c[1] - out.y, c[2] - out.z);
+}
+
 export function centredPosition(
   position: readonly [number, number, number],
   rotation: readonly [number, number, number],
@@ -147,6 +162,9 @@ function HandBody({
   const smoother = useMemo(() => new HandSmoother(), []);
   const rig = useMemo(() => buildHandRig(template, style, stage, side, tint), [template, style, stage, side, tint]);
   const rest = useMemo(() => restFrame(side), [side]);
+  const pivot = useMemo(() => new Vector3(), []);
+  const pivoting = centred && isCentred(rotation, anchor);
+  const centreLocal = useMemo<[number, number, number]>(() => [(side === 'left' ? -1 : 1) * template.centre[0], 0, template.centre[1]], [side, template]);
   const handle = useMemo<HandHandle>(
     () => ({
       rig,
@@ -195,7 +213,10 @@ function HandBody({
     const g = inner.current;
     if (g) {
       g.quaternion.copy(smoother.quat);
-      if (followWristPos) g.position.set(smoother.pos[0], smoother.pos[1], smoother.pos[2]);
+      if (pivoting) pivotOffset(smoother.quat, centreLocal, pivot);
+      else pivot.set(0, 0, 0);
+      if (followWristPos) pivot.set(pivot.x + smoother.pos[0], pivot.y + smoother.pos[1], pivot.z + smoother.pos[2]);
+      g.position.copy(pivot);
     }
   });
 

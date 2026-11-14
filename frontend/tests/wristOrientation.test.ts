@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { Quaternion, Vector3 } from 'three';
+import { Euler, Quaternion, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { HandFrame } from '../src/api/types';
 import { coreCmdFrame } from '../src/api/coreCommand';
+import { isCentred, pivotOffset } from '../src/three/Hand';
 import { buildHandTemplate, type HandTemplate } from '../src/three/handModel';
 import { restFrame } from '../src/three/motion';
 import { HandSmoother } from '../src/three/smoothing';
@@ -65,5 +66,21 @@ describe('wrist orientation of the live hand', () => {
 describe('core command frame', () => {
   it('is the SPEC.md cmd shape the core acks', () => {
     expect(JSON.parse(coreCmdFrame('c-1', 'calibrate'))).toEqual({ v: 1, type: 'cmd', id: 'c-1', name: 'calibrate', args: {} });
+  });
+});
+
+describe('the live hand stays on its ring whatever the wrist heading', () => {
+  const c: [number, number, number] = [-0.1, 0, -1.05];
+  it('turning about the hand centre leaves the centre where it was, for any quaternion', () => {
+    for (const q of [new Quaternion(0, 0, 0, 1), new Quaternion().setFromEuler(new Euler(0.9, 2.4, -0.7)), new Quaternion(0, 1, 0, 0)]) {
+      const t = pivotOffset(q, c, new Vector3());
+      const where = new Vector3(...c).applyQuaternion(q).add(t);
+      expect(where.distanceTo(new Vector3(...c))).toBeLessThan(1e-9);
+    }
+  });
+  it('pivots only where the hand is centred on a ring (a flat hand on a hand-only stage)', () => {
+    expect(isCentred([0, 0, 0], [0, -0.5])).toBe(true);
+    expect(isCentred([0, 0, 0], null)).toBe(false);
+    expect(isCentred([1.2, 0, 0], [0, -0.5])).toBe(false);
   });
 });
