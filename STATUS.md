@@ -31,6 +31,10 @@ confidence pixels, 59 mm on low confidence pixels, so mask by confidence
 (`DepthFrame.depth_ok`). Black fabric gives filled, smooth depth with low
 confidence; hands and objects give high confidence. The app preview is in
 colour. Reinstall path from the terminal is in `ios/README.md`.
+Parked (Sat 16:05): a no-router link between phone and Mac (peer-to-peer WiFi
+through Network.framework plus a Mac helper, or the phone's Personal Hotspot at
+172.20.10.1). Bluetooth is too slow for the stream. The cable is the demo link;
+WiFi at 10.0.34.248 is the fallback in config.toml.
 
 **On `main` now, all suites green** (core and decisions 203 tests, backend 255,
 frontend 296, lint and build):
