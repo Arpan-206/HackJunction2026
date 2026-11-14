@@ -42,7 +42,10 @@ def thumb_cmc_deg(joints_local: np.ndarray) -> float:
 
 
 def hand_to_glove_hand(h: H.HandState) -> dict:
-    a = np.radians(np.asarray(h.angles, dtype=float))
+    # Raw angles, never the calibrated ones: the backend captures its flat and
+    # fist calibration from this stream, and core/calibration.py reads it back.
+    raw = h.angles if h.angles_raw is None else h.angles_raw
+    a = np.radians(np.asarray(raw, dtype=float))
     flexion = {
         "thumb": [
             round(float(np.radians(thumb_cmc_deg(h.joints_local))), 4),

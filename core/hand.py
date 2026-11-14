@@ -197,6 +197,9 @@ class HandState:
     heading_reliable: bool = True
     role: Literal["master", "learner", "free"] = "free"
     angles: np.ndarray = field(default_factory=lambda: np.zeros(N_ANGLES))
+    # Raw angles before the per-wearer calibration (core/calibration.py); None
+    # when no calibration was applied. compat.py sends these on /ws/gloves.
+    angles_raw: np.ndarray | None = None
     curl: dict[str, float] = field(default_factory=dict)
     pinch: dict[str, bool] = field(
         default_factory=lambda: {f: False for f in PINCH_FINGERS}

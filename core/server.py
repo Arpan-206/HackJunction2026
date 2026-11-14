@@ -434,6 +434,7 @@ class Core:
                 for s in SIDES
             },
             "anchor": self.session.anchor,
+            "calibration": self.session.calibrations.status(),
             "gemma": "off",
             "uptime_s": round(time.time() - self.started, 1),
             "fake": self.fake,

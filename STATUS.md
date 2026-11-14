@@ -10,7 +10,7 @@ gloves. Then read DECISIONS.md.
 ```bash
 cd repo
 source .venv/bin/activate              # Python 3.12 virtualenv, already populated
-python -m pytest -q                    # 88 tests, about 28 s
+python -m pytest -q                    # 109 tests, about 33 s
 
 python -m core --fake                  # synthetic gloves + synthetic lesson, learn mode, 30 Hz on :8765
 open http://localhost:8765/debug       # 2D canvas debug view (connects to /ws, has buttons for every command)
@@ -102,6 +102,34 @@ the solver capture with no change to code or `config.toml`:
 | Parse result | 2 definitions, 268 data frames, 0 bad frames; wrist at the origin as SPEC says |
 | `python -m core --replay worn_solver.rgmp` | both hands tracked, curl and pinch values live in the debug view |
 
+`[rgmp] hand_from_device_id_parity` is now `false` (Sat 14 Nov,
+branch `core-calibration`): the ids above are hardware ids, and the solver
+always sends `device_info.hand`. `config.toml` records the verified layout
+beside the setting.
+
+### Szymon's glove measurements (two Smartgloves II, Sat 14 Nov)
+
+From `arpan_info.md` section 2, measured on Szymon's side with the live
+glove tests and `backend/scripts/glove_check.py`.
+
+| Measure | Value |
+| --- | --- |
+| Stream rate | 83.39 Hz per group per glove, over USB, zero gaps |
+| Device ids | left 1572077328, right 2811174587 |
+| Hub | both gloves report the same `HubSerialNumber` |
+| Driver | streams only after an RCSP `SubscribeToData`, or with `--auto-stream-usb` |
+| Heading reliable | bit 11 of the hub `STATUS_FLAGS` on 12276; not on the solver's 12277 |
+| Flexion direction | toward the palm is solver local X, negative |
+| Finger isolation | in the worn capture each finger moved on its own in its phase |
+| Flat hand, flexion read | index about 37 deg, middle 27, ring 26 to 33, little 59 to 79, thumb about 70 |
+| Live tests | 13 of 13 pass with both gloves and the solver running |
+| Core on real gloves | works unchanged through route B; the wrist orientation is wrong until the core's `calibrate` runs |
+| Solver command | `rkk-hand-solver.exe --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277` |
+
+The flat-hand row is why raw angles from two hands cannot be compared. The
+per-wearer calibration on this branch answers it (section "Calibrated
+angles" below).
+
 Unverified in the robot output: which rotation direction Unitree's hand
 model treats as "flex" for `thumb_0` (abduction) and `thumb_1`; the signs
 are set from the URDF limit ranges and can be flipped per joint with
@@ -152,6 +180,131 @@ What it says about the thresholds:
    copy with the same glove (self-consistency floor), then with the left
    glove (cross-hand floor). Set `perfect_deg` a little above the self-copy
    median and `wrong_deg` near 1.5 times its 90th percentile.
+
+**Correction (Sat 14 Nov, afternoon).** The capture is Szymon's scripted take. Both
+hands did the same eight poses at the same time: flat, fist, open, then
+thumb, index, middle, ring and little one at a time
+(`backend/tests/test_glove_rgmp_replay.py`). So the left hand did copy the
+right. The table above scores the whole left take against each step's key
+pose, which mixes all eight poses. Use the time-aligned tables in
+"Calibrated angles" below instead.
+
+## Calibrated angles (Sat 14 Nov, branch `core-calibration`)
+
+A flat hand does not read zero, and the offset differs per wearer and per
+glove. The core now measures each flexion angle from the wearer's own flat
+pose. It then scales the angle by the wearer's own flat-to-fist range.
+
+| Item | What it does |
+| --- | --- |
+| `core/calibration.py` | Reads the files that Szymon's backend already writes (no second format). `calibrations/<id>.json` holds flat and fist. `glove_calibrations/<id>.json` holds the wearer record. |
+| Formula | `calibrated = clip((raw - flat) / (fist - flat), 0, 1) * full`. `full` is 90 deg (thumb 60). So 0 is the wearer's flat and `full` is the wearer's fist. |
+| Gain cap | `max_gain = 2.0`: the span is at least `full / 2`. The thumb moves only about 14 deg from flat to fist; without the cap its noise is multiplied by 4. |
+| Spread angles | Stay raw. The backend stores no spread range. |
+| Where it applies | `Session.update_hand`, glove hands only, before scoring, recording, the robot retarget and the piano task. Fake and camera hands are not changed. |
+| Raw angles | Kept in `HandState.angles_raw`. `compat.py` sends them on `/ws/gloves`, so the backend never captures a calibration on calibrated values. |
+| Which file | `[calibration] wearer` (or `left_wearer`, `right_wearer`): that wearer's newest record and its range ids. With no name: the newest flat and fist for that side. |
+| When it loads | At start, and again on every `calibrate` command. `/health` shows `calibration` per side. |
+| CLI | `--wearer NAME`, `--wearer-left`, `--wearer-right`, `--calibration-dir DIR`, `--no-calibration` |
+| Tests | `tests/test_calibration.py` (10) and one more in `tests/test_score_capture.py`. Two wearers with different offsets and ranges read the same after calibration. |
+| Format check | Files written by `tools/score_capture.py --calibrate capture`, and the test's wearer record, load in the backend's own `Calibration` and `WearerCalibration` models. |
+
+How to run it on the real capture:
+
+```bash
+gunzip -c backend/tests/fixtures/rgmp/worn_solver.rgmp.gz > /tmp/worn_solver.rgmp
+python -m tools.score_capture /tmp/worn_solver.rgmp --calibrate capture --calibration-out /tmp/cal
+```
+
+`--calibrate capture` takes each hand's flat and fist slices from the
+capture. It writes them as backend `Calibration` files and reads them back
+with `core/calibration.py`. The report then scores only the other six
+phases, so the calibration is never scored on its own data.
+
+Flat pose and range in the core's own angles (degrees, mean of the joints of
+each finger):
+
+| Hand | Measure | thumb | index | middle | ring | little |
+| --- | --- | --- | --- | --- | --- | --- |
+| left | flat | 15 | 12 | 9 | 11 | 26 |
+| right | flat | 15 | 12 | 9 | 9 | 20 |
+| left | flat to fist | 14 | 66 | 75 | 66 | 50 |
+| right | flat to fist | 14 | 57 | 70 | 69 | 53 |
+
+These are smaller than Szymon's numbers (index 37, little 59 to 79, thumb
+70). His numbers are finger sensor rotations on the driver stream. The core
+reads the solver's 26 joints, which start nearer to zero.
+
+Time-aligned error, left against right, same phase, frames paired in order
+(degrees, median per phase):
+
+| Phase | Angles | thumb | index | middle | ring | little |
+| --- | --- | --- | --- | --- | --- | --- |
+| open | raw | 3 | 7 | 6 | 6 | 12 |
+| open | calibrated | 4 | 7 | 6 | 5 | 5 |
+| thumb | raw | 3 | 5 | 7 | 19 | 12 |
+| thumb | calibrated | 0 | 4 | 9 | 24 | 4 |
+| index | raw | 7 | 18 | 11 | 21 | 8 |
+| index | calibrated | 14 | 14 | 14 | 27 | 1 |
+| middle | raw | 6 | 6 | 19 | 6 | 11 |
+| middle | calibrated | 11 | 4 | 15 | 10 | 6 |
+| ring | raw | 2 | 6 | 4 | 20 | 7 |
+| ring | calibrated | 5 | 6 | 8 | 16 | 1 |
+| little | raw | 5 | 5 | 9 | 5 | 19 |
+| little | calibrated | 12 | 3 | 9 | 9 | 45 |
+
+| All six phases | median | p75 | p90 |
+| --- | --- | --- | --- |
+| raw | 6.9 | 11.5 | 19.5 |
+| calibrated | 6.7 | 13.8 | 15.7 |
+
+Dead zones on the same frames. "Right pose" pairs the same phase (92
+frames). "Wrong pose" pairs every other phase (450 frames), which mostly
+differs by one finger. Pass is `pass_score = 0.85` on the mean of the five
+finger scores.
+
+| `perfect_deg` / `wrong_deg` | Angles | Right pose passes | Wrong pose passes |
+| --- | --- | --- | --- |
+| 8 / 45 (current) | raw | 98% | 3% |
+| 8 / 45 (current) | calibrated | 67% | 0% |
+| 12 / 45 | raw | 100% | 7% |
+| 12 / 45 | calibrated | 84% | 0% |
+| 12 / 50 | calibrated | 84% | 0% |
+| 15 / 60 | raw | 100% | 17% |
+| 15 / 60 | calibrated | 100% | 3% |
+| 20 / 60 | calibrated | 100% | 6% |
+
+What it says:
+
+1. **Start the glove slot at `perfect_deg = 15`, `wrong_deg = 60`** on
+   calibrated angles. Every right-pose frame passes, and 3% of wrong-pose
+   frames pass. If wrong poses pass in practice, go to 12 / 50 (84% and 0%).
+2. Calibrated degrees are larger than raw degrees. Each joint is stretched
+   from its own range to 90 (index about 1.5 times). So the dead zone must
+   be wider than on raw angles for the same strictness.
+3. On this capture both hands belong to one wearer. Raw cross-hand error is
+   already small (median 7). So calibration does not lower the median here.
+   It does lower the wrong-pose pass rate at each dead zone. Its main value
+   is across wearers, which this capture cannot show. The two-wearer test in
+   `tests/test_calibration.py` shows it on synthetic hands.
+4. The ring finger stays the noisiest (median 16 to 27 in the thumb, index
+   and ring phases). It moves with its neighbours. Weight 0.5 for the ring
+   in general lessons is still a good idea.
+5. Large calibrated errors in the `index` phase (thumb) and the `little`
+   phase (little) are real pose differences. One hand curled that finger
+   more than the other. The range stretch makes them larger, as it should.
+6. 92 right-pose frames is a small sample. Repeat with a real learner
+   capture: record with one glove, copy with the same glove, then with the
+   other.
+
+`config.toml` `[score]` is still 8 / 45: the fake and the tests use it. To
+use the recommendation on real gloves, apply this patch before the slot:
+
+```toml
+[score]
+perfect_deg = 15
+wrong_deg = 60
+```
 
 ## Written but untested, and why
 

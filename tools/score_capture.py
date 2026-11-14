@@ -1,6 +1,16 @@
 """Learn mode end to end on a raw RGMP capture: record a lesson from one glove, score the other against it.
 
     python -m tools.score_capture capture.rgmp [--master right] [--learner left] [--marks 3] [--json out.json]
+        [--calibrate none|capture|store] [--calibration-out DIR] [--wearer NAME]
+
+--calibrate capture: the capture is Szymon's scripted take (slices flat, fist,
+open, thumb, index, middle, ring, little, cut by time gaps). Each hand's flat
+and fist slices become a calibration in the backend's own file format
+(`calibrations/<id>.json`, written to --calibration-out), which is then read
+back with core/calibration.py exactly as the live core reads it, and applied.
+--calibrate store: use the backend's saved calibrations ([calibration] in
+config.toml, --wearer). With a calibration the report adds the time-aligned
+cross-hand error on the six phases not used to calibrate.
 
 Prints what the per-frame scores look like on real hands and which thresholds
 would change the outcome. No server, no hardware: the capture is parsed with
@@ -20,6 +30,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core import hand as H
+from core.calibration import angles_to_triples, load_hand
+from core.compat import thumb_cmc_deg
 from core.clock import FakeClock
 from core.config import load_config
 from core.recorder import Recorder
@@ -55,6 +67,127 @@ def hands_from_capture(cfg, path: Path) -> dict[str, list[H.HandState]]:
     return out
 
 
+PHASES = ["flat", "fist", "open", "thumb", "index", "middle", "ring", "little"]
+SEGMENT_GAP_US = 100_000  # as backend/tests/test_glove_rgmp_replay.py
+
+
+def phase_segments(hands: list[H.HandState]) -> list[list[H.HandState]]:
+    """Contiguous runs of frames, cut where time jumps by more than SEGMENT_GAP_US."""
+    out: list[list[H.HandState]] = []
+    for h in hands:
+        if not out or h.t_us - out[-1][-1].t_us > SEGMENT_GAP_US:
+            out.append([])
+        out[-1].append(h)
+    return out
+
+
+def write_capture_calibration(
+    side: str, hands: list[H.HandState], out_dir: Path
+) -> str | None:
+    """Flat and fist (median over the first two slices) as a backend `Calibration` file; returns its id."""
+    segs = phase_segments(hands)
+    if len(segs) < 2:
+        return None
+    phases = {}
+    for name, seg in zip(("flat", "fist"), segs[:2]):
+        a = np.median([h.angles for h in seg], axis=0)
+        cmc = float(np.radians(np.median([thumb_cmc_deg(h.joints_local) for h in seg])))
+        phases[name] = angles_to_triples(a, cmc)
+    cid = f"capture-{side}"
+    d = out_dir / "calibrations"
+    d.mkdir(parents=True, exist_ok=True)
+    body = {
+        "id": cid,
+        "side": side,
+        "flat": phases["flat"],
+        "fist": phases["fist"],
+        "created_at": "2026-11-14T00:00:00Z",
+    }
+    (d / f"{cid}.json").write_text(json.dumps(body, indent=1))
+    return cid
+
+
+def calibrate_hands(cfg, hands: dict, mode: str, out_dir: Path, wearer: str) -> dict:
+    """Apply the calibration to every HandState in place (raw kept in angles_raw); returns the summaries."""
+    summaries = {}
+    for side, hs in hands.items():
+        if mode == "capture":
+            if write_capture_calibration(side, hs, out_dir) is None:
+                summaries[side] = None
+                continue
+            cal = load_hand(out_dir, side, "", cfg.calibration, cfg.hand)
+        else:
+            d = Path(str(cfg.calibration.data_dir))
+            if not d.is_absolute():
+                d = Path(str(cfg._root)) / d
+            cal = load_hand(d, side, wearer, cfg.calibration, cfg.hand)
+        summaries[side] = None if cal is None else cal.summary()
+        if cal is None:
+            continue
+        for h in hs:
+            h.angles_raw = np.asarray(h.angles, dtype=float).copy()
+            h.angles = cal.apply(h.angles_raw)
+    return summaries
+
+
+def aligned_phase_error(hands: dict, use_raw: bool, wrong: bool = False) -> dict:
+    """Left against right, phase by phase, frames paired in order: per-finger abs error in degrees.
+
+    Only the six phases after flat and fist, so a calibration taken from those
+    two slices is never scored on its own data. With wrong=True every left
+    phase is paired with every other right phase instead: a learner holding
+    the wrong pose, mostly one finger off (the phases move one finger each).
+    """
+    sl, sr = phase_segments(hands["left"]), phase_segments(hands["right"])
+    if len(sl) != len(PHASES) or len(sr) != len(PHASES):
+        return {}
+    per_phase: dict[str, dict[str, float]] = {}
+    frames = {f: [] for f in H.FINGERS}
+    held = range(2, len(PHASES))
+    for k, m in (
+        [(k, m) for k in held for m in held if m != k]
+        if wrong
+        else [(k, k) for k in held]
+    ):
+        n = min(len(sl[k]), len(sr[m]))
+        row = {}
+        for f in H.FINGERS:
+            slots = H.FLEXION_SLOTS[f]
+            errs = []
+            for hl, hr in zip(sl[k][:n], sr[m][:n]):
+                al = (
+                    hl.angles_raw
+                    if use_raw and hl.angles_raw is not None
+                    else hl.angles
+                )
+                ar = (
+                    hr.angles_raw
+                    if use_raw and hr.angles_raw is not None
+                    else hr.angles
+                )
+                errs.append(float(np.mean(np.abs(al[slots] - ar[slots]))))
+            frames[f].extend(errs)
+            row[f] = float(np.median(errs))
+        per_phase[PHASES[k] if k == m else f"{PHASES[k]}/{PHASES[m]}"] = row
+    return {"per_phase_median": per_phase, "frames": frames}
+
+
+def print_aligned(title: str, res: dict) -> None:
+    print(f"\n{title}")
+    print("  phase    " + " ".join(f"{f:>7s}" for f in H.FINGERS))
+    for ph, row in res["per_phase_median"].items():
+        print(f"  {ph:8s} " + " ".join(f"{row[f]:7.0f}" for f in H.FINGERS))
+    fr = res["frames"]
+    print("  median   " + " ".join(f"{np.median(fr[f]):7.0f}" for f in H.FINGERS))
+    print(
+        "  p90      " + " ".join(f"{np.percentile(fr[f], 90):7.0f}" for f in H.FINGERS)
+    )
+    allv = np.concatenate([np.asarray(fr[f]) for f in H.FINGERS])
+    print(
+        f"  all fingers: median {np.median(allv):.1f} p75 {np.percentile(allv, 75):.1f} p90 {np.percentile(allv, 90):.1f}"
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("capture")
@@ -65,9 +198,25 @@ def main() -> int:
     )
     ap.add_argument("--config", default=None)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--calibrate", choices=("none", "capture", "store"), default="none")
+    ap.add_argument(
+        "--calibration-out",
+        default=None,
+        help="where --calibrate capture writes its backend-format files (default: a temp dir)",
+    )
+    ap.add_argument("--wearer", default="", help="wearer name for --calibrate store")
     a = ap.parse_args()
     cfg = load_config(a.config)
     hands = hands_from_capture(cfg, Path(a.capture))
+    cal_report = None
+    if a.calibrate != "none":
+        import tempfile
+
+        out_dir = Path(a.calibration_out or tempfile.mkdtemp(prefix="geppetto-cal-"))
+        cal_report = calibrate_hands(cfg, hands, a.calibrate, out_dir, a.wearer)
+        print(f"calibration ({a.calibrate}, files in {out_dir}):")
+        for side, summ in cal_report.items():
+            print(f"  {side}: {summ}")
     master, learner = hands[a.master], hands[a.learner]
     print(
         f"capture: {len(master)} master ({a.master}) frames, {len(learner)} learner ({a.learner}) frames"
@@ -102,7 +251,7 @@ def main() -> int:
         )
     # 2. score the learner hand against each step, the whole take per step
     tol = Tolerances(cfg.score.perfect_deg, cfg.score.wrong_deg)
-    report = {"steps": [], "thresholds": {}}
+    report = {"steps": [], "thresholds": {}, "calibration": cal_report}
     all_err = {f: [] for f in H.FINGERS}
     for step in lesson.steps:
         sc = StepScorer(a.learner, lesson, step, cfg.score, tol)
@@ -190,6 +339,69 @@ def main() -> int:
             "mean": float(sc_arr.mean()),
             "pass85": float(np.mean(sc_arr >= 0.85)),
         }
+    if cal_report is not None:
+        raw = aligned_phase_error(hands, use_raw=True)
+        cal = aligned_phase_error(hands, use_raw=False)
+        if raw and cal:
+            print_aligned(
+                "time-aligned left against right, held-out phases, RAW angles (deg):",
+                raw,
+            )
+            print_aligned(
+                "time-aligned left against right, held-out phases, CALIBRATED angles (deg):",
+                cal,
+            )
+            fr = np.concatenate([np.asarray(cal["frames"][f]) for f in H.FINGERS])
+            print(
+                "\n  dead zone on the held-out frames, raw and calibrated (mean of 5 finger scores):"
+            )
+            n = len(cal["frames"]["thumb"])
+            bad = aligned_phase_error(hands, use_raw=False, wrong=True)
+            bad_raw = aligned_phase_error(hands, use_raw=True, wrong=True)
+            n_bad = len(bad["frames"]["thumb"])
+            report["aligned"] = {
+                "raw": raw["per_phase_median"],
+                "calibrated": cal["per_phase_median"],
+                "dead_zones": {},
+                "dead_zones_raw": {},
+            }
+            ps = float(cfg.score.pass_score)
+            print(
+                f"  right pose: left and right in the same phase ({n} frames); "
+                f"wrong pose: other phases ({n_bad} frames); pass_score {ps}"
+            )
+
+            def overall(res, k, t2):
+                return np.mean([t2.score(res["frames"][f][k]) for f in H.FINGERS])
+
+            for perfect, wrong in (
+                (8, 45),
+                (10, 40),
+                (12, 45),
+                (12, 50),
+                (15, 45),
+                (15, 60),
+                (20, 60),
+            ):
+                t2 = Tolerances(perfect, wrong)
+                for label, gres, bres, key in (
+                    ("raw", raw, bad_raw, "dead_zones_raw"),
+                    ("cal", cal, bad, "dead_zones"),
+                ):
+                    good = np.asarray([overall(gres, k, t2) for k in range(n)])
+                    badv = np.asarray([overall(bres, k, t2) for k in range(n_bad)])
+                    print(
+                        f"  {label} {perfect:>2}/{wrong:<2}: right pose mean {good.mean():.2f}, at or above pass {np.mean(good >= ps) * 100:3.0f}%"
+                        f" | wrong pose mean {badv.mean():.2f}, at or above pass {np.mean(badv >= ps) * 100:3.0f}%"
+                    )
+                    report["aligned"][key][f"{perfect}/{wrong}"] = {
+                        "right_mean": float(good.mean()),
+                        "right_pass": float(np.mean(good >= ps)),
+                        "wrong_mean": float(badv.mean()),
+                        "wrong_pass": float(np.mean(badv >= ps)),
+                    }
+            report["aligned"]["all_median"] = float(np.median(fr))
+            report["aligned"]["all_p90"] = float(np.percentile(fr, 90))
     if a.json:
         Path(a.json).write_text(json.dumps(report, indent=2))
     return 0
