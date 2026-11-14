@@ -1,6 +1,6 @@
 # Who checked what the agents shipped? Geppetto on CRACI
 
-**Most interesting real finding.** One line that an agent wrote, `lerobot>=0.3.3` in `export/pyproject.toml` (lane `worktree-export`), locks 98 packages that neither the core nor the backend locks. They include a keyboard and mouse listener (`pynput` 1.8.2, which pulls `evdev` and `python-xlib`), a telemetry SDK (`wandb` 0.31.0, which pulls four OpenTelemetry exporter packages), `torch` 2.7.1 and 12 NVIDIA CUDA wheels. No CI job built `export/` before this lane. Source: `export/uv.lock` on `origin/main` at `45e0489`, read by `python -m tools.agent_bom history`. This finding comes from git, not from the CRACI API: the API results wait for the token (section 4).
+**Most interesting real finding.** An agent lane shipped a project that has never installed on Linux, and the cause is a keyboard listener nobody asked for. The `worktree-export` lane added one line, `lerobot>=0.3.3`, in `export/pyproject.toml`. That line locks 98 packages that neither the core nor the backend locks. One of them is `pynput` 1.8.2, a keyboard and mouse listener, which pulls `evdev` on Linux. On CRACI, `uv sync --frozen` in `export/` failed in 23 of 23 lane builds that contain `export/`. Each failure is the same: `evdev` 2.0.0 builds from source and finds no `Python.h`. uv names the chain itself: "`evdev` was included because `geppetto-export` depends on `lerobot` which depends on `pynput` which depends on `evdev`". No CI built `export/` before, so nobody saw it. On a Mac, `pynput` uses `pyobjc` instead, which is why it worked for the agent. Sources: lane audit run 43650860815 job logs; `export/uv.lock` on `origin/main` at `45e0489` via `python -m tools.agent_bom history`.
 
 Status on Sun 15 Nov 2026, written by the `craci` lane. Every number below names its source. "Not run: token missing" means the CRACI API was not called, because `CRACI_API_TOKEN` is not in `.env` yet.
 
@@ -24,7 +24,7 @@ Words used here:
 
 `ci.yml` only runs on a branch that contains it. Lane branches get it when they next merge `main`. Until then, `lane-audit.yml` covers them from the `craci` branch, so no lane branch is touched.
 
-The lane audit also installs the three side projects that agents added with their own lockfiles: `verda/`, `export/` and `genui/`. `ci.yml` does not build them.
+The lane audit also installs the three side projects that have their own lockfiles: `verda/`, `export/` and `genui/`. `ci.yml` does not build them.
 
 ## 2. First run
 
@@ -38,7 +38,49 @@ The lane audit also installs the three side projects that agents added with thei
 
 ## 3. Builds on CRACI
 
-The lane audit run 43650860815 was still running when this section was written. Counts follow when it ends.
+Counted on Sat 14 Nov 23:15 UTC from the GitHub Actions API (`gh run list`, then the jobs of each run). Every job below ran on a runner with the label `craci`.
+
+| Workflow | Runs | Jobs that got a CRACI runner | Jobs that succeeded | Note |
+|---|---|---|---|---|
+| `craci-hello` | 7 | 7 | 7 | one per push to `craci` |
+| `ci` | 6 | 18 | 18 | core, backend, frontend on each push to `craci` |
+| `lane-audit` (first run, 43650356405) | 1 | 18 of 30 | 10 | cancelled after 10 jobs, replaced by the run below |
+| `lane-audit` (full, 43650860815) | 1 | 30 | 30 | 1 list job + 29 lane jobs (28 lane branches and `main`), 22:59 to 23:12 UTC |
+| `model-image` | 1 | 1 | 1 | |
+| Total | 16 | 74 | 66 | 8 more were cancelled while running |
+
+A lane job is green even when a step inside it fails, because the audit steps use `continue-on-error`. The step results below come from the job logs (`gh run view 43650860815 --log`, lines with `##[error]`).
+
+### Step results of the full lane audit (run 43650860815)
+
+| Step | Lanes where the step ran | Passed | Failed | Failure |
+|---|---|---|---|---|
+| Core install and tests | 29 | 29 | 0 | |
+| Backend install and tests | 29 | 29 | 0 | |
+| Frontend install, lint, tests and build | 29 | 28 | 1 | `robot-extras-wip`: 1 of 286 tests, `robotUrdf.test.ts` "the served copies are identical to the core files" (line endings `\n` against `\r\n`) |
+| `verda/` install | 18 | 18 | 0 | |
+| `export/` install | 23 | 0 | 23 | `evdev` 2.0.0 source build: `Python.h: No such file or directory` |
+| `genui/` install | 29 | 29 | 0 | |
+
+### Known vulnerabilities reported inside the CRACI builds (npm audit)
+
+`npm ci` prints an audit line. These counts come from that line in the CRACI job logs, not from the CRACI API.
+
+| Project | Lanes | npm audit line in the CRACI job log |
+|---|---|---|
+| `frontend/` | all 29 builds, `main` included | "15 vulnerabilities (12 moderate, 1 high, 2 critical)" |
+| `genui/` | all 29 builds | "found 0 vulnerabilities" |
+
+The count is the same in every lane. So no lane added or removed a frontend vulnerability. The details below come from `npm audit --package-lock-only` on `main`'s `frontend/package-lock.json` (run locally, Sun 15 Nov):
+
+| Severity | Package | Direct or transitive | Advisory | npm's proposed fix | Locked first in |
+|---|---|---|---|---|---|
+| critical | `tinypool` (<=2.1.1) | transitive (vitest) | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr: prototype pollution to remote code execution | `vitest@5.1.0` (major) | `0681d64`, direct to `main` |
+| critical | `vitest` (<=4.1.10) | direct, dev | GHSA-5xrq-8626-4rwp: Vitest UI server file read and execute | `vitest@5.1.0` (major) | `0681d64`, direct to `main` |
+| high | `vite` (<=6.4.3) | direct, dev | GHSA-4w7w-66w2-5vf9: path traversal in optimized deps `.map` handling | `vite@8.3.8` (major) | `2c7ff54`, direct to `main` |
+| moderate | 12 more: `esbuild`, `react-router`, `react-router-dom`, `@vitest/mocker`, `vite-node`, `minimatch`, `typescript-eslint` and 5 `@typescript-eslint/*` | mixed | see `npm audit` | major upgrades | `2c7ff54` or `0681d64` |
+
+All three high or critical packages are development tools. They are not in the production bundle. But the demo runs the Vite dev server (`npm run dev`, port 5173, CLAUDE.md "Run"), so `vite` and `esbuild` do run on the demo machine. Whether the demo table uses the dev server is unverified.
 
 ## 4. Per-lane audit (CRACI API)
 
@@ -120,12 +162,16 @@ CRACI merge gate (run before every lane merge; owner: dispatcher)
 
 ## 7. AI fix
 
-Not run. Two reasons:
+Not run. Real vulnerabilities exist (section 3: 2 critical and 1 high in `frontend/`, reported by npm audit inside the CRACI builds). But this lane cannot trigger CRACI's AI fix:
 
-1. No vulnerability is known yet: the SBOMs were not read (token missing).
-2. The CRACI API (OpenAPI version `2026-09-11`) has no fix or vulnerability endpoint. Its nine operations are: SBOM, OCI manifest SBOM, three artifact provenance lookups, job logs, active jobs, network trace and usage. The docs mention a list of vulnerabilities in the CRACI web app. An AI fix, if CRACI offers one, is in the web app, not the API.
+1. The CRACI API (OpenAPI version `2026-09-11`) has no fix or vulnerability endpoint.
+2. The web app needs Arpan's login, and this lane does not use his browser session.
 
-When the report shows a real `high` or `critical` vulnerability: open the job in the CRACI web app, use its fix action, copy the proposal into this section, apply it on a branch `craci-fix-<package>`, and run the report before and after.
+The only proposal on record is npm's own, not CRACI's: major upgrades to `vitest@5.1.0` and `vite@8.3.8`. This lane did not apply it. A major upgrade of the test runner and the bundler touches every frontend lane, and other lanes are live tonight.
+
+The nine API operations are: SBOM, OCI manifest SBOM, three artifact provenance lookups, job logs, active jobs, network trace and usage. The docs mention a list of vulnerabilities in the CRACI web app. An AI fix, if CRACI offers one, is in the web app, not the API.
+
+Next step for Arpan: open job 132618946275 (`lane main`, run 43650860815) in the CRACI web app, at `platform.craci.com/projects/hackjunction2026/jobs/132618946275` (the URL pattern from the first run's log), use its fix action, copy the proposal into this section, apply it on a branch `craci-fix-<package>`, and run the report before and after.
 
 ## 8. Model server image provenance
 
