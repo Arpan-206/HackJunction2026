@@ -1,18 +1,25 @@
 import { Link, useParams } from 'react-router-dom';
+import type { Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { ButtonLink } from '../../../components/ui';
+import { useAllAttempts, useAllTests } from '../../shared/practiceLog';
 import { BackLink } from '../ApHeader';
-import { lessonTitle } from '../course/LessonCourse';
-import { HANDS_LABEL, type LessonState, type SkillProgress, type SkillView } from './catalogue';
+import { finaleTitle, lessonTitle } from '../course/LessonCourse';
+import { isDemo } from '../pipeline/flags';
+import { playRecord, tutorialsSeen } from '../pipeline/journey';
+import { DEFAULT_CONFIG, DEMO_CONFIG } from '../pipeline/stages';
+import { HANDS_LABEL, type SkillProgress, type SkillView } from './catalogue';
+import { expertName, skillJourney, type PathLesson, type PathPart } from './journeyMap';
 import { DifficultyLine } from './SkillParts';
 import { SkillShowcase, WorkshopShowcase } from './SkillShowcase';
 import { useSkills } from './useSkills';
 import './skills.css';
 
-function lessonStatus(st: LessonState | undefined): { text: string; mastered: boolean } {
-  if (!st || st.attempts === 0) return { text: 'Not started', mastered: false };
-  if (st.mastered) return { text: st.due ? 'Mastered, review due' : 'Mastered', mastered: true };
-  return { text: `Best ${st.best} in ${st.attempts} ${st.attempts === 1 ? 'attempt' : 'attempts'}`, mastered: false };
+/** What one lesson's line under its title says: mastered (and whether a review is due), the best so far, or not started. */
+function lessonStatus(l: PathLesson): string {
+  if (l.mastered) return l.due ? `Mastered, best ${l.best}. Review due today.` : `Mastered, best ${l.best}`;
+  if (l.attempts === 0) return 'Not started';
+  return `Best ${l.best} in ${l.attempts} ${l.attempts === 1 ? 'attempt' : 'attempts'}`;
 }
 
 function Facts({ skill }: { skill: SkillView }) {
@@ -56,40 +63,116 @@ function PrimaryActions({ skill, progress }: { skill: SkillView; progress: Skill
   );
 }
 
-function WhatYouLearn({ skill, progress }: { skill: SkillView; progress: SkillProgress }) {
+/** The ink mark beside a part: a malachite tick when done (gold for Ghost off, which is mastery), a dot now, a ring ahead. */
+function PartMark({ state, mastery }: { state: PathPart['state']; mastery: boolean }) {
   return (
-    <section className="sk-learn" aria-labelledby="sk-learn-h">
-      <h2 id="sk-learn-h">What you will learn</h2>
-      {progress.started && (
-        <p className="sk-learn__sum">
-          {progress.mastered} of {progress.total} {progress.total === 1 ? 'lesson' : 'lessons'} mastered
-        </p>
+    <svg className={`sk-part__mark${mastery ? ' is-gold' : ''}`} viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+      {state === 'done' ? (
+        <path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      ) : state === 'now' ? (
+        <circle cx="10" cy="10" r="5.5" fill="currentColor" />
+      ) : (
+        <circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" strokeWidth="1.8" />
       )}
-      {skill.courses.map((course, ci) => (
-        <div key={course.id} className="sk-course">
-          <div className="sk-course__head">
-            <h3>{course.title}</h3>
-            <span className="sk-course__by">
-              Taught by {course.master_name}.{' '}
-              <Link to={`/apprentice/lessons/${course.id}`} className="sk-link">
-                Open the course
-              </Link>
-            </span>
-          </div>
-          <ol className="sk-lessons">
-            {course.steps.map((s, i) => {
-              const st = progress.lessons[ci]?.[i];
-              const status = lessonStatus(st);
-              return (
-                <li key={s.id} className="sk-lessons__item">
-                  <span className="sk-lessons__title">{lessonTitle(s, i)}</span>
-                  <span className={`sk-lessons__state${status.mastered ? ' is-mastered' : ''}`}>{status.text}</span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      ))}
+    </svg>
+  );
+}
+
+const PART_STATE_TEXT: Record<PathPart['state'], string> = { done: 'done', now: 'up next', next: 'ahead' };
+
+/** One lesson on the timeline: its roundel on the spine, its title (opens it where it left off), its progress and its parts. */
+function LessonNode({ step, lesson }: { step: Step; lesson: PathLesson }) {
+  const title = lessonTitle(step, lesson.index);
+  const tone = lesson.mastered ? ' is-mastered' : lesson.here ? ' is-here' : lesson.attempts > 0 ? ' is-started' : '';
+  return (
+    <li className={`sk-node${tone}`} aria-current={lesson.here ? 'step' : undefined}>
+      <span className="sk-node__mark" aria-hidden="true">
+        {lesson.index + 1}
+      </span>
+      <div className="sk-node__main">
+        <h4 className="sk-node__title">
+          <Link to={lesson.to} className="sk-node__link">
+            {title}
+          </Link>
+        </h4>
+        <p className="sk-node__state">
+          {lesson.here && <span className="sk-node__here">You are here. </span>}
+          {lessonStatus(lesson)}
+        </p>
+      </div>
+      <ol className="sk-parts" aria-label={`Parts of ${title}`}>
+        {lesson.parts.map((p) => (
+          <li key={p.key}>
+            <Link to={p.to} className={`sk-part is-${p.state}`}>
+              <PartMark state={p.state} mastery={p.key === 'blind' && p.state === 'done'} />
+              <span>{p.label}</span>
+              <span className="ap-sr">, {PART_STATE_TEXT[p.state]}</span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </li>
+  );
+}
+
+/**
+ * The timeline under the hero: every course of the skill as a chapter, each lesson a station on one inked spine, and the
+ * course's game or Play round at its end. Every lesson and every part is a link, so a lesson done long ago is one click
+ * away; the lesson the Continue button opens is marked "You are here".
+ */
+function SkillPath({ skill, progress }: { skill: SkillView; progress: SkillProgress }) {
+  const attempts = useAllAttempts();
+  const tests = useAllTests();
+  const cfg = isDemo() ? DEMO_CONFIG : DEFAULT_CONFIG;
+  const courses = skillJourney({ courses: skill.courses, progress, attempts, tests, seen: tutorialsSeen, played: playRecord, cfg });
+  return (
+    <section className="sk-path" aria-labelledby="sk-path-h">
+      <div className="sk-path__head">
+        <h2 id="sk-path-h">Your path</h2>
+        <p className="sk-path__sum">
+          <span className="ap-num">{progress.mastered}</span> of <span className="ap-num">{progress.total}</span> {progress.total === 1 ? 'lesson' : 'lessons'} mastered. Open any lesson, or any part of one.
+        </p>
+      </div>
+      {skill.courses.map((course, ci) => {
+        const path = courses[ci];
+        const unit = course.test ? 'game' : 'round';
+        return (
+          <section key={course.id} className="sk-chapter" aria-labelledby={`sk-ch-${course.id}`}>
+            <div className="sk-chapter__head">
+              <h3 id={`sk-ch-${course.id}`}>
+                <Link to={path.to} className="sk-chapter__link">
+                  {course.title}
+                </Link>
+              </h3>
+              <p className="sk-chapter__by">
+                Taught by {expertName(course.master_name)}. <span className="ap-num">{path.mastered}</span> of <span className="ap-num">{path.lessons.length}</span> mastered.
+              </p>
+            </div>
+            <ol className="sk-spine">
+              {course.steps.map((s, i) => (
+                <LessonNode key={s.id} step={s} lesson={path.lessons[i]} />
+              ))}
+              <li className={`sk-node sk-node--finale${path.finale.played ? ' is-started' : ''}`}>
+                <span className="sk-node__mark" aria-hidden="true" />
+                <div className="sk-node__main">
+                  <h4 className="sk-node__title">
+                    <Link to={path.finale.to} className="sk-node__link">
+                      {finaleTitle(course)}
+                    </Link>
+                  </h4>
+                  <p className="sk-node__state">
+                    {path.finale.best !== null
+                      ? `Best ${path.finale.best} in ${path.finale.played} ${path.finale.played === 1 ? unit : `${unit}s`}`
+                      : path.mastered < path.lessons.length
+                        ? 'Best after the lessons, but open to everyone.'
+                        : 'Every lesson mastered: time to play.'}
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </section>
+        );
+      })}
     </section>
   );
 }
@@ -140,9 +223,7 @@ export function SkillPage() {
             </div>
           )}
           <Facts skill={skill} />
-          {skill.live ? (
-            <WhatYouLearn skill={skill} progress={progress} />
-          ) : (
+          {!skill.live && (
             <>
               <p className="sk-page__notyet">
                 Not teachable yet: no expert has recorded it with the gloves.
@@ -163,6 +244,7 @@ export function SkillPage() {
           )}
         </div>
       </div>
+      {skill.live && skill.courses.length > 0 && <SkillPath skill={skill} progress={progress} />}
     </>
   );
 }

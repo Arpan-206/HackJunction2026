@@ -15,6 +15,7 @@ import { SealCard } from './SealCard';
 import { VideoSlot } from './VideoSlot';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
 import { skillName, skillPath } from '../skills/catalogue';
+import { expertName } from '../skills/journeyMap';
 import { JOURNEY, JOURNEY_LABEL, playRecord, tutorialsSeen, type JourneyPart } from '../pipeline/journey';
 import { PLAY_CALLS } from '../play/PlayPage';
 
@@ -34,6 +35,11 @@ const PLAY_COPY = {
   title: 'Play: try your skill in real time',
   blurb: 'The moves of this course are called one after another, without the expert. Make each one when it is called; the score fills as you hold it.',
 };
+
+/** The title of a course's last part: its own game, or the generic Play round. */
+export function finaleTitle(lesson: Pick<Lesson, 'test'>): string {
+  return lesson.test ? TEST_COPY[lesson.test.kind].title : PLAY_COPY.title;
+}
 
 /** The three parts of a course as a ledger line, numbered like the practice ladder: done parts in malachite, the next underlined. */
 function JourneyLine({ done }: { done: Record<JourneyPart, boolean> }) {
@@ -107,7 +113,7 @@ export function LessonCourse() {
   return (
     <>
       <PageHeader title={lesson.title} />
-      <p className="ap-course__master">Taught by {lesson.master_name}</p>
+      <p className="ap-course__master">Taught by {expertName(lesson.master_name)}</p>
       {lp && <RankLine rank={lp.rank} />}
       {lp?.rank === 'sealed' && <SealCard master={lesson.master_name} lesson={lesson.title} at={lp.sealedAt} score={lp.blindScore} />}
       {offline && <p className="note ap-banner">Backend offline: showing the built-in demo lesson.</p>}
