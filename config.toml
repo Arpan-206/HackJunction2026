@@ -314,6 +314,16 @@ camera_yaw_deg = 180.0
 cloud_points = 2000
 cloud_hz = 10.0
 dark_min_px = 120
+# Arm shape gates (tools/depth_check.py on captures/bench-3: a crisps bag and a laptop
+# sleeve passed as arms until these were added). Real arms are not measured yet.
+cylinder = true
+arm_width_min_m = 0.01
+arm_width_max_m = 0.16
+arm_radius_min_m = 0.015
+arm_radius_max_m = 0.07
+cylinder_max_rms_m = 0.012
+require_entry = true
+arm_max_tilt_deg = 40.0
 # Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
 correct_yaw = true
 side = "right"

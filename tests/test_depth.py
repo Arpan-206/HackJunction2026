@@ -205,3 +205,29 @@ def test_core_frame_and_ws_depth(tmp_path, schemas):
                          registry=schemas.registry).validate(blk)
     assert blk["table"] and blk["hand"]
     assert core.validation_errors == 0, core.last_validation_error
+
+
+# -- the check tool --------------------------------------------------------------
+def test_depth_check_on_fake_recordings(tmp_path):
+    from tools.depth_check import check
+
+    for dark in (False, True):
+        rec = tmp_path / f"fake-{dark}.gdrec.gz"
+        write_recording(rec, FakeDepthScene(dark_hand=dark), seconds=1.0, fps=10)
+        s = check(rec, tmp_path / f"out-{dark}", n_images=2)
+        assert s["frames"] == 10 and s["bad_packets"] == 0
+        assert s["table"]["app_plane_fraction"] == 1.0 and abs(s["table"]["camera_height_fit_m"]["median"] - 0.14) < 0.003
+        assert s["hand"]["found_fraction"] >= 0.8 and s["forearm_yaw"]["frames"] >= 8
+        assert (s["hand"]["hand_depth_fraction_when_found"] < 0.2) if dark else (s["hand"]["hand_depth_fraction_when_found"] > 0.8)
+        assert s["latency"]["fps"] == 10.0
+        assert len(list((tmp_path / f"out-{dark}").glob("*_overlay.jpg"))) == 2
+        assert (tmp_path / f"out-{dark}" / "frames.csv").exists()
+
+
+def test_a_box_on_the_bench_is_not_an_arm():
+    """A wide block standing on the table passes the height band but fails the arm gates."""
+    s = FakeDepthScene(no_arm=True)
+    box = [(np.array([x, 0.0, -0.25]), np.array([x, 0.12, -0.25]), 0.05, 2) for x in (-0.04, 0.0, 0.04)]
+    s.capsules = lambda t: box
+    o = DepthTracker().process(frame_at(s, 0))
+    assert o.blob_found and not o.arm_found and not o.forearm_ok

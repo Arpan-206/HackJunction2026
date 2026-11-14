@@ -63,6 +63,15 @@ class TrackerConfig:
     cloud_points: int = 2000
     dark_min_px: int = 120           # a conf-0 patch at least this big at the arm's far end means a dark hand
     cylinder: bool = True            # refine the direction with a 3D cylinder fit (see _cylinder_axis)
+    # Shape gates: a blob is an arm only if its forearm stretch is arm-wide and, with the
+    # cylinder fit on, fits a cylinder of arm radius. They reject bags and boxes on the bench.
+    arm_width_min_m: float = 0.01        # the visible half of a 7 cm arm measures 2 to 5 cm here
+    arm_width_max_m: float = 0.16
+    arm_radius_min_m: float = 0.015
+    arm_radius_max_m: float = 0.07
+    cylinder_max_rms_m: float = 0.012
+    require_entry: bool = True           # an arm comes from outside the view, so it crosses the image border
+    arm_max_tilt_deg: float = 40.0       # the cylinder axis lies along the table, not standing up from it
 
     @classmethod
     def from_section(cls, sec) -> "TrackerConfig":
@@ -98,7 +107,12 @@ class DepthObs:
     table_fit: Table | None = None
     agree_deg: float | None = None       # angle between app and fitted normals
     agree_mm: float | None = None        # distance of the app plane's centre from the fitted plane
-    arm_found: bool = False
+    blob_found: bool = False             # something stands above the table
+    arm_found: bool = False              # and it has an arm's shape (the gates in TrackerConfig)
+    width_m: float = 0.0
+    cyl_radius_m: float | None = None
+    cyl_rms_m: float | None = None
+    axis_tilt_deg: float | None = None   # the cylinder axis's angle above the table
     hand_depth: bool = False
     forearm_yaw_deg: float | None = None
     forearm_ok: bool = False             # direction good enough to correct a glove with
@@ -112,6 +126,9 @@ class DepthObs:
     entry_bench: np.ndarray | None = None
     process_ms: float = 0.0
     cloud: dict | None = None            # points (n,3) bench frame, labels (n,), rgb (n,3)
+    bench_R: np.ndarray | None = None    # rows: bench axes in the points' frame
+    bench_origin: np.ndarray | None = None
+    in_world: bool = False
     masks: dict = field(default_factory=dict)  # arm, dark, table, valid at depth resolution (for images)
 
 
@@ -285,10 +302,11 @@ class DepthTracker:
             if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px:
                 blob = lab == k
         R = self.bench_axes(table, cam_fwd, in_world)
+        obs.bench_R, obs.bench_origin, obs.in_world = R, table.point, in_world
         rel = p - table.point
         dark_img = np.zeros((H, W), bool)
         if blob is not None:
-            obs.arm_found = True
+            obs.blob_found = True
             obs.blob_px = int(blob.sum())
             self._forearm(obs, blob, rel, R, H, W, dist, R @ (cam - table.point))
             dark_img = self._dark_patch(obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W))
@@ -354,8 +372,11 @@ class DepthTracker:
         w, V = np.linalg.eigh(cov)
         axis = V[:, 1]
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
+        obs.width_m = float(math.sqrt(12.0 * max(w[0], 0.0)))   # full width of a uniform band
         if cfg.cylinder:
-            d3 = self._cylinder_axis(q[sel], axis, cam_bench)
+            d3 = self._cylinder_axis(q[sel], axis, cam_bench, obs)
+            if d3 is not None:
+                obs.axis_tilt_deg = float(math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2]))))
             if d3 is not None and np.hypot(d3[0], d3[2]) > 1e-6:
                 a2 = np.array([d3[0], d3[2]]) / np.hypot(d3[0], d3[2])
                 axis = a2 if a2 @ axis >= 0 else -a2
@@ -377,11 +398,22 @@ class DepthTracker:
         proj = (xz - (entry if entry is not None else c)) @ axis
         obs.length_m = float(np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2))))
         obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
-        obs.forearm_ok = obs.elongation >= cfg.min_elongation and obs.forearm_points >= cfg.min_forearm_points
+        arm_like = cfg.arm_width_min_m <= obs.width_m <= cfg.arm_width_max_m
+        if cfg.require_entry:
+            arm_like = arm_like and entry is not None
+        if cfg.cylinder:
+            arm_like = arm_like and obs.cyl_radius_m is not None \
+                and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m \
+                and obs.cyl_rms_m is not None and obs.cyl_rms_m <= cfg.cylinder_max_rms_m \
+                and obs.axis_tilt_deg is not None and obs.axis_tilt_deg <= cfg.arm_max_tilt_deg
+        obs.arm_found = bool(arm_like)
+        obs.forearm_ok = obs.arm_found and obs.elongation >= cfg.min_elongation \
+            and obs.forearm_points >= cfg.min_forearm_points
         if obs.forearm_ok:
             self.last_dir = d
 
-    def _cylinder_axis(self, P: np.ndarray, axis_xz: np.ndarray, cam: np.ndarray) -> np.ndarray | None:
+    def _cylinder_axis(self, P: np.ndarray, axis_xz: np.ndarray, cam: np.ndarray,
+                       obs: DepthObs | None = None) -> np.ndarray | None:
         """Fit a cylinder to the forearm's 3D points (bench frame); its axis direction, or None.
 
         The camera sees only the near half of the arm, and from a different angle along it,
@@ -431,8 +463,11 @@ class DepthTracker:
             if np.abs(step).max() < 1e-6:
                 break
         d, c, r = unpack(x)
-        if not (0.01 <= r <= 0.08) or not np.isfinite(d).all():
+        if not np.isfinite(d).all() or not np.isfinite(r):
             return None
+        if obs is not None:
+            obs.cyl_radius_m = float(abs(r))
+            obs.cyl_rms_m = float(np.sqrt(np.mean(resid(x) ** 2)))
         return d
 
     def _dark_patch(self, obs: DepthObs, blob: np.ndarray, conf: np.ndarray, valid: np.ndarray,
