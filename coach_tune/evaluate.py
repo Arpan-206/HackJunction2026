@@ -53,7 +53,7 @@ async def run(system: str, latency_n: int, concurrency: int) -> dict:
     wall = time.time() - t0
     lat = []
     sample = random.Random(1).sample(rows, min(latency_n, len(rows)))
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=oai.headers()) as client:
         await oai.complete(client, model, prompt.messages(sample[0]), 0.0)  # warm
         for ex in sample:
             lat.append((await oai.complete(client, model, prompt.messages(ex), 0.0))[1])
@@ -87,7 +87,7 @@ def report() -> str:
     outs = {s: {json.loads(x)["id"]: json.loads(x) for x in (OUT / f"{s}.jsonl").read_text().splitlines()} for s in sums}
     lessons = sorted({r["unit"] for r in rows.values()})
     lines = ["# Coach model evaluation", "", f"Held-out units ({len(lessons)}), never seen in training: {', '.join(lessons)}.",
-             f"{len(rows)} test examples. Quality at temperature 0. Latency: single requests in a row from the laptop through an SSH tunnel to the A100 VM.", "",
+             f"{len(rows)} test examples. Quality at temperature 0. Latency: single requests in a row from the laptop through the Verda container gateway (each system on its own 1x H100 serverless container), so it includes the internet round trip.", "",
              "| System | Model | Right finger % | Right direction % | Style % | All three % | Latency p50 s | Latency p95 s |",
              "| --- | --- | --- | --- | --- | --- | --- | --- |"]
     for s, m in sums.items():

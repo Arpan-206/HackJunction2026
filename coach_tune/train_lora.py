@@ -70,6 +70,22 @@ def val_loss(model, data, bs, pad_id, device) -> float:
     return tot / max(1, n)
 
 
+@torch.no_grad()
+def samples(model, tok, rows: list[dict], device) -> list[dict]:
+    """Greedy lines for a few validation prompts: the sanity check that the text is sane after training."""
+    model.eval()
+    out = []
+    for r in rows:
+        prompt = tok.apply_chat_template(r["messages"], tokenize=False, add_generation_prompt=True)
+        ids = tok(prompt, add_special_tokens=False, return_tensors="pt").to(device)
+        gen = model.generate(**ids, max_new_tokens=40, do_sample=False)
+        text = tok.decode(gen[0, ids["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+        out.append({"expected": r["completion"], "generated": text})
+        print(json.dumps(out[-1], ensure_ascii=False), flush=True)
+    model.train()
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", type=Path, required=True)
@@ -84,6 +100,8 @@ def main() -> int:
     ap.add_argument("--dropout", type=float, default=0.05)
     ap.add_argument("--max-len", type=int, default=512)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-steps", type=int, default=0, help="stop after N steps (smoke test); 0 runs every epoch")
+    ap.add_argument("--no-merge", action="store_true", help="skip the merge (smoke test)")
     a = ap.parse_args()
 
     random.seed(a.seed)
@@ -118,15 +136,28 @@ def main() -> int:
             sched.step()
             opt.zero_grad(set_to_none=True)
             step += 1
+            if not math.isfinite(loss.item()):
+                raise SystemExit(f"loss is not finite at step {step}: {loss.item()}")
+            if a.max_steps and step >= a.max_steps:
+                break
             if step % 10 == 0:
                 curve.append({"step": step, "loss": round(loss.item(), 4), "t_s": round(time.time() - t0)})
                 print(json.dumps(curve[-1]), flush=True)
+        if a.max_steps and step >= a.max_steps:
+            curve.append({"step": step, "loss": round(loss.item(), 4), "t_s": round(time.time() - t0), "smoke": True})
+            print(json.dumps(curve[-1]), flush=True)
+            break
         v = val_loss(model, val, a.bs, pad_id, device)
         curve.append({"epoch": epoch + 1, "val_loss": round(v, 4), "t_s": round(time.time() - t0)})
         print(json.dumps(curve[-1]), flush=True)
+    (a.out / "samples.json").write_text(json.dumps(samples(model, tok, load_rows(a.data / "val.jsonl")[:5], device), indent=2,
+                                                   ensure_ascii=False))
     model.save_pretrained(a.out)
     tok.save_pretrained(a.out)
     (a.out / "metrics.json").write_text(json.dumps({"curve": curve, "train_s": round(time.time() - t0)}, indent=2))
+    if a.no_merge:
+        print("done (no merge)", json.dumps({"train_s": round(time.time() - t0), "steps": step}))
+        return 0
     merged = model.merge_and_unload()
     merged.save_pretrained(a.merged, safe_serialization=True)
     tok.save_pretrained(a.merged)

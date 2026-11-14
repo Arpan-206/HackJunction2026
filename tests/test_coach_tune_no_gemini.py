@@ -64,7 +64,7 @@ def test_label_run_touches_only_the_tunnel(monkeypatch):
     assert not [k for k in env.read if "GEMINI" in k.upper() or "DECISION" in k.upper()]
 
 
-@pytest.mark.parametrize("url", ["https://generativelanguage.googleapis.com", "https://decisions.example.com", "http://localhost.evil.com:8001"])
+@pytest.mark.parametrize("url", ["https://generativelanguage.googleapis.com", "https://decisions.example.com", "http://localhost.evil.com:8001", "https://containers.datacrunch.io.evil.io/x"])
 def test_client_refuses_other_hosts(url):
     with pytest.raises(oai.ForbiddenHost):
         oai.check_host(url)
@@ -94,3 +94,15 @@ def test_built_dataset_keeps_captures_in_test_only():
     for split in ("train", "val"):
         text = (data / f"{split}.jsonl").read_text()
         assert '"source": "capture"' not in text
+
+
+def test_gateway_key_is_the_only_secret_read(monkeypatch, tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("GEMINI_API_KEY=nope\nVERDA_INFERENCE_KEY=k123\n")
+    monkeypatch.setattr(oai, "ENV_FILE", env_file)
+    env = RecordingEnv({k: v for k, v in os.environ.items() if k != "VERDA_INFERENCE_KEY"})
+    monkeypatch.setattr(os, "environ", env)
+    assert oai.headers("https://containers.datacrunch.io/coach-tune-teacher") == {"Authorization": "Bearer k123"}
+    assert oai.headers("http://localhost:8001") == {}
+    assert env.read == ["VERDA_INFERENCE_KEY"]
+    oai.check_host("https://containers.datacrunch.io/coach-tune-teacher")

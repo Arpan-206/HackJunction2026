@@ -34,7 +34,7 @@ def label_source(model: str, precision: str) -> dict:
     """Where a label came from. Refuses any model that is not a self-hosted open-weights Gemma 4."""
     if not model.startswith(oai.TEACHER_PREFIX):
         raise SystemExit(f"refusing to label with {model!r}: labels come only from our self-hosted Gemma 4 on Verda")
-    return {"model": model, "precision": precision, "host": "verda-vm via ssh tunnel", "self_hosted": True}
+    return {"model": model, "precision": precision, "host": oai.where(), "self_hosted": True}
 
 
 async def label(rows: list[dict], model: str, tries: int, concurrency: int, precision: str = "bf16") -> list[dict]:
