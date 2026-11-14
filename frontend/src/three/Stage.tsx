@@ -192,6 +192,18 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // A canvas scrolled out of view is never presented, so nothing paces its render loop: the browser runs it as fast as
+  // the script allows and the GPU queue grows without bound (on a software GPU a few seconds of it take half a minute
+  // to drain, and the drain blocks the page when the canvas unmounts and loses its context). Pause the loop while the
+  // canvas is out of view; it keeps its last frame and resumes when it scrolls back.
+  const [inView, setInView] = useState(true);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: '64px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   // Small canvases skip the set dressing; mid-sized ones get the bench and light but not the model props.
   const sizeKnown = size !== null;
   const autoDecor = !sizeKnown || size[0] >= 300;
@@ -203,7 +215,7 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
     <div ref={box} className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       <Canvas
         key={epoch}
-        frameloop={frameloop}
+        frameloop={inView ? frameloop : 'never'}
         onCreated={({ gl }) => {
           gl.domElement.addEventListener('webglcontextlost', (e) => {
             e.preventDefault();
