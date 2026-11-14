@@ -50,7 +50,9 @@ function Hands({ hands, ghost, style = 'wood' }: Pick<TypingStageProps, 'hands' 
       {SIDES.map((side) => {
         const h = hands[side];
         const tint: Partial<Record<Finger, string>> = {};
-        for (const [f, m] of Object.entries(h.marks ?? {}) as [Finger, FingerMark][]) tint[f] = colour[m];
+        // The thumb's tint reaches down to its root at the wrist, a large patch between the hands that hides the space bar,
+        // so the space bar's cue stays on the key (lit, or malachite after a right strike) and the thumb is left untinted.
+        for (const [f, m] of Object.entries(h.marks ?? {}) as [Finger, FingerMark][]) if (f !== 'thumb') tint[f] = colour[m];
         return <Hand key={side} ref={h.handRef} side={side} style={style} live={h.live} getFrame={h.getFrame} motion={h.motion} fingerTint={tint} position={position(side)} />;
       })}
       {ghost && SIDES.map((side) => <Hand key={`ghost-${side}`} side={side} style="ghost" opacity={0.7} getFrame={ghost[side]} position={position(side)} />)}
