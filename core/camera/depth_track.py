@@ -71,6 +71,21 @@ class TrackerConfig:
     arm_radius_max_m: float = 0.07
     cylinder_max_rms_m: float = 0.012
     require_entry: bool = True           # an arm comes from outside the view, so it crosses the image border
+    entry_margin_px: int = 6             # "touches the border" means within this many depth pixels of it
+    # Arm gate. "shape" (default since the first real clip, captures/bench-stand-1): every blob is
+    # scored and an arm must enter from the edge, be long enough but not too long, widen from a
+    # wrist toward the hand (taper) and stay low over the table. "cylinder" is the first gate
+    # (radius, residual, tilt), which accepted a tall object at the edge of that clip.
+    gate: str = "shape"
+    arm_len_min_m: float = 0.12
+    arm_len_max_m: float = 0.26
+    arm_min_px: int = 1200               # a hand 30 to 50 cm from the phone covers thousands of depth pixels
+    arm_confirm_frames: int = 3          # the gate must pass now and in this many of the last arm_confirm_window frames
+    arm_confirm_window: int = 5          # (a one-frame flicker of a bottle is not an arm)
+    arm_taper_min: float = 1.3           # widest slice in the far half / narrowest in the near half
+    arm_wmax_min_m: float = 0.05         # the hand's width
+    arm_wmax_max_m: float = 0.15
+    arm_h95_max_m: float = 0.15          # 95th percentile height above the table
     arm_max_tilt_deg: float = 40.0       # the cylinder axis lies along the table, not standing up from it
 
     @classmethod
@@ -113,6 +128,7 @@ class DepthObs:
     cyl_radius_m: float | None = None
     cyl_rms_m: float | None = None
     axis_tilt_deg: float | None = None   # the cylinder axis's angle above the table
+    shape: dict = field(default_factory=dict)  # shape-gate features of the chosen (or largest) blob
     hand_depth: bool = False
     forearm_yaw_deg: float | None = None
     forearm_ok: bool = False             # direction good enough to correct a glove with
@@ -239,6 +255,7 @@ class DepthTracker:
         self.ref_fwd: np.ndarray | None = None   # camera's first viewing direction on the table (world)
         self._ref_in_world: bool | None = None
         self.last_dir: np.ndarray | None = None
+        self._recent: list[bool] = []
         self.frames = 0
 
     # -- bench frame -----------------------------------------------------------
@@ -295,21 +312,35 @@ class DepthTracker:
         arm_img = arm.reshape(H, W).astype(np.uint8)
         arm_img = cv2.morphologyEx(arm_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n_lab, lab, stats, _ = cv2.connectedComponentsWithStats(arm_img, connectivity=8)
-        blob = None
-        if n_lab > 1:
-            areas = stats[1:, cv2.CC_STAT_AREA]
-            k = int(np.argmax(areas)) + 1
-            if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px:
-                blob = lab == k
         R = self.bench_axes(table, cam_fwd, in_world)
         obs.bench_R, obs.bench_origin, obs.in_world = R, table.point, in_world
         rel = p - table.point
+        blob = None
+        self._shape_pass = False
+        order = [k for k in np.argsort(-stats[1:, cv2.CC_STAT_AREA]) + 1 if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px]
+        if order:
+            blob = lab == order[0]               # the largest, shown even when it is not an arm
+            if cfg.gate == "shape":
+                best = None
+                for k in order:
+                    sh = self._shape(lab == k, rel, R, H, W)
+                    if k == order[0]:
+                        obs.shape = sh
+                    if sh["pass"]:
+                        best = (k, sh)
+                        break                    # the largest blob that passes
+                if best is not None:
+                    blob = lab == best[0]
+                    obs.shape = best[1]
+                    self._shape_pass = True
         dark_img = np.zeros((H, W), bool)
         if blob is not None:
             obs.blob_found = True
             obs.blob_px = int(blob.sum())
             self._forearm(obs, blob, rel, R, H, W, dist, R @ (cam - table.point))
             dark_img = self._dark_patch(obs, blob, conf.reshape(H, W), valid.reshape(H, W), h.reshape(H, W))
+        else:
+            self._push_pass(False)
         if want_cloud:
             obs.cloud = self._cloud(frame, rel @ R.T, valid & (dist <= cfg.max_range_m * 1.5), h,
                                     None if blob is None else blob.reshape(-1), dark_img.reshape(-1))
@@ -320,6 +351,55 @@ class DepthTracker:
         obs.process_ms = (time.perf_counter() - t0) * 1000
         return obs
 
+    def _push_pass(self, passed: bool) -> None:
+        self._recent.append(bool(passed))
+        del self._recent[:-max(1, self.cfg.arm_confirm_window)]
+
+    def _border(self, H: int, W: int) -> np.ndarray:
+        m = max(1, int(self.cfg.entry_margin_px))
+        border = np.zeros((H, W), bool)
+        border[:m, :] = border[-m:, :] = True
+        border[:, :m] = border[:, -m:] = True
+        return border
+
+    def _shape(self, bm: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int) -> dict:
+        """Shape features of one blob for the "shape" gate, in the bench frame."""
+        cfg = self.cfg
+        out = {"pass": False, "entry": False, "length_m": 0.0, "taper": 0.0, "wmax_m": 0.0, "h95_m": 0.0}
+        flat = bm.reshape(-1)
+        q = rel[flat] @ R.T
+        xz, hh = q[:, [0, 2]], q[:, 1]
+        out["h95_m"] = round(float(np.percentile(hh, 95)), 4)
+        edge = (bm & self._border(H, W)).reshape(-1)[flat]
+        if edge.sum() < 3:
+            return out
+        out["entry"] = True
+        e = np.median(xz[edge], axis=0)
+        ax = xz.mean(axis=0) - e
+        if np.linalg.norm(ax) < 1e-6:
+            return out
+        ax /= np.linalg.norm(ax)
+        side = np.array([-ax[1], ax[0]])
+        s, lat = (xz - e) @ ax, (xz - e) @ side
+        L = float(np.percentile(s, 98))
+        ws = []
+        for b in np.arange(0.0, L, 0.01):
+            m = (s >= b) & (s < b + 0.01)
+            if m.sum() >= 4:
+                lo, hi = np.percentile(lat[m], [5, 95])
+                ws.append(hi - lo)
+        if len(ws) < 4:
+            return out
+        ws = np.array(ws)
+        half = len(ws) // 2
+        out["length_m"] = round(L, 3)
+        out["taper"] = round(float(ws[half:].max() / max(ws[:half].min(), 1e-3)), 2)
+        out["wmax_m"] = round(float(ws.max()), 3)
+        out["pass"] = bool(int(bm.sum()) >= cfg.arm_min_px and cfg.arm_len_min_m <= L <= cfg.arm_len_max_m and out["taper"] >= cfg.arm_taper_min
+                           and cfg.arm_wmax_min_m <= out["wmax_m"] <= cfg.arm_wmax_max_m
+                           and out["h95_m"] <= cfg.arm_h95_max_m)
+        return out
+
     def _forearm(self, obs: DepthObs, blob: np.ndarray, rel: np.ndarray, R: np.ndarray, H: int, W: int,
                  dist: np.ndarray, cam_bench: np.ndarray) -> None:
         import cv2
@@ -328,9 +408,8 @@ class DepthTracker:
         q = rel[flat] @ R.T                 # bench frame
         xz = q[:, [0, 2]]
         centre = xz.mean(axis=0)
-        border = np.zeros((H, W), bool)
-        border[:2, :] = border[-2:, :] = True
-        border[:, :2] = border[:, -2:] = True
+        border = self._border(H, W)
+        m_px = max(1, int(cfg.entry_margin_px))
         edge = blob & border
         entry = None
         if edge.sum() >= 3:
@@ -340,7 +419,7 @@ class DepthTracker:
             n_runs, runs = cv2.connectedComponents(cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)) & edge.astype(np.uint8), connectivity=8)
             runs_flat = runs.reshape(-1)[flat]
             dist_blob = dist[flat]
-            best, best_score = None, -1.0
+            best, best_score = None, -math.inf
             for r in range(1, n_runs):
                 m = runs_flat == r
                 if m.sum() < 3:
@@ -356,8 +435,8 @@ class DepthTracker:
             if best is not None:
                 entry = best[0]
                 vv, uu = np.nonzero(runs == (np.bincount(runs_flat[best[1]]).argmax()))
-                sides = {"top": (vv < 2).sum(), "bottom": (vv >= H - 2).sum(), "left": (uu < 2).sum(),
-                         "right": (uu >= W - 2).sum()}
+                sides = {"top": (vv < m_px).sum(), "bottom": (vv >= H - m_px).sum(), "left": (uu < m_px).sum(),
+                         "right": (uu >= W - m_px).sum()}
                 obs.entry = max(sides, key=sides.get)
         if entry is not None:
             sel = np.linalg.norm(xz - entry, axis=1) <= cfg.forearm_len_m
@@ -371,6 +450,7 @@ class DepthTracker:
         cov = np.cov((pts - c).T)
         w, V = np.linalg.eigh(cov)
         axis = V[:, 1]
+        axis_pca = axis.copy()
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
         obs.width_m = float(math.sqrt(12.0 * max(w[0], 0.0)))   # full width of a uniform band
         if cfg.cylinder:
@@ -398,6 +478,23 @@ class DepthTracker:
         proj = (xz - (entry if entry is not None else c)) @ axis
         obs.length_m = float(np.percentile(proj, 98) - min(0.0, float(np.percentile(proj, 2))))
         obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
+        if cfg.gate == "shape":
+            if cfg.cylinder and not (obs.cyl_rms_m is not None and obs.cyl_rms_m <= cfg.cylinder_max_rms_m
+                                     and obs.cyl_radius_m is not None
+                                     and cfg.arm_radius_min_m <= obs.cyl_radius_m <= cfg.arm_radius_max_m):
+                # a flat hand is no cylinder: keep the plain axis for it
+                a = axis_pca if (entry is None or (centre - entry) @ axis_pca >= 0) else -axis_pca
+                d = np.array([a[0], 0.0, a[1]])
+                obs.dir_bench = d
+                obs.forearm_yaw_deg = round(yaw_of_dir(d), 2)
+            passed = bool(self._shape_pass and entry is not None)
+            self._push_pass(passed)
+            obs.shape["recent"] = int(sum(self._recent))
+            obs.arm_found = passed and sum(self._recent) >= max(1, cfg.arm_confirm_frames)
+            obs.forearm_ok = obs.arm_found and obs.forearm_points >= cfg.min_forearm_points
+            if obs.forearm_ok:
+                self.last_dir = obs.dir_bench
+            return
         arm_like = cfg.arm_width_min_m <= obs.width_m <= cfg.arm_width_max_m
         if cfg.require_entry:
             arm_like = arm_like and entry is not None

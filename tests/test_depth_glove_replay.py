@@ -20,7 +20,7 @@ import pytest
 from core import geom
 from core import hand as H
 from core.camera.depth_live import DepthTracking, FakeDepthSource, glove_yaw_deg
-from core.camera.depth_track import YawCorrectorConfig, wrap_deg
+from core.camera.depth_track import TrackerConfig, YawCorrectorConfig, wrap_deg
 from core.camera.fake_depth import FakeDepthScene
 from core.clock import FakeClock
 
@@ -50,7 +50,7 @@ def test_drift_correction_on_real_glove_window(dark):
     scene = FakeDepthScene(dark_hand=dark, yaw_fn=lambda t: glove_yaw(t) - mean)
     clock = FakeClock()
     fps = 10.0
-    dt = DepthTracking(FakeDepthSource(scene, clock=clock, fps=fps),
+    dt = DepthTracking(FakeDepthSource(scene, clock=clock, fps=fps), TrackerConfig(gate="cylinder", entry_margin_px=2),
                        corrector_cfg=YawCorrectorConfig(lock_s=2.0, lock_min_samples=10, tau_s=1.5))
     t0 = clock.now_us()
     errs, raw_errs = [], []

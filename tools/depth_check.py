@@ -85,11 +85,31 @@ def overlay(frame, obs) -> np.ndarray:
     return img
 
 
-def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg: TrackerConfig | None = None) -> dict:
+def span_label(spans: list[dict], k: int) -> str:
+    for sp in spans:
+        if sp["from"] <= k <= sp["to"]:
+            return sp["label"]
+    return "unlabelled"
+
+
+def span_scores(spans: list[dict], indices: list[int], found: list[bool]) -> dict:
+    """Found rate per label; for "no_arm" that rate is the false-accept rate."""
+    out: dict = {}
+    for lab in sorted({sp["label"] for sp in spans} | {"unlabelled"}):
+        ks = [f for k, f in zip(indices, found) if span_label(spans, k) == lab]
+        if ks:
+            out[lab] = {"frames": len(ks), "found": int(sum(ks)), "rate": round(sum(ks) / len(ks), 3)}
+    na = [k for k, f in zip(indices, found) if f and span_label(spans, k) == "no_arm"]
+    out["false_accept_frames"] = na[:50]
+    return out
+
+
+def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg: TrackerConfig | None = None,
+          spans: list[dict] | None = None) -> dict:
     import cv2
     out.mkdir(parents=True, exist_ok=True)
     tr = DepthTracker(tracker_cfg)
-    rows, obs_all = [], []
+    rows, obs_all, idx_all = [], [], []
     arrivals, stream_ts, tracking = [], [], []
     packets = list(read_recording(path))
     picks = set(np.linspace(0, max(0, len(packets) - 1), min(n_images, len(packets))).astype(int).tolist()) if packets else set()
@@ -109,13 +129,17 @@ def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg:
         want_img = k in picks
         o = tr.process(f, want_masks=want_img)
         obs_all.append(o)
+        idx_all.append(k)
         rows.append({
             "index": k, "frame_id": f.frame_id, "arrival_us": arrival_us, "stream_t": round(f.stream_t, 4),
             "process_ms": round(o.process_ms, 2), "plane_from_app": int(f.plane is not None),
             "table": o.table.source if o.table else "", "camera_height_m": round(o.table.camera_height_m, 4) if o.table else "",
             "fit_height_m": round(o.table_fit.camera_height_m, 4) if o.table_fit else "",
             "agree_deg": o.agree_deg if o.agree_deg is not None else "", "agree_mm": o.agree_mm if o.agree_mm is not None else "",
-            "blob": int(o.blob_found), "arm": int(o.arm_found), "width_m": round(o.width_m, 3),
+            "blob": int(o.blob_found), "arm": int(o.arm_found),
+            "label": span_label(spans, k) if spans else "",
+            "shape_len_m": o.shape.get("length_m", ""), "shape_taper": o.shape.get("taper", ""),
+            "shape_wmax_m": o.shape.get("wmax_m", ""), "shape_h95_m": o.shape.get("h95_m", ""), "width_m": round(o.width_m, 3),
             "cyl_radius_m": round(o.cyl_radius_m, 4) if o.cyl_radius_m is not None else "",
             "cyl_rms_mm": round(o.cyl_rms_m * 1000, 2) if o.cyl_rms_m is not None else "",
             "axis_tilt_deg": round(o.axis_tilt_deg, 1) if o.axis_tilt_deg is not None else "",
@@ -211,6 +235,8 @@ def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg:
                                               "p95": _q(skew_ms, [95])[0] if len(skew_ms) else None},
         },
     }
+    if spans:
+        summary["spans"] = span_scores(spans, idx_all, [o.arm_found for o in obs_all])
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     return summary
 
@@ -223,6 +249,9 @@ def main() -> int:
     ap.add_argument("--every", type=int, default=1, help="process every Nth packet")
     ap.add_argument("--config", default=None, help="config.toml with [camera.depth] (default: the repo's)")
     ap.add_argument("--camera-yaw", type=float, default=None, help="override [camera.depth] camera_yaw_deg")
+    ap.add_argument("--spans", type=Path, help="hand-marked spans (JSON, as tests/fixtures/depth/bench_stand_1_spans.json): "
+                    "adds the found rate per label and the false accepts on no_arm spans")
+    ap.add_argument("--gate", choices=["shape", "cylinder"], help="override [camera.depth] gate")
     a = ap.parse_args()
     cfg = load_config(a.config)
     tcfg = TrackerConfig.from_section(cfg.camera.get("depth") if "depth" in cfg.camera else None)
@@ -230,7 +259,10 @@ def main() -> int:
         tcfg.camera_yaw_deg = a.camera_yaw
     name = a.recording.name.split(".")[0]
     out = a.out or (REPO_ROOT / "logs" / "depth" / f"{time.strftime('%Y%m%d-%H%M%S')}-{name}")
-    s = check(a.recording, out, a.images, a.every, tcfg)
+    if a.gate:
+        tcfg.gate = a.gate
+    spans = json.loads(a.spans.read_text())["spans"] if a.spans else None
+    s = check(a.recording, out, a.images, a.every, tcfg, spans)
     print(json.dumps(s, indent=2))
     return 0
 

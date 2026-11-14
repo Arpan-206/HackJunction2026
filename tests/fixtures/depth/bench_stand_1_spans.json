@@ -1,0 +1,17 @@
+{
+  "recording": "captures/bench-stand-1.gdrec.gz",
+  "how": "Marked by hand from colour contact sheets at every 10th frame (lane lidar, Sat 14 Nov 19:50). index is the packet index in the file (0 to 1199); frame_id = index + 121 on this clip. Ends are rounded to the nearest 5 frames inside each span.",
+  "frame_id_offset": 121,
+  "spans": [
+    {"label": "no_arm", "from": 0, "to": 165, "note": "table, cables and the tall black object at the left edge (the 'bottle' the first run accepted)"},
+    {"label": "ambiguous", "from": 166, "to": 179, "note": "hand blurs in from the bottom edge"},
+    {"label": "arm", "from": 180, "to": 295, "note": "bare hand, spread, from the bottom edge, wrist and watch at the edge"},
+    {"label": "ambiguous", "from": 296, "to": 359, "note": "both hands handle the phone; the view moves"},
+    {"label": "no_arm", "from": 360, "to": 395, "note": "table and equipment, new view"},
+    {"label": "ambiguous", "from": 396, "to": 419, "note": "something passes the top edge"},
+    {"label": "arm", "from": 420, "to": 975, "note": "bare hand flat on the table from the top edge; 550 to 665 mostly sleeve and watch with the hand at the bottom edge; 830 to 870 hand tilted"},
+    {"label": "glove", "from": 976, "to": 1135, "note": "black Rokoko Smartglove on the hand, from the top edge, hovering"},
+    {"label": "ambiguous", "from": 1136, "to": 1165, "note": "lens covered"},
+    {"label": "arm", "from": 1166, "to": 1199, "note": "bare hand flat, from the top edge"}
+  ]
+}
