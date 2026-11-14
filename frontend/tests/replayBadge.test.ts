@@ -36,6 +36,12 @@ describe('replay signal from the core', () => {
     expect(coreFeedsPage(null, '/anything', true)).toBe(true);
     expect(coreFeedsPage('simulator', '/apprentice', false)).toBe(false);
     expect(coreFeedsPage(null, '/demolition', false)).toBe(false);
+    // mock mode: the robot and typing screens use the in-browser engine; /demo and the kiosk still read the core
+    expect(coreFeedsPage('simulator', '/robot', false, { mock: true })).toBe(false);
+    expect(coreFeedsPage('simulator', '/demo', false, { mock: true })).toBe(true);
+    // ?nocore=1 keeps the demo off the core, but a bridged backend still carries the core's hands
+    expect(coreFeedsPage('simulator', '/demo', true, { nocore: true })).toBe(false);
+    expect(coreFeedsPage('external', '/demo', true, { nocore: true })).toBe(true);
   });
 
   it('turns on with replay frames, holds through short gaps, and turns off on a live frame or silence', () => {

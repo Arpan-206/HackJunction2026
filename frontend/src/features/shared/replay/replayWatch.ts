@@ -1,4 +1,5 @@
 import { coreSessionEndpoint } from '../../../api/useCoreSession';
+import { readFlag } from '../../apprentice/pipeline/flags';
 import { isKiosk } from '../kiosk';
 
 /**
@@ -9,9 +10,12 @@ import { isKiosk } from '../kiosk';
  * Note: the backend's `/ws/gloves` also says "replay" for every bridged frame, live gloves included (CONTRACT.md
  * `/ws/ingest`), so only the core's own stream is read here.
  *
- * The core socket is opened only where the core feeds the screen, so a laptop with no core logs no connection errors:
- * when the backend reports `glove_source: "external"` (route B, the core's hands bridged in), on the core screens
- * (/demo, /robot, /typing), and always in the kiosk.
+ * The core socket is opened only where the core's hands can reach the screen, so a laptop with no core logs no
+ * connection errors (the walks fail on any console error):
+ * - the backend reports `glove_source: "external"` (route B: the core's hands bridged in), whatever else is set;
+ * - otherwise not with `?nocore=1` (the demo screen then never reads the core);
+ * - the kiosk, and /demo, which read the core directly;
+ * - /robot and /typing, except in mock mode (they then use the in-browser engine, not the core).
  */
 
 /** A recording is "on" for this long after the last replay frame; the core sends frames at 30 Hz. */
@@ -19,7 +23,7 @@ export const REPLAY_HOLD_MS = 2500;
 const RETRY_MIN_MS = 2000;
 const RETRY_MAX_MS = 10000;
 const HEALTH_POLL_MS = 5000;
-const CORE_ROUTES = ['/demo', '/robot', '/typing'];
+const CORE_ROUTES = ['/robot', '/typing'];
 
 /** `ws://host:8765/ws` (or VITE_CORE_WS) becomes `ws://host:8765/ws/gloves`. */
 export function coreGlovesEndpoint(sessionUrl: string = coreSessionEndpoint()): string {
@@ -36,10 +40,18 @@ export function frameSource(raw: unknown): string | null {
 }
 
 /** Whether the core is the hands' source for this page, so its socket is worth opening. */
-export function coreFeedsPage(backendGloveSource: string | null, pathname: string, kiosk: boolean): boolean {
-  if (kiosk) return true;
+export function coreFeedsPage(
+  backendGloveSource: string | null,
+  pathname: string,
+  kiosk: boolean,
+  opts: { mock?: boolean; nocore?: boolean } = {},
+): boolean {
   if (backendGloveSource === 'external') return true;
-  return CORE_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
+  if (opts.nocore) return false;
+  const under = (r: string) => pathname === r || pathname.startsWith(`${r}/`);
+  if (kiosk || under('/demo')) return true;
+  if (opts.mock) return false;
+  return CORE_ROUTES.some(under);
 }
 
 type Listener = () => void;
@@ -115,7 +127,10 @@ class ReplayWatch {
   /** Open the core socket when the core feeds this page; never close it because of a route change once replay is seen. */
   reconsider = (): void => {
     if (this.refs === 0 || typeof location === 'undefined' || typeof WebSocket === 'undefined') return;
-    const want = this.replay || coreFeedsPage(this.backendSource, location.pathname, isKiosk());
+    const want = this.replay || coreFeedsPage(this.backendSource, location.pathname, isKiosk(), {
+        mock: (window as { __apprenticeMock?: boolean }).__apprenticeMock === true,
+        nocore: readFlag('nocore'),
+      });
     if (want && !this.ws && this.retryTimer === null) this.open();
   };
 
