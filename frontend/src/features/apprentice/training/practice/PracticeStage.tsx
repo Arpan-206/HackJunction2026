@@ -16,6 +16,12 @@ import { FingerTinter } from '../modes/useFingerTints';
 export const TRANSITION_MS = 1300;
 /** How far above its resting place the expert's hand hangs while it works the puppet. */
 const PUPPETEER_LIFT = 1.2;
+/**
+ * How far the keyboard comes towards the player on this stage. <Keyboard /> and its chalk sketch lie under the fingers of a
+ * hand whose wrist is at the origin; here the hand is centred on the stage instead (its middle at the origin), which put the
+ * keys a hand's length beyond the fingertips, and the lit key was not the one under the finger.
+ */
+const KEYS_Z = 1.0;
 /** Height above the wooden hand the ghost floats down from. */
 const GHOST_FALL = 1.4;
 
@@ -155,8 +161,13 @@ function ExpertSide({ coach, side, prop, cue, progress, watching }: SideProps & 
     strings.current = 1 - clamp01(k / 0.35);
   });
 
+  // The expert plays the same keyboard: under the puppet while watching (it rests where the hand plays), then under the expert.
+  const keysHand = watching ? puppet : master;
   return (
     <>
+      {(prop === 'keyboard' || cue === 'keyboard') && (
+        <group position={[0, 0, KEYS_Z]}>{prop === 'keyboard' ? <Keyboard handRef={keysHand} /> : <PropCue prop={cue} hand={keysHand} />}</group>
+      )}
       <group ref={lift}>
         <Hand ref={master} side={side} style="chalk" getFrame={getMaster}>
           {prop === 'racket' && <Racket />}
@@ -257,8 +268,11 @@ function LearnerSide({ coach, gloves, side, prop, cue, policy, toleranceDeg, pro
 
   return (
     <>
-      {prop === 'keyboard' && <Keyboard handRef={learner} />}
-      <PropCue prop={cue} hand={learner} />
+      <group position={[0, 0, KEYS_Z]}>
+        {prop === 'keyboard' && <Keyboard handRef={learner} />}
+        {cue === 'keyboard' && <PropCue prop={cue} hand={learner} />}
+      </group>
+      {cue !== 'keyboard' && <PropCue prop={cue} hand={learner} />}
       <LearnerHand ref={learner} coach={coach} gloves={gloves} side={side} prop={prop} cue={cue} />
       {trying && <FaultMarks hand={learner} coach={coach} policy={policy} toleranceDeg={toleranceDeg} />}
       {showGhost && (
