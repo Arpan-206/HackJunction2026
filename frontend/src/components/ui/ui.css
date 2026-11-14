@@ -52,7 +52,10 @@
 
 /* ---------- Card ---------- */
 .card {
-  background: var(--surface);
+  /* A leaf of the sketchbook: mottled paper with its single fine border. */
+  background-color: var(--surface);
+  background-image: var(--tex-mottle);
+  background-size: 600px 600px;
   border: 1px solid var(--line);
   border-radius: var(--radius-m);
   box-shadow: var(--shadow);

@@ -8,8 +8,9 @@
   --font-ui: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
 
   --radius-s: 4px;
-  --radius-m: 8px;
-  --radius-l: 14px;
+  /* Plates and leaves of paper: nearly square corners. */
+  --radius-m: 4px;
+  --radius-l: 6px;
   --target: 44px;
   --rail-w: 92px;
 
@@ -21,144 +22,184 @@
   --step-4: clamp(2.8rem, 2rem + 4vw, 5rem);
 }
 
+/*
+ * The three themes are one Leonardo-style sketchbook seen three ways. Bottega: the parchment day sheet in sepia
+ * iron-gall ink. Notte: the same sheet by candlelight. Affresco: sand plaster with a burnt orange spine (the user's
+ * chosen #BA6C24), terracotta and sage in support. Colour is kept for meaning: gold only for mastery, vermilion only for
+ * corrections, malachite for correct; everything else is ink on paper.
+ */
 :root,
 :root[data-theme='bottega'] {
   color-scheme: light;
-  --lapis: #1f2e78;
-  --lapis-deep: #172259;
-  --bg: #e8e9e6;
-  --surface: #f4f4f1;
-  --surface-2: #dfe1dd;
-  --text: #1c1d24;
-  --text-2: #4a4c57;
-  --line: #c3c6c8;
-  --line-strong: #1c1d24;
-  --rail-bg: #172259;
-  --rail-bg-2: #1f2e78;
-  --rail-text: #e8e9e6;
-  --rail-text-2: #aab3e0;
-  --accent: #1f2e78;
-  --accent-hover: #2a3d99;
-  --accent-text: #f4f4f1;
-  --accent-soft: #dde1f2;
-  --gold: #d9b45a;
-  --gold-text: #6b5214;
-  --focus: #d9b45a;
-  --focus-inner: #1c1d24;
+  --lapis: #26357f;
+  --lapis-deep: #1a2560;
+  --bg: #eadbbd;
+  --surface: #f5ecd9;
+  --surface-2: #e3d0ac;
+  --text: #2a1b0f;
+  --text-2: #5b4330;
+  --line: #cdb68d;
+  --line-strong: #3a2616;
+  --rail-bg: #24170c;
+  --rail-bg-2: #3a2616;
+  --rail-text: #f3e6cc;
+  --rail-text-2: #cdb48e;
+  --accent: #5a3315;
+  --accent-hover: #6e4220;
+  --accent-text: #f7eedc;
+  --accent-soft: #e8d5b2;
+  --gold: #c9962e;
+  --gold-text: #6a4c0c;
+  --focus: #26357f;
+  --focus-inner: #f5ecd9;
   --danger: #b2321b;
-  --danger-soft: #f3dcd6;
-  --ok: #2f7a57;
-  --ok-soft: #d6e8df;
-  --stage-bg: #8fa0b3;
-  --shadow: 0 1px 0 rgba(28, 29, 36, 0.06), 0 10px 28px -12px rgba(23, 34, 89, 0.35);
-  --paper: #f4f4f1;
+  --danger-soft: #f2d6cc;
+  --ok: #266848;
+  --ok-soft: #d7e5d3;
+  --stage-bg: #e3d2ae;
+  --shadow: 0 1px 0 rgba(42, 27, 15, 0.08), 0 10px 26px -14px rgba(58, 38, 22, 0.45);
+  --paper: #f5ecd9;
   --on-danger: #ffffff;
-  --rail-ok: #5cc496;
-  --scrim: #172259;
-  --ink-sea: #0b1138;
+  --rail-ok: #6fcb9c;
+  --scrim: #24170c;
+  --ink-sea: #1a1008;
   --walnut-ink: #3b2716;
+  /* Sketchbook chrome: fine ink rules, the faint page grid and the stains at the sheet's edges. */
+  --rule: #6b4a2b;
+  --grid-ink: rgba(74, 47, 26, 0.028);
+  --stain: rgba(120, 72, 30, 0.11);
+  --fox: rgba(140, 86, 40, 0.08);
 }
 
 :root[data-theme='notte'] {
   color-scheme: dark;
   --lapis: #18225c;
   --lapis-deep: #0b1138;
-  --bg: #0d1334;
-  --surface: #151e52;
-  --surface-2: #1d2863;
-  --text: #f1ebdc;
-  --text-2: #b8bfdc;
-  --line: #2b3677;
-  --line-strong: #e2be6a;
-  --rail-bg: #070b24;
-  --rail-bg-2: #0d1334;
-  --rail-text: #f1ebdc;
-  --rail-text-2: #8f9acb;
-  --accent: #e2be6a;
-  --accent-hover: #efcd80;
-  --accent-text: #14193f;
-  --accent-soft: #262f6e;
+  --bg: #17100a;
+  --surface: #221811;
+  --surface-2: #2d2117;
+  --text: #f2e5c9;
+  --text-2: #cdb794;
+  --line: #4a3724;
+  --line-strong: #d8c196;
+  --rail-bg: #0e0905;
+  --rail-bg-2: #1b120b;
+  --rail-text: #f2e5c9;
+  --rail-text-2: #bba27d;
+  --accent: #f0dfc0;
+  --accent-hover: #f8ead0;
+  --accent-text: #1e140c;
+  --accent-soft: #3a2a1b;
   --gold: #e2be6a;
-  --gold-text: #e2be6a;
-  --focus: #e2be6a;
-  --focus-inner: #070b24;
-  --danger: #ee7a62;
-  --danger-soft: #3d2330;
-  --ok: #5cc496;
-  --ok-soft: #1a3b3a;
-  --stage-bg: #1a2554;
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px -14px rgba(0, 0, 0, 0.7);
-  --paper: #f1ebdc;
-  --on-danger: #1a0f12;
-  --rail-ok: #5cc496;
-  --scrim: #070b24;
-  --ink-sea: #070b24;
-  --walnut-ink: #f1ebdc;
+  --gold-text: #e8c66f;
+  --focus: #f0dfc0;
+  --focus-inner: #0e0905;
+  --danger: #f07f66;
+  --danger-soft: #3e211a;
+  --ok: #6cc99c;
+  --ok-soft: #1b3326;
+  --stage-bg: #2a1d12;
+  --shadow: 0 1px 0 rgba(255, 236, 200, 0.04), 0 14px 32px -14px rgba(0, 0, 0, 0.75);
+  --paper: #f2e5c9;
+  --on-danger: #1a0f0a;
+  --rail-ok: #6cc99c;
+  --scrim: #0e0905;
+  --ink-sea: #0e0905;
+  --walnut-ink: #f2e5c9;
+  --rule: #b89a6c;
+  --grid-ink: rgba(242, 229, 201, 0.018);
+  --stain: rgba(0, 0, 0, 0.38);
+  --fox: rgba(214, 150, 70, 0.04);
 }
 
 :root[data-theme='affresco'] {
   color-scheme: light;
   --lapis: #6f84a8;
   --lapis-deep: #3a4a63;
-  --bg: #e2e3cf;
-  --surface: #eeeedf;
-  --surface-2: #d6d8c2;
-  --text: #2a2b22;
-  --text-2: #565849;
-  --line: #bcc0a4;
-  --line-strong: #2a2b22;
-  --rail-bg: #3f4c33;
-  --rail-bg-2: #4a5a3c;
-  --rail-text: #eeeedf;
-  --rail-text-2: #b9c4a4;
-  --accent: #8a4a32;
-  --accent-hover: #9d5a3f;
-  --accent-text: #f7f3e6;
-  --accent-soft: #eadccc;
+  --bg: #ede1ca;
+  --surface: #f6eedf;
+  --surface-2: #e2d0ae;
+  --text: #2b1c12;
+  --text-2: #5c4535;
+  --line: #d6be9a;
+  --line-strong: #3b2718;
+  --rail-bg: #7a4116;
+  --rail-bg-2: #84461a;
+  --rail-text: #f6ead3;
+  --rail-text-2: #e6cba4;
+  --accent: #7a3e12;
+  --accent-hover: #8a4a1a;
+  --accent-text: #fff6e8;
+  --accent-soft: #f1dcc4;
   --gold: #c9a24b;
   --gold-text: #6b5214;
-  --focus: #c9a24b;
-  --focus-inner: #2a2b22;
-  --danger: #9a3a22;
-  --danger-soft: #efd9cf;
-  --ok: #4a7a45;
-  --ok-soft: #d9e4cc;
-  --stage-bg: #a9b4bc;
-  --shadow: 0 1px 0 rgba(42, 43, 34, 0.06), 0 10px 26px -12px rgba(63, 76, 51, 0.4);
-  --paper: #f7f3e6;
+  --focus: #1a0f08;
+  --focus-inner: #f6eedf;
+  --danger: #b81e24;
+  --danger-soft: #f6d7d0;
+  --ok: #2b6b4a;
+  --ok-soft: #e1e3cb;
+  --stage-bg: #e2cfab;
+  --shadow: 0 1px 0 rgba(43, 28, 18, 0.07), 0 10px 26px -12px rgba(120, 62, 20, 0.35);
+  --paper: #f6eedf;
   --on-danger: #ffffff;
-  --rail-ok: #b7d79a;
-  --scrim: #3a4a63;
-  --ink-sea: #2a2b22;
+  --rail-ok: #9be3b8;
+  --scrim: #3b2718;
+  --ink-sea: #2b1c12;
   --walnut-ink: #3b2716;
+  --rule: #b07a52;
+  --grid-ink: rgba(122, 65, 22, 0.03);
+  --stain: rgba(150, 82, 30, 0.1);
+  --fox: rgba(160, 96, 40, 0.07);
 }
 
 /*
- * Paper and plaster textures (CC0, see the SOURCE.md in each public/textures folder). Very faint by design: the texture is a veil
- * of the theme surface colour laid over the image, so text contrast stays that of the plain token (WCAG AA).
- * Opt in with a class: .tex-plaster on page backgrounds, .tex-parchment on cards and panels.
+ * Sketchbook paper (CC0 texture, see public/textures/paper005/SOURCE.md). Very faint by design: each layer is a veil of
+ * the theme colour over the image, so text contrast stays that of the plain token (WCAG AA). The page gets the sheet:
+ * mottled paper, the faint ruled grid, foxing and the darker stain at the edges of the screen. Cards and panels opt in
+ * with .tex-parchment for the lighter sheet.
  */
 :root {
   --tex-plaster: url('/textures/worn_plaster_wall/diff.jpg');
   --tex-parchment: url('/textures/paper005/diff.jpg');
+  /* Mottling and paper tooth: two fractal noises, drawn as faint sepia blotches. Tiles seamlessly. */
+  --tex-mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.29 0 0 0 0 0.13 0.4 0 0 0 -0.17'/%3E%3C/filter%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0 0.1 0.5 0 0 0 -0.22'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23a)'/%3E%3Crect width='600' height='600' filter='url(%23b)'/%3E%3C/svg%3E");
   --tex-plaster-veil: 96%;
-  --tex-parchment-veil: 92%;
+  --tex-parchment-veil: 86%;
+  --grid-cell: 36px;
 }
 
 :root[data-theme='notte'] {
   --tex-plaster-veil: 97.5%;
-  --tex-parchment-veil: 95%;
+  --tex-parchment-veil: 96%;
+  /* By candlelight the paper's mottling shows as shade, not as lighter brown. */
+  --tex-mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0 0 0 -0.17'/%3E%3C/filter%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0 0 0 -0.22'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23a)'/%3E%3Crect width='600' height='600' filter='url(%23b)'/%3E%3C/svg%3E");
 }
 
-html body,
+html body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 90% 85% at 50% 42%, transparent 64%, var(--stain) 100%),
+    radial-gradient(circle at 3% 6%, var(--fox) 0, transparent 2.2rem),
+    radial-gradient(circle at 97% 92%, var(--fox) 0, transparent 2.8rem),
+    linear-gradient(var(--grid-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px),
+    var(--tex-mottle),
+    linear-gradient(color-mix(in srgb, var(--bg) var(--tex-parchment-veil), transparent), color-mix(in srgb, var(--bg) var(--tex-parchment-veil), transparent)),
+    var(--tex-parchment);
+  background-size: auto, auto, auto, var(--grid-cell) var(--grid-cell), var(--grid-cell) var(--grid-cell), 600px 600px, auto, 512px 512px;
+  background-attachment: fixed, fixed, fixed, scroll, scroll, scroll, scroll, scroll;
+}
+
 .tex-plaster {
   background-color: var(--bg);
   background-image: linear-gradient(color-mix(in srgb, var(--bg) var(--tex-plaster-veil), transparent), color-mix(in srgb, var(--bg) var(--tex-plaster-veil), transparent)), var(--tex-plaster);
   background-size: auto, 640px 640px;
 }
 
+/* A lighter leaf of the same paper for cards and panels: mottled, no grid. */
 .tex-parchment {
   background-color: var(--surface);
-  background-image: linear-gradient(color-mix(in srgb, var(--surface) var(--tex-parchment-veil), transparent), color-mix(in srgb, var(--surface) var(--tex-parchment-veil), transparent)), var(--tex-parchment);
-  background-size: auto, 420px 420px;
+  background-image: var(--tex-mottle), linear-gradient(color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface) 92%, transparent)), var(--tex-parchment);
+  background-size: 600px 600px, auto, 420px 420px;
 }

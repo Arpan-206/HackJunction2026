@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MARGINS } from '../../api/margin';
 import { Button } from '../../components/ui';
 import { useAssistant } from './assistant';
+import { IconSettings } from './RailIcons';
 import { PROP_NOTE, useShowProps } from './sessionPrefs';
 import { MARGIN_INFO, systemReducesMotion, useDemoMode, useMargin, useReducedMotion, useScoreView, useWearer, WEARER_MAX_CHARS, type ScoreView } from './settings';
 import './settings.css';
@@ -223,11 +224,7 @@ export function SettingsButton({ className }: { className?: string }) {
   return (
     <>
       <button ref={button} type="button" className={className} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
-        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-          <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-          <circle cx="16" cy="7" r="2" />
-          <circle cx="8" cy="17" r="2" />
-        </svg>
+        <IconSettings />
         Settings
       </button>
       {open && <SettingsDialog onClose={() => setOpen(false)} returnFocus={button} />}
