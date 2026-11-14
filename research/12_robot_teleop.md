@@ -2,6 +2,8 @@
 
 Written Sat 14 Nov 2026. Plain English. Every claim from the web has its source inline. Anything I could not confirm is marked **ASSUMED** or **UNCONFIRMED**.
 
+**Update, Sat 14 Nov late morning:** retargeting now lives in the core. `core/robot.py` turns the 18 angles into Unitree Dex3-1 joint targets and serves them on `/ws/robot` and as `frame.robot` (DECISIONS.md D25). The `robot_bridge` below should therefore not retarget: it only forwards the core's `q` to hardware with rate limits, a force cap and an e-stop. An Inspire hand, if that is what we get, becomes a second model in the core's `[robot]` config. Section 3 stays as background for that table. The handover is in `arpan_info.md`.
+
 ## 0. Recommendation (read this first)
 
 **Pivot line:** "Geppetto and Pinocchio. The human is the puppeteer, the robot hand is the puppet, the marionette strings on screen are the teleop UI. Every skill an expert teaches a human learner also teaches the robot."
