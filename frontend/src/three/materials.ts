@@ -17,9 +17,13 @@ import {
   type Material,
 } from 'three';
 import type { StageColors } from '../theme/themes';
+import { withHatching } from './sketch';
 
-/** How a hand is drawn. chalk: master, wood: apprentice marionette, ghost: translucent overlay, shadow: dark guidance. */
-export type HandStyle = 'chalk' | 'wood' | 'ghost' | 'shadow';
+/**
+ * How a hand is drawn. chalk: master, wood: apprentice marionette, ghost: translucent overlay, shadow: dark guidance,
+ * sketch: the expert's codex hand, lit toon shading with iron-gall hatching and a heavier ink outline.
+ */
+export type HandStyle = 'chalk' | 'wood' | 'ghost' | 'shadow' | 'sketch';
 
 let gradient: DataTexture | null = null;
 
@@ -145,6 +149,19 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
       fill: () => stencilise(track(new MeshBasicMaterial({ color: base.clone(), transparent: true, opacity: 0.42, depthWrite: false })), stencilRef),
       line: null,
       outline: 0,
+      peg: null,
+      base,
+      dispose,
+    };
+  }
+
+  if (style === 'sketch') {
+    const base = new Color(tint ?? stage.chalk);
+    const ink = track(new MeshBasicMaterial({ color: stage.ink, side: BackSide }));
+    return {
+      fill: () => track(withHatching(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), { ink: stage.ink, strength: 0.7, spacing: 5, base: 1.08 })),
+      line: ink,
+      outline: 0.018,
       peg: null,
       base,
       dispose,
