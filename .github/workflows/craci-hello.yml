@@ -1,0 +1,15 @@
+name: craci-hello
+
+# First run on CRACI: a tiny job so the CRACI onboarding page registers a run.
+
+on:
+  push:
+    branches: [craci]
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: craci
+    steps:
+      - uses: actions/checkout@v4
+      - run: uname -a && cat /etc/os-release && nproc && echo "Geppetto on CRACI"
