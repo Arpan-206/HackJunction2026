@@ -4,12 +4,17 @@ import { Color, Group, Mesh, MeshToonMaterial, SphereGeometry, Vector3, type Ins
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { FINGERS } from '../../api/types';
+import { FINGERS, type Finger } from '../../api/types';
 import type { HandHandle } from '../Hand';
 import { toonGradient } from '../materials';
 import { useStageColors } from '../stageContext';
 import { STRING_POINTS, writeStringSegments } from '../stringMath';
-import type { RobotHandHandle } from './RobotHand';
+
+/** Anything with fingertips the strings can tie to: the Dex3-1 twin, or a five-finger hand drawn as a robot. */
+export interface StringTarget {
+  /** World position of a fingertip, or null when there is no such finger. */
+  getTipWorld: (finger: Finger, out: Vector3) => Vector3 | null;
+}
 
 const SEGMENTS = STRING_POINTS - 1;
 const FAN = [-0.9, -0.45, 0, 0.45, 0.9];
@@ -28,7 +33,7 @@ function makeLine(width: number, color: Color): Line2 {
 
 interface RobotStringsProps {
   human: RefObject<HandHandle>;
-  robot: RefObject<RobotHandHandle>;
+  robot: RefObject<StringTarget | null>;
   visible?: boolean;
 }
 

@@ -6,6 +6,7 @@ import { applyDualQuaternionBoneTransform, installDualQuaternionSkinning, skinWi
 import type { HandTemplate } from './handModel';
 import { applyHandPose, applyJointPose, createBones, THUMB_TUNING } from './handPose';
 import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
+import { addRobotJoints } from './robotHandParts';
 import type { HandSmoother } from './smoothing';
 
 export interface FingerRig {
@@ -79,6 +80,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     const joints = f.joints.map((j) => bones[j.bone]) as [Bone, Bone, Bone];
     return { name: FINGER_ORDER[i], base: joints[0], joints, tip: bones[f.tip] };
   });
+  const parts = style === 'robot' && mats.accent ? addRobotJoints(fingers, mats.accent) : [];
 
   return {
     root,
@@ -91,6 +93,7 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
     template,
     setFingerTint: mats.setTint,
     dispose() {
+      parts.forEach((p) => p.removeFromParent());
       mats.dispose();
       skeleton.dispose();
     },

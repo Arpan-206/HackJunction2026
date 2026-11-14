@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { FINGERS, type Finger } from '../../../api/types';
 import { CORE_PORT, useRobotView, type RobotStreamHandle } from '../../../api/useRobotStream';
 import { jointFinger, shortJointName, SOURCE_LABEL, waitingLine } from '../../../api/robot';
 import { Disclosure } from '../../../components/ui';
 import { FINGER_LABEL } from '../../apprentice/training/coach/tips';
+import { Segmented } from '../../apprentice/training/Segmented';
+import { ROBOT_MODEL_OPTIONS, useRobotModelChoice } from './robotPrefs';
 import { RobotSourceControl } from './RobotSourceControl';
 
 interface RobotPanelProps {
@@ -11,6 +14,25 @@ interface RobotPanelProps {
   compact?: boolean;
   /** Hide the source control (when it is shown elsewhere on the page). */
   noControl?: boolean;
+  /** Show the switch between the three-finger and the five-finger robot. */
+  modelControl?: boolean;
+  /** The lesson step the five-finger robot is playing in the browser, if any. */
+  playing?: string | null;
+  /** The five-finger robot's lesson player, placed right under the robot switch. */
+  lessonSlot?: ReactNode;
+}
+
+/** Which robot hand the twin draws: the Dex3-1 or the five-finger humanoid. Stored in localStorage. */
+export function RobotModelControl() {
+  const [model, setModel] = useRobotModelChoice();
+  const current = ROBOT_MODEL_OPTIONS.find((o) => o.id === model);
+  return (
+    <div className="ap-field">
+      <span className="ap-field__label">Robot hand</span>
+      <Segmented label="Robot hand" value={model} options={ROBOT_MODEL_OPTIONS} onChange={setModel} />
+      <p className="note ap-field__hint">{current?.hint}</p>
+    </div>
+  );
 }
 
 const RAD = 180 / Math.PI;
@@ -31,7 +53,38 @@ export function robotStateLine(robot: RobotStreamHandle): { text: string; tone: 
  * fingers it lacks, and the live joint targets. Fidelity is the core's number: robot joints over human joints per
  * finger, less any clipping at the joint limits.
  */
-export function RobotPanel({ robot, compact = false, noControl = false }: RobotPanelProps) {
+export function RobotPanel(props: RobotPanelProps) {
+  const [choice] = useRobotModelChoice();
+  return choice === 'humanoid' ? <HumanoidPanel {...props} /> : <DexPanel {...props} />;
+}
+
+/**
+ * The five-finger robot's panel: what drives it, the robot switch, the lesson player (its main job) and, below, the
+ * gloves that can drive it through the engine. It copies every human joint, so there is no fidelity table.
+ */
+function HumanoidPanel({ robot, compact = false, noControl = false, modelControl = false, playing = null, lessonSlot }: RobotPanelProps) {
+  const connected = robot.status === 'open' && robot.hello !== null;
+  const source = robot.source ?? 'off';
+  const line = playing
+    ? `Playing ${playing}.`
+    : !connected
+      ? 'Following the hand beside it. It copies every joint of all five fingers, no engine needed.'
+      : source === 'off' || source === 'lesson'
+        ? 'Resting. Play a lesson, or pick a glove to drive it.'
+        : `Following the ${SOURCE_LABEL[source].toLowerCase()}.`;
+  return (
+    <div className={`rb-panel ${compact ? 'rb-panel--compact' : ''}`}>
+      <p className="rb-state" role="status">
+        {line}
+      </p>
+      {modelControl && <RobotModelControl />}
+      {lessonSlot}
+      {!noControl && connected && <RobotSourceControl robot={robot} exclude={['lesson']} paused={playing ? 'Paused while the lesson plays.' : null} />}
+    </div>
+  );
+}
+
+function DexPanel({ robot, compact = false, noControl = false, modelControl = false }: RobotPanelProps) {
   const view = useRobotView(8);
   const desc = robot.hello?.robot ?? null;
   const missing = new Set<Finger>(view?.missing ?? desc?.missing ?? []);
@@ -47,6 +100,7 @@ export function RobotPanel({ robot, compact = false, noControl = false }: RobotP
           {robot.mock && ' Sample robot, offline.'}
         </span>
       </p>
+      {modelControl && <RobotModelControl />}
       {!noControl && <RobotSourceControl robot={robot} />}
       <div className="ap-field">
         <span className="ap-field__label">How much of each finger it copies</span>
