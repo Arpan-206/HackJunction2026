@@ -3,7 +3,7 @@ import type { ScoreResult, Step } from '../../../api';
 import { logAttempt, useLoggedAttempts } from '../../shared/practiceLog';
 import { setLine, stageLine } from '../pipeline/coachLines';
 import { dayKey, deriveStep, startingPoint } from '../pipeline/progress';
-import { applyRep, chooseStage, configFor, finishWatch, initialState, replay, type PipelineConfig, type RepOutcome, type Stage, type StageEvent, type StageState } from '../pipeline/stages';
+import { applyRep, chooseStage, configFor, finishWatch, initialState, openAt, replay, type OpenStage, type PipelineConfig, type RepOutcome, type Stage, type StageEvent, type StageState } from '../pipeline/stages';
 import { policyForStage, type AttemptPolicy } from './coach/fade';
 
 export interface PipelineLines {
@@ -41,7 +41,7 @@ export interface StepPipeline {
  * Drives one step through Watch, then Ghost on and Ghost off (the learner's switch). The starting stage is rebuilt from the attempt log, so a learner
  * returns to where they left off; every scored rep is logged with its stage so ranks and review dates can be derived later.
  */
-export function useStepPipeline(lessonId: string, step: Step, demo: boolean): StepPipeline {
+export function useStepPipeline(lessonId: string, step: Step, demo: boolean, ask: OpenStage | null = null): StepPipeline {
   const logged = useLoggedAttempts(lessonId);
   const cfg = useMemo(() => configFor(step, demo), [step, demo]);
 
@@ -50,8 +50,10 @@ export function useStepPipeline(lessonId: string, step: Step, demo: boolean): St
     const base = replay(own.map((a) => ({ stage: a.stage, score: a.score })), cfg);
     const mastery = deriveStep(step.id, own, cfg);
     const sp = startingPoint(base.stage, mastery, dayKey(new Date()));
-    const machine = sp.stage === base.stage ? base : { ...initialState(sp.stage), mastered: base.mastered || sp.review };
-    return { machine, review: sp.review };
+    const resumed = sp.stage === base.stage ? base : { ...initialState(sp.stage), mastered: base.mastered || sp.review };
+    // A link may ask for a stage (the skill page's timeline): Watch or Ghost on set a due review aside, Ghost off keeps it.
+    const machine = openAt(resumed, ask);
+    return { machine, review: sp.review && (ask === null || ask === 'blind') };
   });
 
   const [machine, setMachine] = useState<StageState>(start.machine);

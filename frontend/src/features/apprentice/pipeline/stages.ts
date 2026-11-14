@@ -85,6 +85,24 @@ export function chooseStage(state: StageState, stage: 'ghost' | 'blind'): StageS
   return { ...state, stage, combo: 0, repsInSet: 0, cleanInSet: 0, failedSets: 0 };
 }
 
+/** The stages a link can open the practice screen at (`?stage=`), for revisiting a lesson from its timeline. */
+export type OpenStage = 'watch' | 'ghost' | 'blind';
+
+/** Reads a `?stage=` value; anything else is null (the screen resumes where the log left off). */
+export function askedStage(raw: string | null | undefined): OpenStage | null {
+  return raw === 'watch' || raw === 'ghost' || raw === 'blind' ? raw : null;
+}
+
+/**
+ * Opens a step at the stage a link asked for, keeping its mastery: Watch starts the puppet again, Ghost on and Ghost off
+ * are the learner's switch (a fresh count at that stage). With no ask the resumed state stands.
+ */
+export function openAt(state: StageState, ask: OpenStage | null): StageState {
+  if (!ask) return state;
+  if (ask === 'watch') return state.stage === 'watch' ? state : { ...initialState('watch'), mastered: state.mastered };
+  return chooseStage(finishWatch(state), ask);
+}
+
 /** The fingers whose per-finger score fell short of the pass score. */
 export function wrongFingersOf(score: Pick<ScoreResult, 'per_finger'>, passScore: number): Finger[] {
   return FINGERS.filter((f) => score.per_finger[f] < passScore);
