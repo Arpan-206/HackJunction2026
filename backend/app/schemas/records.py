@@ -3,7 +3,15 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app import constants as c
-from app.schemas.common import Finger, FingerValues, Hands, Side, Tolerance, Triple
+from app.schemas.common import (
+    Finger,
+    FingerValues,
+    Hands,
+    Margin,
+    Side,
+    Tolerance,
+    Triple,
+)
 from app.schemas.frames import GloveFrame
 from app.schemas.motion import MotionSpec
 
@@ -53,6 +61,7 @@ class ScoreRequest(BaseModel):
     attempt_frames: list[GloveFrame] | None = Field(default=None, max_length=c.MAX_RECORDING_FRAMES)
     side: Side | None = None
     tolerance: Tolerance = Field(default_factory=Tolerance)
+    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The learner's margin of error; scales the tolerance and the hint thresholds.")
     use_latest_calibration: bool = False
     attempt_calibration_id: str | None = None
     reference_calibration_id: str | None = None
@@ -77,3 +86,4 @@ class ScoreResult(BaseModel):
     worst_finger: Finger
     hint: str
     warnings: list[str] = Field(default_factory=list)
+    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The margin of error the score was judged with.")

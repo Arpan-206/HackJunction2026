@@ -58,7 +58,7 @@ def build_prompt(request: CoachHintRequest, draft: HintDraft) -> str:
         joints = (request.joint_deviations or {}).get(finger)
         extra = f" (knuckle {joints[0]:+.0f}, middle {joints[1]:+.0f}, tip {joints[2]:+.0f})" if joints and len(joints) == c.JOINTS_PER_FINGER else ""
         lines.append(f"{finger}: {value:+d}{extra}")
-    if abs(request.timing_ms) >= c.HINT_TIMING_MS:
+    if abs(request.timing_ms) >= hints.thresholds(request.margin, request.tolerance_deg).timing_ms:
         lines.append(f"Timing: {_round(abs(request.timing_ms), c.HINT_PROMPT_MS_STEP)} ms {'late' if request.timing_ms > 0 else 'early'}")
     if request.wrist_error_deg is not None:
         lines.append(f"Wrist {request.wrist_axis or 'angle'}: {_round(request.wrist_error_deg, c.HINT_PROMPT_DEG_STEP):+d}")

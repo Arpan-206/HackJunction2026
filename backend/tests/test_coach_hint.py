@@ -118,3 +118,25 @@ def test_hint_request_validation(client: TestClient) -> None:
     """Attempt must be positive and text fields are length limited."""
     assert client.post("/api/coach/hint", json={"attempt": 0}).status_code == 422
     assert client.post("/api/coach/hint", json={"last_hint": "x" * 201}).status_code == 422
+
+
+def test_margin_scales_the_live_hint() -> None:
+    """Relaxed stays quiet inside its widened band, strict speaks up below the standard threshold, standard is unchanged."""
+    off = {"deviations": {"ring": -22}}
+    assert hints.build_hint_draft(_req(**off)) == hints.build_hint_draft(_req(**off, margin="standard"))
+    assert hints.build_hint_draft(_req(**off)).cue_type == "curl"
+    assert hints.build_hint_draft(_req(**off, margin="relaxed")).cue_type == "praise"
+    assert hints.build_hint_draft(_req(**off, margin="just_trying")).cue_type == "praise"
+    slight = {"deviations": {"index": 3}}
+    assert hints.build_hint_draft(_req(**slight)).cue_type == "praise"
+    strict = hints.build_hint_draft(_req(**slight, margin="strict"))
+    assert strict.cue_type == "extend" and strict.focus_finger == "index"
+    assert hints.thresholds() == hints.STANDARD and hints.STANDARD.finger_deg == c.HINT_MIN_DEVIATION_DEG
+
+
+def test_margin_reaches_the_hint_endpoint(client: TestClient) -> None:
+    """POST /coach/hint accepts the margin; relaxed praises a rep the standard margin would correct."""
+    body = {"instruction": "Grip", "deviations": {"ring": 25}, "timing_ms": 0}
+    assert client.post("/api/coach/hint", json=body).json()["cue_type"] == "extend"
+    assert client.post("/api/coach/hint", json={**body, "margin": "relaxed"}).json()["cue_type"] == "praise"
+    assert client.post("/api/coach/hint", json={**body, "margin": "sloppy"}).status_code == 422

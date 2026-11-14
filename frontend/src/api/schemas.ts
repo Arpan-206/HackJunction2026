@@ -19,6 +19,9 @@ export const gloveFrameSchema = z.object({
   hands: z.array(handFrameSchema),
 });
 
+/** The learner's margin of error (see src/api/margin.ts). */
+export const marginSchema = z.enum(['strict', 'standard', 'relaxed', 'just_trying']);
+
 export const motionSpecSchema = z.discriminatedUnion('preset', [
   z.object({ preset: z.literal('finger_sequence'), sequence: z.array(z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])), beat_ms: z.number() }),
   z.object({ preset: z.literal('grip_and_swing'), grip: z.enum(['shakehand', 'penhold']), swing: z.enum(['forehand', 'backhand']), beat_ms: z.number() }),

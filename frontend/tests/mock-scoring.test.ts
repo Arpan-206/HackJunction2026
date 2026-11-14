@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Calibration, Finger, GloveFrame, MotionSpec, ScoreResult } from '../src/api/types';
-import { dtwPath, scoreFrames, buildHint } from '../src/mock/scoring';
+import type { Calibration, Finger, GloveFrame, Margin, MotionSpec, ScoreResult } from '../src/api/types';
+import { dtwPath, scoreFrames, buildHint, thresholds, STANDARD_THRESHOLDS } from '../src/mock/scoring';
 import { frameAt, synthesise } from '../src/mock/synth';
 
 /**
@@ -116,6 +116,55 @@ describe('held poses carry no timing penalty', () => {
 
   it('keeps timing for a moving reference', () => {
     expect(run(SEQ, SEQ, 4, { shift: -0.3 }).timing).toBeLessThan(90);
+  });
+});
+
+describe('margin of error, pinned to the Python scorer', () => {
+  const holdBump = (bump: number, margin?: Margin) =>
+    scoreFrames(synthesise(HOLD, 'right', 2, 30), attempt(HOLD, 2, 0, ['index', bump]), 'right', { angle_deg: 18, timing_ms: 250 }, undefined, margin);
+
+  it('leaves the default exactly as before and echoes standard', () => {
+    const plain = holdBump(0.12);
+    expect(holdBump(0.12, 'standard')).toEqual(plain);
+    expect(plain.margin).toBe('standard');
+    expectScore(plain, {
+      overall: 96.0, per: [100, 74.7, 100, 100, 100], timing: 100, within: false, worst: 'index',
+      hint: 'Relax your index finger, it is curled about 21 degrees (in total) too much.',
+    });
+  });
+
+  it('relaxed passes a slightly-off rep that standard flags, with no correction', () => {
+    const r = holdBump(0.12, 'relaxed');
+    expectScore(r, { overall: 98.1, per: [100, 87.8, 100, 100, 100], timing: 100, within: true, worst: 'index', hint: 'Great match. Keep the same shape and rhythm.' });
+    expect(r.margin).toBe('relaxed');
+    expectScore(holdBump(0.12, 'just_trying'), { overall: 99.3, per: [100, 95.4, 100, 100, 100], timing: 100, within: true, hint: 'Great match. Keep the same shape and rhythm.' });
+  });
+
+  it('strict flags a rep that standard passes', () => {
+    expectScore(holdBump(0.07), {
+      overall: 98.5, per: [100, 90.5, 100, 100, 100], timing: 100, within: true, worst: 'index',
+      hint: 'Relax your index finger, it is curled about 12 degrees (in total) too much.',
+    });
+    expectScore(holdBump(0.07, 'strict'), {
+      overall: 96.1, per: [100, 75.9, 100, 100, 100], timing: 100, within: false, worst: 'index',
+      hint: 'Relax your index finger, it is curled about 12 degrees (in total) too much.',
+    });
+  });
+
+  it('scales timing too: relaxed stays quiet about a 231 ms late rep, strict flags it', () => {
+    const late = (margin: Margin) => scoreFrames(synthesise(SEQ, 'right', 4, 30), attempt(SEQ, 4, -0.3), 'right', { angle_deg: 18, timing_ms: 250 }, undefined, margin);
+    expectScore(late('relaxed'), { overall: 98.3, per: [100, 100, 99.6, 100, 100], timing: 91.9, within: true, hint: 'Great match. Keep the same shape and rhythm.' });
+    const strict = late('strict');
+    close(strict.timing, 59.0);
+    expect(strict.within_tolerance).toBe(false);
+  });
+
+  it('scales the hint thresholds like hints.thresholds', () => {
+    expect(thresholds()).toEqual(STANDARD_THRESHOLDS);
+    expect(STANDARD_THRESHOLDS.fingerDeg).toBe(4);
+    expect(buildHint({ ring: -22 }, 0, thresholds('relaxed'))).toBe('Great match. Keep the same shape and rhythm.');
+    expect(buildHint({ index: 3 }, 0)).toBe('Great match. Keep the same shape and rhythm.');
+    expect(buildHint({ index: 3 }, 0, thresholds('strict'))).toContain('Relax your index finger');
   });
 });
 

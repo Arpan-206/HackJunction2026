@@ -105,6 +105,16 @@ STATIC_PRESETS = ("hold_pose", "idle")
 HINT_MIN_DEVIATION_DEG = 4.0
 HINT_TIMING_MS = 120.0
 
+# Margin of error: the learner's own choice of how strict scoring and corrections are. Each level multiplies the step's
+# tolerance bands (angle and timing) and every hint threshold, so the Gaussian score, within_tolerance, the written hint
+# and the live corrections all move together. "standard" (1.0) is the behaviour without a margin. The quiet levels also
+# say nothing about a finger, the timing or the wrist while it stays inside the widened band, so a slightly wrong swing
+# passes with no correction.
+MARGINS = ("strict", "standard", "relaxed", "just_trying")
+MARGIN_MULTIPLIERS = {"strict": 0.6, "standard": 1.0, "relaxed": 1.5, "just_trying": 2.5}
+MARGIN_QUIET = ("relaxed", "just_trying")
+DEFAULT_MARGIN = "standard"
+
 # Rokoko Studio Custom Streaming.
 ROKOKO_DEFAULT_PORT = 14043
 LZ4_FRAME_MAGIC = b"\x04\x22\x4d\x18"

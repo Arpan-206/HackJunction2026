@@ -60,6 +60,12 @@ export interface Tolerance {
   timing_ms: number;
 }
 
+/**
+ * The learner's margin of error: multiplies the step's Tolerance and the hint thresholds (strict x0.6, standard x1,
+ * relaxed x1.5, just_trying x2.5). Standard is the default and changes nothing. See src/api/margin.ts.
+ */
+export type Margin = 'strict' | 'standard' | 'relaxed' | 'just_trying';
+
 export interface Step {
   id: string;
   title: string;
@@ -122,6 +128,8 @@ export interface ScoreResult {
   hint: string;
   /** Plain notes about the scoring itself, for example an incomplete calibration that was ignored. Empty normally. */
   warnings: string[];
+  /** The margin of error the score was judged with. Always sent by the scorer; absent on locally built results (standard). */
+  margin?: Margin;
 }
 
 /* ---- HTTP request and response bodies (prefix /api) ---- */
@@ -180,6 +188,8 @@ export type ScoreRequest = (
   /** Frames to score instead of the stored recording; `t` starts at the reference's first beat. */
   attempt_frames?: GloveFrame[];
   tolerance: Tolerance;
+  /** The learner's margin of error; omit for standard. */
+  margin?: Margin;
   /** Normalise the attempt with the latest calibration stored for its side. */
   use_latest_calibration?: boolean;
   attempt_calibration_id?: string;
@@ -194,6 +204,10 @@ export interface CoachHintRequest {
   instruction: string;
   deviations: Record<Finger, number>;
   timing_ms: number;
+  /** The step's own angle tolerance (before the margin); default 18. */
+  tolerance_deg?: number;
+  /** The learner's margin of error; omit for standard. */
+  margin?: Margin;
 }
 
 export interface CoachHintResponse {

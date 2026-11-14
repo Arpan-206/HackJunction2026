@@ -5,7 +5,15 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app import constants as c
-from app.schemas.common import Finger, FingerValues, GloveSource, Hands, Side, Skill
+from app.schemas.common import (
+    Finger,
+    FingerValues,
+    GloveSource,
+    Hands,
+    Margin,
+    Side,
+    Skill,
+)
 from app.schemas.frames import GloveFrame
 from app.schemas.lesson import Lesson
 from app.schemas.motion import MotionSpec
@@ -92,6 +100,7 @@ class CoachHintRequest(BaseModel):
     wrist_error_deg: float | None = Field(default=None, description="Signed wrist error about wrist_axis, in degrees.")
     wrist_axis: Literal["pitch", "yaw", "roll"] | None = None
     tolerance_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
+    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The learner's margin of error; scales tolerance_deg and the hint thresholds.")
     attempt: int = Field(default=1, ge=1, le=c.HINT_MAX_ATTEMPT)
     last_hint: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
 

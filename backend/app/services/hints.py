@@ -1,8 +1,10 @@
 """Algorithmic, plain-language tips derived from per-finger deviations and timing."""
 
+from dataclasses import dataclass
+
 from app import constants as c
 from app.schemas.api import CoachHintRequest, HintDraft, Severity
-from app.schemas.common import Finger
+from app.schemas.common import Finger, Margin
 
 
 def worst_finger(deviations_deg: dict[str, float]) -> Finger:
@@ -10,15 +12,48 @@ def worst_finger(deviations_deg: dict[str, float]) -> Finger:
     return max(c.FINGERS, key=lambda f: abs(deviations_deg.get(f, 0.0)))  # type: ignore[return-value]
 
 
-def build_hint(deviations_deg: dict[str, float], timing_ms: float) -> str:
+@dataclass(frozen=True)
+class Thresholds:
+    """The sizes from which a hint speaks up, and the tolerances severity is measured against, after the margin of error."""
+
+    finger_deg: float
+    timing_ms: float
+    wrist_deg: float
+    angle_tol_deg: float
+    timing_tol_ms: float
+    wrist_tol_deg: float
+
+
+def thresholds(
+    margin: Margin = c.DEFAULT_MARGIN,
+    angle_tol_deg: float = c.DEFAULT_TOLERANCE_ANGLE_DEG,
+    timing_tol_ms: float = c.DEFAULT_TOLERANCE_TIMING_MS,
+) -> Thresholds:
+    """Scale every hint threshold and tolerance by the margin's multiplier.
+
+    The tolerances passed in are the step's own (not yet widened). A quiet margin (relaxed and looser) also raises each
+    threshold to its widened tolerance, so nothing inside the band is ever corrected. "standard" returns the constants.
+    """
+    k = c.MARGIN_MULTIPLIERS[margin]
+    angle, timing, wrist = angle_tol_deg * k, timing_tol_ms * k, c.HINT_WRIST_TOLERANCE_DEG * k
+    finger_min, timing_min, wrist_min = c.HINT_MIN_DEVIATION_DEG * k, c.HINT_TIMING_MS * k, c.HINT_WRIST_MIN_DEG * k
+    if margin in c.MARGIN_QUIET:
+        finger_min, timing_min, wrist_min = max(finger_min, angle), max(timing_min, timing), max(wrist_min, wrist)
+    return Thresholds(finger_min, timing_min, wrist_min, angle, timing, wrist)
+
+
+STANDARD = thresholds()
+
+
+def build_hint(deviations_deg: dict[str, float], timing_ms: float, limits: Thresholds = STANDARD) -> str:
     """Describe the biggest problem. Deviation is signed degrees of total finger flexion, summed over its joints (positive: curled too much); timing is positive when late."""
     finger = worst_finger(deviations_deg)
     deviation = deviations_deg.get(finger, 0.0)
-    if abs(deviation) >= c.HINT_MIN_DEVIATION_DEG:
+    if abs(deviation) >= limits.finger_deg:
         if deviation > 0:
             return f"Relax your {finger} finger, it is curled about {abs(deviation):.0f} degrees (in total) too much."
         return f"Curl your {finger} finger more, it is about {abs(deviation):.0f} degrees (in total) too straight."
-    if abs(timing_ms) >= c.HINT_TIMING_MS:
+    if abs(timing_ms) >= limits.timing_ms:
         word = "late" if timing_ms > 0 else "early"
         return f"Your finger shapes are right, but you are about {abs(timing_ms):.0f} ms {word}. Match the guide hand's beat."
     return "Great match. Keep the same shape and rhythm."
@@ -69,6 +104,11 @@ def _pick(candidates: list[str], last_hint: str | None) -> str:
     return next((t for t in fits if t.lower() != last), fits[0])
 
 
+def _limits(request: CoachHintRequest) -> Thresholds:
+    """The hint thresholds for a live request: its own tolerance widened by its margin of error."""
+    return thresholds(request.margin, request.tolerance_deg)
+
+
 def _finger_hint(request: CoachHintRequest, finger: str, deviation: float) -> HintDraft:
     """Build a curl or extend cue for one finger."""
     label, size = _finger_label(finger), abs(deviation)
@@ -89,7 +129,7 @@ def _finger_hint(request: CoachHintRequest, finger: str, deviation: float) -> Hi
     text = _pick(candidates, request.last_hint)
     return HintDraft(
         hint=text, focus_finger=finger, cue_type="extend" if too_curled else "curl",  # type: ignore[arg-type]
-        severity=_severity(size / request.tolerance_deg),
+        severity=_severity(size / _limits(request).angle_tol_deg),
     )
 
 
@@ -102,7 +142,7 @@ def _timing_hint(request: CoachHintRequest) -> HintDraft:
     ]
     return HintDraft(
         hint=_pick(candidates, request.last_hint), focus_finger=None, cue_type="timing",
-        severity=_severity(size / c.DEFAULT_TOLERANCE_TIMING_MS),
+        severity=_severity(size / _limits(request).timing_tol_ms),
     )
 
 
@@ -115,7 +155,7 @@ def _wrist_hint(request: CoachHintRequest) -> HintDraft:
     candidates.append("Match the guide hand's wrist angle.")
     return HintDraft(
         hint=_pick(candidates, request.last_hint), focus_finger=None, cue_type="wrist",
-        severity=_severity(abs(error) / c.HINT_WRIST_TOLERANCE_DEG),
+        severity=_severity(abs(error) / _limits(request).wrist_tol_deg),
     )
 
 
@@ -123,13 +163,14 @@ def build_hint_draft(request: CoachHintRequest) -> HintDraft:
     """Choose the biggest problem relative to its tolerance and phrase it as one imperative cue; praise if nothing stands out."""
     finger = worst_finger(request.deviations.model_dump())
     deviation = getattr(request.deviations, finger)
+    limits = _limits(request)
     scored: list[tuple[float, str]] = []
-    if abs(deviation) >= c.HINT_MIN_DEVIATION_DEG:
-        scored.append((abs(deviation) / request.tolerance_deg, "finger"))
-    if abs(request.timing_ms) >= c.HINT_TIMING_MS:
-        scored.append((abs(request.timing_ms) / c.DEFAULT_TOLERANCE_TIMING_MS, "timing"))
-    if request.wrist_error_deg is not None and abs(request.wrist_error_deg) >= c.HINT_WRIST_MIN_DEG:
-        scored.append((abs(request.wrist_error_deg) / c.HINT_WRIST_TOLERANCE_DEG, "wrist"))
+    if abs(deviation) >= limits.finger_deg:
+        scored.append((abs(deviation) / limits.angle_tol_deg, "finger"))
+    if abs(request.timing_ms) >= limits.timing_ms:
+        scored.append((abs(request.timing_ms) / limits.timing_tol_ms, "timing"))
+    if request.wrist_error_deg is not None and abs(request.wrist_error_deg) >= limits.wrist_deg:
+        scored.append((abs(request.wrist_error_deg) / limits.wrist_tol_deg, "wrist"))
     if not scored:
         praise = _pick(["Great match, hold that shape.", "Nice and steady, keep it going."], request.last_hint)
         return HintDraft(hint=praise, focus_finger=None, cue_type="praise", severity="low")

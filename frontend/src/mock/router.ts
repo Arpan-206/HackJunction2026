@@ -4,6 +4,7 @@ import type {
   GloveFrame,
   JointTriple,
   Lesson,
+  Margin,
   MotionSpec,
   Recording,
   ScoreResult,
@@ -17,7 +18,8 @@ import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
 import { MOVES } from './seed';
-import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS } from './scoring';
+import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
+import { DEFAULT_MARGIN, isMargin } from '../api/margin';
 import { getStore } from './store';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
@@ -94,6 +96,11 @@ function tolerance(v: unknown): Tolerance {
   const timing = v.timing_ms === undefined ? DEFAULT_TOLERANCE.timing_ms : Number(v.timing_ms);
   if (!(angle > 0) || !(timing > 0)) return invalid('tolerance values must be positive');
   return { angle_deg: angle, timing_ms: timing };
+}
+
+function margin(v: unknown): Margin {
+  if (v === undefined || v === null) return DEFAULT_MARGIN;
+  return isMargin(v) ? v : invalid('margin must be strict, standard, relaxed or just_trying');
 }
 
 function motion(v: unknown): MotionSpec {
@@ -216,6 +223,7 @@ function score(b: Record<string, unknown>): ScoreResult {
   const hasAttemptRec = typeof b.attempt_recording_id === 'string';
   if (!hasFrames && !hasAttemptRec) invalid('provide attempt_recording_id or attempt_frames');
   const tol = tolerance(b.tolerance);
+  const chosen = margin(b.margin);
 
   let attemptFrames: GloveFrame[];
   if (hasFrames) attemptFrames = parseFrames(b.attempt_frames);
@@ -243,7 +251,7 @@ function score(b: Record<string, unknown>): ScoreResult {
     if (own) attempt = calibrateAttempt(attempt, own, refCal, warnings);
   }
   const declaredStatic = hasRefMotion && STATIC_PRESETS.includes((b.reference_motion as { preset?: string }).preset ?? '') ? true : undefined;
-  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic), tol), warnings };
+  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic), tol, chosen), warnings };
 }
 
 type Handler = (req: MockRequest, params: string[]) => Promise<MockResponse> | MockResponse;
@@ -355,7 +363,9 @@ route('POST', '/score', async (req) => {
 route('POST', '/coach/hint', (req) => {
   const b = body(req);
   const deviations = (isObj(b.deviations) ? b.deviations : {}) as Partial<Record<Finger, number>>;
-  return ok({ hint: buildHint(deviations, Number(b.timing_ms ?? 0)), provider: 'algorithmic' });
+  const tol = b.tolerance_deg === undefined ? DEFAULT_TOLERANCE_ANGLE_DEG : Number(b.tolerance_deg);
+  if (!(tol > 0)) invalid('tolerance_deg must be positive');
+  return ok({ hint: buildHint(deviations, Number(b.timing_ms ?? 0), thresholds(margin(b.margin), tol)), provider: 'algorithmic' });
 });
 route('POST', '/coach/plan', async (req) => {
   const b = body(req);

@@ -1,4 +1,5 @@
-import type { Calibration, Finger, GloveFrame, JointTriple, ScoreResult, Side, Tolerance } from '../api/types';
+import type { Calibration, Finger, GloveFrame, JointTriple, Margin, ScoreResult, Side, Tolerance } from '../api/types';
+import { DEFAULT_MARGIN, MARGIN_MULTIPLIERS, MARGIN_QUIET } from '../api/margin';
 import { FINGER_NAMES } from './synth';
 
 /**
@@ -17,6 +18,10 @@ export const TIMING_WEIGHT = 0.2;
 export const MIN_SCORE_FRAMES = 2;
 export const HINT_MIN_DEVIATION_DEG = 4;
 export const HINT_TIMING_MS = 120;
+export const HINT_WRIST_MIN_DEG = 8;
+export const HINT_WRIST_TOLERANCE_DEG = 15;
+export const DEFAULT_TOLERANCE_ANGLE_DEG = 18;
+export const DEFAULT_TOLERANCE_TIMING_MS = 250;
 export const CALIBRATION_MIN_RANGE_RAD = 0.05;
 /** A reference whose every finger moves less than this total flexion (peak to peak) is a held pose: timing is not scored. */
 export const STATIC_REFERENCE_RANGE_DEG = 12;
@@ -199,15 +204,54 @@ export function worstDeviationFinger(deviations: Partial<Record<Finger, number>>
   return best;
 }
 
+/** The sizes from which a hint speaks up, and the tolerances severity is measured against, after the margin of error. */
+export interface Thresholds {
+  fingerDeg: number;
+  timingMs: number;
+  wristDeg: number;
+  angleTolDeg: number;
+  timingTolMs: number;
+  wristTolDeg: number;
+}
+
+/**
+ * Scales every hint threshold and tolerance by the margin's multiplier (hints.thresholds). The tolerances passed in are
+ * the step's own. A quiet margin also raises each threshold to its widened tolerance, so nothing inside the band is
+ * corrected. Standard returns the plain constants.
+ */
+export function thresholds(margin: Margin = DEFAULT_MARGIN, angleTolDeg = DEFAULT_TOLERANCE_ANGLE_DEG, timingTolMs = DEFAULT_TOLERANCE_TIMING_MS): Thresholds {
+  const k = MARGIN_MULTIPLIERS[margin];
+  const angle = angleTolDeg * k;
+  const timing = timingTolMs * k;
+  const wrist = HINT_WRIST_TOLERANCE_DEG * k;
+  let fingerDeg = HINT_MIN_DEVIATION_DEG * k;
+  let timingMs = HINT_TIMING_MS * k;
+  let wristDeg = HINT_WRIST_MIN_DEG * k;
+  if (MARGIN_QUIET.includes(margin)) {
+    fingerDeg = Math.max(fingerDeg, angle);
+    timingMs = Math.max(timingMs, timing);
+    wristDeg = Math.max(wristDeg, wrist);
+  }
+  return { fingerDeg, timingMs, wristDeg, angleTolDeg: angle, timingTolMs: timing, wristTolDeg: wrist };
+}
+
+export const STANDARD_THRESHOLDS = thresholds();
+
+/** The step's tolerance bands widened (or narrowed) by the margin of error (Tolerance.widened). */
+export function widened(tolerance: Tolerance, margin: Margin = DEFAULT_MARGIN): Tolerance {
+  const k = MARGIN_MULTIPLIERS[margin];
+  return { angle_deg: tolerance.angle_deg * k, timing_ms: tolerance.timing_ms * k };
+}
+
 /** Plain-language tip. Deviation is signed total-flexion degrees (positive: curled too much); timing is positive when late. */
-export function buildHint(deviations: Partial<Record<Finger, number>>, timingMs: number): string {
+export function buildHint(deviations: Partial<Record<Finger, number>>, timingMs: number, limits: Thresholds = STANDARD_THRESHOLDS): string {
   const finger = worstDeviationFinger(deviations);
   const deviation = deviations[finger] ?? 0;
-  if (Math.abs(deviation) >= HINT_MIN_DEVIATION_DEG) {
+  if (Math.abs(deviation) >= limits.fingerDeg) {
     if (deviation > 0) return `Relax your ${finger} finger, it is curled about ${Math.abs(deviation).toFixed(0)} degrees (in total) too much.`;
     return `Curl your ${finger} finger more, it is about ${Math.abs(deviation).toFixed(0)} degrees (in total) too straight.`;
   }
-  if (Math.abs(timingMs) >= HINT_TIMING_MS) {
+  if (Math.abs(timingMs) >= limits.timingMs) {
     const word = timingMs > 0 ? 'late' : 'early';
     return `Your finger shapes are right, but you are about ${Math.abs(timingMs).toFixed(0)} ms ${word}. Match the guide hand's beat.`;
   }
@@ -216,8 +260,10 @@ export function buildHint(deviations: Partial<Record<Finger, number>>, timingMs:
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
 
-/** Turns alignment statistics into the contract's ScoreResult. */
-export function toResult(cmp: Comparison, tolerance: Tolerance): ScoreResult {
+/** Turns alignment statistics into the contract's ScoreResult, judged with the learner's margin of error. */
+export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Margin = DEFAULT_MARGIN): ScoreResult {
+  const limits = thresholds(margin, stepTolerance.angle_deg, stepTolerance.timing_ms);
+  const tolerance = widened(stepTolerance, margin);
   const perFinger = FINGER_NAMES.map((f) => gaussianScore(cmp.errorDeg[f], tolerance.angle_deg));
   const timing = gaussianScore(cmp.timingAbsMs, tolerance.timing_ms);
   const overall = FINGER_WEIGHT * (perFinger.reduce((s, v) => s + v, 0) / perFinger.length) + TIMING_WEIGHT * timing;
@@ -232,8 +278,9 @@ export function toResult(cmp: Comparison, tolerance: Tolerance): ScoreResult {
     timing: round1(timing),
     within_tolerance: within,
     worst_finger: worst,
-    hint: buildHint(cmp.deviationDeg, cmp.timingSignedMs),
+    hint: buildHint(cmp.deviationDeg, cmp.timingSignedMs, limits),
     warnings: [],
+    margin,
   };
 }
 
@@ -295,12 +342,13 @@ export function scoreFrames(
   side: Side,
   tolerance: Tolerance,
   calibration?: { own: Calibration | null; reference: Calibration | null },
+  margin: Margin = DEFAULT_MARGIN,
 ): ScoreResult {
   const ref = resample(referenceFrames, side);
   let att = resample(attemptFrames, side);
   const warnings: string[] = [];
   if (calibration?.own) att = calibrateAttempt(att, calibration.own, calibration.reference, warnings);
-  return { ...toResult(compare(ref, att), tolerance), warnings };
+  return { ...toResult(compare(ref, att), tolerance, margin), warnings };
 }
 
 export type { JointTriple };

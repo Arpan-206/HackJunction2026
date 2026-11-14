@@ -12,6 +12,8 @@ GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"]
 Skill = Literal["table_tennis", "piano", "general"]
 Prop = Literal["none", "racket", "keyboard", "ball"]
 Hands = Literal["left", "right", "both"]
+# The learner's margin of error; see MARGINS in app/constants.py.
+Margin = Literal["strict", "standard", "relaxed", "just_trying"]
 Triple = tuple[float, float, float]
 
 
@@ -39,3 +41,8 @@ class Tolerance(BaseModel):
 
     angle_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
     timing_ms: float = Field(default=c.DEFAULT_TOLERANCE_TIMING_MS, gt=0)
+
+    def widened(self, margin: Margin) -> "Tolerance":
+        """Return the bands the learner's margin of error asks for: both scaled by its multiplier."""
+        k = c.MARGIN_MULTIPLIERS[margin]
+        return Tolerance(angle_deg=self.angle_deg * k, timing_ms=self.timing_ms * k)

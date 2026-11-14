@@ -7,10 +7,9 @@ import numpy as np
 
 from app import constants as c
 from app.core.errors import BadRequestError
-from app.schemas.common import FingerValues, Side, Tolerance
+from app.schemas.common import FingerValues, Margin, Side, Tolerance
 from app.schemas.frames import GloveFrame
-from app.schemas.records import Recording, ScoreRequest, ScoreResult
-from app.schemas.records import Calibration
+from app.schemas.records import Calibration, Recording, ScoreRequest, ScoreResult
 from app.services import hints
 from app.services.calibration import CalibrationService
 from app.services.motion import synthesiser
@@ -102,8 +101,13 @@ def _gaussian_score(error: float, tolerance: float) -> float:
     return 100.0 * math.exp(-0.5 * (error / (c.SCORE_SIGMA_FACTOR * tolerance)) ** 2)
 
 
-def to_result(cmp: Comparison, tolerance: Tolerance) -> ScoreResult:
-    """Turn alignment statistics into the contract's ScoreResult."""
+def to_result(cmp: Comparison, tolerance: Tolerance, margin: Margin = c.DEFAULT_MARGIN) -> ScoreResult:
+    """Turn alignment statistics into the contract's ScoreResult, judged with the learner's margin of error.
+
+    The margin widens (or narrows) the step's tolerance before anything is computed, and the hint thresholds with it.
+    """
+    limits = hints.thresholds(margin, tolerance.angle_deg, tolerance.timing_ms)
+    tolerance = tolerance.widened(margin)
     per_finger = [_gaussian_score(cmp.error_deg[f], tolerance.angle_deg) for f in c.FINGERS]
     timing = _gaussian_score(cmp.timing_abs_ms, tolerance.timing_ms)
     overall = c.FINGER_WEIGHT * float(np.mean(per_finger)) + c.TIMING_WEIGHT * timing
@@ -114,7 +118,8 @@ def to_result(cmp: Comparison, tolerance: Tolerance) -> ScoreResult:
         timing=round(timing, 1),
         within_tolerance=within,
         worst_finger=max(c.FINGERS, key=lambda f: cmp.error_deg[f]),  # type: ignore[arg-type]
-        hint=hints.build_hint(cmp.deviation_deg, cmp.timing_signed_ms),
+        hint=hints.build_hint(cmp.deviation_deg, cmp.timing_signed_ms, limits),
+        margin=margin,
     )
 
 
@@ -184,7 +189,7 @@ class ScoringService:
         own, ref_cal = self._calibrations_for(request, side)
         if own is not None:
             attempt_data = calibrate_attempt(attempt_data, own, ref_cal, warnings)
-        result = to_result(compare(reference_data, attempt_data, static=self._static(request)), request.tolerance)
+        result = to_result(compare(reference_data, attempt_data, static=self._static(request)), request.tolerance, request.margin)
         return result.model_copy(update={"warnings": warnings})
 
     @staticmethod

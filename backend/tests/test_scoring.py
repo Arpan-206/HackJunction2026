@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
 
+from app.schemas.common import Tolerance
 from app.schemas.motion import FingerSequence, HoldPose, MotionSpec
 from app.services import scoring
 from app.services.motion import synthesiser
@@ -224,3 +225,48 @@ def test_swing_reference_is_not_static(beat_ms: int) -> None:
     """The swing's finger signal is small, so its breathing must not cancel it below the static-reference threshold."""
     spec = TypeAdapter(MotionSpec).validate_python({"preset": "grip_and_swing", "grip": "penhold", "swing": "backhand", "beat_ms": beat_ms})
     assert not scoring.is_static(scoring.resample(synthesiser.synthesise(spec, "right", 12.0, 30.0), "right"))
+
+
+# Margin of error: the learner's choice of how strict the scorer and its hint are.
+
+
+def _post(client: TestClient, frames: list[dict], **extra: object) -> dict:
+    """Score inline frames against the finger sequence, with optional extra request fields."""
+    return client.post("/api/score", json={"reference_motion": MOTION, "attempt_frames": frames, **extra}).json()
+
+
+def test_default_margin_is_standard_and_unchanged(client: TestClient) -> None:
+    """Without a margin the result is exactly the standard margin's, and the standard margin is the plain tolerance."""
+    frames = _clumsy_frames()
+    plain = _post(client, frames)
+    assert plain == _post(client, frames, margin="standard") and plain["margin"] == "standard"
+    fingers = ("thumb", "index", "middle", "ring", "little")
+    cmp = scoring.Comparison(dict.fromkeys(fingers, 10.0), dict.fromkeys(fingers, -10.0), 100.0, 100.0)
+    assert scoring.to_result(cmp, Tolerance()) == scoring.to_result(cmp, Tolerance(), "standard")
+    assert scoring.to_result(cmp, Tolerance()).per_finger.ring == round(100 * math.exp(-0.5 * (10 / (1.5 * 18)) ** 2), 1)
+
+
+def test_relaxed_margin_passes_a_slightly_off_rep_that_standard_flags(client: TestClient) -> None:
+    """A ring finger 28 degrees short (in total) is outside the 18 degree band but inside the relaxed 27, with no correction."""
+    frames = _clumsy_frames(lag_s=0.0, under_deg=28.0)
+    standard = _post(client, frames)
+    relaxed = _post(client, frames, margin="relaxed")
+    assert standard["within_tolerance"] is False and "ring" in standard["hint"]
+    assert relaxed["within_tolerance"] is True and relaxed["margin"] == "relaxed"
+    assert relaxed["hint"] == "Great match. Keep the same shape and rhythm."
+    assert relaxed["per_finger"]["ring"] > standard["per_finger"]["ring"] and relaxed["overall"] > standard["overall"]
+
+
+def test_strict_margin_flags_a_rep_that_standard_passes(client: TestClient) -> None:
+    """A ring finger 20 degrees short (in total) passes the 18 degree band but not the strict 10.8."""
+    frames = _clumsy_frames(lag_s=0.0, under_deg=20.0)
+    standard = _post(client, frames)
+    strict = _post(client, frames, margin="strict")
+    assert standard["within_tolerance"] is True
+    assert strict["within_tolerance"] is False and strict["worst_finger"] == "ring" and "ring" in strict["hint"]
+    assert strict["per_finger"]["ring"] < standard["per_finger"]["ring"]
+
+
+def test_unknown_margin_is_rejected(client: TestClient) -> None:
+    """Only the four named margins are accepted."""
+    assert _post(client, _clumsy_frames(), margin="lenient").get("detail") is not None
