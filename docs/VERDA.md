@@ -108,6 +108,49 @@ Findings:
 - Gemini picked shadow puppet moves for an open hand and a fist. Gemma picked the plain `general_spread` and `general_fist` moves, which match the trace.
 - Every call on every path gave a valid lesson on the first attempt.
 
+## Our own coach model, trained and served on Verda
+
+No Gemini model was distilled. No output from Gemini or the Gemini Decisions API was used as training data at any point. Our tuned coach was trained only on text written by Gemma 4 31B (google/gemma-4-31B-it, bf16), an open-weights model we hosted ourselves on Verda. Gemini and the Decisions API are used only at run time, for live answers.
+
+This is a job an API cannot do. We fine-tuned a small Gemma 4 on our own glove data, so we have our own fast
+coach. The `coach-tune` lane (`coach_tune/`, branch `coach-tune`) ran it on Sat 14 Nov 2026, 19:05 to 20:02
+Helsinki. Model card: `docs/COACH_MODEL.md`.
+
+What ran, all on Verda Serverless Containers (Verda refuses VMs on the coupon balance until a card is on file):
+
+| Step | What | GPU | Result |
+| --- | --- | --- | --- |
+| Teacher | `google/gemma-4-31B-it`, bf16, vLLM v0.29.0 | 1x H100 80 GB | 3,231 of 3,363 lines kept (96.1%) in 35 s, 64 requests at a time |
+| Training | LoRA on `google/gemma-4-E2B-it`, bf16, 3 epochs, seed 0 | 1x H100 80 GB | 555 steps in 167 s, validation loss 0.254 to 0.221 |
+| Serving | merged model as `geppetto-coach-e2b` on vLLM, behind `COACH_MODEL=tuned` | 1x H100 80 GB | p50 0.108 s, p95 0.166 s from Helsinki |
+
+Held-out evaluation, 1,150 examples from lessons never seen in training ("all three" is the right finger, the right
+direction and the style rules at once):
+
+| System | All three % | On real capture frames % | Latency p50 s |
+| --- | --- | --- | --- |
+| Gemma 4 E2B untuned | 55.5 | 43.5 | 0.118 |
+| Gemma 4 E2B tuned (ours) | 89.0 | 62.2 | 0.108 |
+| Gemma 4 31B teacher | 85.7 | 66.7 | 0.311 |
+
+The tuned model is 3 times faster than its teacher and better overall. On real capture frames it is still below the
+teacher. The training inputs were synthetic mistakes on target poses; real captures were test data only.
+
+The trainer is one container: the vLLM image runs a small control server on the exposed port
+(`coach_tune/remote/ctl_server.py`). It takes the data over HTTPS, trains, merges and serves from the same GPU.
+
+| Container | Minutes | USD at list price (5.77 per hour) |
+| --- | --- | --- |
+| Teacher (labels, teacher evaluation) | 8.0 | 0.77 |
+| Trainer, first start (untuned evaluation) | 9.5 | 0.91 |
+| Trainer, second start (smoke test, training, tuned evaluation, re-serve test) | 42 | 4.04 |
+| Total | 59.5 (about 1 GPU hour) | 5.72 |
+
+Why Verda: an expert's hand movements are their know-how. A school that records its experts should not send that
+data to a closed API. On Verda, the glove data, the labels and the model stay on European compute, and every model in
+the pipeline has open weights. We own the coach that comes out: a 95 MB adapter that any Verda GPU can serve again in
+about 5 minutes.
+
 ## Cost so far
 
 | When (Helsinki) | Event | GPU | Hours | USD at list price | Running total USD | Balance (EUR) |
@@ -116,6 +159,9 @@ Findings:
 | 14 Nov 12:22 | Teardown: vLLM crash-looped, KV cache too small for 32768 tokens on 80 GB | H100 | 0.50 | 2.86 | 2.86 | 200.00 |
 | 14 Nov 12:23 | Second deploy, context 12288 (an H200 was free this time) | H200 | 0 | 0 | 2.86 | 200.00 |
 | 14 Nov 12:32 | Teardown after the smoke test and the 6-call comparison | H200 | 0.147 | 1.08 | 3.94 | 200.00 |
+| 14 Nov 19:13 | coach-tune teacher container, labels and teacher evaluation | H100 | 0.133 | 0.77 | 4.71 | |
+| 14 Nov 19:17 | coach-tune trainer, first start | H100 | 0.158 | 0.91 | 5.62 | |
+| 14 Nov 20:02 | coach-tune trainer, second start; all torn down | H100 | 0.70 | 4.04 | 9.66 | 196.70 |
 
 The balance column is what the Verda console showed at that moment. Verda posts charges in 10 minute
 aggregates, so it lags the list-price estimate. Nothing is deployed now, so nothing bills.

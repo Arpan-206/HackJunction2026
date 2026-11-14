@@ -86,6 +86,33 @@ def samples(model, tok, rows: list[dict], device) -> list[dict]:
     return out
 
 
+def fill_shared_kv(merged_dir: Path, model_id: str) -> int:
+    """Gemma 4 E2B shares KV between layers. The transformers save drops the k_norm, k_proj and v_proj weights of the
+    sharing layers, and vLLM refuses a checkpoint without them. They are unused at run time, so copy them from the
+    base checkpoint under the same names (same as remote/fix_merged.py, which patched the 14 Nov run)."""
+    from huggingface_hub import snapshot_download
+    from safetensors import safe_open
+    from safetensors.torch import save_file
+
+    path = merged_dir / "model.safetensors"
+    with safe_open(str(path), "pt") as m:
+        tensors = {k: m.get_tensor(k) for k in m.keys()}
+        meta = m.metadata()
+    base = Path(snapshot_download(model_id, allow_patterns=["*.safetensors"]))
+    added = 0
+    for f in sorted(base.glob("*.safetensors")):
+        with safe_open(str(f), "pt") as b:
+            for k in b.keys():
+                if k not in tensors:
+                    tensors[k] = b.get_tensor(k)
+                    added += 1
+    if added:
+        save_file(tensors, str(path) + ".tmp", metadata=meta or {"format": "pt"})
+        Path(str(path) + ".tmp").replace(path)
+    print(json.dumps({"filled_from_base": added}), flush=True)
+    return added
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", type=Path, required=True)
@@ -168,6 +195,7 @@ def main() -> int:
     for f in base.iterdir():
         if f.suffix in (".json", ".model", ".jinja") and not (a.merged / f.name).exists():
             (a.merged / f.name).write_bytes(f.read_bytes())
+    fill_shared_kv(a.merged, a.model)
     print("done", json.dumps({"train_s": round(time.time() - t0), "steps": step}))
     return 0
 

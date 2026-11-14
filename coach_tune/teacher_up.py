@@ -77,7 +77,14 @@ def up(gpu: str) -> int:
 def down() -> int:
     c = client()
     if NAME in {d.name for d in c.containers.get_deployments()}:
-        c.containers.delete_deployment(NAME)
+        try:
+            c.containers.delete_deployment(NAME)
+        except Exception as e:  # noqa: BLE001 - the API often times out at 60 s while the delete goes on
+            print(f"delete call returned {e!s:.120}; the delete continues on Verda, check with status")
+        for _ in range(60):
+            if NAME not in {d.name for d in c.containers.get_deployments()}:
+                break
+            time.sleep(10)
         print(f"deleted {NAME}")
     else:
         print(f"no deployment {NAME}")
