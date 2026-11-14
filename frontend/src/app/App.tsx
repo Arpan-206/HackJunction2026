@@ -9,6 +9,8 @@ import { ApprenticeHome, ApprenticeLesson, ApprenticeSkill, ApprenticeStep, Appr
 
 const Playground = lazy(() => import('../playground/Playground'));
 const DesignRoute = lazy(() => import('../design/DesignRoute'));
+const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen'));
+const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -40,6 +42,8 @@ export function App() {
         <Route path="/apprentice/lessons/:lessonId/steps/:stepIndex" element={<ApprenticeStep />} />
         <Route path="/apprentice/lessons/:lessonId/test" element={<ApprenticeTest />} />
         <Route path="/lab" element={<HandLab />} />
+        <Route path="/gloves" element={<Suspense fallback={null}><GlovesScreen /></Suspense>} />
+        <Route path="/gloves/calibrate" element={<Suspense fallback={null}><CalibrateScreen /></Suspense>} />
         <Route path="*" element={<MasterHome />} />
       </Route>
     </Routes>

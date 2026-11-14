@@ -1,0 +1,235 @@
+/*
+ * Gloves screen and calibration area (features/shared/gloves). Ink on paper; vermilion only for what to correct (the
+ * fix step, saturated sensors, calibration notes), malachite only for what is right (ready, a finger that follows).
+ * No gold here: gold is for mastery. All text at least 16px, readable from across the room.
+ */
+.gl-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 72rem;
+  font-size: 1.15rem;
+}
+.gl-line {
+  margin: 0;
+  line-height: 1.45;
+}
+.gl-ready {
+  margin: 0;
+  font: 700 var(--step-1) var(--font-ui);
+  color: var(--ok);
+}
+.gl-fix {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-left: 6px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius-s);
+}
+.gl-fix--plain {
+  display: block;
+}
+.gl-fix__title {
+  margin: 0;
+  font: 700 var(--step-1) var(--font-ui);
+  color: var(--text);
+}
+.gl-fix__text {
+  margin: 0;
+  line-height: 1.5;
+}
+.gl-code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 1rem;
+  padding: 0.1rem 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  overflow-wrap: anywhere;
+}
+.gl-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1.25rem;
+}
+.gl-glove {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+}
+.gl-glove--off {
+  border-style: dashed;
+}
+.gl-glove__title,
+.gl-step__title,
+.gl-notes__title,
+.gl-demo__title {
+  margin: 0;
+  font-size: var(--step-1);
+}
+.gl-glove__view {
+  width: 100%;
+  height: 15rem;
+}
+.gl-facts {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+.gl-facts > div {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.75rem;
+}
+.gl-facts dt {
+  color: var(--text-2);
+}
+.gl-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+.gl-sensors,
+.gl-fingers,
+.gl-result__hands {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
+}
+.gl-sensor--bad {
+  color: var(--danger);
+  font-weight: 700;
+}
+.gl-finger--ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.gl-notes {
+  display: grid;
+  gap: 0.5rem;
+}
+.gl-notes__list {
+  margin: 0;
+  padding-left: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+  line-height: 1.5;
+}
+.gl-actions,
+.gl-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.gl-demo,
+.gl-step {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+}
+.gl-demo__name,
+.gl-field {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 32rem;
+}
+.gl-label {
+  font-weight: 700;
+}
+.gl-inline .field__control {
+  flex: 1 1 14rem;
+  min-height: 44px;
+}
+.gl-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.gl-check input {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: 0.1rem;
+  accent-color: var(--accent);
+  flex: none;
+}
+.gl-result {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-s);
+  border-left: 6px solid var(--line-strong);
+}
+.gl-result--ok {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+.gl-result--drift {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.gl-result__text {
+  margin: 0;
+  font-weight: 700;
+}
+.gl-quality {
+  display: grid;
+  gap: 0.5rem;
+}
+.gl-quality__grade {
+  margin: 0;
+  font: 700 var(--step-1) var(--font-ui);
+}
+.gl-quality--good .gl-quality__grade {
+  color: var(--ok);
+}
+.gl-correction {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+}
+/* The rail's glove line is a link to the gloves screen. */
+.rail__gloves {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-s);
+  padding: 0.25rem 0.4rem;
+  line-height: 1.25;
+}
+.rail__gloves:hover {
+  color: var(--rail-text);
+  text-decoration: underline;
+}
+.rail__gloves:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.glove-dot--ok {
+  background: var(--rail-ok);
+}
+.glove-dot--warn {
+  background: transparent;
+  border: 2px solid var(--rail-ok);
+}
+.glove-dot--off {
+  background: var(--rail-text-2);
+}
+@media (max-width: 640px) {
+  .gl-facts > div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .gl-glove__view {
+    height: 12rem;
+  }
+}

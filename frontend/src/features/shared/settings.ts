@@ -110,6 +110,27 @@ export const scoreViewPref = pref<ScoreView>(VIEW_KEY, (raw) => (raw === '2d' ? 
 /** How the score is shown first: the 3D scene (default) or the flat chart. */
 export const useScoreView = scoreViewPref.use;
 
+/* ---- gloves: demo mode and the wearer ---- */
+
+const DEMO_KEY = 'apprentice.demoMode';
+const WEARER_KEY = 'apprentice.wearer';
+export const WEARER_MAX_CHARS = 40;
+
+/**
+ * Demo mode skips the full glove calibration: the app loads the wearer's last saved calibration and only runs a short
+ * drift check ("hold still") before going in, asking for a recalibration when the gloves have drifted. Off by default.
+ */
+export const demoModePref = pref<boolean>(DEMO_KEY, (raw) => raw === '1', (v) => (v ? '1' : null));
+export const useDemoMode = demoModePref.use;
+
+/** Who wears the gloves: calibrations are saved per wearer. Empty until someone types a name. */
+export const wearerPref = pref<string>(
+  WEARER_KEY,
+  (raw) => (raw ?? '').slice(0, WEARER_MAX_CHARS),
+  (v) => (v.trim() ? v.trim().slice(0, WEARER_MAX_CHARS) : null),
+);
+export const useWearer = wearerPref.use;
+
 /* ---- reduced motion ---- */
 
 /** Whether the device itself asks for less motion. */
