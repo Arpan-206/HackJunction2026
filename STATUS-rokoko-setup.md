@@ -21,9 +21,18 @@ Lane "rokoko-setup", branch `rokoko-setup`, Sat 14 Nov 2026. Goal: the Rokoko De
 | Fail path | A failed step shows its log and runs stop.sh | First run: the frontend check timed out; stop.sh cleaned up all eight processes |
 | Syntax | `bash -n` passes on both scripts | |
 
+## Verified with both gloves (glove slot, Sat 14 Nov, reported by the dispatcher)
+
+| Item | Result |
+| --- | --- |
+| `scripts/live.sh arpan`, run by the dispatcher from the main checkout | At 13:19 it started the real driver, the solver, both raw captures, the core, the bridge, the backend and the frontend, with both gloves plugged in |
+| First two attempts | Failed. The Rokoko desktop app held the driver's UDP port 14041. The fix is to quit the app first. `docs/GLOVE-SLOT.md` now lists this as the first thing to check |
+| `scripts/stop.sh` on that run | Not yet exercised. It was tested only on the no-glove runs above |
+
 ## Written but not tested
 
-- Everything with gloves plugged in: device lines in the driver log, `rgmp.devices`, non-empty captures, the bridge with real hands.
+- stop.sh against the glove run of 13:19.
+- Glove-on details that this lane did not see itself: driver device lines, `rgmp.devices` values and capture sizes.
 - `LLM_PROVIDER=gemini` in live.sh: the key load from the repo-root `.env` is written but not run (no paid calls in tests).
 - The core on the default port 8765. Another lane (`robot-view`) holds 8765 with `python -m core --fake`, so every test used `GEPPETTO_CORE_PORT=8775`. live.sh refuses to start while 8765 is in use. Stop that lane's core before the slot.
 - shellcheck is not installed, so no lint beyond `bash -n`.

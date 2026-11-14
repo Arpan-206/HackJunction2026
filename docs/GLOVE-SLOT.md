@@ -21,7 +21,7 @@ rokoko signin && rokoko activate && rokoko doctor
 
 ## 2. Start and stop
 
-Plug in both gloves by USB. Close Rokoko Studio. Then, from the repo root:
+Quit the Rokoko desktop app and Rokoko Studio: they hold the driver's UDP port 14041. Plug in both gloves by USB. Then, from the repo root:
 
 ```bash
 scripts/live.sh WEARER          # WEARER is the name from the calibration screen
@@ -94,6 +94,7 @@ Measured rates on Szymon's gloves: 83.39 Hz per group per glove, zero gaps (STAT
 
 ## 4. A glove does not appear: check in this order
 
+0. **Quit the Rokoko desktop app first.** It holds the driver's UDP port 14041. In the slot on Sat 14 Nov, the first two live.sh attempts failed for this reason. Quit the app, then run live.sh again. To find the owner, run `lsof -nP -iUDP:14041`.
 1. **USB.** Use a data cable, not a charge-only cable. If you can, plug straight into the Mac. Wait 5 s.
 2. **Driver log.** Run `tail -f logs/live/current/driver.log`. "SDK not activated" means: do section 1. If no device line appears, unplug and plug in again.
 3. **Device list.** Run `rokoko device list`. It asks the driver over RCSP. With no gloves it prints "No devices found." Both gloves must be in the list.
