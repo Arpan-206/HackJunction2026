@@ -25,7 +25,7 @@ Python commands run from the repo root with `.venv`. All suites pass: core 158, 
 | Fake recording | `python -m core.camera.fake_depth --record logs/depth/fake.gdrec.gz --seconds 10 [--dark-hand]` | 300 frames, about 20 MB |
 | Depth step in the core | `python -m core --depth` (phone), `--depth-host HOST:PORT`, `--depth-fake` (in process) | Live check over TCP: 30 fps in, 0 bad packets, 0 schema errors, tick 30 Hz |
 | Point cloud | `ws://<core>:8765/ws/depth` | About 9 to 10 messages a second, 2000 labelled points, about 84 KB each |
-| Viewer | `http://<core>:8765/depth` (`tools/depth_view.html`) | Script passes `node --check`. **Not seen in a browser**: the Chrome extension was not connected and Playwright is not installed |
+| Viewer | `http://<core>:8765/depth` (`tools/depth_view.html`) | Script passes `node --check`. Seen by the dispatcher in headless Chrome at 17:02 with `python -m core --fake --depth-fake --port 8799`: the cloud draws with table, arm and grid, and the status lines read frame, table, camera height, arm found, forearm yaw and the correction |
 | Check a recording | `python -m tools.depth_check FILE.gdrec.gz` | Prints the summary, writes images, `frames.csv` and `summary.json` to `logs/depth/<time>-<name>/` |
 | Glove yaw window | `python -m tools.glove_yaw_window CAPTURE --survey`, then `--start S --seconds D --out X.npz` | Survey of the 1.2 GB hour: 22 s |
 | Frontend note | `docs/DEPTH_STREAM.md` | How to read `/ws/depth` and `frame.depth` |
