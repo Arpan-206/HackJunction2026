@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, tutorialVideoOf, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApHeader } from '../ApHeader';
@@ -19,7 +19,7 @@ import { attemptRetryLine, checkAttempt } from './coach/attemptGuard';
 import { useCoach, type PracticeMode } from './coach/useCoach';
 import { goalLine, repLine } from '../pipeline/coachLines';
 import { isDemo, isDev } from '../pipeline/flags';
-import type { RepOutcome } from '../pipeline/stages';
+import { askedStage, type OpenStage, type RepOutcome } from '../pipeline/stages';
 import { PlanCard } from '../course/PlanCard';
 import { usePracticePlan } from '../hooks/usePracticePlan';
 import { StageLadder } from './StageLadder';
@@ -65,6 +65,9 @@ function attemptLength(period: number): number {
  */
 export function TrainingRoom() {
   const { lessonId, stepIndex } = useParams();
+  // `?stage=watch|ghost|blind` opens the step at that stage (the skill page's timeline); without it the room resumes.
+  const [search] = useSearchParams();
+  const ask = askedStage(search.get('stage'));
   const dev = useMemo(() => isDev(), []);
   const { data: lesson, loading, error, offline } = useLessonById(lessonId);
   const index = Number(stepIndex ?? 0);
@@ -92,10 +95,11 @@ export function TrainingRoom() {
       </div>
     );
   }
-  return <Room key={`${lesson.id}:${step.id}`} lesson={lesson} lessonId={lesson.id} lessonTitle={lesson.title} step={step} index={index} total={lesson.steps.length} hasTest={Boolean(lesson.test)} dev={dev} offline={offline} />;
+  return <Room key={`${lesson.id}:${step.id}:${ask ?? ''}`} ask={ask} lesson={lesson} lessonId={lesson.id} lessonTitle={lesson.title} step={step} index={index} total={lesson.steps.length} hasTest={Boolean(lesson.test)} dev={dev} offline={offline} />;
 }
 
 interface RoomProps {
+  ask: OpenStage | null;
   lesson: Lesson;
   lessonId: string;
   lessonTitle: string;
@@ -107,7 +111,7 @@ interface RoomProps {
   offline: boolean;
 }
 
-function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev, offline }: RoomProps) {
+function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest, dev, offline }: RoomProps) {
   const navigate = useNavigate();
   const resultRef = useRef<HTMLDivElement>(null);
   const gloves = useGloveStream(true);
@@ -122,7 +126,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
   const [margin] = useMargin();
-  const config = useMemo(() => configFromTolerance(step.tolerance, margin), [step.tolerance, margin]);
+  const config = useMemo(() => configFromTolerance(step.tolerance, margin, step.weights), [step.tolerance, margin, step.weights]);
   const room = roomFor(step.tolerance, margin);
   const { track, loading: refLoading, notice, video: takeVideo } = useReferenceTrack(step, side);
   const [pipOn, setPipOn] = useTakeVideoPref();
@@ -135,7 +139,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   // The clumsy simulation starts on only when this very URL asks for ?dev=1; the remembered dev flag just offers the switch.
   const [clumsy, setClumsy] = useState(() => dev && new URLSearchParams(window.location.search).get('dev') === '1');
   const demo = useMemo(() => isDemo(), []);
-  const pipe = useStepPipeline(lessonId, step, demo);
+  const pipe = useStepPipeline(lessonId, step, demo, ask);
   const plan = usePracticePlan(lesson);
   const planRequest = useRef(plan.request);
   planRequest.current = plan.request;
@@ -232,9 +236,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       const sideField = step.hands === 'left' || step.hands === 'right' ? { side: step.hands } : {};
       const req: ScoreRequest | null =
         attempt && step.reference_recording_id
-          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, margin, ...(step.weights ? { weights: step.weights } : {}), ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
           : attempt && step.motion
-            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, margin, ...(step.weights ? { weights: step.weights } : {}), ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
             : null;
       if (req && twoHanded) {
         // The scorer judges one hand per call: score each hand, then keep the weaker hand's result (see combineHandScores).
@@ -341,6 +345,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             pose={track ? track.handAt(track.period * SCORE_POSE_AT) : null}
             side={side}
             tolerance={step.tolerance}
+            light={config.light}
             attempt={pipe.reps}
             lines={{ rep: repLine(result.score), stage: pipe.lines.stage, set: pipe.lines.set }}
             clean={result.outcome.clean}

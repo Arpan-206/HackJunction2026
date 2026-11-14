@@ -1,7 +1,7 @@
 import { Euler, Quaternion, Vector3 } from 'three';
 import type { Finger, HandFrame, JointTriple, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER, FULL, RELAXED } from './anatomy';
-import { fromYawPitchRoll, keyframePose, keysPeriod } from '../mock/synth';
+import { fromYawPitchRoll, keyframePose, keysPeriod, THUMB_FLEXION_SCALE } from '../mock/synth';
 
 /**
  * Local motion synthesiser, for PREVIEW ONLY: lets screens show animated guide hands when the backend is down.
@@ -63,12 +63,16 @@ function holdPose(pose: Partial<Record<Finger, number>>): Pose {
   return { active: -1, curls: FINGER_ORDER.map((n) => pose[n] ?? 0), press: 0, swing: 0 };
 }
 
-/** Maps a 0..1 curl per finger (thumb first) to joint flexion in radians. */
+/**
+ * Maps a 0..1 curl per finger (thumb first) to joint flexion in radians. The thumb is scaled by THUMB_FLEXION_SCALE,
+ * as in the backend synthesiser and the scorer's nominal ranges, so a pose copied from the preview scores as the target.
+ */
 export function curlsToFlexion(curls: number[]): Record<Finger, JointTriple> {
   const out = {} as Record<Finger, JointTriple>;
   FINGER_ORDER.forEach((name, i) => {
     const c = Math.max(-0.2, Math.min(1, curls[i] ?? 0));
-    out[name] = [RELAXED[i][0] + FULL[i][0] * c, RELAXED[i][1] + FULL[i][1] * c, RELAXED[i][2] + FULL[i][2] * c];
+    const s = i === 0 ? THUMB_FLEXION_SCALE : 1;
+    out[name] = [(RELAXED[i][0] + FULL[i][0] * c) * s, (RELAXED[i][1] + FULL[i][1] * c) * s, (RELAXED[i][2] + FULL[i][2] * c) * s];
   });
   return out;
 }

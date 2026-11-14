@@ -11,6 +11,7 @@ from app.schemas.api import GenerateLessonResponse
 from app.schemas.common import Skill
 from app.schemas.lesson import Lesson, LessonBase
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import answered_by
 from app.services.llm.fake import template_lesson
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -92,7 +93,7 @@ class LessonGenerator:
         filename: str,
     ) -> GenerateLessonResponse:
         """Generate a lesson from a video; providers without video support get the template plus a note."""
-        client = self._llm.client
+        client = self._llm.client_for("lesson")
         if not getattr(client, "supports_video", False):
             draft = template_lesson(f"{text} {filename}", skill)
             draft = draft.model_copy(
@@ -109,7 +110,7 @@ class LessonGenerator:
         self, text: str, skill: Skill | None, video: tuple[str, str] | None = None
     ) -> GenerateLessonResponse:
         """Return a lesson, the provider that produced it, and the number of model attempts used."""
-        client = self._llm.client
+        client = self._llm.client_for("lesson")
         video_path, video_mime = video if video else (None, None)
         errors: str | None = None
         fallback_provider = "fake"
@@ -147,7 +148,7 @@ class LessonGenerator:
             else:
                 return GenerateLessonResponse(
                     lesson=self._finalise(draft),
-                    provider=client.name,
+                    provider=answered_by(client.name),
                     attempts=attempts,
                 )
         log.warning(

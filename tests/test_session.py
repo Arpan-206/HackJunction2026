@@ -267,3 +267,18 @@ def test_control_pinch_ignores_fist_and_other_hand(sess):
         s, clock, "right", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch
     )
     assert types(msgs, "event", "step_restarted")
+
+
+def test_button_press_makes_that_glove_the_master(sess):
+    """With no master role set, the pressed glove is the one recorded (slot-kit finding)."""
+    s, clock = sess
+    for _ in range(3):
+        feed(s, clock, "left", fake.POSES[0][1], n=1)
+        feed(s, clock, "right", fake.POSES[0][1], n=1)
+    assert not s.sides_with_role("master")
+    s.handle_button("right", "SinglePress")
+    assert s.recorder.active and not s.sides_with_role("master")
+    feed(s, clock, "right", fake.POSES[0][1], n=30)
+    feed(s, clock, "right", fake.POSES[1][1], n=30)
+    s.handle_button("right", "SinglePress")
+    assert s.lesson is not None and s.lesson.master_hand == "right"

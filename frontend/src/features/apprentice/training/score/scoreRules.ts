@@ -6,10 +6,15 @@ export const MASTERY = 90;
 /** A finger or the timing at or above this held the expert's shape; below it is the one correction. */
 export const OK_FROM = 70;
 
-/** The finger with the lowest displayed score; the backend's own pick only breaks a tie. */
-export function weakestFinger(result: ScoreResult): Finger {
-  let worst = result.worst_finger;
-  for (const f of FINGERS) {
+/**
+ * The finger with the lowest displayed score; the backend's own pick only breaks a tie. Fingers the step weights too
+ * little (`light`, see lightFingers) are never the one to fix.
+ */
+export function weakestFinger(result: ScoreResult, light: readonly Finger[] = []): Finger {
+  const named = FINGERS.filter((f) => !light.includes(f));
+  if (!named.length) return result.worst_finger;
+  let worst = named.includes(result.worst_finger) ? result.worst_finger : named[0];
+  for (const f of named) {
     if (Math.round(result.per_finger[f]) < Math.round(result.per_finger[worst])) worst = f;
   }
   return worst;

@@ -23,7 +23,8 @@ const FULL_FLEXION = [
   [1.15, 1.3, 0.85],
   [1.15, 1.3, 0.85],
 ];
-const THUMB_FLEXION_SCALE = 0.8;
+/** The guide hand's thumb flexes this fraction of the curl table; the scorer's nominal ranges use the same scale. */
+export const THUMB_FLEXION_SCALE = 0.8;
 const CURL_MIN = -0.2;
 const CURL_MAX = 1.0;
 const BREATHE_AMPLITUDE = 0.02;

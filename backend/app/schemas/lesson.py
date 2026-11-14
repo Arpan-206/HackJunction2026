@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app import constants as c
 from app.core.utils import new_id
-from app.schemas.common import Prop, Side, Skill, Tolerance
+from app.schemas.common import FingerValues, Prop, Side, Skill, Tolerance
 from app.schemas.media import MediaRef
 from app.schemas.motion import MotionSpec
 
@@ -52,6 +52,10 @@ class Step(BaseModel):
         description="The expert talking the step through (POST /media), with the second at which the reference "
         "take starts; the learner's Tutorial plays the reference hand in sync with it.",
         json_schema_extra={c.LLM_SCHEMA_SKIP_KEY: True},
+    )
+    weights: FingerValues | None = Field(
+        default=None,
+        description="How much each finger counts on this step, 0 to 1; null counts every finger fully.",
     )
 
 

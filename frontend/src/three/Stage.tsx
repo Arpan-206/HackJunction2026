@@ -229,7 +229,12 @@ export function HandCanvas({
   useEffect(() => {
     const el = box.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(([e]) => setSize([Math.round(e.contentRect.width), Math.round(e.contentRect.height)]));
+    const ro = new ResizeObserver(([e]) => {
+      const w = Math.round(e.contentRect.width);
+      const h = Math.round(e.contentRect.height);
+      // Sub-pixel changes (a CSS transition, a scrollbar) round to the same size: keep the state, so the canvas does not re-render.
+      setSize((s) => (s && s[0] === w && s[1] === h ? s : [w, h]));
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

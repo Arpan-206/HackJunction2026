@@ -1,0 +1,844 @@
+{
+ "source": "FurElise (CC BY-NC 4.0), left hand, marker motion capture of 15 elite pianists",
+ "scale": "calibrated degrees: flexion rescaled by AAOS normal range (MCP 90, PIP 100, DIP 70; thumb MCP 50, IP 80) so a fist reads 90 (thumb 60); spreads anatomical",
+ "fps_after_downsample": 9.99,
+ "train_frames": 158365,
+ "train_pressing_share": 0.449,
+ "all": {
+  "thumb_mcp": {
+   "p5": 10.1,
+   "p25": 17.8,
+   "p50": 24.1,
+   "p75": 31.7,
+   "p95": 44.3
+  },
+  "thumb_ip": {
+   "p5": 2.9,
+   "p25": 7.1,
+   "p50": 12.5,
+   "p75": 19.6,
+   "p95": 29.4
+  },
+  "index_mcp": {
+   "p5": 10.9,
+   "p25": 18.3,
+   "p50": 23.9,
+   "p75": 30.1,
+   "p95": 43.8
+  },
+  "index_pip": {
+   "p5": 12.8,
+   "p25": 23.0,
+   "p50": 30.6,
+   "p75": 39.2,
+   "p95": 54.2
+  },
+  "index_dip": {
+   "p5": 11.9,
+   "p25": 15.5,
+   "p50": 18.9,
+   "p75": 23.7,
+   "p95": 37.1
+  },
+  "middle_mcp": {
+   "p5": 8.1,
+   "p25": 13.6,
+   "p50": 19.3,
+   "p75": 27.5,
+   "p95": 50.5
+  },
+  "middle_pip": {
+   "p5": 6.9,
+   "p25": 16.7,
+   "p50": 24.6,
+   "p75": 34.5,
+   "p95": 53.4
+  },
+  "middle_dip": {
+   "p5": 2.3,
+   "p25": 5.8,
+   "p50": 10.3,
+   "p75": 17.7,
+   "p95": 34.1
+  },
+  "ring_mcp": {
+   "p5": 4.4,
+   "p25": 10.6,
+   "p50": 16.5,
+   "p75": 24.3,
+   "p95": 43.4
+  },
+  "ring_pip": {
+   "p5": 11.6,
+   "p25": 19.7,
+   "p50": 27.1,
+   "p75": 37.3,
+   "p95": 57.9
+  },
+  "ring_dip": {
+   "p5": 7.4,
+   "p25": 9.9,
+   "p50": 12.5,
+   "p75": 16.5,
+   "p95": 28.8
+  },
+  "little_mcp": {
+   "p5": 5.8,
+   "p25": 13.6,
+   "p50": 21.2,
+   "p75": 30.1,
+   "p95": 49.5
+  },
+  "little_pip": {
+   "p5": 3.8,
+   "p25": 10.2,
+   "p50": 17.0,
+   "p75": 26.7,
+   "p95": 52.7
+  },
+  "little_dip": {
+   "p5": 3.8,
+   "p25": 8.0,
+   "p50": 11.7,
+   "p75": 16.9,
+   "p95": 30.3
+  },
+  "spread_thumb_index": {
+   "p5": 9.3,
+   "p25": 19.1,
+   "p50": 28.5,
+   "p75": 40.0,
+   "p95": 57.9
+  },
+  "spread_index_middle": {
+   "p5": 3.8,
+   "p25": 8.3,
+   "p50": 12.7,
+   "p75": 18.3,
+   "p95": 30.2
+  },
+  "spread_middle_ring": {
+   "p5": 2.6,
+   "p25": 6.0,
+   "p50": 9.3,
+   "p75": 13.6,
+   "p95": 24.7
+  },
+  "spread_ring_little": {
+   "p5": 7.4,
+   "p25": 16.1,
+   "p50": 24.4,
+   "p75": 33.4,
+   "p95": 46.0
+  }
+ },
+ "pressing": {
+  "thumb_mcp": {
+   "p5": 10.9,
+   "p25": 18.5,
+   "p50": 25.0,
+   "p75": 32.7,
+   "p95": 45.9
+  },
+  "thumb_ip": {
+   "p5": 3.1,
+   "p25": 7.4,
+   "p50": 13.0,
+   "p75": 19.6,
+   "p95": 28.0
+  },
+  "index_mcp": {
+   "p5": 10.9,
+   "p25": 18.6,
+   "p50": 24.3,
+   "p75": 30.0,
+   "p95": 41.6
+  },
+  "index_pip": {
+   "p5": 14.2,
+   "p25": 24.1,
+   "p50": 31.0,
+   "p75": 38.8,
+   "p95": 50.8
+  },
+  "index_dip": {
+   "p5": 11.7,
+   "p25": 15.5,
+   "p50": 18.7,
+   "p75": 23.2,
+   "p95": 34.1
+  },
+  "middle_mcp": {
+   "p5": 8.3,
+   "p25": 13.9,
+   "p50": 19.5,
+   "p75": 27.2,
+   "p95": 42.4
+  },
+  "middle_pip": {
+   "p5": 7.8,
+   "p25": 17.9,
+   "p50": 25.8,
+   "p75": 35.3,
+   "p95": 51.1
+  },
+  "middle_dip": {
+   "p5": 2.4,
+   "p25": 6.0,
+   "p50": 10.9,
+   "p75": 18.1,
+   "p95": 31.5
+  },
+  "ring_mcp": {
+   "p5": 4.5,
+   "p25": 10.8,
+   "p50": 16.8,
+   "p75": 24.0,
+   "p95": 36.1
+  },
+  "ring_pip": {
+   "p5": 11.6,
+   "p25": 20.4,
+   "p50": 28.2,
+   "p75": 37.9,
+   "p95": 54.6
+  },
+  "ring_dip": {
+   "p5": 7.3,
+   "p25": 9.9,
+   "p50": 12.5,
+   "p75": 16.3,
+   "p95": 25.7
+  },
+  "little_mcp": {
+   "p5": 6.2,
+   "p25": 14.2,
+   "p50": 21.7,
+   "p75": 30.1,
+   "p95": 45.2
+  },
+  "little_pip": {
+   "p5": 4.0,
+   "p25": 10.5,
+   "p50": 17.2,
+   "p75": 26.7,
+   "p95": 50.1
+  },
+  "little_dip": {
+   "p5": 3.5,
+   "p25": 7.5,
+   "p50": 11.1,
+   "p75": 16.1,
+   "p95": 26.7
+  },
+  "spread_thumb_index": {
+   "p5": 8.6,
+   "p25": 18.1,
+   "p50": 27.3,
+   "p75": 39.5,
+   "p95": 58.1
+  },
+  "spread_index_middle": {
+   "p5": 3.7,
+   "p25": 8.5,
+   "p50": 13.2,
+   "p75": 18.9,
+   "p95": 30.4
+  },
+  "spread_middle_ring": {
+   "p5": 2.7,
+   "p25": 6.3,
+   "p50": 9.8,
+   "p75": 14.6,
+   "p95": 26.5
+  },
+  "spread_ring_little": {
+   "p5": 7.9,
+   "p25": 16.7,
+   "p50": 24.9,
+   "p75": 33.5,
+   "p95": 45.4
+  }
+ },
+ "not_pressing": {
+  "thumb_mcp": {
+   "p5": 9.5,
+   "p25": 17.3,
+   "p50": 23.3,
+   "p75": 30.8,
+   "p95": 43.2
+  },
+  "thumb_ip": {
+   "p5": 2.8,
+   "p25": 6.9,
+   "p50": 12.2,
+   "p75": 19.5,
+   "p95": 30.8
+  },
+  "index_mcp": {
+   "p5": 10.8,
+   "p25": 18.1,
+   "p50": 23.6,
+   "p75": 30.1,
+   "p95": 45.9
+  },
+  "index_pip": {
+   "p5": 11.9,
+   "p25": 22.1,
+   "p50": 30.2,
+   "p75": 39.4,
+   "p95": 58.3
+  },
+  "index_dip": {
+   "p5": 12.1,
+   "p25": 15.5,
+   "p50": 19.0,
+   "p75": 24.1,
+   "p95": 39.6
+  },
+  "middle_mcp": {
+   "p5": 8.0,
+   "p25": 13.3,
+   "p50": 19.1,
+   "p75": 27.9,
+   "p95": 57.2
+  },
+  "middle_pip": {
+   "p5": 6.4,
+   "p25": 15.8,
+   "p50": 23.6,
+   "p75": 33.8,
+   "p95": 55.6
+  },
+  "middle_dip": {
+   "p5": 2.3,
+   "p25": 5.6,
+   "p50": 9.8,
+   "p75": 17.4,
+   "p95": 37.1
+  },
+  "ring_mcp": {
+   "p5": 4.2,
+   "p25": 10.3,
+   "p50": 16.2,
+   "p75": 24.6,
+   "p95": 51.8
+  },
+  "ring_pip": {
+   "p5": 11.6,
+   "p25": 19.2,
+   "p50": 26.2,
+   "p75": 36.7,
+   "p95": 61.1
+  },
+  "ring_dip": {
+   "p5": 7.5,
+   "p25": 9.9,
+   "p50": 12.5,
+   "p75": 16.6,
+   "p95": 32.7
+  },
+  "little_mcp": {
+   "p5": 5.5,
+   "p25": 13.3,
+   "p50": 20.7,
+   "p75": 30.2,
+   "p95": 54.3
+  },
+  "little_pip": {
+   "p5": 3.6,
+   "p25": 9.9,
+   "p50": 16.8,
+   "p75": 26.8,
+   "p95": 54.7
+  },
+  "little_dip": {
+   "p5": 4.2,
+   "p25": 8.5,
+   "p50": 12.2,
+   "p75": 17.5,
+   "p95": 35.0
+  },
+  "spread_thumb_index": {
+   "p5": 10.0,
+   "p25": 20.0,
+   "p50": 29.5,
+   "p75": 40.3,
+   "p95": 57.6
+  },
+  "spread_index_middle": {
+   "p5": 3.9,
+   "p25": 8.3,
+   "p50": 12.4,
+   "p75": 17.7,
+   "p95": 29.9
+  },
+  "spread_middle_ring": {
+   "p5": 2.5,
+   "p25": 5.8,
+   "p50": 8.8,
+   "p75": 12.9,
+   "p95": 22.9
+  },
+  "spread_ring_little": {
+   "p5": 6.9,
+   "p25": 15.6,
+   "p50": 24.0,
+   "p75": 33.3,
+   "p95": 46.4
+  }
+ },
+ "suggested_tolerances": {
+  "thumb": {
+   "median_err": 7.7,
+   "p90_err": 14.1,
+   "perfect_deg": 7.7,
+   "wrong_deg": 21.2
+  },
+  "index": {
+   "median_err": 7.1,
+   "p90_err": 13.0,
+   "perfect_deg": 7.1,
+   "wrong_deg": 19.4
+  },
+  "middle": {
+   "median_err": 6.9,
+   "p90_err": 15.0,
+   "perfect_deg": 6.9,
+   "wrong_deg": 22.5
+  },
+  "ring": {
+   "median_err": 6.6,
+   "p90_err": 13.7,
+   "perfect_deg": 6.6,
+   "wrong_deg": 20.6
+  },
+  "little": {
+   "median_err": 7.5,
+   "p90_err": 15.5,
+   "perfect_deg": 7.5,
+   "wrong_deg": 23.2
+  }
+ },
+ "current_tolerances": {
+  "perfect_deg": 15,
+  "wrong_deg": 60
+ },
+ "pieces": [
+  {
+   "piece_id": "000",
+   "subject_id": 0,
+   "frames": 5543,
+   "press_fit_r": 0.678,
+   "split": "train"
+  },
+  {
+   "piece_id": "001",
+   "subject_id": 0,
+   "frames": 2538,
+   "press_fit_r": 0.633,
+   "split": "train"
+  },
+  {
+   "piece_id": "002",
+   "subject_id": 0,
+   "frames": 2955,
+   "press_fit_r": 0.805,
+   "split": "train"
+  },
+  {
+   "piece_id": "003",
+   "subject_id": 0,
+   "frames": 1919,
+   "press_fit_r": 0.923,
+   "split": "train"
+  },
+  {
+   "piece_id": "015",
+   "subject_id": 1,
+   "frames": 5241,
+   "press_fit_r": 0.817,
+   "split": "train"
+  },
+  {
+   "piece_id": "016",
+   "subject_id": 1,
+   "frames": 3497,
+   "press_fit_r": 0.671,
+   "split": "train"
+  },
+  {
+   "piece_id": "017",
+   "subject_id": 1,
+   "frames": 5265,
+   "press_fit_r": 0.748,
+   "split": "train"
+  },
+  {
+   "piece_id": "018",
+   "subject_id": 1,
+   "frames": 4416,
+   "press_fit_r": 0.752,
+   "split": "train"
+  },
+  {
+   "piece_id": "023",
+   "subject_id": 2,
+   "frames": 688,
+   "press_fit_r": 0.953,
+   "split": "train"
+  },
+  {
+   "piece_id": "024",
+   "subject_id": 2,
+   "frames": 1039,
+   "press_fit_r": 0.703,
+   "split": "train"
+  },
+  {
+   "piece_id": "025",
+   "subject_id": 2,
+   "frames": 7066,
+   "press_fit_r": 0.807,
+   "split": "train"
+  },
+  {
+   "piece_id": "026",
+   "subject_id": 2,
+   "frames": 6264,
+   "press_fit_r": 0.787,
+   "split": "train"
+  },
+  {
+   "piece_id": "030",
+   "subject_id": 3,
+   "frames": 2380,
+   "press_fit_r": 0.873,
+   "split": "test"
+  },
+  {
+   "piece_id": "031",
+   "subject_id": 3,
+   "frames": 3155,
+   "press_fit_r": 0.781,
+   "split": "test"
+  },
+  {
+   "piece_id": "032",
+   "subject_id": 3,
+   "frames": 3847,
+   "press_fit_r": 0.781,
+   "split": "test"
+  },
+  {
+   "piece_id": "033",
+   "subject_id": 3,
+   "frames": 3461,
+   "press_fit_r": 0.551,
+   "split": "test"
+  },
+  {
+   "piece_id": "034",
+   "subject_id": 4,
+   "frames": 4013,
+   "press_fit_r": 0.449,
+   "split": "train"
+  },
+  {
+   "piece_id": "035",
+   "subject_id": 4,
+   "frames": 2905,
+   "press_fit_r": 0.562,
+   "split": "train"
+  },
+  {
+   "piece_id": "036",
+   "subject_id": 5,
+   "frames": 5024,
+   "press_fit_r": 0.608,
+   "split": "train"
+  },
+  {
+   "piece_id": "037",
+   "subject_id": 5,
+   "frames": 1623,
+   "press_fit_r": 0.622,
+   "split": "train"
+  },
+  {
+   "piece_id": "038",
+   "subject_id": 5,
+   "frames": 949,
+   "press_fit_r": 0.68,
+   "split": "train"
+  },
+  {
+   "piece_id": "039",
+   "subject_id": 5,
+   "frames": 1039,
+   "press_fit_r": 0.703,
+   "split": "train"
+  },
+  {
+   "piece_id": "046",
+   "subject_id": 6,
+   "frames": 2458,
+   "press_fit_r": 0.962,
+   "split": "train"
+  },
+  {
+   "piece_id": "047",
+   "subject_id": 6,
+   "frames": 1245,
+   "press_fit_r": 0.653,
+   "split": "train"
+  },
+  {
+   "piece_id": "048",
+   "subject_id": 6,
+   "frames": 2894,
+   "press_fit_r": 0.688,
+   "split": "train"
+  },
+  {
+   "piece_id": "049",
+   "subject_id": 6,
+   "frames": 1719,
+   "press_fit_r": 0.672,
+   "split": "train"
+  },
+  {
+   "piece_id": "068",
+   "subject_id": 7,
+   "frames": 2678,
+   "press_fit_r": 0.764,
+   "split": "train"
+  },
+  {
+   "piece_id": "069",
+   "subject_id": 7,
+   "frames": 1302,
+   "press_fit_r": 0.629,
+   "split": "train"
+  },
+  {
+   "piece_id": "070",
+   "subject_id": 7,
+   "frames": 2832,
+   "press_fit_r": 0.456,
+   "split": "train"
+  },
+  {
+   "piece_id": "071",
+   "subject_id": 7,
+   "frames": 6112,
+   "press_fit_r": 0.429,
+   "split": "train"
+  },
+  {
+   "piece_id": "079",
+   "subject_id": 8,
+   "frames": 1763,
+   "press_fit_r": 0.668,
+   "split": "train"
+  },
+  {
+   "piece_id": "080",
+   "subject_id": 8,
+   "frames": 3277,
+   "press_fit_r": 0.549,
+   "split": "train"
+  },
+  {
+   "piece_id": "081",
+   "subject_id": 8,
+   "frames": 2719,
+   "press_fit_r": 0.813,
+   "split": "train"
+  },
+  {
+   "piece_id": "082",
+   "subject_id": 8,
+   "frames": 1939,
+   "press_fit_r": 0.604,
+   "split": "train"
+  },
+  {
+   "piece_id": "096",
+   "subject_id": 9,
+   "frames": 5132,
+   "press_fit_r": 0.716,
+   "split": "test"
+  },
+  {
+   "piece_id": "097",
+   "subject_id": 9,
+   "frames": 3587,
+   "press_fit_r": 0.736,
+   "split": "test"
+  },
+  {
+   "piece_id": "098",
+   "subject_id": 9,
+   "frames": 4706,
+   "press_fit_r": 0.651,
+   "split": "test"
+  },
+  {
+   "piece_id": "099",
+   "subject_id": 9,
+   "frames": 5105,
+   "press_fit_r": 0.665,
+   "split": "test"
+  },
+  {
+   "piece_id": "104",
+   "subject_id": 10,
+   "frames": 8875,
+   "press_fit_r": 0.73,
+   "split": "train"
+  },
+  {
+   "piece_id": "105",
+   "subject_id": 11,
+   "frames": 4724,
+   "press_fit_r": 0.947,
+   "split": "train"
+  },
+  {
+   "piece_id": "106",
+   "subject_id": 11,
+   "frames": 1386,
+   "press_fit_r": 0.899,
+   "split": "train"
+  },
+  {
+   "piece_id": "107",
+   "subject_id": 11,
+   "frames": 1214,
+   "press_fit_r": 0.734,
+   "split": "train"
+  },
+  {
+   "piece_id": "108",
+   "subject_id": 11,
+   "frames": 3993,
+   "press_fit_r": 0.821,
+   "split": "train"
+  },
+  {
+   "piece_id": "122",
+   "subject_id": 12,
+   "frames": 1611,
+   "press_fit_r": 0.808,
+   "split": "train"
+  },
+  {
+   "piece_id": "123",
+   "subject_id": 12,
+   "frames": 1069,
+   "press_fit_r": 0.829,
+   "split": "train"
+  },
+  {
+   "piece_id": "124",
+   "subject_id": 12,
+   "frames": 1998,
+   "press_fit_r": 0.831,
+   "split": "train"
+  },
+  {
+   "piece_id": "125",
+   "subject_id": 12,
+   "frames": 1129,
+   "press_fit_r": 0.459,
+   "split": "train"
+  },
+  {
+   "piece_id": "133",
+   "subject_id": 13,
+   "frames": 2054,
+   "press_fit_r": 0.767,
+   "split": "train"
+  },
+  {
+   "piece_id": "134",
+   "subject_id": 13,
+   "frames": 2368,
+   "press_fit_r": 0.84,
+   "split": "train"
+  },
+  {
+   "piece_id": "135",
+   "subject_id": 13,
+   "frames": 1389,
+   "press_fit_r": 0.858,
+   "split": "train"
+  },
+  {
+   "piece_id": "136",
+   "subject_id": 13,
+   "frames": 4740,
+   "press_fit_r": 0.694,
+   "split": "train"
+  },
+  {
+   "piece_id": "146",
+   "subject_id": 14,
+   "frames": 8680,
+   "press_fit_r": 0.778,
+   "split": "train"
+  },
+  {
+   "piece_id": "147",
+   "subject_id": 14,
+   "frames": 4986,
+   "press_fit_r": 0.689,
+   "split": "train"
+  },
+  {
+   "piece_id": "148",
+   "subject_id": 14,
+   "frames": 6504,
+   "press_fit_r": 0.7,
+   "split": "train"
+  },
+  {
+   "piece_id": "149",
+   "subject_id": 14,
+   "frames": 8723,
+   "press_fit_r": 0.701,
+   "split": "train"
+  }
+ ],
+ "test_subjects": [
+  3,
+  9
+ ],
+ "bytes_streamed": 335104506,
+ "held_out_pianists_inside_p5_p95": {
+  "frames": 31373,
+  "per_joint": {
+   "thumb_mcp": 0.957,
+   "thumb_ip": 0.89,
+   "index_mcp": 0.922,
+   "index_pip": 0.886,
+   "index_dip": 0.848,
+   "middle_mcp": 0.943,
+   "middle_pip": 0.917,
+   "middle_dip": 0.852,
+   "ring_mcp": 0.924,
+   "ring_pip": 0.882,
+   "ring_dip": 0.962,
+   "little_mcp": 0.886,
+   "little_pip": 0.881,
+   "little_dip": 0.971,
+   "spread_thumb_index": 0.879,
+   "spread_index_middle": 0.957,
+   "spread_middle_ring": 0.937,
+   "spread_ring_little": 0.977
+  },
+  "all_joints_inside": 0.31,
+  "mean_joints_outside": 1.53
+ }
+}

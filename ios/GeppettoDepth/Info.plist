@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Geppetto Depth uses the camera and LiDAR to measure your hands on the workbench and sends the depth to your Mac.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Geppetto Depth serves the depth stream to your Mac over the USB cable or the local network.</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arkit</string>
+	</array>
+	<key>UIStatusBarHidden</key>
+	<true/>
+</dict>
+</plist>

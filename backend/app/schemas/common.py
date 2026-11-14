@@ -13,6 +13,7 @@ Skill = Literal[
     "table_tennis",
     "piano",
     "finnish_fingerspelling",
+    "fingerspelling",
     "shadow_puppets",
     "general",
 ]

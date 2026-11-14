@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geppetto depth view</title>
+<style>
+  body { margin: 0; background: #1b1a17; color: #eee6d6; font: 16px/1.4 system-ui, sans-serif; }
+  header { display: flex; gap: 12px; align-items: center; padding: 8px 12px; flex-wrap: wrap; }
+  input { font: inherit; width: 22em; background: #2a2823; color: inherit; border: 1px solid #555; padding: 4px; }
+  button { font: inherit; background: #3a372f; color: inherit; border: 1px solid #666; padding: 4px 10px; cursor: pointer; }
+  #wrap { position: relative; }
+  canvas { display: block; width: 100vw; height: calc(100vh - 140px); cursor: grab; }
+  #info { padding: 6px 12px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 16px; }
+  .key span { display: inline-block; width: 12px; height: 12px; margin: 0 4px 0 12px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <strong>Depth view</strong>
+  <input id="url">
+  <button id="go">Connect</button>
+  <label><input type="checkbox" id="colour" style="width:auto"> camera colours</label>
+  <span class="key"><span style="background:#8a7a5a"></span>table<span style="background:#3fb37f"></span>arm
+    <span style="background:#c0392b"></span>hand with no depth<span style="background:#777"></span>other</span>
+</header>
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="info">not connected</div>
+<script>
+// Reads /ws/depth (schema/depth.json): about 2000 labelled points at about 10 Hz in the bench
+// frame (metres, y up from the table, z toward the person). Drag to orbit, wheel to zoom.
+const $ = (id) => document.getElementById(id);
+$("url").value = `ws://${location.hostname || "localhost"}:${location.port || 8765}/ws/depth`;
+const cv = $("c"), ctx = cv.getContext("2d");
+let ws = null, last = null, yaw = 0.6, pitch = 0.5, dist = 0.9, drag = null;
+const LABEL_COL = ["#777777", "#8a7a5a", "#3fb37f", "#c0392b"];
+
+function connect() {
+  if (ws) ws.close();
+  ws = new WebSocket($("url").value);
+  ws.onopen = () => { $("info").textContent = "connected, waiting for depth"; };
+  ws.onclose = () => { $("info").textContent = "closed"; };
+  ws.onmessage = (e) => { last = JSON.parse(e.data); };
+}
+$("go").onclick = connect;
+cv.onmousedown = (e) => { drag = [e.clientX, e.clientY]; };
+window.onmouseup = () => { drag = null; };
+window.onmousemove = (e) => {
+  if (!drag) return;
+  yaw += (e.clientX - drag[0]) * 0.01; pitch = Math.max(-1.4, Math.min(1.4, pitch + (e.clientY - drag[1]) * 0.01));
+  drag = [e.clientX, e.clientY];
+};
+cv.onwheel = (e) => { e.preventDefault(); dist = Math.max(0.2, Math.min(4, dist * (e.deltaY > 0 ? 1.1 : 0.9))); };
+
+function project(p, W, H) {
+  // orbit camera around a point just above the bench origin
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  let x = p[0], y = p[1] - 0.05, z = p[2];
+  let x1 = cy * x - sy * z, z1 = sy * x + cy * z;
+  let y2 = cp * y - sp * z1, z2 = sp * y + cp * z1;
+  const d = dist - z2;
+  if (d < 0.05) return null;
+  const f = 0.9 * Math.min(W, H);
+  return [W / 2 + f * x1 / d, H / 2 - f * y2 / d, d];
+}
+
+function draw() {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  ctx.fillStyle = "#1b1a17"; ctx.fillRect(0, 0, W, H);
+  // bench grid, 10 cm
+  ctx.strokeStyle = "#333"; ctx.lineWidth = 1;
+  for (let i = -5; i <= 5; i++) {
+    for (const [a, b] of [[[i / 10, 0, -0.5], [i / 10, 0, 0.5]], [[-0.5, 0, i / 10], [0.5, 0, i / 10]]]) {
+      const pa = project(a, W, H), pb = project(b, W, H);
+      if (pa && pb) { ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); ctx.stroke(); }
+    }
+  }
+  if (last) {
+    const m = last, pts = [];
+    for (let i = 0; i < m.n; i++) {
+      const q = project([m.points[3 * i], m.points[3 * i + 1], m.points[3 * i + 2]], W, H);
+      if (q) pts.push([q, i]);
+    }
+    pts.sort((a, b) => b[0][2] - a[0][2]);
+    const useRgb = $("colour").checked && m.rgb;
+    for (const [q, i] of pts) {
+      ctx.fillStyle = useRgb ? `rgb(${m.rgb[3 * i]},${m.rgb[3 * i + 1]},${m.rgb[3 * i + 2]})` : LABEL_COL[m.labels[i]];
+      const s = Math.max(2, 6 / q[2]);
+      ctx.fillRect(q[0] - s / 2, q[1] - s / 2, s, s);
+    }
+    const a = m.arm;
+    if (a.dir && a.entry) {
+      const e = a.entry, d = a.dir, L = 0.25;
+      const p0 = project([e[0], 0.06, e[2]], W, H), p1 = project([e[0] + d[0] * L, 0.06, e[2] + d[2] * L], W, H);
+      if (p0 && p1) {
+        ctx.strokeStyle = a.forearm_ok ? "#3fb37f" : "#e0b030"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+      }
+    }
+    const t = m.table, c = m.correction;
+    $("info").textContent =
+      `frame ${m.frame_id}  points ${m.n}  frame ${m.frame}  process ${m.process_ms} ms\n` +
+      `table ${t.found ? t.source : "not found"}  camera height ${t.camera_height_m} m  app vs fit ${t.agree_deg} deg, ${t.agree_mm} mm\n` +
+      `arm ${a.found ? "found" : "not found"}  hand depth ${a.hand_depth}  forearm yaw ${a.yaw_deg} deg  ok ${a.forearm_ok}  length ${a.length_m} m\n` +
+      `correction ${c.side}: ${c.correction_deg} deg  locked ${c.locked}  applied ${c.applied}  glove yaw ${c.glove_yaw_deg}`;
+  }
+  requestAnimationFrame(draw);
+}
+connect();
+draw();
+</script>
+</body>
+</html>

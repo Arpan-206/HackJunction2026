@@ -1,0 +1,133 @@
+{
+  "recording": "worn-solver-right",
+  "path": "gemma-pictures",
+  "t": "2026-11-14T10:32:29+00:00",
+  "input_text": "Teach the hand skill shown in this recording.\n\nRECORDED DEMONSTRATION (measured by the gloves):\nRecording title: Worn Smartgloves II capture, right hand.\nDemonstrating hand: right. Duration 25.1 s, 67 glove samples. The recorder cut it into 3 step(s) at the moments the hand was still.\nFinger travel over the whole take (flexion range, degrees): thumb 35, index 64, middle 71, ring 69, little 58.\nSteps, in order:\n1. Step 1 (held still, 8.4 s): thumb half bent, index half bent, middle half bent, ring half bent, little half bent. Most bent: little at 37 degrees. Picture: step_00.jpg.\n2. Step 2 (held still, 8.4 s): thumb straight, index straight, middle straight, ring straight, little straight. Most bent: little at 21 degrees. Picture: step_01.jpg.\n3. Step 3 (held still, 8.4 s): thumb half bent, index straight, middle straight, ring curled, little half bent. Most bent: ring at 71 degrees. Picture: step_02.jpg.",
+  "lesson": {
+    "title": "Hand Pose Sequence",
+    "skill": "general",
+    "summary": "",
+    "master_name": "Master",
+    "source": "generated",
+    "steps": [
+      {
+        "id": "8ec77128f7a8",
+        "title": "Lesson 1: Partial Curl",
+        "instruction": "Bend all your fingers and your thumb halfway.",
+        "move_id": null,
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 35.0,
+            "index": 64.0,
+            "middle": 71.0,
+            "ring": 69.0,
+            "little": 58.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 8400.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "ce3267825f6a",
+        "title": "Lesson 2: Open Hand",
+        "instruction": "Straighten all your fingers and your thumb completely.",
+        "move_id": "general_spread",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 0.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 0.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 8400.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "16dd9ebe3569",
+        "title": "Lesson 3: Ring Finger Curl",
+        "instruction": "Curl your ring finger tightly while keeping your index and middle fingers straight.",
+        "move_id": null,
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 35.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 71.0,
+            "little": 37.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 3,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 8400.0
+        },
+        "video_url": null
+      }
+    ],
+    "test": null,
+    "id": "0ef8c17aeef7",
+    "created_at": "2026-11-14T10:32:19.602298+00:00"
+  },
+  "provider": "verda-gemma",
+  "model": "google/gemma-4-31B-it",
+  "attempts": 1,
+  "latency_s": 10.16483470890671,
+  "usage": {
+    "prompt_tokens": 2220,
+    "total_tokens": 2751,
+    "completion_tokens": 531
+  },
+  "schema_mode": "json_schema",
+  "frames": [
+    "step_00.jpg",
+    "step_01.jpg",
+    "step_02.jpg"
+  ],
+  "prompt_chars": 3770,
+  "errors": [],
+  "digest": {
+    "title": "Hand Pose Sequence",
+    "skill": "general",
+    "steps": 3,
+    "step_titles": [
+      "Lesson 1: Partial Curl",
+      "Lesson 2: Open Hand",
+      "Lesson 3: Ring Finger Curl"
+    ],
+    "move_ids": [
+      null,
+      "general_spread",
+      null
+    ],
+    "presets": [
+      "hold_pose",
+      "hold_pose",
+      "hold_pose"
+    ]
+  }
+}

@@ -29,9 +29,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.services = services
         await services.gloves.start()
         await services.rig.start()
+        services.core_export.start()
         try:
             yield
         finally:
+            services.core_export.stop()
             await services.rig.stop()
             await services.gloves.stop()
 

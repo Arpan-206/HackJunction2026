@@ -1,5 +1,7 @@
 """Captures smoothed glove frames into stored recordings."""
 
+from collections.abc import Callable
+
 from app import constants as c
 from app.core.errors import NotFoundError
 from app.core.utils import new_id, utc_now_iso
@@ -31,6 +33,13 @@ class Recorder:
         """Use the given store for finished takes."""
         self._store = store
         self._active: dict[str, _Take] = {}
+        # Called after a stored take is saved or deleted (the Verda export listens here).
+        self.on_change: list[Callable[[], None]] = []
+
+    def _changed(self) -> None:
+        """Tell the listeners that a stored take changed."""
+        for listener in self.on_change:
+            listener()
 
     def start(
         self, lesson_id: str | None, step_id: str | None, hands: Hands = "both"
@@ -78,7 +87,9 @@ class Recorder:
             hands=take.hands,
             frames=frames,
         )
-        return self._store.save(recording)
+        saved = self._store.save(recording)
+        self._changed()
+        return saved
 
     def get(self, recording_id: str) -> Recording:
         """Return a stored recording or raise NotFoundError."""
@@ -111,3 +122,4 @@ class Recorder:
             return
         if not self._store.delete(recording_id):
             raise NotFoundError(f"recording {recording_id} not found")
+        self._changed()

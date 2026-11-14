@@ -1,5 +1,150 @@
 # STATUS.md
 
+## Saturday 14 Nov, 14:40: handover to Szymon (read this first)
+
+Everything below this section is the overnight core report, still valid.
+This section is what changed on Saturday and where things stand.
+
+**Evening batch (Sat 16:20 to 17:55), six lanes on Opus 5.5, all merged on
+main, every suite green** (core 177, backend 304, frontend 316, lint, build,
+demo walk and mock walk clean; nothing touched live gloves):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| lidar | core depth source on `ios/PROTOCOL.md`, fake phone `core/camera/fake_depth.py` (dark-hand and no-plane variants), depth step behind `python -m core --depth` or `--depth-fake` (table, forearm by cylinder fit, glove yaw drift correction), `/ws/depth` point cloud, `/depth` viewer, `tools/depth_check`, `docs/DEPTH_STREAM.md`. Nothing verified on real depth | `STATUS-lidar.md` |
+| demo-mode | `/demo` visitor flow with a 20 s guest calibration (flat, fist, thumb folded), lesson pick, live score beside the robot twin, Next visitor; kiosk flag; Geppetto rename done; thumb phase stored by the backend and now used by the core's thumb range | `STATUS-demo-mode.md` |
+| shadows | five shadow puppets reach a score card; Fingerspelling is teachable (A to Z, word drill, letter chart at `/apprentice/fingerspelling`); `tools/make_pose_lessons.py` emits core lessons | `STATUS-shadows.md` |
+| slot-kit | `scripts/slot/run.sh` guided checklist for the next glove slot, logs to `logs/slot/<time>/`, `--dry-run` on fakes passes; fake RCSP driver `tools/fake_rcsp_server.py` | `STATUS-slot-kit.md`, `docs/SLOT-KIT.md` |
+| models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
+| submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
+
+**For Szymon's Claude (Sat 20:45):** since the 20:05 push, main gained
+coach-tune. What it is: our own fast coach, a LoRA on `google/gemma-4-E2B-it`
+trained on 3,231 coaching lines written by `google/gemma-4-31B-it` (bf16, on a
+Verda Serverless Container), evaluated and torn down, 5.72 USD. It is OFF by
+default: the backend provider sits behind `COACH_MODEL=tuned` with
+`TUNED_BASE_URL`, and nothing changes for you unless both are set. Held-out
+score 89 % tuned against 56 % untuned and 86 % teacher; on the 333 real-capture
+rows the tuned model scores 62 %, below the teacher's 67 %. Files:
+`coach_tune/` (dataset builder, label, train, eval, container scripts,
+`RUN.md`), `docs/COACH_MODEL.md` (model card, the no-Gemini statement,
+"Serve it again" in about 5 minutes), `docs/VERDA.md` (updated),
+`docs/submission/VERDA-COACH-TUNE.md`, `STATUS-coach-tune.md`. The adapter
+(95 MB) lives git-ignored in the coach-tune worktree's `coach_tune/out/`.
+Nothing else in `backend/` changed behaviour. Also since 20:05:
+`tools/depth_live_view.py` (browser live view of the phone's colour, depth,
+confidence and an overlay, port 8790) and the iPhone app rebinds its listener
+after lock or background. Lanes still running on their own branches: lidar
+(arm gate, colour plus depth, gloved blobs), hand-root (hand position from
+the phone), fingerspelling-packs (alphabet packs, Finnish slots). Each gets
+its own note here when merged.
+
+**Third batch (Sat 18:55 on), merged so far:** expert-priors (core 210
+pass). `core/priors/`: an ASL letter recogniser on the 18 angles (20 classes,
+J and Z excluded, G/Q, K/P and H/U/V merged; leave-one-session-out top-1
+67.4 %, top-2 87.7 %, calibrated confidence), a FurElise piano posture checker
+(47 training pieces, held-out pianists inside the expert band 85 to 98 % per
+joint; suggested piano tolerances about 7 perfect and 20 to 23 wrong, config
+unchanged at 15/60), both as optional coach facts behind the environment
+flags PRIORS_ASL and PRIORS_PIANO, off by default, and a provenance test (no
+Gemini, no Decisions API, no logs/live data in training). PianoMotion10M was
+dropped: CC BY-NC-ND and MANO-gated. Not tested on real piano or real
+fingerspelling: record one glove piano take and one fingerspelled alphabet,
+then `python -m core.priors.real_check`. `docs/PRIORS.md`,
+`STATUS-expert-priors.md`. Verda VMs refuse the coupon balance without a
+payment method; only Serverless Containers run. coach-tune is still running.
+
+**Second batch (Sat 18:05 to 18:40), merged on main, suites green** (core 190,
+backend 375, frontend 359, lint, build):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| thumb-align | the preview's thumb now uses the scorer's 0.8 scale (`frontend/src/three/motion.ts`); a pose copied from the preview scores 99 or more; tests over every letter, both words and five puppets within 5 degrees. Open: `finger_sequence`, `pinch`, `idle` and `grip_and_swing` presets still differ between preview and scorer target | `STATUS-thumb-align.md` |
+| replay-demo | capture inventory (`tools/capture_inventory.py`, 553 still stretches in `docs/replay-demo/still-stretches.md`); `python -m core --replay` gains `--replay-start`, `--replay-seconds`, `--replay-speed`, `--replay-stream`, `--replay-continuous`; `scripts/replay_demo.sh CAPTURE [--start S --seconds D]` plays a capture through the whole stack, looping; a REPLAY corner mark from the core's own `/ws/gloves` source that no setting, kiosk flag or dev panel hides; ten held-pose lessons in `lessons/replay-*` (same pose 99 to 100, wrong pose fails 9 of 10); an offline thumb-folded calibration from capture 2969 to 2978.5 s makes the right thumb usable without changing any pass or fail | `STATUS-replay-demo.md` |
+
+Core fixes from the batch: a glove button press records that glove
+(`record_start` takes a hand), and the thumb-folded capture sets the thumb
+range (`core/calibration.py`).
+
+**Depth camera (Sat 14:30):** `core/camera/depth.py` (`DepthFrame`,
+`DepthSource`) and `core/camera/record3dstream.py` read the free
+Record3DStream app (PathOn) on an iPhone; address in config.toml
+`[camera.record3dstream]`. `python -m tools.r3d_snapshot` saves one frame of
+each stream to `logs/r3d/<time>/` and prints resolution, frame rate and depth
+and confidence statistics. Tested on a 17 frame capture over WiFi (RGB
+1920x1440, depth and confidence 256x192, about 9 fps); not yet wired into the
+hand tracker. The ARKit app lane (ios/) produces the same `DepthFrame`.
+
+**Our own iPhone app (Sat 15:33), live over USB:** `ios/GeppettoDepth` on the
+iPhone 16 Pro streamed to the Mac through `ios/mac/forward.sh` (iproxy, port
+7700): 296 frames in 9.9 s, 29.8 fps, no gaps, colour 640x480, depth and
+confidence 256x192, table plane in every frame. Recorded with
+`python -m ios.mac.record captures/bench.gdrec.gz --seconds 10`, summarised
+with `python -m ios.mac.replay captures/bench.gdrec.gz --info`. The PathOn
+app is the WiFi fallback only: in its USB mode the phone refuses port 8888 and
+no other port of its own listens.
+
+**Bench capture (Sat 15:51, patched app):** `captures/bench-3.gdrec.gz`, 300
+frames at 30 fps, the phone on the bench with a hand on black fabric. The
+bench plane faced up, 0.19 m below the camera, and held the same height to
+the millimetre over the 10 s. Depth noise on a still scene: 1.8 mm on high
+confidence pixels, 59 mm on low confidence pixels, so mask by confidence
+(`DepthFrame.depth_ok`). Black fabric gives filled, smooth depth with low
+confidence; hands and objects give high confidence. The app preview is in
+colour. Reinstall path from the terminal is in `ios/README.md`.
+Parked (Sat 16:05): a no-router link between phone and Mac (peer-to-peer WiFi
+through Network.framework plus a Mac helper, or the phone's Personal Hotspot at
+172.20.10.1). Bluetooth is too slow for the stream. The cable is the demo link;
+WiFi at 10.0.34.248 is the fallback in config.toml.
+
+**On `main` now, all suites green** (core and decisions 203 tests, backend 255,
+frontend 296, lint and build):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| core | Per-wearer flat and fist calibration read from the backend's files; parity off; threshold study on real data | `STATUS-core.md` |
+| robot-view | Dex3-1 twin in the frontend from `/ws/robot`, `/robot` screen, source control | `frontend/STATUS-robot-view.md` |
+| decisions | Gemini Decisions adapter behind the core's coach interface, rule fallback, registered in `core/server.py` | `decisions/STATUS-decisions.md` |
+| export | Lessons plus Dex3-1 targets to LeRobot episodes, one command | `STATUS-export.md` |
+| verda | Gemma 4 31B on a Verda H200 behind vLLM, measured, torn down; 3.94 USD spent | `verda/STATUS-verda.md`, `docs/VERDA.md` |
+| typing | Typing task, `/typing` screen, keystroke verdicts, accuracy tool, `[typing]` thresholds | `STATUS-typing.md` |
+| weights | Per-finger step weights (take consistency x task chart x calibration mask) in both scorers and the practice view | `STATUS-weights.md` |
+| rokoko-setup | Rokoko SDK installed and activated on this Mac; `scripts/live.sh`, `scripts/stop.sh`, `docs/GLOVE-SLOT.md` | `STATUS-rokoko-setup.md` |
+
+**Glove slot, 13:19 to 14:20, both Smartgloves II on this Mac, through
+route B** (core reads the solver; the bridge feeds the backend; the frontend
+reads the backend):
+
+| Check | Result |
+| --- | --- |
+| Live stack | `scripts/live.sh arpan` brought up driver, solver, two raw captures, core, bridge, backend, frontend. Two earlier attempts failed because the Rokoko desktop app held the driver's UDP port; quit it first (GLOVE-SLOT step 0) |
+| Gloves | right device 291175775 and left 3552246405, both solved at 83.3 Hz, both tracked in the core |
+| Raw captures | `logs/live/20261114-131952/` (untracked, about 1 GB solver plus 0.3 GB driver for the hour); replay any window with `--replay` |
+| Calibration | flat and fist captured through the backend API for wearer "arpan", linked by a neutral record, loaded by the core. Right glove calibrated well (knuckle ranges 37 to 49 deg). Left glove ranges 0.7 to 8 deg: loose or mis-seated, redo it |
+| Held pose copied by the same glove | 3 of 3 hold steps passed within 2 s, scores 0.95, 0.995, 1.00. The sensing and the scorer are proven |
+| Three-take continuous lesson (crochet style) in the expert screens | mid 70s when the expert copies himself: a lesson and margin problem, not a sensing problem. Record clear poses for visitors; set the margin from the expert's own spread |
+| Typing finger detection | two clean runs: 17% and 31% of keys got a clear finger, 6% and 4% matched the chart. The solver's angles do not show keystrokes. Keep typing as a drill without a finger verdict, or try the raw driver stream |
+
+**Decisions taken today**: route B, one owner per capability, both contracts
+frozen (`RECONCILE.md` section 0). The product name is Geppetto; the rename
+checklist in `CLAUDE.md` is still open. Thresholds: pose lessons score at
+`perfect_deg = 15`, `wrong_deg = 60` on calibrated angles (applied in `4785ddd`).
+
+**Lane patches applied on main in `4785ddd`**: expert takes set
+`Step.weights` in the expert screens; the `openai` provider (Gemma on Verda)
+is registered in the backend; Rokoko binary names and the SDK path are right
+on macOS; coach model calls run off the tick and land on a later poll. Still
+not applied, optional: the decisions rubric into the scorer and `/health`
+counters (`decisions/STATUS-decisions.md`).
+
+**Running on this Mac at handover**: nothing. The gloves were returned at
+14:30 and `scripts/stop.sh` took the live stack down at 14:33: every part
+stopped in reverse order and all six ports came free; the core ignored SIGINT
+and SIGTERM and needed the script's SIGKILL after 9 s (a small core fix for
+later). The hour of raw captures is kept untracked in
+`logs/live/20261114-131952/` (1.5 GB). No lane session is running.
+Keys and tokens are in the git-ignored `.env` at the repo root.
+
 Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 10:55, on branch
 `core-overnight` (pushed to origin at 07:15, merged with `main` as of `9810bf5`). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the

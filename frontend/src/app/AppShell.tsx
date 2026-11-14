@@ -14,6 +14,7 @@ const links = [
     end: false,
   },
   { to: "/robot", label: "Robot", icon: <IconRobot />, end: false },
+  { to: "/typing", label: "Typing", icon: <IconRobot />, end: false },
 ];
 
 /** Lapis rail navigation with Settings, the AI Assistant state and glove status, wrapping every routed screen except the role select. */

@@ -1,5 +1,6 @@
 """Shared constants for the Geppetto backend: protocol values, motion maths, scoring and smoothing defaults."""
 
+import sys
 from pathlib import Path
 
 APP_TITLE = "Geppetto backend"
@@ -100,6 +101,15 @@ SCORE_SIGMA_FACTOR = 1.5
 FINGER_WEIGHT = 0.8
 TIMING_WEIGHT = 0.2
 MIN_SCORE_FRAMES = 2
+# Per-finger step weights (STATUS-weights.md, the core's [score] focus_min_weight and [record] weights). The worst
+# finger and the hint only ever name a finger weighted at least FOCUS_MIN_WEIGHT; with none that heavy, the heaviest
+# non-zero fingers stand in. Take consistency: a finger whose total flexion varies across the expert's takes by a
+# standard deviation of TAKE_CONSISTENT_DEG or less keeps weight 1, TAKE_INCONSISTENT_DEG or more drops to
+# TAKE_INCONSISTENT_FLOOR. Total flexion is three joints summed, so these are three times the core's per-joint numbers.
+FOCUS_MIN_WEIGHT = 0.3
+TAKE_CONSISTENT_DEG = 12.0
+TAKE_INCONSISTENT_DEG = 45.0
+TAKE_INCONSISTENT_FLOOR = 0.2
 # A reference whose every finger moves less than this much total flexion (peak to peak) is a held pose: its timing is
 # not scored, since aligning two near-constant series says nothing about when the learner moved.
 STATIC_REFERENCE_RANGE_DEG = 12.0
@@ -174,10 +184,11 @@ LLM_GEMINI_TIMEOUT_S = 20.0
 LLM_GEMINI_HINT_TIMEOUT_S = 4.0
 HTTP_SERVICE_UNAVAILABLE = 503
 LLM_GEMINI_VIDEO_TIMEOUT_S = 120.0
-OLLAMA_NUM_CTX = 16000
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
-DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_OPENAI_MODEL = "google/gemma-4-31B-it"  # an OpenAI-compatible endpoint, e.g. Gemma on Verda (verda/)
+# The tuned coach (coach_tune/, COACH_MODEL=tuned): Gemma 4 E2B with our LoRA merged, served by vLLM on Verda.
+DEFAULT_TUNED_MODEL = "geppetto-coach-e2b"
+TUNED_TIMEOUT_S = 2.0
 LLM_TEMPERATURE = 0.4
 # A field whose json_schema_extra holds {LLM_SCHEMA_SKIP_KEY: True} is left out of every schema sent to a model (the
 # expert's take ids and per-finger tolerance, which only POST /recordings/model fills). Such a field needs a default.
@@ -266,8 +277,9 @@ MEDIA_MAX_DURATION_S = 4 * 3600.0
 REPO_ROOT = BACKEND_ROOT.parent
 ROKOKO_SDK_DIRNAME = "Rokoko Device SDK"
 ROKOKO_SDK_BIN = "bin"
-ROKOKO_SOLVER_EXE = "rkk-hand-solver.exe"
-ROKOKO_DRIVER_EXE = "rokoko-sdk.exe"
+_EXE = ".exe" if sys.platform == "win32" else ""
+ROKOKO_SOLVER_EXE = f"rkk-hand-solver{_EXE}"
+ROKOKO_DRIVER_EXE = f"rokoko-sdk{_EXE}"
 ROKOKO_STUDIO_PROCESS = "Rokoko Studio.exe"
 ROKOKO_DRIVER_HOST = "127.0.0.1"
 ROKOKO_DRIVER_RGMP_PORT = 12276
@@ -414,3 +426,27 @@ DEV_REVEAL_DIRS = {
 }
 # An export id is a file name in <data_dir>/exports (with or without .geppetto.json), or a lesson id for its newest backup.
 DEV_EXPORT_NAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,159}$"
+
+# Core lesson export (services/core_export.py): every stored take and lesson is also written, locally, as a core lesson
+# folder (SPEC.md "Lesson files": lesson.json, trace.npz, frames/step_XX.jpg), the format Arpan's local tools read
+# (coach_tune/build_dataset.py, weights/check_lessons.py) and the one verda/gemma_client.py turns into the prompt for the
+# model hosted on Verda. Nothing is uploaded. The folders live under <data_dir>/<CORE_EXPORT_DIR_NAME> unless
+# CORE_EXPORT_DIR names another folder; CORE_EXPORT=false turns the export off.
+CORE_EXPORT_DIR_NAME = "core_lessons"
+CORE_EXPORT_TAKES_DIR = "takes"
+CORE_EXPORT_LESSONS_DIR = "lessons"
+CORE_EXPORT_MANIFEST_FILE = "manifest.json"
+CORE_EXPORT_SCHEMA = "geppetto.core-export/1"
+CORE_LESSON_SCHEMA = "geppetto.lesson/1"
+CORE_LESSON_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_-]*$"
+# The worker re-checks the stored files this often, and at once when a take or lesson is saved or deleted.
+CORE_EXPORT_SYNC_INTERVAL_S = 30.0
+# After a save the worker waits this long, so a burst of saves (several takes, a lesson publish) becomes one sync.
+CORE_EXPORT_DEBOUNCE_S = 0.5
+# The repo root that holds Arpan's core/ and config.toml; the export borrows the core's recorder from it, read only.
+REPO_ROOT = BACKEND_ROOT.parent
+VERDA_LANE_DIR = REPO_ROOT / "verda"
+# Lesson steps recorded as separate takes are joined into one trace with this gap between them, in seconds.
+CORE_EXPORT_STEP_GAP_S = 0.02
+# Who demonstrated, when the take has no lesson to name the expert.
+CORE_EXPORT_DEFAULT_EXPERT = "expert"

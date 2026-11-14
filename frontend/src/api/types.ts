@@ -6,7 +6,7 @@
 export type Side = 'left' | 'right';
 export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-export type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'shadow_puppets' | 'general';
+export type Skill = 'table_tennis' | 'piano' | 'finnish_fingerspelling' | 'fingerspelling' | 'shadow_puppets' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 /** Which hands a move, step or recording uses: one hand (left or right) or both. */
 export type Hands = Side | 'both';
@@ -99,6 +99,8 @@ export interface Step {
   tolerance: Tolerance;
   /** Older single video link; read as a tutorial video synced at 0 s when `tutorial_video` is absent (see tutorialVideoOf). */
   video_url: string | null;
+  /** How much each finger counts on this step, 0 to 1; null or absent counts every finger fully. */
+  weights?: FingerWeights | null;
   /**
    * The expert talking the step through (POST /api/media), with the second at which the reference take starts in it. The
    * learner's Tutorial plays the reference hand in sync with it. Absent or null when there is none.
@@ -144,6 +146,9 @@ export interface MediaAttachRequest {
   offset_s?: number;
 }
 
+/** Per-finger step weights, 0 to 1. A light finger costs less and is never named as the one to fix. */
+export type FingerWeights = Record<Finger, number>;
+
 export interface TestSpec {
   kind: 'table_tennis_rally' | 'piano_play_along' | 'air_typing';
   opponent: 'bot' | 'two_player';
@@ -168,6 +173,8 @@ export interface Calibration {
   side: Side;
   flat: Record<Finger, JointTriple>;
   fist: Record<Finger, JointTriple>;
+  /** Additive (demo kiosk): flat hand, thumb folded across the palm. Null or absent until captured. */
+  thumb?: Record<Finger, JointTriple> | null;
   created_at: string;
 }
 
@@ -215,13 +222,16 @@ export interface GenerateLessonRequest {
 
 export interface GenerateLessonResponse {
   lesson: Lesson;
-  provider: string;
+  provider: ModelProvider;
   attempts: number;
 }
 
+/** `thumb` (flat hand, thumb folded) is additive, for the demo kiosk's guest calibration. */
+export type CalibrationCapturePhase = 'flat' | 'fist' | 'thumb';
+
 export interface CalibrationRequest {
   side: Side;
-  phase: 'flat' | 'fist';
+  phase: CalibrationCapturePhase;
   duration_s?: number;
 }
 
@@ -320,6 +330,8 @@ export type ScoreRequest = (
   reference_calibration_id?: string;
   /** Which hand to score; omit to let the backend pick. */
   side?: Side;
+  /** The step's per-finger weights; omit to count every finger fully. */
+  weights?: FingerWeights | null;
 };
 
 export interface CoachHintRequest {
@@ -336,8 +348,9 @@ export interface CoachHintRequest {
 }
 
 export interface CoachHintResponse {
+  /** With provider 'offline' this is the one-sentence offline note. */
   hint: string;
-  provider: string;
+  provider: ModelProvider;
 }
 
 export interface CoachPlanRequest {
@@ -361,7 +374,7 @@ export interface CoachPlanResponse {
   drills: Drill[];
   /** Where this learner struggles, written for the master. */
   master_note: string;
-  provider: string;
+  provider: ModelProvider;
 }
 
 export interface MotionFromTextRequest {
@@ -374,7 +387,7 @@ export interface MotionFromTextResponse {
   motion: MotionSpec;
   explanation: string;
   /** 'fake' when the keyword rules answered. */
-  provider: string;
+  provider: ModelProvider;
 }
 
 /** Optional fields of POST /api/lessons/generate_from_video next to the video itself. */
@@ -387,7 +400,14 @@ export interface VisionHandsResponse {
   hands: { side: Side; wrist_pos: [number, number, number] | null; landmarks: [number, number, number][] }[];
 }
 
-export type LlmProvider = 'fake' | 'gemini' | 'ollama';
+export type LlmProvider = 'fake' | 'gemini' | 'openai';
+
+/**
+ * Who answered a model call (the `provider` field): 'gemini', 'openai' (Gemma on Verda), 'fake' or 'fake (rate limited)'
+ * (a template after every model failed), 'offline' (the coach's offline note), 'algorithmic' (the rule-based cue) or
+ * 'mock'. Show it with features/shared/ModelLabel, never as raw text in user copy.
+ */
+export type ModelProvider = 'gemini' | 'openai' | 'fake' | 'fake (rate limited)' | 'offline' | 'algorithmic' | 'mock' | (string & {});
 
 export interface SmoothingState {
   enabled: boolean;
@@ -400,6 +420,9 @@ export interface DevState {
   smoothing: SmoothingState;
   llm_provider: LlmProvider;
   simulator_motion: MotionSpec;
+  /** Read-only: the providers the default role tries, in order, and who answered last (a provider name or 'offline'). */
+  llm_chain?: string[];
+  llm_answered_by?: string | null;
 }
 
 export type DevStatePatch = Partial<Omit<DevState, 'smoothing'>> & { smoothing?: Partial<SmoothingState> };

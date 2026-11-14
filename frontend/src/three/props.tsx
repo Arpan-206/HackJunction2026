@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three';
+import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3, type Material } from 'three';
 import type { HandHandle } from './Hand';
 import { toonGradient } from './materials';
 import { Optional } from './atmosphere';
@@ -28,6 +28,16 @@ function inflate(geo: BufferGeometry, amount: number): BufferGeometry {
 }
 
 const toon = (color: string) => new MeshToonMaterial({ color, gradientMap: toonGradient() });
+
+/** Frees the geometry and material of every mesh under `root` (a prop built by hand in a useMemo). */
+function disposeMeshes(root: Group): void {
+  root.traverse((o) => {
+    if (o instanceof Mesh) {
+      o.geometry.dispose();
+      (o.material as Material).dispose();
+    }
+  });
+}
 
 function inked(parent: Group, geo: BufferGeometry, mat: MeshToonMaterial, line: MeshBasicMaterial, amount: number): Mesh {
   const m = new Mesh(geo, mat);
@@ -106,16 +116,7 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
     return g;
   }, [stage.ink, rubber]);
 
-  useEffect(
-    () => () =>
-      group.traverse((o) => {
-        if (o instanceof Mesh) {
-          o.geometry.dispose();
-          (o.material as MeshToonMaterial).dispose();
-        }
-      }),
-    [group],
-  );
+  useEffect(() => () => disposeMeshes(group), [group]);
   return <primitive object={group} />;
 }
 
@@ -157,6 +158,9 @@ export function Keyboard({ keys = 11, y = -0.49, handRef, activeKey = null }: Ke
     });
     return { g, list, whiteBase };
   }, [keys, y, stage.ink]);
+
+  // The keys, their ink hulls and materials belong to this keyboard: free them when it unmounts or is rebuilt.
+  useEffect(() => () => disposeMeshes(built.g), [built]);
 
   const gold = useMemo(() => new Color(stage.gold), [stage.gold]);
   const tmp = useRef(new Vector3());

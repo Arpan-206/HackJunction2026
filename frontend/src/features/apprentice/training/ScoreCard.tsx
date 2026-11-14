@@ -33,6 +33,8 @@ interface ScoreCardProps {
   /** The hand drawn in the 3D score, and its side. */
   pose?: HandFrame | null;
   side?: Side;
+  /** Fingers the step weights too little to correct (lightFingers); never named as the one to fix. */
+  light?: readonly Finger[];
   /** The step's own tolerance, so the margin line can say what the margin allowed. */
   tolerance?: Tolerance;
 }
@@ -51,13 +53,13 @@ function consistentHint(hint: string, weakest: Finger): string | null {
  * (Settings, or click to flip), a large Cinzel numeral (gold only at mastery), the margin of error it was judged with, and
  * one line about the weakest finger, all derived from the displayed scores.
  */
-export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer, pose, side = 'right', tolerance }: ScoreCardProps) {
+export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer, pose, side = 'right', tolerance, light = [] }: ScoreCardProps) {
   const overall = Math.round(result.overall);
   const mastery = isMastery(result);
   const margin = result.margin ?? 'standard';
   // A high rep under a widened margin is good work, but gold stays for the standard or strict margin.
   const goldKept = !mastery && overall >= MASTERY && result.within_tolerance && MARGIN_QUIET.includes(margin);
-  const weakest = weakestFinger(result);
+  const weakest = weakestFinger(result, light);
   const weakScore = Math.round(result.per_finger[weakest]);
   const allGood = weakScore >= OK_FROM;
   const hint = allGood ? null : consistentHint(result.hint, weakest);

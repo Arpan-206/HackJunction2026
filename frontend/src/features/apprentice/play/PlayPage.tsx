@@ -110,7 +110,7 @@ function PlayRound({ lesson }: { lesson: Lesson }) {
   const { track } = useReferenceTrack(step, side);
   const [margin] = useMargin();
   const [showProps] = useShowProps();
-  const config = useMemo(() => configFromTolerance(step.tolerance, margin), [step.tolerance, margin]);
+  const config = useMemo(() => configFromTolerance(step.tolerance, margin, step.weights), [step.tolerance, margin, step.weights]);
   const recordStart = useRef<() => void>(() => {});
   const coach = useCoach({ track, gloves, side, config, mode: 'flow', clumsy: false, onRecordStart: () => recordStart.current() });
   const performS = track ? Math.min(PERFORM_MAX_S, Math.max(PERFORM_MIN_S, track.period)) : PERFORM_MIN_S;

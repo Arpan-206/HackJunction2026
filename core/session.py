@@ -12,12 +12,14 @@ import numpy as np
 from . import hand as H
 from .calibration import Calibrations
 from .coach import Coach, CoachLine
+from .priors.facts import from_scorer as prior_facts
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
 from .robot import SOURCES as ROBOT_SOURCES
 from .robot import Retargeter
 from .scorer import FrameScore, MirrorScorer, StepScorer, Tolerances
 from .tasks import TASKS, task_state
 from .tasks.piano import PianoTask
+from .tasks.typing import TypingTask
 
 log = logging.getLogger("geppetto.session")
 
@@ -88,6 +90,7 @@ class Session:
         self._pinch_fired: dict[str, bool] = {"left": False, "right": False}
         self.answers: dict[str, str] = {}
         self.piano: PianoTask | None = None
+        self.typing: TypingTask | None = None
         self.seq = 0
         root = Path(cfg.get_path("_root", "."))
         self.robot: Retargeter | None = None
@@ -102,6 +105,9 @@ class Session:
             self.robot_error = f"{type(e).__name__}: {e}"
             log.warning("robot output disabled: %s", self.robot_error)
         self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
+        # Depth step (core/camera/depth_live.py), attached by __main__ with --depth; None leaves
+        # the frame exactly as before (no "depth" key, no yaw correction).
+        self.depth = None
 
     def log_attempt(self, summary: dict) -> None:
         """Append a step summary to logs/attempts.jsonl (visitor attempt log, for tuning tolerances later)."""
@@ -268,7 +274,8 @@ class Session:
                     else:
                         if self.mode != "record":
                             self.handle_command("set_mode", {"mode": "record"})
-                        self.handle_command("record_start", {})
+                        # the glove whose button was pressed is the one recorded
+                        self.handle_command("record_start", {"hand": side})
                 elif press == "DoublePress" and self.recorder.active:
                     self.handle_command("record_stop", {"save": False})
             elif self.mode in ("learn", "mirror", "duel"):
@@ -297,16 +304,56 @@ class Session:
         sc = self.cfg.score.camera if camera else self.cfg.score
         return Tolerances(float(sc.perfect_deg), float(sc.wrong_deg))
 
+    def _cal_for(self, side: str):
+        """The calibration applied to this side's hands, or None (fake, camera, none loaded)."""
+        if self.fake or self.sources.get(side) != "glove":
+            return None
+        return self.calibrations.by_side.get(side)
+
+    def _weights_for(
+        self, side: str, weights: dict[str, float]
+    ) -> tuple[dict[str, float], np.ndarray | None]:
+        """Step weights times the learner calibration's finger mask, and its slot mask."""
+        cal = self._cal_for(side)
+        if cal is None:
+            return dict(weights), None
+        mask = cal.finger_weights()
+        return (
+            {f: float(weights.get(f, 1.0)) * mask[f] for f in H.FINGERS},
+            cal.slot_weights(),
+        )
+
+    def _mirror_scorer(self, learner: str) -> MirrorScorer:
+        """Mirror mode: every finger counts, minus joints either hand's calibration cannot read."""
+        w, slots = self._weights_for(learner, {f: 1.0 for f in H.FINGERS})
+        for m in self.sides_with_role("master"):
+            mw, mslots = self._weights_for(m, w)
+            w = mw
+            if mslots is not None:
+                slots = mslots if slots is None else slots * mslots
+        return MirrorScorer(
+            learner,
+            self.cfg.score,
+            self._tol_for(learner),
+            self.cfg.session.mirror_delay_ms,
+            w,
+            slots,
+        )
+
     def _rest(self, side: str) -> tuple[np.ndarray, np.ndarray]:
         rp = self.cfg.rest_pose[side]
         return np.asarray(rp.p, dtype=float), np.asarray(rp.q, dtype=float)
 
-    def _master_hand_for_recording(self) -> str:
+    def _master_hand_for_recording(self, wanted: str | None = None) -> str:
+        """A master glove first; else the hand asked for (the glove whose button was
+        pressed); else the first tracked hand."""
         masters = [
             s for s in self.sides_with_role("master") if self.hands.get(s) is not None
         ]
         if masters:
             return masters[0]
+        if wanted in SIDES and self.hands.get(wanted) is not None:
+            return wanted
         tracked = [
             s for s in SIDES if self.hands.get(s) is not None and self.hands[s].tracked
         ]
@@ -333,7 +380,10 @@ class Session:
         )
         self.scorers = {}
         for s in sides:
-            sc = StepScorer(s, self.lesson, step, self.cfg.score, self._tol_for(s))
+            w, slots = self._weights_for(s, step.weights)
+            sc = StepScorer(
+                s, self.lesson, step, self.cfg.score, self._tol_for(s), w, slots
+            )
             sc.reset_attempt(t)
             self.scorers[s] = sc
         self.emit_event(
@@ -397,6 +447,7 @@ class Session:
     def _attempt_failed(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None and self.step_index is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=False)
+        summary = prior_facts(summary, sc)  # PRIORS_ASL / PRIORS_PIANO, off by default
         self.log_attempt(summary)
         log.info("attempt failed: %s", summary)
         self.emit_coach(self.coach.on_summary(t_us, summary))
@@ -423,6 +474,7 @@ class Session:
     def _stuck(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=True)
+        summary = prior_facts(summary, sc)  # PRIORS_ASL / PRIORS_PIANO, off by default
         self.log_attempt(summary)
         log.info("stuck: %s", summary)
         self.emit_event(
@@ -534,6 +586,8 @@ class Session:
             "score": None,
             "task": {},
         }
+        if self.depth is not None:
+            self.depth.apply(self.hands, t)
         dec = int(self.cfg.hand.joint_decimals)
         for side in SIDES:
             h = self.hands.get(side)
@@ -606,8 +660,12 @@ class Session:
 
         if self.task == "piano":
             self._piano_tick(t)
+        if self.task == "typing":
+            self._typing_tick(t)
         frame["task"] = task_state(self)
         frame["robot"] = self.robot_block(t)
+        if self.depth is not None:
+            frame["depth"] = self.depth.block()
         self.emit_coach_flush(t)
         return frame
 
@@ -709,9 +767,7 @@ class Session:
             self.start_step(self.step_index or 0)
         elif mode == "mirror":
             l = self.learner_sides()[0]
-            self.mirror = MirrorScorer(
-                l, self.cfg.score, self._tol_for(l), self.cfg.session.mirror_delay_ms
-            )
+            self.mirror = self._mirror_scorer(l)
         elif mode == "playback":
             self.playback_t0_us = self.now()
             self.step_index = 0
@@ -724,6 +780,43 @@ class Session:
             if self.task == "piano"
             else None
         )
+        self.typing = (
+            TypingTask(
+                self.cfg.get_path("typing", self.cfg.piano), self.task_config, self.fake
+            )
+            if self.task == "typing"
+            else None
+        )
+
+    def _typing_tick(self, t_us: int) -> None:
+        if self.typing is None:
+            return
+        for side in SIDES:
+            h = self.hands.get(side)
+            self.typing.feed(t_us, side, h.angles if (h is not None and h.tracked) else None)
+        for v in self.typing.due(t_us):
+            hand = v["detected"]["hand"] if v["detected"] else None
+            self.emit_event("keystroke", hand, v)
+
+    def cmd_keystroke(self, args: dict) -> dict:
+        """Typing task: one keydown from the viewer. The verdict follows as a `keystroke` event."""
+        if self.typing is None:
+            raise CommandError("bad_state", "keystroke needs the typing task")
+        key = args.get("key")
+        t = args.get("t", self.now())
+        if not isinstance(t, int) or isinstance(t, bool):
+            raise CommandError("bad_args", "t must be an integer in core microseconds")
+        ks = self.typing.keystroke(key, t)
+        if ks is None:
+            raise CommandError("bad_args", f"no chart key {key!r}")
+        return {"id": ks.id, "key": ks.key, "due_ms": int(self.typing.p["post_ms"])}
+
+    def cmd_typing_reset(self, args: dict) -> dict:
+        """Typing task: clear the per-finger tally."""
+        if self.typing is None:
+            raise CommandError("bad_state", "typing_reset needs the typing task")
+        self.typing.reset_tally()
+        return {"ok": True}
 
     def _piano_tick(self, t_us: int) -> None:
         if self.piano is None:
@@ -789,12 +882,7 @@ class Session:
         if self.mode == "mirror":
             if self.sides_with_role("master") and self.learner_sides():
                 l = self.learner_sides()[0]
-                self.mirror = MirrorScorer(
-                    l,
-                    self.cfg.score,
-                    self._tol_for(l),
-                    self.cfg.session.mirror_delay_ms,
-                )
+                self.mirror = self._mirror_scorer(l)
             else:
                 self.mode, self.mirror = "idle", None
         self.emit_session()
@@ -832,7 +920,7 @@ class Session:
             raise CommandError("bad_state", "mode must be record")
         if self.recorder.active:
             raise CommandError("busy", "already recording")
-        side = self._master_hand_for_recording()
+        side = self._master_hand_for_recording(args.get("hand"))
         title = str(args.get("title") or f"{self.task} lesson")
         source = self.sources.get(side, "glove")
         self.recorder.start(
@@ -860,7 +948,12 @@ class Session:
         if not self.recorder.active:
             raise CommandError("bad_state", "not recording")
         save = bool(args.get("save", True))
-        lesson = self.recorder.stop(self.now(), save=save)
+        mcal = self._cal_for(self.recorder.master_hand)
+        lesson = self.recorder.stop(
+            self.now(),
+            save=save,
+            usable=None if mcal is None else mcal.finger_weights(),
+        )
         if save and lesson is None:
             self.emit_event("recording_stopped", None, {"lesson_id": None})
             self.emit_session()

@@ -29,13 +29,16 @@ class Calibration(BaseModel):
     side: Side
     flat: dict[str, Triple] = Field(default_factory=_zero_flexion)
     fist: dict[str, Triple] = Field(default_factory=_zero_flexion)
+    # Additive (demo kiosk): flat hand with the thumb folded across the palm. The thumb barely moves between flat
+    # and a loose fist, so this pose gives its real range. None until captured; scoring does not read it yet.
+    thumb: dict[str, Triple] | None = None
     created_at: str
 
-    @field_validator("flat", "fist")
+    @field_validator("flat", "fist", "thumb")
     @classmethod
-    def _all_fingers(cls, value: dict[str, Triple]) -> dict[str, Triple]:
+    def _all_fingers(cls, value: dict[str, Triple] | None) -> dict[str, Triple] | None:
         """Require exactly the five fingers."""
-        if set(value) != set(c.FINGERS):
+        if value is not None and set(value) != set(c.FINGERS):
             raise ValueError(f"expected exactly the keys {list(c.FINGERS)}")
         return value
 
@@ -166,6 +169,10 @@ class ScoreRequest(BaseModel):
     use_latest_calibration: bool = False
     attempt_calibration_id: str | None = None
     reference_calibration_id: str | None = None
+    weights: FingerValues | None = Field(
+        default=None,
+        description="The step's per-finger weights, 0 to 1; null counts every finger fully.",
+    )
 
     @model_validator(mode="after")
     def _one_reference(self) -> "ScoreRequest":

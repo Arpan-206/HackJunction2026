@@ -25,13 +25,13 @@ Position is `null` in the contract unless a webcam (MediaPipe) or Coil Pro suppl
 ## Google DeepMind
 
 7. **Where exactly do you use Gemini?**
-Gemini Flash generates validated lesson JSON from natural language (structured output with the Lesson JSON schema), rewords coaching hints, and (built, fake provider tested) `POST /api/coach/plan` writes a practice plan from attempt scores and `POST /api/motion/from_text` turns text into a `MotionSpec`. Fallbacks: Gemma 4 via Ollama, then a deterministic fake. [VERIFIED in code: providers `gemini`, `ollama`, `fake`]
+Gemini Flash generates validated lesson JSON from natural language (structured output with the Lesson JSON schema), rewords coaching hints, and (built, fake provider tested) `POST /api/coach/plan` writes a practice plan from attempt scores and `POST /api/motion/from_text` turns text into a `MotionSpec`. Fallbacks: Gemma 4 on Verda, then a deterministic fake. [VERIFIED in code: providers `gemini`, `ollama`, `fake`]
 
 8. **Is the LLM scoring the learner?**
 No. Scoring is deterministic (per-finger angle error, tolerance, timing). The LLM only explains. This is deliberate so scores are fair and reproducible. [VERIFIED]
 
 9. **Why Gemma and not only Gemini?**
-Offline, no key, no latency, privacy of body data. Gemma 4 E4B runs through Ollama on a laptop. Needs the model pulled in advance. [VERIFIED for existence, research/05; UNVERIFIED for demo-day speed on our laptop]
+Offline, no key, no latency, privacy of body data. Gemma 4 runs on Verda, our own GPU endpoint, as the fallback behind Gemini. Needs the Verda endpoint up in advance. [VERIFIED for existence, research/05; UNVERIFIED for demo-day speed on our laptop]
 
 10. **How do you stop the LLM hallucinating invalid lessons?**
 Structured output with a JSON schema, then pydantic validation, retry up to two times with errors fed back, then fall back to a template. [VERIFIED in CONTRACT.md]

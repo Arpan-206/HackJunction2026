@@ -27,6 +27,11 @@ export const CALIBRATION_MIN_RANGE_RAD = 0.05;
 export const STATIC_REFERENCE_RANGE_DEG = 12;
 /** Motion presets that are held poses by definition. */
 export const STATIC_PRESETS = ['hold_pose', 'idle'];
+/** Per-finger step weights: the worst finger and the hint only name a finger weighted at least this. */
+export const FOCUS_MIN_WEIGHT = 0.3;
+export const TAKE_CONSISTENT_DEG = 12;
+export const TAKE_INCONSISTENT_DEG = 45;
+export const TAKE_INCONSISTENT_FLOOR = 0.2;
 
 const RELAXED_FLEXION = [
   [0.1, 0.18, 0.15],
@@ -156,7 +161,7 @@ export function isStatic(reference: Series): boolean {
  * (`isStaticRef` true, or unset and the reference barely moves) has no beat to be early or late for: the warp path on a
  * near-constant series is arbitrary, so the timing offset is reported as 0 instead of that noise.
  */
-export function compare(reference: Series, attempt: Series, fps = SCORE_FPS, isStaticRef?: boolean): Comparison {
+export function compare(reference: Series, attempt: Series, fps = SCORE_FPS, isStaticRef?: boolean, jointMask?: number[][] | null): Comparison {
   const errorDeg = {} as Record<Finger, number>;
   const deviationDeg = {} as Record<Finger, number>;
   const signedLags: number[] = [];
@@ -165,12 +170,14 @@ export function compare(reference: Series, attempt: Series, fps = SCORE_FPS, isS
     const ref = reference.map((f) => f[fi]);
     const att = attempt.map((f) => f[fi]);
     const path = dtwPath(ref, att);
+    const m = jointMask?.[fi];
+    const total = m ? (v: number[]) => v[0] * m[0] + v[1] * m[1] + v[2] * m[2] : sum3;
     let absSum = 0;
     let signedSum = 0;
     let lagSigned = 0;
     let lagAbs = 0;
     for (const [ri, ai] of path) {
-      const diff = sum3(att[ai]) - sum3(ref[ri]);
+      const diff = total(att[ai]) - total(ref[ri]);
       absSum += Math.abs(diff);
       signedSum += diff;
       lagSigned += ai - ri;
@@ -296,22 +303,49 @@ export function buildHint(
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
 
+/** Per-finger weights clipped to 0..1; null (or a missing finger) counts fully (scoring.weight_map). */
+export function weightMap(weights?: Partial<Record<Finger, number>> | null): Record<Finger, number> {
+  const out = {} as Record<Finger, number>;
+  for (const f of FINGER_NAMES) out[f] = Math.min(1, Math.max(0, weights?.[f] ?? 1));
+  return out;
+}
+
+/** Fingers that may be named as the one to fix: weight at or above the minimum, else the heaviest non-zero ones. */
+export function focusFingers(weights: Record<Finger, number>, minWeight = FOCUS_MIN_WEIGHT): Finger[] {
+  const out = FINGER_NAMES.filter((f) => weights[f] >= minWeight && weights[f] > 0);
+  if (out.length) return out;
+  const top = Math.max(...FINGER_NAMES.map((f) => weights[f]));
+  return FINGER_NAMES.filter((f) => top > 0 && weights[f] === top);
+}
+
 /**
  * Turns alignment statistics into the contract's ScoreResult, judged with the learner's margin of error. Per-finger bands
- * (tolerance.finger_angle_deg) give each finger its own Gaussian and limit; the worst finger is then the one furthest
- * outside its own band, which is the largest error when every band is the same.
+ * (tolerance.finger_angle_deg) give each finger its own Gaussian and limit (the worst finger is the one furthest outside
+ * its own band). With step weights, the finger part of `overall` is their weighted mean, a zero-weight finger never breaks `within_tolerance`,
+ * and the worst finger and the hint only name a finger weighted at least FOCUS_MIN_WEIGHT.
  */
-export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Margin = DEFAULT_MARGIN): ScoreResult {
+export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Margin = DEFAULT_MARGIN, weights?: Partial<Record<Finger, number>> | null): ScoreResult {
   const limits = thresholds(margin, stepTolerance.angle_deg, stepTolerance.timing_ms);
   const fingerLimits = fingerThresholds(stepTolerance, margin);
   const tolerance = widened(stepTolerance, margin);
   const band = (f: Finger) => angleFor(tolerance, f);
   const perFinger = FINGER_NAMES.map((f) => gaussianScore(cmp.errorDeg[f], band(f)));
   const timing = gaussianScore(cmp.timingAbsMs, tolerance.timing_ms);
-  const overall = FINGER_WEIGHT * (perFinger.reduce((s, v) => s + v, 0) / perFinger.length) + TIMING_WEIGHT * timing;
-  const within = FINGER_NAMES.every((f) => cmp.errorDeg[f] <= band(f)) && cmp.timingAbsMs <= tolerance.timing_ms;
-  let worst: Finger = 'thumb';
-  for (const f of FINGER_NAMES) if (cmp.errorDeg[f] / band(f) > cmp.errorDeg[worst] / band(worst)) worst = f;
+  const w = weightMap(weights);
+  let fingersPart: number;
+  if (!weights) fingersPart = perFinger.reduce((s, v) => s + v, 0) / perFinger.length;
+  else {
+    const total = FINGER_NAMES.reduce((s, f) => s + w[f], 0);
+    fingersPart = total > 0 ? FINGER_NAMES.reduce((s, f, i) => s + w[f] * perFinger[i], 0) / total : 100;
+  }
+  const overall = FINGER_WEIGHT * fingersPart + TIMING_WEIGHT * timing;
+  const within = FINGER_NAMES.every((f) => w[f] <= 0 || cmp.errorDeg[f] <= band(f)) && cmp.timingAbsMs <= tolerance.timing_ms;
+  const focusList = focusFingers(w);
+  const focus = focusList.length ? focusList : FINGER_NAMES;
+  let worst: Finger = focus[0];
+  for (const f of focus) if (cmp.errorDeg[f] / band(f) > cmp.errorDeg[worst] / band(worst)) worst = f;
+  const focusDeviation: Partial<Record<Finger, number>> = {};
+  for (const f of focus) focusDeviation[f] = cmp.deviationDeg[f];
   const per = {} as Record<Finger, number>;
   FINGER_NAMES.forEach((f, i) => (per[f] = round1(perFinger[i])));
   return {
@@ -320,10 +354,39 @@ export function toResult(cmp: Comparison, stepTolerance: Tolerance, margin: Marg
     timing: round1(timing),
     within_tolerance: within,
     worst_finger: worst,
-    hint: buildHint(cmp.deviationDeg, cmp.timingSignedMs, limits, fingerLimits),
+    hint: buildHint(focusDeviation, cmp.timingSignedMs, limits, fingerLimits),
     warnings: [],
     margin,
   };
+}
+
+/** (joint mask (5, 3), finger weights) from a calibration's usable joints; null if a phase is missing (scoring.calibration_masks). */
+export function calibrationMasks(cal: Calibration): { joints: number[][]; fingers: Record<Finger, number> } | null {
+  const r = rangesOf(cal);
+  if (!r) return null;
+  const fingers = {} as Record<Finger, number>;
+  FINGER_NAMES.forEach((f, i) => (fingers[f] = r.usable[i].some(Boolean) ? 1 : 0));
+  return { joints: r.usable.map((row) => row.map((u) => (u ? 1 : 0))), fingers };
+}
+
+/** (weights, spread in degrees) per finger from several takes of one step (scoring.take_weights). */
+export function takeWeights(takes: Series[]): { weights: Record<Finger, number>; spreadDeg: Record<Finger, number> } {
+  const weights = {} as Record<Finger, number>;
+  const spreadDeg = {} as Record<Finger, number>;
+  FINGER_NAMES.forEach((f, fi) => {
+    if (takes.length < 2) {
+      weights[f] = 1;
+      spreadDeg[f] = 0;
+      return;
+    }
+    const means = takes.map((t) => toDeg(t.reduce((s, frame) => s + sum3(frame[fi]), 0) / t.length));
+    const mu = means.reduce((s, v) => s + v, 0) / means.length;
+    const sd = Math.sqrt(means.reduce((s, v) => s + (v - mu) ** 2, 0) / means.length);
+    const frac = Math.min(1, Math.max(0, (sd - TAKE_CONSISTENT_DEG) / (TAKE_INCONSISTENT_DEG - TAKE_CONSISTENT_DEG)));
+    weights[f] = Math.round((1 - frac * (1 - TAKE_INCONSISTENT_FLOOR)) * 100) / 100;
+    spreadDeg[f] = round1(sd);
+  });
+  return { weights, spreadDeg };
 }
 
 interface Ranges {
@@ -385,12 +448,36 @@ export function scoreFrames(
   tolerance: Tolerance,
   calibration?: { own: Calibration | null; reference: Calibration | null },
   margin: Margin = DEFAULT_MARGIN,
+  weights?: Partial<Record<Finger, number>> | null,
 ): ScoreResult {
   const ref = resample(referenceFrames, side);
   let att = resample(attemptFrames, side);
   const warnings: string[] = [];
-  if (calibration?.own) att = calibrateAttempt(att, calibration.own, calibration.reference, warnings);
-  return { ...toResult(compare(ref, att), tolerance, margin), warnings };
+  let jointMask: number[][] | null = null;
+  let w = weights ?? null;
+  if (calibration?.own) {
+    att = calibrateAttempt(att, calibration.own, calibration.reference, warnings);
+    const masked = applyCalibrationMasks(calibration.own, w, warnings);
+    jointMask = masked.jointMask;
+    w = masked.weights;
+  }
+  return { ...toResult(compare(ref, att, SCORE_FPS, undefined, jointMask), tolerance, margin, w), warnings };
+}
+
+/** The score handler's calibration step: joints the attempt calibration cannot read leave the sum, fingers with none get weight 0. */
+export function applyCalibrationMasks(
+  own: Calibration,
+  weights: Partial<Record<Finger, number>> | null,
+  warnings: string[],
+): { jointMask: number[][] | null; weights: Partial<Record<Finger, number>> | null } {
+  const masks = calibrationMasks(own);
+  if (!masks || masks.joints.every((row) => row.every((v) => v === 1))) return { jointMask: null, weights };
+  const base = weightMap(weights);
+  const out = {} as Record<Finger, number>;
+  for (const f of FINGER_NAMES) out[f] = base[f] * masks.fingers[f];
+  const dropped = FINGER_NAMES.filter((f) => masks.fingers[f] === 0);
+  if (dropped.length) warnings.push(`this calibration cannot read the ${dropped.join(', ')}; not scored`);
+  return { jointMask: masks.joints, weights: out };
 }
 
 export type { JointTriple };

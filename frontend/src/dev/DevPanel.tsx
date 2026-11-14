@@ -4,6 +4,7 @@ import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
 import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
 import { isDev } from '../features/apprentice/pipeline/flags';
 import { clearPracticeHistory, resetDemoHistory } from '../features/apprentice/pipeline/demoHistory';
+import { isKiosk } from '../features/shared/kiosk';
 import './devPanel.css';
 
 /** The old, sticky localStorage flag. It is cleared on sight so a dev panel switched on long ago never resurfaces. */
@@ -41,7 +42,8 @@ function shouldShow(): boolean {
   } catch {
     /* storage unavailable */
   }
-  return isDev();
+  // A kiosk never shows the dev panel, whatever the URL says: a visitor could type ?dev=1.
+  return isDev() && !isKiosk();
 }
 
 /**
@@ -187,9 +189,14 @@ function Body({ onLeave }: { onLeave: () => void }) {
           {!state && <option value="">unknown</option>}
           <option value="fake">fake</option>
           <option value="gemini">gemini</option>
-          <option value="ollama">ollama</option>
+          <option value="openai">openai (Gemma on Verda)</option>
         </select>
       </label>
+      {state?.llm_chain && state.llm_chain.length > 0 && (
+        <p>
+          Chain: {state.llm_chain.join(' then ')}. Last answer: {state.llm_answered_by ?? 'none yet'}.
+        </p>
+      )}
 
       <label>
         Theme

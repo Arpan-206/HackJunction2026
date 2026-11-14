@@ -44,7 +44,8 @@ export function ReplayPlayer({ items, side = 'right', hands, prop = 'none', onCl
   const framesA = useMemo(() => padTo(a.recording?.frames, duration), [a.recording, duration]);
   const framesB = useMemo(() => padTo(b.recording?.frames, duration), [b.recording, duration]);
   const pa = usePlayback(framesA, { loop });
-  const pb = usePlayback(framesB, { loop });
+  // The scrubber shows the first take's position; the second clock only draws, so it does not tick the page as well.
+  const pb = usePlayback(framesB, { loop, tick: false });
   const compare = items.length === 2;
   const both = !compare && hands === 'both';
   const loading = a.loading || b.loading;

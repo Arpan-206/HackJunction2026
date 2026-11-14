@@ -54,24 +54,64 @@ class FrameScore:
 
 
 def finger_errors(
-    learner: np.ndarray, master: np.ndarray, spread_weight: float = 0.5
+    learner: np.ndarray,
+    master: np.ndarray,
+    spread_weight: float = 0.5,
+    slot_weights: np.ndarray | None = None,
 ) -> tuple[dict[str, float], dict[str, float], dict[str, float]]:
     """Per finger: weighted mean absolute error, signed flexion diff, signed spread diff.
 
     Spread slots count `spread_weight` for each of the two fingers they separate.
-    Signed diffs are learner minus master.
+    `slot_weights` (18,) multiplies each slot; 0 drops a joint the calibration
+    marked unusable. A finger with every slot dropped reads 0 error (its weight
+    is 0 anyway). Signed diffs are learner minus master.
     """
     diff = np.asarray(learner, dtype=float) - np.asarray(master, dtype=float)
+    sw = (
+        np.ones(H.N_ANGLES)
+        if slot_weights is None
+        else np.asarray(slot_weights, dtype=float)
+    )
     err, flex, spread = {}, {}, {}
     for f in H.FINGERS:
         fs = H.FLEXION_SLOTS[f]
         ss = H.FINGER_SPREAD_SLOTS[f]
-        w = np.array([1.0] * len(fs) + [spread_weight] * len(ss))
+        w = np.array([1.0] * len(fs) + [spread_weight] * len(ss)) * sw[fs + ss]
         d = np.concatenate([diff[fs], diff[ss]])
-        err[f] = float(np.sum(w * np.abs(d)) / np.sum(w))
-        flex[f] = float(np.mean(diff[fs]))
+        err[f] = float(np.sum(w * np.abs(d)) / np.sum(w)) if np.sum(w) > 0 else 0.0
+        fw = sw[fs]
+        flex[f] = float(np.sum(fw * diff[fs]) / np.sum(fw)) if np.sum(fw) > 0 else 0.0
         spread[f] = float(np.mean(diff[ss])) if ss else 0.0
     return err, flex, spread
+
+
+def focus_fingers(weights: dict[str, float], min_weight: float) -> list[str]:
+    """Fingers that may be named as the one to fix: weight at or above `min_weight`.
+
+    With every finger below it, the heaviest fingers (weight above 0) stand in,
+    so a lesson of only light fingers still gets a correction. All zero: none.
+    """
+    w = {f: float(weights.get(f, 1.0)) for f in H.FINGERS}
+    out = [f for f in H.FINGERS if w[f] >= min_weight and w[f] > 0]
+    if out:
+        return out
+    top = max(w.values())
+    return [f for f in H.FINGERS if top > 0 and w[f] == top]
+
+
+def worst_finger(
+    fingers: dict[str, float], err: dict[str, float], focus: list[str]
+) -> str | None:
+    """Lowest score among the focus fingers, ties to the larger error; None without focus."""
+    if not focus:
+        return None
+    return min(focus, key=lambda f: (fingers[f], -err[f]))
+
+
+def weighted_err(err: dict[str, float], weights: dict[str, float]) -> float:
+    w = np.array([float(weights.get(f, 1.0)) for f in H.FINGERS])
+    e = np.array([float(err[f]) for f in H.FINGERS])
+    return float(np.sum(w * e) / np.sum(w)) if np.sum(w) > 0 else 0.0
 
 
 def hint_for(flex_diff: float, spread_diff: float) -> str | None:
@@ -90,16 +130,28 @@ def score_frame(
     weights: dict[str, float],
     tol: Tolerances,
     spread_weight: float = 0.5,
+    slot_weights: np.ndarray | None = None,
+    focus_min_weight: float = 0.0,
 ) -> tuple[FrameScore, dict, dict]:
-    """Unsmoothed score of one learner frame against one master pose."""
-    err, flex, spread = finger_errors(learner, master, spread_weight)
+    """Unsmoothed score of one learner frame against one master pose.
+
+    `overall` is the weight-averaged finger score. `worst` (the one to fix) is
+    chosen only among fingers weighted at least `focus_min_weight`.
+    """
+    err, flex, spread = finger_errors(learner, master, spread_weight, slot_weights)
     fingers = {f: tol.score(err[f]) for f in H.FINGERS}
     w = np.array([float(weights.get(f, 1.0)) for f in H.FINGERS])
-    overall = float(
-        np.sum(w * np.array([fingers[f] for f in H.FINGERS])) / max(1e-9, np.sum(w))
+    overall = (
+        float(np.sum(w * np.array([fingers[f] for f in H.FINGERS])) / np.sum(w))
+        if np.sum(w) > 0
+        else 1.0
     )
-    worst = min(H.FINGERS, key=lambda f: (fingers[f], -err[f]))
-    hint = hint_for(flex[worst], spread[worst]) if fingers[worst] < 1.0 else HINT_NONE
+    worst = worst_finger(fingers, err, focus_fingers(weights, focus_min_weight))
+    hint = (
+        hint_for(flex[worst], spread[worst])
+        if worst is not None and fingers[worst] < 1.0
+        else HINT_NONE
+    )
     return (
         FrameScore(
             hand=hand,
@@ -162,13 +214,26 @@ class StepScorer:
     """
 
     def __init__(
-        self, hand: str, lesson: Lesson, step: Step, score_cfg, tol: Tolerances
+        self,
+        hand: str,
+        lesson: Lesson,
+        step: Step,
+        score_cfg,
+        tol: Tolerances,
+        weights: dict[str, float] | None = None,
+        slot_weights: np.ndarray | None = None,
     ) -> None:
+        """`weights` overrides the step's own (the session multiplies in the learner's
+        calibration mask); `slot_weights` drops joints the learner's calibration marks unusable."""
         self.hand = hand
         self.lesson = lesson
         self.step = step
         self.cfg = score_cfg
         self.tol = tol
+        self.weights = dict(step.weights if weights is None else weights)
+        self.slot_weights = slot_weights
+        self.focus_min = float(score_cfg.get("focus_min_weight", 0.0))
+        self.focus = focus_fingers(self.weights, self.focus_min)
         self.ema = Ema(score_cfg.ema_tau_ms)
         self.attempt = 1
         self.history: list[float] = []  # best overall of each finished attempt
@@ -237,11 +302,13 @@ class StepScorer:
                     self.hand,
                     learner_angles,
                     cands[i],
-                    self.step.weights,
+                    self.weights,
                     self.tol,
                     self.cfg.spread_weight,
+                    self.slot_weights,
+                    self.focus_min,
                 )
-                key = (round(fs.overall, 6), -float(np.mean(list(fs.err_deg.values()))))
+                key = (round(fs.overall, 6), -weighted_err(fs.err_deg, self.weights))
                 if best_key is None or key > best_key:
                     best_i, best_key, best_fs = i, key, (fs, flex, spread)
             raw, flex, spread = best_fs
@@ -252,9 +319,11 @@ class StepScorer:
                 self.hand,
                 learner_angles,
                 self.step.key_angles,
-                self.step.weights,
+                self.weights,
                 self.tol,
                 self.cfg.spread_weight,
+                self.slot_weights,
+                self.focus_min,
             )
         self.last_flex, self.last_spread = flex, spread
 
@@ -264,9 +333,11 @@ class StepScorer:
         overall = float(sm["overall"])
         fingers = dict(sm["fingers"])
         err = dict(sm["err_deg"])
-        worst = min(H.FINGERS, key=lambda f: (fingers[f], -err[f]))
+        worst = worst_finger(fingers, err, self.focus)
         hint = (
-            hint_for(flex[worst], spread[worst]) if fingers[worst] < 1.0 else HINT_NONE
+            hint_for(flex[worst], spread[worst])
+            if worst is not None and fingers[worst] < 1.0
+            else HINT_NONE
         )
 
         self.best = max(self.best, overall)
@@ -339,7 +410,7 @@ class StepScorer:
         fs = self.last
         fingers = {}
         if fs is not None:
-            for f in H.FINGERS:
+            for f in self.focus:  # only weighted fingers are ever reported to fix
                 if fs.fingers[f] < self.cfg.pass_score:
                     fingers[f] = {
                         "score": round(float(fs.fingers[f]), 3),
@@ -469,12 +540,16 @@ class MirrorScorer:
         tol: Tolerances,
         delay_ms: float,
         weights: dict | None = None,
+        slot_weights: np.ndarray | None = None,
     ) -> None:
         self.hand = hand
         self.cfg = score_cfg
         self.tol = tol
         self.delay_us = int(delay_ms * 1000)
         self.weights = weights or {f: 1.0 for f in H.FINGERS}
+        self.slot_weights = slot_weights
+        self.focus_min = float(score_cfg.get("focus_min_weight", 0.0))
+        self.focus = focus_fingers(self.weights, self.focus_min)
         self.ema = Ema(score_cfg.ema_tau_ms)
         self.ref = LiveReference()
         self.last: FrameScore | None = None
@@ -496,8 +571,10 @@ class MirrorScorer:
                 self.weights,
                 self.tol,
                 self.cfg.spread_weight,
+                self.slot_weights,
+                self.focus_min,
             )
-            key = (round(fs.overall, 6), -float(np.mean(list(fs.err_deg.values()))))
+            key = (round(fs.overall, 6), -weighted_err(fs.err_deg, self.weights))
             if best_key is None or key > best_key:
                 best, best_key = (fs, flex, spread, int(times[i])), key
         raw, flex, spread, t_match = best
@@ -505,9 +582,11 @@ class MirrorScorer:
             t_us, overall=raw.overall, fingers=raw.fingers, err_deg=raw.err_deg
         )
         fingers, err = dict(sm["fingers"]), dict(sm["err_deg"])
-        worst = min(H.FINGERS, key=lambda f: (fingers[f], -err[f]))
+        worst = worst_finger(fingers, err, self.focus)
         hint = (
-            hint_for(flex[worst], spread[worst]) if fingers[worst] < 1.0 else HINT_NONE
+            hint_for(flex[worst], spread[worst])
+            if worst is not None and fingers[worst] < 1.0
+            else HINT_NONE
         )
         self.last = FrameScore(
             hand=self.hand,
