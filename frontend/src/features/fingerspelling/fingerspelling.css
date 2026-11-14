@@ -264,3 +264,78 @@
   background: var(--text-2);
   border-radius: 2px;
 }
+
+/* packs: letters that are not recorded yet, and letters outside the pack */
+.fs-strip__l--skip {
+  border-style: dashed;
+  color: var(--text-2);
+  position: relative;
+  height: auto;
+  min-height: 3rem;
+  width: auto;
+  min-width: 2.6rem;
+  padding: 0.2rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+}
+.fs-strip__why {
+  font: italic var(--step--1) / 1.1 var(--font-note);
+  color: var(--text-2);
+}
+.fs-skips {
+  margin: 0;
+  padding-left: 1.2rem;
+  font: var(--step-0) / 1.45 var(--font-ui);
+  color: var(--text-2);
+}
+.fs-card--empty {
+  border-style: dashed;
+  color: var(--text-2);
+}
+.fs-bars--none {
+  height: 2.6rem;
+}
+.fs-chart__empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font: italic var(--step-1) / 1.2 var(--font-note);
+  color: var(--text-2);
+}
+.fs-who {
+  font: var(--step-0) / 1.45 var(--font-ui);
+  margin: 0.4rem 0;
+  overflow-wrap: anywhere;
+}
+
+/* the packs on the skill page */
+.fs-packs {
+  margin: 1rem 0;
+}
+.fs-packs h2 {
+  font: 600 var(--step-1) / 1.2 var(--font-display);
+  margin: 0 0 0.5rem;
+}
+.fs-packs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.fs-packs__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font: var(--step-0) / 1.4 var(--font-ui);
+}
+.fs-packs__name {
+  font-weight: 600;
+  color: var(--text);
+}
+.fs-packs__count,
+.fs-packs__missing {
+  color: var(--text-2);
+}

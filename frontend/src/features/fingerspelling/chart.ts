@@ -1,8 +1,9 @@
 /**
- * The fingerspelling chart: the 26 letters of the American manual alphabet as the gloves see them. Each letter's shape is
+ * The ASL fingerspelling alphabet as the gloves see it: the 26 letters of the American manual alphabet. Other alphabets
+ * live in packs (`packs.ts`); this module holds the ASL shapes and the glove twins. Each letter's shape is
  * the `fs_<letter>` move in `mock/data/moves.json`, a verbatim copy of `backend/app/data/moves.json`, so the chart, the drill,
  * the seeded lessons, the scorer and `tools/make_pose_lessons.py` all read one table. Nothing here is a second copy of a
- * curl. Every curl is an estimate of a written handshape (SOURCES) until an expert records the letters with the gloves.
+ * curl. Every curl is an estimate of a written handshape (the ASL pack's sources) until an expert records the letters with the gloves.
  *
  * The solver gives finger curl and the wrist, not finger spread or which finger the thumb touches (STATUS.md), so some
  * letters look the same to the scorer. `gloveTwins` finds them from the curls, and `TWIN_REASON` says in words what really
@@ -13,14 +14,8 @@ import { FINGERS } from '../../api/types';
 import movesJson from '../../mock/data/moves.json';
 
 export const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-export type Letter = (typeof LETTERS)[number];
-
-/** Where the written handshapes come from. Checked on 14 Nov 2026. */
-export const SOURCES = [
-  { label: 'Stokoe notation, handshape (dez) table, Wikipedia', url: 'https://en.wikipedia.org/wiki/Stokoe_notation' },
-  { label: 'American manual alphabet, Wikipedia', url: 'https://en.wikipedia.org/wiki/American_manual_alphabet' },
-  { label: 'American Sign Language alphabet, Start ASL', url: 'https://www.startasl.com/american-sign-language-alphabet/' },
-] as const;
+/** One letter of any pack, upper case: 'A', or 'Ä' in the Finnish pack. */
+export type Letter = string;
 
 interface MoveRow {
   id: string;
@@ -53,7 +48,7 @@ function curlsOf(m: MotionSpec): Curls {
   throw new Error(`a letter is a hold or keyframes, not ${m.preset}`);
 }
 
-const MOVEMENT: Partial<Record<Letter, string>> = {
+const MOVEMENT: Record<string, string> = {
   J: 'Twist the wrist so the little finger draws a J.',
   Z: 'Draw a Z in the air with the index finger.',
   P: 'Turned down: the middle finger points to the floor.',
@@ -70,7 +65,7 @@ export const CHART: LetterShape[] = LETTERS.map((letter) => {
 const BY_LETTER = new Map(CHART.map((c) => [c.letter, c]));
 
 export function letterShape(letter: string): LetterShape | null {
-  return BY_LETTER.get(letter.toUpperCase() as Letter) ?? null;
+  return BY_LETTER.get(letter.toUpperCase()) ?? null;
 }
 
 /** Largest per-finger curl difference between two shapes, 0 to 1. */
@@ -145,7 +140,7 @@ export function twinReason(a: string, b: string): string {
 
 /** Letters of a word the chart can spell, upper case; anything else (spaces, digits, accents) is dropped. */
 export function spellable(word: string): Letter[] {
-  return [...word.toUpperCase()].filter((ch): ch is Letter => BY_LETTER.has(ch as Letter));
+  return [...word.toUpperCase()].filter((ch) => BY_LETTER.has(ch));
 }
 
 /** Milliseconds each letter of a spelled word lasts: about one letter a second, as the seeded word lessons. */
@@ -156,8 +151,12 @@ export const LETTER_MS = 1200;
  * squeezed into the slot. The same rule built the seeded word moves (fs_word_*), tested against them.
  */
 export function wordMotion(word: string, ms = LETTER_MS): MotionSpec {
-  const keys = spellable(word).flatMap((l) => {
-    const m = (BY_LETTER.get(l) as LetterShape).motion;
+  return lettersMotion(spellable(word).map((l) => (BY_LETTER.get(l) as LetterShape).motion), ms);
+}
+
+/** Letter motions in a row, one slot of `ms` each: a hold is one key, a keyframed letter keeps its keys squeezed in. */
+export function lettersMotion(motions: MotionSpec[], ms = LETTER_MS): MotionSpec {
+  const keys = motions.flatMap((m) => {
     if (m.preset === 'hold_pose') return [{ pose: { ...m.pose }, ms }];
     if (m.preset !== 'keyframes') return [];
     const total = m.keys.reduce((n, k) => n + k.ms, 0);

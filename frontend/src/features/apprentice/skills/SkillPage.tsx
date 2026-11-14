@@ -6,6 +6,7 @@ import { lessonTitle } from '../course/LessonCourse';
 import { HANDS_LABEL, type LessonState, type SkillProgress, type SkillView } from './catalogue';
 import { DifficultyLine } from './SkillParts';
 import { SkillShowcase, WorkshopShowcase } from './SkillShowcase';
+import { FingerspellingPacks } from '../../fingerspelling/PackList';
 import { useSkills } from './useSkills';
 import './skills.css';
 
@@ -139,6 +140,7 @@ export function SkillPage() {
               </ButtonLink>
             </div>
           )}
+          {skill.live && skill.id === 'fingerspelling' && <FingerspellingPacks />}
           <Facts skill={skill} />
           {skill.live ? (
             <WhatYouLearn skill={skill} progress={progress} />

@@ -1,5 +1,6 @@
 // Lane shadows, mock mode (no backend, no gloves): every shadow puppet from the skill page to a score card, a fingerspelling
-// letter lesson to a score card, the word drill spelling a word to its score, and the letter chart.
+// letter lesson to a score card, the word drill spelling a word to its score, the letter chart, and the Finnish pack
+// (sormiaakkoset) showing every letter as not recorded yet in the skill page, the drill and the chart.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/shadows-*.png.
 // Run: node e2e/shadows-walk.mjs   (starts the Vite dev server on :5182 if nothing answers there; E2E_PORT picks the port).
 // Playwright is taken from the repo's genui package, as in mock-walk.mjs.
@@ -114,11 +115,45 @@ try {
 
   step('fingerspelling: the letter chart, with the letters the gloves read alike');
   await page.getByRole('radio', { name: 'Letter chart' }).click();
-  await expectVisible(page.getByRole('list', { name: 'The 26 letters' }), 'letter grid');
+  await expectVisible(page.getByRole('list', { name: 'The letters of ASL fingerspelling alphabet' }), 'letter grid');
   await page.getByRole('button', { name: /^V/ }).first().click();
   await expectVisible(page.getByText(/do not sense spread/), 'U and V spread note');
   await settle(1500);
   await shot('05-chart');
+
+  step('fingerspelling packs: the skill page lists the ASL alphabet and the empty Finnish pack');
+  await page.goto(`${BASE}/apprentice/skills/fingerspelling`);
+  await expectVisible(page.getByRole('link', { name: 'ASL fingerspelling alphabet' }), 'ASL pack on the skill page');
+  await expectVisible(page.getByText('26 of 26 letters recorded'), 'ASL count');
+  await expectVisible(page.getByRole('link', { name: 'Finnish fingerspelling (sormiaakkoset)' }), 'Finnish pack on the skill page');
+  await expectVisible(page.getByText('Not recorded yet: S, U, O, M, I, Ä, Ö'), 'Finnish letters not recorded yet');
+
+  step('fingerspelling packs: the Finnish drill flags every letter and scores nothing');
+  await page.goto(`${BASE}/apprentice/fingerspelling`);
+  await page.getByRole('radio', { name: 'Finnish fingerspelling (sormiaakkoset)' }).click();
+  await page.getByRole('button', { name: 'SUOMI', exact: true }).click();
+  await expectVisible(page.getByRole('list', { name: 'How this word spells' }), 'plan strip');
+  if ((await page.locator('.fs-strip__why', { hasText: 'not recorded yet' }).count()) !== 5) throw new Error('every letter of SUOMI should show not recorded yet');
+  await page.getByRole('textbox', { name: 'Word to spell' }).fill('');
+  await page.getByRole('button', { name: 'Add Ä' }).click();
+  await page.getByRole('button', { name: 'Add Ö' }).click();
+  await page.getByRole('button', { name: 'Add Å' }).click();
+  if ((await page.getByRole('textbox', { name: 'Word to spell' }).inputValue()) !== 'ÄÖÅ') throw new Error('the Å, Ä and Ö buttons should type the letters');
+  await expectVisible(page.getByText('Å is not in Finnish fingerspelling (sormiaakkoset).'), 'Å outside the pack');
+  await expectVisible(page.getByText('Ä: not recorded yet.'), 'Ä not recorded yet');
+  if (!(await page.getByRole('button', { name: 'Nothing to spell yet' }).isDisabled())) throw new Error('the drill must not start on unrecorded letters');
+  await shot('06-finnish-drill');
+
+  step('fingerspelling packs: the Finnish chart shows not recorded yet, never a hand');
+  await page.getByRole('radio', { name: 'Letter chart' }).click();
+  await expectVisible(page.getByRole('list', { name: 'The letters of Finnish fingerspelling (sormiaakkoset)' }), 'Finnish letter grid');
+  if ((await page.locator('.fs-card__note', { hasText: 'Not recorded yet' }).count()) !== 7) throw new Error('all 7 Finnish cards should say not recorded yet');
+  await page.getByRole('button', { name: /^Ä/ }).first().click();
+  await expectVisible(page.locator('.fs-chart__empty', { hasText: 'Not recorded yet' }), 'no hand for an unrecorded letter');
+  if (await page.locator('.fs-chart__hand canvas').count()) throw new Error('an unrecorded letter must not show a hand');
+  await expectVisible(page.getByRole('link', { name: /Suvi/ }), 'the official chart as the reference');
+  await settle(800);
+  await shot('07-finnish-chart');
 } catch (e) {
   problems.push(`walk failed: ${e.message}`);
   await shot('zz-failure').catch(() => undefined);
