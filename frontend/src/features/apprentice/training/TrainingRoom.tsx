@@ -31,6 +31,7 @@ import { GuidanceModeSwitch } from './GuidanceModeSwitch';
 import { GhostOverlay } from './modes/GhostOverlay';
 import { Marionette } from './modes/Marionette';
 import { Shadow } from './modes/Shadow';
+import { ShadowPuppets } from './modes/ShadowPuppets';
 import { SideBySide } from './modes/SideBySide';
 import { Segmented } from './Segmented';
 import { ScoreCard } from './ScoreCard';
@@ -116,6 +117,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const guidance = useGuidance();
   // A two-handed step coaches one hand at a time on the stage (the learner picks which); every rep scores both hands.
   const twoHanded = step.hands === 'both';
+  // Shadow puppets are learnt on the wall: the lamp's shadow theatre replaces the guidance modes.
+  const theatre = lesson.skill === 'shadow_puppets';
   const [coached, setCoached] = useState<Side>(stepSide(step));
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
@@ -332,6 +335,8 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
           <div className="ap-stage__canvas">
             {refLoading || !track ? (
               <p className="note ap-state">Loading the expert's recording...</p>
+            ) : theatre ? (
+              <ShadowPuppets {...stageProps} step={step} />
             ) : guidance === 'marionette' ? (
               <Marionette {...stageProps} />
             ) : guidance === 'shadow' ? (
@@ -400,7 +405,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
 
           <Disclosure summary="Room settings" className="ap-settings">
             {(calibration.loading || calibrated) && calPanel}
-            <GuidanceModeSwitch />
+            {theatre ? <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p> : <GuidanceModeSwitch />}
             <PropSwitch prop={step.prop} />
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Lesson } from '../../../api';
+import type { HandFrame, Lesson, Step } from '../../../api';
 import { Hand, HandCanvas } from '../../../three';
 import { synthFrame } from '../../../three/motion';
+import { layoutFor, Puppet, puppetLayout, raiseFor, ShadowTheatreSet, THEATRE_CAMERA } from '../../../three/ShadowTheatre';
+import { shapeName } from '../training/modes/ShadowPuppets';
 import { lessonTitle } from '../course/LessonCourse';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import type { ReferenceTrack } from '../training/coach/reference';
@@ -53,9 +55,13 @@ export function SkillShowcase({ course }: { course: Lesson }) {
   return (
     <figure className="sk-show">
       <div className="sk-show__stage">
-        <HandCanvas preset="single" label={step ? `The expert's hand playing ${lessonTitle(step, shown)}` : 'The expert hand'} stage={{ decor: true }}>
-          <Hand side={side} style="chalk" getFrame={getFrame} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
-        </HandCanvas>
+        {course.skill === 'shadow_puppets' && step ? (
+          <TheatreShowcase key={step.id} step={step} getFrame={getFrame} />
+        ) : (
+          <HandCanvas preset="single" label={step ? `The expert's hand playing ${lessonTitle(step, shown)}` : 'The expert hand'} stage={{ decor: true }}>
+            <Hand side={side} style="chalk" getFrame={getFrame} rotation={DISPLAY_POSE.rotation} position={DISPLAY_POSE.position} />
+          </HandCanvas>
+        )}
       </div>
       <figcaption className="sk-show__cap">
         <span className="sk-show__now" aria-live="polite">
@@ -84,6 +90,35 @@ export function SkillShowcase({ course }: { course: Lesson }) {
         )}
       </figcaption>
     </figure>
+  );
+}
+
+/**
+ * Shadow puppets on the skill page: the expert's hands alone in the lamplit theatre, the shape named above the wall. The
+ * step's own hand replays the reference; a second hand (the bird, the snail) plays the step's guide motion.
+ */
+function TheatreShowcase({ step, getFrame }: { step: Step; getFrame: () => HandFrame | null }) {
+  const placements = useMemo(() => puppetLayout(layoutFor(step.move_id, step.hands), undefined, raiseFor(step.move_id)), [step.move_id, step.hands]);
+  const own = stepSide(step);
+  const name = shapeName(step);
+  return (
+    <div className="sp-theatre">
+      <HandCanvas bare shadows stage={{ cameraPosition: THEATRE_CAMERA }} label={`The expert's shadow on the wall making ${name.toLowerCase()}`}>
+        <ShadowTheatreSet />
+        <Puppet x={0} placements={placements}>
+          {(p) =>
+            p.side === own ? (
+              <Hand side={p.side} style="chalk" getFrame={getFrame} position={p.position} rotation={p.rotation} scale={p.scale} />
+            ) : (
+              <Hand side={p.side} style="chalk" motion={step.motion ?? undefined} position={p.position} rotation={p.rotation} scale={p.scale} />
+            )
+          }
+        </Puppet>
+      </HandCanvas>
+      <p className="sp-theatre__name" aria-hidden="true">
+        {name}
+      </p>
+    </div>
   );
 }
 

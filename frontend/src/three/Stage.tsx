@@ -169,6 +169,10 @@ export interface HandCanvasProps {
   label?: string;
   /** 'demand' renders only when something invalidates, for static or rarely changing scenes. Default 'always'. */
   frameloop?: 'always' | 'demand';
+  /** Skip the bottega stage (lights, bench, wall, orbit): the children bring their own set, as the shadow theatre does. */
+  bare?: boolean;
+  /** Turn on the renderer's shadow maps (PCF, crisp edges), for sets with a shadow-casting light. Default false. */
+  shadows?: boolean;
   children?: ReactNode;
 }
 
@@ -176,7 +180,7 @@ export interface HandCanvasProps {
  * Canvas + theme bridge + Stage in one. Put <Hand>, <Racket>, <Keyboard> as children. Fills its parent, so give the
  * parent a size.
  */
-export function HandCanvas({ preset = 'single', stage, sway = 0, className, style, label, frameloop = 'always', children }: HandCanvasProps) {
+export function HandCanvas({ preset = 'single', stage, sway = 0, className, style, label, frameloop = 'always', bare = false, shadows = false, children }: HandCanvasProps) {
   const { stage: colors } = useTheme();
   const [epoch, setEpoch] = useState(0);
   const box = useRef<HTMLDivElement>(null);
@@ -207,13 +211,14 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
           });
         }}
         flat
+        shadows={shadows ? 'percentage' : false}
         dpr={[1, 2]}
         camera={{ position: cam, fov: 30, near: 0.1, far: 80 }}
         gl={{ antialias: true, stencil: true, alpha: false }}
         style={{ touchAction: 'pan-y' }}
       >
         <StageColorsContext.Provider value={colors}>
-          <Stage
+          {!bare && <Stage
             groundY={stage?.groundY ?? p.groundY}
             showGrid={stage?.showGrid}
             showCircle={stage?.showCircle}
@@ -226,7 +231,7 @@ export function HandCanvas({ preset = 'single', stage, sway = 0, className, styl
             cameraPosition={cam}
             decor={stage?.decor ?? autoDecor}
             quality={stage?.quality ?? autoQuality}
-          />
+          />}
           <Suspense fallback={null}>{content}</Suspense>
         </StageColorsContext.Provider>
       </Canvas>

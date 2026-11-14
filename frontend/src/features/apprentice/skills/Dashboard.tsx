@@ -62,7 +62,11 @@ function SkillCard({ skill, progress, query }: { skill: SkillView; progress: Ski
     <li>
       <Link to={skillPath(skill.id)} className={`sk-card${skill.live ? '' : ' sk-card--workshop'}`}>
         <div className="sk-card__media">
-          <SkillStill className="sk-card__view" pose={skill.keyPose} label={`${skill.name}: the key pose on a chalk hand`} />
+          {skill.still ? (
+            <img className="sk-card__view sk-card__img" src={skill.still.src} alt={skill.still.alt} loading="lazy" />
+          ) : (
+            <SkillStill className="sk-card__view" pose={skill.keyPose} label={`${skill.name}: the key pose on a chalk hand`} />
+          )}
           {!skill.live && <span className="sk-card__veil" aria-hidden="true" />}
         </div>
         <div className="sk-card__body">

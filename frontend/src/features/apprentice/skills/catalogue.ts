@@ -38,7 +38,7 @@ export interface CatalogueEntry {
   timeToLearn: string;
   keyPose: KeyPose;
   /** A picture for the card instead of the key pose on a chalk hand, for a skill whose look is not the hand itself. */
-  still?: string;
+  still?: { src: string; alt: string };
   /** For a skill in the workshop: what its lessons would cover once an expert records them. */
   wouldTeach?: string[];
 }
@@ -79,7 +79,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     hands: 'two',
     timeToLearn: 'An evening',
     keyPose: hold(0.7, 0, 0, 0.9, 0.9),
-    still: '/stills/shadow-puppets.png',
+    still: { src: '/stills/shadow-puppets.jpg', alt: "The expert's rabbit, a hand's shadow on the plaster wall by lamplight" },
   },
   {
     id: 'surgical_grips',

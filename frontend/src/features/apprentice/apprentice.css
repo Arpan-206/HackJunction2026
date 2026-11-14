@@ -1333,3 +1333,51 @@
 .ap-settings {
   padding: 0 0.25rem;
 }
+
+/* Shadow puppets: the theatre fills the stage. The room is always dark (lamplight only, in every theme), so its labels use the
+   theatre's own candlelit parchment colour rather than the theme text colour. */
+.sp-theatre {
+  --sp-text: #f3e6c8;
+  --sp-ink: #2a1a0e;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.sp-theatre__name {
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  transform: translateX(-50%);
+  font: 700 var(--step-3) / 1.1 var(--font-display);
+  letter-spacing: 0.06em;
+  /* Lettered in ink on the lit plaster, where light text would wash out. */
+  color: var(--sp-ink);
+  text-shadow: 0 0 10px rgba(255, 236, 200, 0.55);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sp-theatre__who {
+  position: absolute;
+  /* On the dark bench, above the correction label's corner. */
+  bottom: 4.75rem;
+  z-index: 2;
+  max-width: 30%;
+  font: 500 var(--step-1) / 1.3 var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--sp-text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.sp-theatre__who--expert {
+  left: 1.25rem;
+}
+.sp-theatre__who--you {
+  right: 1.25rem;
+  text-align: right;
+}
+.sp-theatre__who--away {
+  font: italic 400 var(--step-0) / 1.3 var(--font-note);
+  letter-spacing: 0;
+}

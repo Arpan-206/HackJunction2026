@@ -87,7 +87,8 @@ describe('the propless seeded skills: shadow puppets, surgical grips and crochet
 
   it('shadow puppets: a live beginner skill for two hands, five named animals, a picture for its card', () => {
     const sp = byId(skills, 'shadow_puppets');
-    expect(sp).toMatchObject({ live: true, name: 'Shadow puppets', difficulty: 'beginner', hands: 'two', lessonCount: 5, still: '/stills/shadow-puppets.png' });
+    expect(sp).toMatchObject({ live: true, name: 'Shadow puppets', difficulty: 'beginner', hands: 'two', lessonCount: 5 });
+    expect(sp.still?.src).toBe('/stills/shadow-puppets.jpg');
     expect(sp.wouldTeach).toBeUndefined();
     expect(sp.courses[0].steps.map((s) => s.title.replace(/^Lesson \d+: /, ''))).toEqual(['The rabbit', 'The talking dog', 'The swan', 'The flapping bird', 'The snail']);
     expect(sp.courses[0].steps.filter((s) => s.hands === 'both').map((s) => s.move_id)).toEqual(['sp_flapping_bird', 'sp_snail']);
