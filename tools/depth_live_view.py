@@ -2,8 +2,8 @@
 
     python -m tools.depth_live_view [--host 127.0.0.1] [--port 7700] [--http 8790] [--usb]
 
-Opens http://localhost:8790 with three images refreshed about ten times a second:
-the colour frame, the depth map (blue 0.2 m to red 1.5 m, dim where confidence is
+Opens http://localhost:8790 with four images refreshed about ten times a second:
+an overlay (colour with the depth map blended in, strongest where confidence is high), the colour frame, the depth map (blue 0.2 m to red 1.5 m, dim where confidence is
 low) and the confidence map, plus the frame rate and the table plane height. With
 --usb it starts iproxy itself. One client at a time on the phone, so stop the core's
 --depth run first.
@@ -31,12 +31,14 @@ PAGE = """<!doctype html><title>Geppetto depth live</title>
 figcaption{padding:4px 2px;color:#bbb}#s{padding:8px 12px;font-family:ui-monospace,monospace;white-space:pre}</style>
 <div id=s>connecting</div>
 <div class=row>
+<figure><img id=overlay width=960 height=720><figcaption>overlay: colour with the depth map blended in, strongest where confidence is high</figcaption></figure>
+</div><div class=row>
 <figure><img id=rgb width=640 height=480><figcaption>colour 640x480</figcaption></figure>
 <figure><img id=depth width=640 height=480><figcaption>depth, blue 0.2 m to red 1.5 m, dim = low confidence</figcaption></figure>
 <figure><img id=conf width=320 height=240><figcaption>confidence: black low, grey medium, white high</figcaption></figure>
 </div>
 <script>
-const ids=['rgb','depth','conf'];let busy=false;
+const ids=['overlay','rgb','depth','conf'];let busy=false;
 async function tick(){if(busy)return;busy=true;try{const t=Date.now();
 for(const id of ids){const img=document.getElementById(id);await new Promise(r=>{img.onload=r;img.onerror=r;img.src='/'+id+'.jpg?t='+t});}
 const s=await (await fetch('/status.json')).json();document.getElementById('s').textContent=
@@ -64,6 +66,14 @@ class State:
         if f.confidence is not None:
             img = np.where((f.confidence == 0)[..., None], (img * 0.35).astype(np.uint8), img)
         depth_img = cv2.resize(img, (640, 480), interpolation=cv2.INTER_NEAREST)
+        # overlay: colour under a depth tint; the tint is strongest where the confidence is high
+        tint = cv2.resize(LUT[(n * 255).astype(np.uint8)], (f.bgr.shape[1], f.bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+        if f.confidence is not None:
+            alpha = cv2.resize((f.confidence.astype(np.float32) / 2.0), (f.bgr.shape[1], f.bgr.shape[0]), interpolation=cv2.INTER_LINEAR)
+            alpha = (0.15 + 0.5 * alpha)[..., None]
+        else:
+            alpha = np.full(f.bgr.shape[:2] + (1,), 0.5, np.float32)
+        overlay = (f.bgr.astype(np.float32) * (1 - alpha) + tint.astype(np.float32) * alpha).astype(np.uint8)
         conf_img = None if f.confidence is None else cv2.resize((f.confidence.astype(np.uint16) * 127).clip(0, 255).astype(np.uint8), (320, 240), interpolation=cv2.INTER_NEAREST)
         plane = None
         if f.plane is not None and f.transform is not None:
@@ -73,7 +83,7 @@ class State:
                   "depth_median_m": round(float(np.median(d[ok])), 3) if ok.any() else None,
                   "conf_high_pct": None if f.confidence is None else round(float((f.confidence == 2).mean() * 100), 1),
                   "error": self.cam.status().get("error")}
-        return f.bgr, depth_img, conf_img, status
+        return f.bgr, depth_img, conf_img, status, overlay
 
 
 def main() -> int:
@@ -122,8 +132,8 @@ def main() -> int:
                 return self.send(200, "application/json", body)
             if v is None:
                 return self.send(503, "text/plain", b"no frame yet")
-            bgr, depth_img, conf_img, _ = v
-            pick = {"/rgb.jpg": bgr, "/depth.jpg": depth_img, "/conf.jpg": conf_img}.get(path)
+            bgr, depth_img, conf_img, _, overlay = v
+            pick = {"/rgb.jpg": bgr, "/depth.jpg": depth_img, "/conf.jpg": conf_img, "/overlay.jpg": overlay}.get(path)
             if pick is None:
                 return self.send(404, "text/plain", b"not found")
             ok, jpg = cv2.imencode(".jpg", pick, [cv2.IMWRITE_JPEG_QUALITY, 80])
