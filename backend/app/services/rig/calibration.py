@@ -88,7 +88,11 @@ def _grade(
 def quality_of(
     hands: list[NeutralHand], heading_share: float | None
 ) -> CalibrationQuality:
-    """Noise at rest, bias away from a flat hand and heading reliability, graded by the bands in constants.py."""
+    """Noise at rest and bias away from a flat hand, graded by the bands in constants.py.
+
+    The heading share is reported as measured but no longer graded: the glove compass settles on its own once the
+    wearer moves, so it never blocks or downgrades a capture.
+    """
     noise = round(max(h.noise_deg for h in hands), 2) if hands else None
     bias = None
     if hands:
@@ -102,12 +106,6 @@ def quality_of(
     grades = (
         _grade(noise, c.QUALITY_NOISE_GOOD_DEG, c.QUALITY_NOISE_FAIR_DEG),
         _grade(bias, c.QUALITY_BIAS_GOOD_DEG, c.QUALITY_BIAS_FAIR_DEG),
-        _grade(
-            heading_share,
-            c.QUALITY_HEADING_GOOD,
-            c.QUALITY_HEADING_FAIR,
-            higher_is_better=True,
-        ),
     )
     notes: list[str] = []
     if grades[0]:
@@ -117,10 +115,6 @@ def quality_of(
     if grades[1]:
         notes.append(
             "The flat hands read as bent. Lay the fingers flat and straight, then capture again."
-        )
-    if grades[2]:
-        notes.append(
-            "The heading was unreliable. Move away from metal and magnets, wait a moment, then capture again."
         )
     return CalibrationQuality(
         noise_deg=noise,

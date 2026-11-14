@@ -37,7 +37,7 @@ export const DRIFT_MAX_YAW_DEG = 15;
 const GLOVE_MIN_DRIVER_FPS = 75;
 const GLOVE_MIN_STREAM_FPS = 40;
 const GLOVE_STALE_FRAME_MS = 250;
-const QUALITY = { noiseGood: 1, noiseFair: 3, biasGood: 22, biasFair: 32, headingGood: 0.95, headingFair: 0.6 };
+const QUALITY = { noiseGood: 1, noiseFair: 3, biasGood: 22, biasFair: 32 };
 const NEUTRAL_MIN_FRAMES = 10;
 const DEG = 180 / Math.PI;
 
@@ -99,7 +99,6 @@ interface Snapshot {
   lines: string[];
 }
 
-const SENSOR_WORDS: Partial<Record<GloveSensorName, string>> = { hub: 'back of the hand', arm: 'forearm' };
 const other = (s: Side): Side => (s === 'left' ? 'right' : 'left');
 
 /** Port of diagnosis.diagnose(): the fix steps, most important first. */
@@ -152,15 +151,6 @@ export function diagnoseRig(s: Snapshot): GloveIssue[] {
       const how = g.connection === 'usb' ? 'check its battery and its USB cable' : 'charge its battery or plug in its USB cable';
       issues.push({ code: 'low_frame_rate', side: g.side, blocking: false, title: `The ${g.side} glove sends ${Math.round(rate)} frames a second`, fix: `For the ${g.side} glove, ${how}. On Wi-Fi, move closer to the router and away from other networks.` });
     }
-  }
-  for (const g of connected) {
-    const bad = g.sensors.filter((x) => x.saturated.length).map((x) => `${SENSOR_WORDS[x.name] ?? x.name} (${x.saturated.join(', ')})`);
-    if (bad.length)
-      issues.push({ code: 'saturation', side: g.side, blocking: false, title: `Saturated sensors on the ${g.side} glove: ${bad.join(', ')}`, fix: 'Move away from metal and magnets (laptops, speakers, metal table frames), hold still for a few seconds, then recalibrate.' });
-  }
-  for (const g of connected) {
-    if (g.heading_reliable === false)
-      issues.push({ code: 'heading_unreliable', side: g.side, blocking: false, title: `The ${g.side} glove's heading is still settling`, fix: 'Move your hands to settle the compass: turn both wrists slowly a few times, away from metal. It settles with movement after a still moment.' });
   }
   return issues;
 }
@@ -276,11 +266,10 @@ export function qualityOf(hands: NeutralHand[], headingShare: number | null): Ca
   const grade = (v: number | null, good: number, fair: number, higher = false) => (v === null ? 0 : higher ? (v >= good ? 0 : v >= fair ? 1 : 2) : v <= good ? 0 : v <= fair ? 1 : 2);
   const noise = hands.length ? round(Math.max(...hands.map((h) => h.noise_deg))) : null;
   const bias = hands.length ? round(Math.max(...hands.map((h) => (Object.values(h.offsets).flat().reduce((a, v) => a + Math.abs(v), 0) / 15) * DEG))) : null;
-  const g = [grade(noise, QUALITY.noiseGood, QUALITY.noiseFair), grade(bias, QUALITY.biasGood, QUALITY.biasFair), grade(headingShare, QUALITY.headingGood, QUALITY.headingFair, true)];
+  const g = [grade(noise, QUALITY.noiseGood, QUALITY.noiseFair), grade(bias, QUALITY.biasGood, QUALITY.biasFair)];
   const notes: string[] = [];
   if (g[0]) notes.push('The hands moved during the capture. Rest them on the table and hold still.');
   if (g[1]) notes.push('The flat hands read as bent. Lay the fingers flat and straight, then capture again.');
-  if (g[2]) notes.push('The heading was unreliable. Move away from metal and magnets, wait a moment, then capture again.');
   return { noise_deg: noise, bias_deg: bias, heading_reliable: headingShare, grade: (['good', 'fair', 'poor'] as const)[Math.max(...g)], notes };
 }
 

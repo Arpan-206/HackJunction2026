@@ -13,7 +13,8 @@ import { useGloveRig } from './useGloveRig';
 import './gloves.css';
 
 function SensorList({ g }: { g: GloveDeviceStatus }) {
-  const bad = g.sensors.filter((s) => s.saturated.length);
+  // The compass (magnetometer) settles on its own once the hand moves, so it is never listed as a fault.
+  const bad = g.sensors.map((s) => ({ ...s, saturated: s.saturated.filter((x) => x !== 'magnetometer') })).filter((s) => s.saturated.length);
   if (!g.connected) return null;
   if (!bad.length) return <p className="gl-line">All seven sensors read normally.</p>;
   return (

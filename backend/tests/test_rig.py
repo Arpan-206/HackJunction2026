@@ -367,19 +367,20 @@ def test_low_frame_rate_mentions_battery_or_wifi() -> None:
     assert "battery" in issues[0].fix and "Wi-Fi" in issues[0].fix
 
 
-def test_saturation_says_move_away_from_metal_then_recalibrate() -> None:
+def test_saturation_and_an_unsettled_heading_raise_no_issue() -> None:
     sensors = [
         SensorStatus(name="index", saturated=["gyroscope"]),
         SensorStatus(name="hub", saturated=["magnetometer"]),
     ]
-    issues = diagnose(_snap(gloves=[_glove("left"), _glove("right", sensors=sensors)]))
-    assert [(i.code, i.side) for i in issues] == [("saturation", "right")]
-    assert (
-        "index (gyroscope)" in issues[0].title
-        and "back of the hand (magnetometer)" in issues[0].title
+    issues = diagnose(
+        _snap(
+            gloves=[
+                _glove("left", heading_reliable=False),
+                _glove("right", sensors=sensors),
+            ]
+        )
     )
-    assert "metal" in issues[0].fix and "recalibrate" in issues[0].fix
-    assert not issues[0].blocking
+    assert issues == []
 
 
 def test_unsubscribed_gloves_are_not_a_glove_fault() -> None:
@@ -467,7 +468,8 @@ def test_neutral_summary_and_quality_reading() -> None:
         and "still" in shaky.notes[0]
     )
     unreliable = quality_of([hand], 0.5)
-    assert unreliable.grade == "poor" and "metal" in unreliable.notes[0]
+    assert unreliable.grade == "good" and unreliable.notes == []
+    assert unreliable.heading_reliable == 0.5
 
 
 def _saved(hand) -> WearerCalibration:
