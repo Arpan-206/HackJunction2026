@@ -102,3 +102,41 @@ def test_duel_failed_move_step_resets_both_scorers(cfg, tmp_path):
             s.update_hand(side, h)
         s.tick(clock.now_us())
     assert all(sc.attempt == 2 for sc in s.scorers.values()), {k: v.attempt for k, v in s.scorers.items()}
+
+
+def test_fake_lessons_overwrite_their_own_folder(cfg, tmp_path):
+    fake.build_fake_lesson(cfg, tmp_path)
+    fake.build_fake_lesson(cfg, tmp_path)
+    fake.build_fake_wave_lesson(cfg, tmp_path)
+    fake.build_fake_wave_lesson(cfg, tmp_path)
+    assert sorted(d.name for d in tmp_path.iterdir() if d.is_dir()) == [fake.FAKE_LESSON_ID, fake.FAKE_WAVE_ID]
+
+
+async def test_replay_paces_on_one_device_clock(tmp_path):
+    """Two gloves with boot clocks 20 s apart, interleaved: the replay must take about the capture's span."""
+    import time
+    from tools.fake_rgmp_server import frame_bytes, make_definition, pack_definition
+    from tools.replay import ReplayServer
+    import asyncio
+    data = pack_definition(make_definition(1, "left", "transform")) + pack_definition(make_definition(2, "right", "transform"))
+    n, dt_us = 25, 12_000                     # 0.3 s of capture per device
+    for i in range(n):
+        data += frame_bytes(i * dt_us / 1e6, 2_728_979_320 + i * dt_us, "left", 1, "transform")
+        data += frame_bytes(i * dt_us / 1e6, 2_749_204_072 + i * dt_us, "right", 2, "transform")
+    cap = tmp_path / "two.rgmp"
+    cap.write_bytes(data)
+    srv = ReplayServer(cap, port=0, speed=1.0)
+    await srv.start()
+    reader, writer = await asyncio.open_connection("127.0.0.1", srv.port)
+    t0 = time.monotonic()
+    got = b""
+    while len(got) < len(data):
+        chunk = await asyncio.wait_for(reader.read(65536), 5.0)
+        if not chunk:
+            break
+        got += chunk
+    elapsed = time.monotonic() - t0
+    writer.close()
+    await srv.stop()
+    assert len(got) == len(data)
+    assert 0.2 <= elapsed <= 0.9, elapsed       # paced at about real time, not instant

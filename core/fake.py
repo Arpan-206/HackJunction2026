@@ -140,7 +140,7 @@ def build_fake_lesson(cfg, lessons_dir: Path, hold_s: float = 2.0, move_s: float
         s.name = name
         s.named_by = "manual"
         s.note = f"Reach the {name.lower()} shape and hold it."
-    lesson.save(Path(lessons_dir))
+    lesson.save(Path(lessons_dir), overwrite=True)
     return lesson
 
 
@@ -165,5 +165,5 @@ def build_fake_wave_lesson(cfg, lessons_dir: Path, seconds: float = 4.0, master_
     lesson.steps[0].name = "Finger wave"
     lesson.steps[0].named_by = "manual"
     lesson.steps[0].note = "Ripple the fingers in time with the ghost."
-    lesson.save(Path(lessons_dir))
+    lesson.save(Path(lessons_dir), overwrite=True)
     return lesson

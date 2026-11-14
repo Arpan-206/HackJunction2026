@@ -70,21 +70,27 @@ class ReplayServer:
                 for m in self.definitions:
                     writer.write(m)
                 await writer.drain()
+                # Each glove has its own boot clock, so pace on the first device seen and
+                # send the other devices' frames as they come in stream order.
+                pacer: int | None = None
                 prev_ts = None
                 wall = time.monotonic()
                 for prefix, ts, raw in self.messages:
                     if prefix == PREFIX_DEFINITION:
                         continue
-                    if ts is not None and prev_ts is not None:
-                        dt = (ts - prev_ts) / 1e6 / self.speed
-                        if 0 < dt < 1.0:
-                            wall += dt
-                            delay = wall - time.monotonic()
-                            if delay > 0:
-                                await asyncio.sleep(delay)
-                        elif dt < 0 or dt >= 1.0:   # a jump in the capture: restart pacing from now
-                            wall = time.monotonic()
-                    if ts is not None:
+                    dev = DATA_HDR.unpack_from(raw, OUTER.size)[0] if prefix == PREFIX_DATA else None
+                    if dev is not None and pacer is None:
+                        pacer = dev
+                    if ts is not None and dev == pacer:
+                        if prev_ts is not None:
+                            dt = (ts - prev_ts) / 1e6 / self.speed
+                            if 0 < dt < 1.0:
+                                wall += dt
+                                delay = wall - time.monotonic()
+                                if delay > 0:
+                                    await asyncio.sleep(delay)
+                            else:   # a gap or a jump in the capture: restart pacing from now
+                                wall = time.monotonic()
                         prev_ts = ts
                     writer.write(raw)
                     if prefix == PREFIX_DATA:

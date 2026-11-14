@@ -142,9 +142,9 @@ class Lesson:
                    source=d["source"], rate_hz=d["rate_hz"], duration_us=d["duration_us"],
                    steps=[Step.from_json(s) for s in d["steps"]], trace=trace, dir=dir)
 
-    def save(self, lessons_dir: Path, keyframes: bool = True) -> Path:
+    def save(self, lessons_dir: Path, keyframes: bool = True, overwrite: bool = False) -> Path:
         d = Path(lessons_dir) / self.id
-        if self.dir is None and d.exists():      # a new lesson must never overwrite an older one
+        if self.dir is None and d.exists() and not overwrite:   # a new lesson must never overwrite an older one
             n = 2
             while (Path(lessons_dir) / f"{self.id}-{n}").exists():
                 n += 1
