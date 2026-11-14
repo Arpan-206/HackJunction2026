@@ -27,3 +27,4 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["hardware: needs the real Rokoko gloves and driver, runs only with GLOVES_LIVE=1"]
