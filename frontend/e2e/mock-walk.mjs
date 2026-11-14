@@ -155,6 +155,8 @@ try {
   await shot('11-course');
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/steps/0`);
   await expectVisible(page.getByRole('button', { name: /Start with the strings/ }), 'Start with the strings button');
+  // The skinned hand and the room's shaders take a moment on the software renderer; shoot once they are drawn.
+  await settle(1500);
   await shot('12-room');
   await page.getByRole('button', { name: /Start with the strings/ }).click();
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button');
