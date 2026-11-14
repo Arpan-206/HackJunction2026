@@ -90,6 +90,15 @@ f = cam.read()          # newest DepthFrame or None, never blocks
 cam.status()            # connected, frames, fps, tracking, plane, error
 ```
 
+## WiFi instead of the cable
+
+The app listens on every interface, so the Mac can also connect over WiFi: skip
+`forward.sh` and pass the phone's WiFi address as `--host` (or set `host` under
+`[camera.geppetto_depth]` in config.toml). The app does not show its address yet; read it
+from Settings > Wi-Fi on the phone. Measured Sat 14 Nov 15:55 on the venue network:
+16 fps, arrival gaps median 46 ms, p90 130 ms, max 330 ms, against 30 fps and a steady
+33 ms over USB. Use the cable for the demo.
+
 ## Without a phone
 
 ```bash
