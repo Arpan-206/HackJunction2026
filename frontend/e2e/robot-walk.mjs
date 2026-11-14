@@ -169,8 +169,8 @@ try {
   await visible(teach, 'Teach the robot button');
   await teach.click();
   await visible(page.getByText(/The robot is copying/), 'playing line');
-  await canvasDrawn(page, '.rb-teach__stage', 'teach stage');
   await shot(page, '05-teach-playing');
+  await canvasDrawn(page, '.rb-teach__stage', 'teach stage');
   await visible(page.getByRole('heading', { name: 'The robot is the apprentice' }), 'result heading', 30000);
   await visible(page.getByText(/^Thumb \d+\./), 'thumb score line');
   await visible(page.getByText(/Ring: the robot has no ring finger/), 'ring line in result');
