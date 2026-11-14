@@ -120,6 +120,19 @@ Findings:
 The balance column is what the Verda console showed at that moment. Verda posts charges in 10 minute
 aggregates, so it lags the list-price estimate. Nothing is deployed now, so nothing bills.
 
+## Expert-priors lane: no GPU used
+
+The `expert-priors` lane (branch `expert-priors`, `core/priors/`, docs/PRIORS.md) planned one small Verda VM. Its job was to pull the FurElise piano motion capture (47 GB zip) and turn it into the core's 18 joint angles. It never ran on Verda.
+
+| When (Helsinki) | Action | Result | USD |
+| --- | --- | --- | --- |
+| 14 Nov 18:54 | Balance check (`core/priors/verda_vm.py balance`) | 200 EUR, no instance | 0 |
+| 14 Nov 18:56 | Start CPU.4V.16G at 0.048 USD/h | Refused by a permission prompt in the agent session | 0 |
+| 14 Nov 19:05 | Start again after the rules changed | CPU.4V.16G no longer free | 0 |
+| 14 Nov 19:05 | Start 1V100.4V at 0.244 USD/h | Refused by the Verda API: "Compute cannot be deployed using JUNCTION-2026 coupon balance until at least one payment method is added." | 0 |
+
+What this means for other lanes: VMs (the `instances` API) need a payment method on the account, even with coupon credit. Serverless Containers worked from the same credit earlier in the day (the Gemma runs above). The lane did the pull on the Mac instead, as HTTP range reads of only the left-hand joint arrays (335 MB, nothing raw saved). Lane spend: 0 USD. Nothing is running.
+
 ## How this scales to many skills
 
 Every recorded demonstration becomes one call. A handful of pictures and about 2500 tokens go in, and one
