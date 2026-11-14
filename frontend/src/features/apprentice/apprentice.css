@@ -849,6 +849,15 @@
   margin: 0;
   font-size: var(--step-0);
 }
+.ap-calib p {
+  margin: 0;
+  font-size: var(--step-1);
+}
+.ap-calib .ap-calib__count {
+  font: 600 var(--step-4) / 1 var(--font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: center;
+}
 .ap-intro__foot {
   display: flex;
   justify-content: flex-end;
