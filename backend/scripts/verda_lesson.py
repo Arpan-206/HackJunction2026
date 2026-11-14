@@ -27,13 +27,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import constants as c  # noqa: E402
-from app.core.config import Settings  # noqa: E402
-from app.core.utils import new_id, utc_now_iso  # noqa: E402
-from app.schemas.lesson import Lesson  # noqa: E402
-from app.services.llm.registry import UNSET_OPENAI_URL  # noqa: E402
-from app.services.storage.json_store import JsonStore  # noqa: E402
-from app.services.core_export import CoreLessonExporter  # noqa: E402
+from app import constants as c
+from app.core.config import Settings
+from app.core.utils import new_id, utc_now_iso
+from app.schemas.lesson import Lesson
+from app.services.core_export import CoreLessonExporter
+from app.services.llm.registry import UNSET_OPENAI_URL
+from app.services.storage.json_store import JsonStore
 
 ENDPOINT_FILE = c.VERDA_LANE_DIR / "out" / "endpoint.json"
 
@@ -54,7 +54,11 @@ def endpoint_settings(settings: Settings) -> tuple[str, str | None, str]:
     """Base URL, key and model from the backend settings, the base URL falling back to verda/out/endpoint.json."""
     base = settings.openai_base_url.rstrip("/")
     model = settings.openai_model
-    if "openai_base_url" not in settings.model_fields_set or not base or base == UNSET_OPENAI_URL:
+    if (
+        "openai_base_url" not in settings.model_fields_set
+        or not base
+        or base == UNSET_OPENAI_URL
+    ):
         base = ""
         if ENDPOINT_FILE.exists():
             info = json.loads(ENDPOINT_FILE.read_text(encoding="utf-8"))
@@ -72,8 +76,14 @@ def pick_folder(exporter: CoreLessonExporter, item_id: str, side: str | None) ->
     elif len(folders) > 1:
         folders = [f for f in folders if f.name.endswith("-right")] or folders
     if not folders:
-        entry = next((e for e in exporter.manifest()["entries"] if e["id"] == item_id), None)
-        why = (entry.get("reason") or f"no {side} hand") if entry else "no take or lesson with that id"
+        entry = next(
+            (e for e in exporter.manifest()["entries"] if e["id"] == item_id), None
+        )
+        why = (
+            (entry.get("reason") or f"no {side} hand")
+            if entry
+            else "no take or lesson with that id"
+        )
         raise SystemExit(f"nothing exported for {item_id}: {why}")
     return folders[0]
 
@@ -82,18 +92,33 @@ def main(argv: list[str] | None = None) -> int:
     """Pick the folder, then dry-run or call Gemma on Verda."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("id", help="a take id or a lesson id")
-    ap.add_argument("--side", choices=c.SIDES, default=None, help="for a two-hand take; default right")
+    ap.add_argument(
+        "--side",
+        choices=c.SIDES,
+        default=None,
+        help="for a two-hand take; default right",
+    )
     ap.add_argument("--text", default="", help="the expert's request to the model")
     ap.add_argument("--skill", default=None)
-    ap.add_argument("--dry-run", action="store_true", help="print what the model would get; call nothing")
-    ap.add_argument("--save", action="store_true", help="store the generated lesson in data/lessons")
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print what the model would get; call nothing",
+    )
+    ap.add_argument(
+        "--save", action="store_true", help="store the generated lesson in data/lessons"
+    )
     ap.add_argument("--out", default=None, help="also write the lesson JSON here")
     a = ap.parse_args(argv)
 
     settings = Settings()
-    exporter = CoreLessonExporter(settings.data_dir, settings.core_export_dir, enabled=True)
+    exporter = CoreLessonExporter(
+        settings.data_dir, settings.core_export_dir, enabled=True
+    )
     if not exporter.sync().available:
-        raise SystemExit("the core could not be imported from the repo root, so the take cannot be exported")
+        raise SystemExit(
+            "the core could not be imported from the repo root, so the take cannot be exported"
+        )
     folder = pick_folder(exporter, a.id, a.side)
     G = gemma_client()
     print(f"Recording folder: {folder}", file=sys.stderr)
@@ -107,9 +132,13 @@ def main(argv: list[str] | None = None) -> int:
 
     base, key, model = endpoint_settings(settings)
     if not base:
-        raise SystemExit("no Verda endpoint: set VERDA_GEMMA_URL (or OPENAI_BASE_URL) in backend/.env, or run verda/deploy.py")
+        raise SystemExit(
+            "no Verda endpoint: set VERDA_GEMMA_URL (or OPENAI_BASE_URL) in backend/.env, or run verda/deploy.py"
+        )
     if not key:
-        raise SystemExit("no Verda key: set VERDA_INFERENCE_KEY (or OPENAI_API_KEY) in backend/.env")
+        raise SystemExit(
+            "no Verda key: set VERDA_INFERENCE_KEY (or OPENAI_API_KEY) in backend/.env"
+        )
     endpoint = G.Endpoint(base_url=base, api_key=key, model=model)
     result = G.generate_lesson(folder, a.text, a.skill, endpoint=endpoint)
     text = json.dumps(result.lesson, indent=2)

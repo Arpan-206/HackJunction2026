@@ -15,23 +15,33 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.config import Settings  # noqa: E402
-from app.services.core_export import CoreLessonExporter  # noqa: E402
+from app.core.config import Settings
+from app.services.core_export import CoreLessonExporter
 
 
 def main() -> int:
     """One sync with the backend's own settings."""
     settings = Settings()
-    exporter = CoreLessonExporter(settings.data_dir, settings.core_export_dir, enabled=True)
+    exporter = CoreLessonExporter(
+        settings.data_dir, settings.core_export_dir, enabled=True
+    )
     report = exporter.sync()
     if not report.available:
-        print("The core could not be imported from the repo root, so nothing was exported.")
+        print(
+            "The core could not be imported from the repo root, so nothing was exported."
+        )
         return 1
     print(f"Export folder: {exporter.out_dir}")
-    print(f"Written: {len(report.exported)}  unchanged: {report.unchanged}  skipped: {len(report.skipped)}  "
-          f"removed: {len(report.removed)}  failed: {len(report.failed)}")
-    for label, items in (("written", report.exported), ("skipped", report.skipped), ("removed", report.removed),
-                         ("failed", report.failed)):
+    print(
+        f"Written: {len(report.exported)}  unchanged: {report.unchanged}  skipped: {len(report.skipped)}  "
+        f"removed: {len(report.removed)}  failed: {len(report.failed)}"
+    )
+    for label, items in (
+        ("written", report.exported),
+        ("skipped", report.skipped),
+        ("removed", report.removed),
+        ("failed", report.failed),
+    ):
         for item in items:
             print(f"  {label}: {item}")
     print(f"Manifest: {exporter.manifest_path}")
