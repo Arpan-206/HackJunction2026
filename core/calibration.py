@@ -100,6 +100,23 @@ class HandCalibration:
         mask[FLEX_SLOTS] = True
         return mask & ((self.fist - self.flat) > self.min_range_deg)
 
+    def slot_weights(self) -> np.ndarray:
+        """(18,) 1 or 0 per angle slot for the scorer: 0 on a flexion joint this calibration marks unusable.
+
+        An unusable joint stays raw while its neighbours are calibrated, so its
+        error against a calibrated reference means nothing. Spread slots stay 1.
+        """
+        w = np.ones(H.N_ANGLES)
+        w[FLEX_SLOTS] = self.usable[FLEX_SLOTS].astype(float)
+        return w
+
+    def finger_weights(self) -> dict[str, float]:
+        """1 per finger with at least one usable flexion joint, else 0 (the finger cannot be judged)."""
+        use = self.usable
+        return {
+            f: 1.0 if bool(use[H.FLEXION_SLOTS[f]].any()) else 0.0 for f in H.FINGERS
+        }
+
     def apply(self, angles: np.ndarray) -> np.ndarray:
         a = np.asarray(angles, dtype=float)
         use = self.usable
@@ -118,6 +135,10 @@ class HandCalibration:
         return {
             **self.origin,
             "usable_joints": int(self.usable.sum()),
+            "unusable": [
+                H.ANGLE_NAMES[i] for i in FLEX_SLOTS if not bool(self.usable[i])
+            ],
+            "finger_weights": self.finger_weights(),
             "flat_deg": {
                 f: round(float(np.mean(self.flat[H.FLEXION_SLOTS[f]])), 1)
                 for f in H.FINGERS
