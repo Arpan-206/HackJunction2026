@@ -27,7 +27,7 @@ class BlobFix:
 
 
 def test_one_glove_ignores_a_bare_hand_passing_through():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right")
     for k in range(60):
         t = k * 33_333
@@ -39,7 +39,7 @@ def test_one_glove_ignores_a_bare_hand_passing_through():
 
 
 def test_one_glove_without_a_dark_difference_keeps_the_nearest_blob():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right")
     for k in range(40):
         t = k * 33_333
@@ -51,25 +51,25 @@ def test_one_glove_without_a_dark_difference_keeps_the_nearest_blob():
 
 
 def test_one_glove_led_wins_and_ambiguity_holds():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right")
     a, b = REST["right"], REST["right"] + [0.2, 0, 0]
     f.apply({"right": h}, [BlobFix(a, 0, 0, 0.8)], 0)
     # the other side's ring is never taken; this side's ring is, even far away (after the jump gate)
     f.apply({"right": h}, [BlobFix(b, 33_333, 1, 0.9, led_side="left")], 33_333)
     assert np.allclose(h.wrist_p, a)
-    for k in range(2, 5):
+    for k in range(2, 8):           # the jump gate: 5 persistent fixes
         f.apply({"right": h}, [BlobFix(b, k * 33_333, k, 0.8, led_side="right")], k * 33_333)
     assert np.allclose(h.wrist_p, b)
     # two equally dark blobs equally far from the wrist: hold, do not switch
     c, d = b + [0.1, 0, 0], b - [0.1, 0, 0]
     n0 = f.held_ambiguous
-    f.apply({"right": h}, [BlobFix(c, 199_999, 6, 0.8), BlobFix(d, 199_999, 6, 0.8)], 199_999)
+    f.apply({"right": h}, [BlobFix(c, 299_999, 9, 0.8), BlobFix(d, 299_999, 9, 0.8)], 299_999)
     assert np.allclose(h.wrist_p, b) and f.held_ambiguous == n0 + 1
 
 
 def test_two_gloves_one_ring_names_its_hand():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     hl, hr = glove("left"), glove("right")
     # by x order these would be left then right; the ring says the lower-x blob is the right hand
     f.apply({"left": hl, "right": hr}, [BlobFix(REST["left"], 0, 1, 0.8, led_side="right"),
@@ -78,7 +78,7 @@ def test_two_gloves_one_ring_names_its_hand():
 
 
 def test_two_gloves_two_blobs_go_by_x_order():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     hl, hr = glove("left"), glove("right")
     f.apply({"left": hl, "right": hr}, [BlobFix(REST["right"], 0, 1, 0.8), BlobFix(REST["left"], 0, 1, 0.8)], 0)
     assert np.allclose(hl.wrist_p, REST["left"]) and np.allclose(hr.wrist_p, REST["right"])

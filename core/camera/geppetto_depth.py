@@ -223,6 +223,7 @@ class GeppettoDepthCamera:
         self.clock = clock or _MonotonicClock()
         self.on_packet = on_packet       # called with (arrival_us, packet bytes); the recorder uses it
         self._latest: DepthFrame | None = None
+        self._raw: tuple[int, bytes] | None = None   # newest packet not yet decoded
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -285,20 +286,30 @@ class GeppettoDepthCamera:
         now = int(self.clock.now_us())
         if self.on_packet is not None:
             self.on_packet(now, pkt)
-        f = parse_packet(pkt, now, self.latency_us)
-        if f is None:
+        # The reader thread only keeps the newest raw packet: decoding (JPEG, depth) waits for read(), so
+        # the socket is drained as fast as the link delivers and no frame is decoded that nobody reads.
+        h = parse_header(memoryview(pkt)[PREFIX.size:]) if len(pkt) >= PREFIX.size + HEADER_SIZE else None
+        if h is None:
             self.bad += 1
             return
-        h = parse_header(memoryview(pkt)[PREFIX.size:])
-        self.tracking = TRACKING.get(h.tracking) if h else None
+        self.tracking = TRACKING.get(h.tracking)
         with self._lock:
-            self._latest = f
+            self._raw = (now, pkt)
         self.error = None
         self.frames += 1
         self._arrivals.append(time.monotonic())
         del self._arrivals[:-120]
 
     def read(self) -> DepthFrame | None:
+        with self._lock:
+            raw, self._raw = self._raw, None
+        if raw is not None:
+            f = parse_packet(raw[1], raw[0], self.latency_us)
+            if f is None:
+                self.bad += 1
+            else:
+                with self._lock:
+                    self._latest = f
         with self._lock:
             return self._latest
 

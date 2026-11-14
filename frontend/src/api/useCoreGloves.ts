@@ -1,3 +1,4 @@
+import { delayProbe } from './delayProbe';
 import { useEffect, useRef, type RefObject } from 'react';
 import type { GloveFrame } from './types';
 
@@ -36,7 +37,10 @@ export function useCoreGloves(robotUrl: string | null): RefObject<GloveFrame | n
       ws.onmessage = (ev) => {
         if (typeof ev.data !== 'string') return;
         const f = parseGloveFrame(ev.data);
-        if (f) latest.current = f;
+        if (f) {
+          latest.current = f;
+          delayProbe.received(f.t);
+        }
       };
       ws.onerror = () => ws?.close();
       ws.onclose = () => {

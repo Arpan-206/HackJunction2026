@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import compat as compat_mod
+from .delay import STATS
 from . import fake as fake_mod
 from .clock import Clock
 from .coach import Coach
@@ -39,6 +40,7 @@ class ClientState:
     last_frame_us: int = 0
     queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=64))
     dropped: int = 0
+    enq_us: int = 0  # /ws/gloves only: the tick time of the newest frame queued (core/delay.py)
 
 
 class Core:
@@ -174,6 +176,7 @@ class Core:
                         compat_mod.glove_frame(self, t), separators=(",", ":")
                     )
                     for c in list(self.compat_clients.values()):
+                        c.enq_us = t
                         self._enqueue(c, text)
                 if self.robot_clients and frame.get("robot"):
                     msg = {"v": 1, "type": "robot", "t": t, **frame["robot"]}
@@ -368,7 +371,8 @@ class Core:
     async def handle_compat_ws(self, ws: WebSocket) -> None:
         """/ws/gloves: the teammate frontend's GloveFrame stream (core/compat.py)."""
         await ws.accept()
-        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz))
+        # two frames at most: a slow viewer gets the newest hand, never a backlog
+        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz), queue=asyncio.Queue(maxsize=2))
         key = id(ws)
         self.compat_clients[key] = c
         sender = asyncio.create_task(self._sender(c))
@@ -397,6 +401,9 @@ class Core:
             while True:
                 text = await c.queue.get()
                 await c.ws.send_text(text)
+                if c.enq_us:  # tick to socket write; frames still queued behind this one count as a tick each
+                    waiting = c.queue.qsize() * 1e6 / max(1.0, c.rate_hz)
+                    STATS.add("tick_to_sent", (self.clock.now_us() - c.enq_us + waiting) / 1000.0)
         except asyncio.CancelledError:
             return
         except Exception:
@@ -625,6 +632,16 @@ def create_app(core: Core) -> FastAPI:
         return JSONResponse(core.schemas.get(name))
 
     compat_mod.install_compat(app, core)
+
+    @app.get("/debug/delay")
+    def debug_delay():
+        # t0_wall_s: the wall clock at GloveFrame t = 0, so a viewer on this machine can time tick to received
+        t0 = getattr(core, "compat_t0_us", None)
+        t0_wall = None if t0 is None else time.time() - (core.clock.now_us() - t0) / 1e6
+        root = core.session.root
+        return {"stages_ms": STATS.snapshot(), "t0_wall_s": t0_wall,
+                "assumed_capture_latency_ms": float(core.cfg.camera.latency_us) / 1000.0,
+                "root": None if root is None else root.status()}
 
     @app.get("/debug")
     def debug_view():

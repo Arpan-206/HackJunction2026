@@ -1,3 +1,4 @@
+import { delayProbe } from '../api/delayProbe';
 import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Mesh, Vector3, type Quaternion, type Material } from 'three';
@@ -14,6 +15,8 @@ import { useStageAnchor, useStageColors } from './stageContext';
 
 /** The core's [rest_pose] wrist positions (config.toml), metres: wrist_pos here means "not moved". */
 const CORE_REST: Record<Side, [number, number, number]> = { left: [-0.15, 0.1, -0.2], right: [0.15, 0.1, -0.2] };
+/** The furthest the hand moves from its place on the stage, metres per axis: the core's work box half sizes. */
+const MAX_OFFSET_M: [number, number, number] = [0.225, 0.125, 0.15];
 
 export interface HandProps {
   side?: Side;
@@ -224,6 +227,7 @@ function HandBody({
     if (!target) target = rest;
 
     smoother.step(target, Math.min(delta, 0.1), smoothing, joints);
+    delayProbe.drawn();
     applyPose(rig, smoother);
     const g = inner.current;
     if (g) {
@@ -232,12 +236,13 @@ function HandBody({
       else pivot.set(0, 0, 0);
       if (followWristPos !== false && target.wrist_pos) {
         // the core's wrist position in metres, offset from its rest pose and scaled to the stage (hand-root lane)
+        // clamped to the core's work box half sizes, so the hand cannot leave the stage
         const r = CORE_REST[side];
-        pivot.set(
-          pivot.x + (smoother.pos[0] - r[0]) * HAND_SCALE,
-          pivot.y + (smoother.pos[1] - r[1]) * HAND_SCALE,
-          pivot.z + (smoother.pos[2] - r[2]) * HAND_SCALE,
-        );
+        const off = (k: number) => {
+          const m = MAX_OFFSET_M[k] * HAND_SCALE;
+          return Math.min(m, Math.max(-m, (smoother.pos[k] - r[k]) * HAND_SCALE));
+        };
+        pivot.set(pivot.x + off(0), pivot.y + off(1), pivot.z + off(2));
       }
       g.position.copy(pivot);
     }

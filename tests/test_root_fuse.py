@@ -115,7 +115,7 @@ def test_no_fix_leaves_hand_untouched():
 
 
 def test_rate_cap_jump_gate_hold_and_decay():
-    cfg = FuseConfig(max_speed_m_s=1.5, jump_m=0.15, jump_frames=3, hold_s=1.0, decay_s=1.0)
+    cfg = FuseConfig(max_speed_m_s=1.5, jump_m=0.15, jump_frames=3, hold_s=1.0, decay_s=1.0, box=False, one_euro=False)
     f = RootFuser(cfg)
     h = glove("right", 0)
     dt = 33_333
@@ -144,7 +144,7 @@ def test_rate_cap_jump_gate_hold_and_decay():
 
 
 def test_jump_accepted_after_three_frames():
-    f = RootFuser(FuseConfig(jump_frames=3, max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(jump_m=0.15, jump_frames=3, max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right", 0)
     f.apply({"right": h}, [Fix("right", REST["right"], 0, 0)], 0)
     far = REST["right"] + [0.3, 0, 0]
@@ -154,7 +154,7 @@ def test_jump_accepted_after_three_frames():
 
 
 def test_two_fixes_go_by_x_order_whatever_the_label():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     hl, hr = glove("left", 0), glove("right", 0)
     fixes = [Fix("left", REST["right"], 0, 1), Fix("left", REST["left"], 0, 1)]
     f.apply({"left": hl, "right": hr}, fixes, 0)
@@ -163,7 +163,7 @@ def test_two_fixes_go_by_x_order_whatever_the_label():
 
 
 def test_one_fix_one_glove_goes_to_that_glove():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     hl = glove("left", 0)
     p = REST["left"] + [0, 0.05, 0]
     f.apply({"left": hl, "right": None}, [Fix("right", p, 0, 1)], 0)
@@ -171,7 +171,7 @@ def test_one_fix_one_glove_goes_to_that_glove():
 
 
 def test_twice_on_one_hand_object_applies_once():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right", 0)
     p = REST["right"] + [0.05, 0, 0]
     f.apply({"right": h}, [Fix("right", p, 0, 1)], 0)
@@ -181,7 +181,7 @@ def test_twice_on_one_hand_object_applies_once():
 
 
 def test_camera_hands_are_left_alone():
-    f = RootFuser(FuseConfig(max_speed_m_s=100.0))
+    f = RootFuser(FuseConfig(max_speed_m_s=0.0, box=False, one_euro=False))
     h = glove("right", 0)
     h.source, h.anchor = "camera", "camera"
     p0 = h.wrist_p.copy()
@@ -223,7 +223,9 @@ def test_tracker_backprojects_onto_the_bench_and_locks_to_rest():
     a = tr.process(table_frame(0, 1_000_000))
     b = tr.process(table_frame(1, 1_033_333))
     assert tr.bench is not None and tr.bench.table.camera_height_m == pytest.approx(0.4, abs=0.01)
-    assert len(a) == 1 and np.allclose(a[0].p, REST["right"]) and a[0].p_bench[1] == pytest.approx(0.0, abs=0.01)
+    # x and z lock to the rest pose; y is the table height: floor_y_m + motion_scale * 0 m
+    assert len(a) == 1 and np.allclose(a[0].p, [REST["right"][0], 0.05, REST["right"][2]], atol=0.005)
+    assert a[0].p_bench[1] == pytest.approx(0.0, abs=0.01)
     assert np.linalg.norm(b[0].p_bench - a[0].p_bench) == pytest.approx(0.0458, abs=0.004)
     assert a[0].confidence == 1.0
 
@@ -299,10 +301,24 @@ def test_flag_on_with_a_hand_moves_the_wrist_and_sends_wrist_pos(cfg, tmp_path):
     s.root = HandRootLive(ListSource(clock), tr, RootFuser(FuseConfig(hold_s=1.0, decay_s=1.0)), threaded=False)
     out = [json.loads(x) for x in _run(s, clock, w, 180)]
     wp = [o["compat"]["wrist_pos"] for o in out]
-    assert wp[0] is not None and np.allclose(wp[0], REST["right"], atol=1e-3)
+    assert wp[0] is not None and np.allclose(np.array(wp[0])[[0, 2]], REST["right"][[0, 2]], atol=1e-3)
     moved = [p for p in wp[:60] if p is not None]
     # image right is the person's left when the phone faces them (camera_yaw_deg 180): core -x
-    assert REST["right"][0] - min(p[0] for p in moved) > 0.03       # the wrist followed the hand
+    # 5 cm of real motion times motion_scale 0.6
+    assert REST["right"][0] - min(p[0] for p in moved) > 0.02       # the wrist followed the hand
     assert out[59]["frame"]["hands"]["right"]["anchor"] == "camera"
     assert out[75]["frame"]["hands"]["right"]["anchor"] == "held"
     assert wp[-1] is None and out[-1]["frame"]["hands"]["right"]["wrist"]["p"] == pytest.approx(list(REST["right"]))
+
+
+def test_filter_presets_steady_is_the_default_and_fast_is_a_setting(cfg):
+    from core.root_fuse import FILTER_PRESETS
+
+    assert FuseConfig().preset == "steady" and FuseConfig().filter_params() == FILTER_PRESETS["steady"] == (2.0, 1.0)
+    assert FuseConfig(preset="fast").filter_params() == (6.0, 2.0)
+    assert FuseConfig(preset="fast", one_euro_beta=3.0).filter_params() == (3.0, 2.0)
+    assert FuseConfig.from_config(cfg).preset == "steady"
+    f = RootFuser(FuseConfig(preset="fast"))
+    assert f.state["left"].filt.beta == 6.0 and f.state["left"].filt.d_cutoff == 2.0
+    with pytest.raises(ValueError):
+        RootFuser(FuseConfig(preset="quick"))

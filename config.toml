@@ -408,12 +408,26 @@ swap_handedness = false
 # "bench": bench coordinates (y = height above the table) plus bench_offset_m.
 origin = "lock"
 bench_offset_m = [0.0, 0.0, -0.2]
-one_euro_min_cutoff = 2.0
-one_euro_beta = 4.0
-# Fusion: rate cap, jump gate, hold then decay to the glove's rest position.
+# The 3D hand moves this share of the real hand's motion (about the first fix); height is
+# taken from the table: core y = floor_y_m + motion_scale * height above the table.
+motion_scale = 0.6
+floor_y_m = 0.05
+# Fusion (core/root_fuse.py): a fix more than fuse_jump_m from the last good one is a wrong
+# blob until fuse_jump_frames such fixes in a row agree; a One Euro filter smooths, and a
+# 1.5 m/s ceiling stops the step when a far blob is accepted (bench-onehand-1: 30 to 3
+# jumps a minute). The wrist is clamped in the work box: 45 cm wide, 25 cm high, 30 cm deep.
+fuse_jump_m = 0.08
+fuse_jump_frames = 5
 fuse_max_speed_m_s = 1.5
-fuse_jump_m = 0.15
-fuse_jump_frames = 3
+# Wrist filter preset: "steady" (the stabilisation-pass value: fewest jumps) or "fast" (35 ms less
+# lag on a reach, a few more jumps). fuse_one_euro_beta and fuse_one_euro_d_cutoff override it.
+fuse_preset = "steady"
+fuse_one_euro_min_cutoff = 1.0
+# Prediction along the filtered velocity by the age of the fix (ms cap). 0 = off: it overshoots stops.
+fuse_lead_max_ms = 0.0
+fuse_box = true
+fuse_box_centre = [0.0, 0.175, -0.2]
+fuse_box_half = [0.225, 0.125, 0.15]
 fuse_hold_s = 2.0
 fuse_decay_s = 1.5
 fuse_stale_ms = 150.0

@@ -168,3 +168,62 @@ Changed (additive):
 Not touched: `core/camera/depth_track.py`, `depth_live.py`, `geppetto_depth.py`, `tools/depth_check.py`, `SPEC.md`, `docs/CONTRACT.md`.
 
 Checks run before the last commit: core suite 232 passed (20:55), frontend lint, 359 vitest tests and build passed.
+
+## Stabilisation pass (Sat 22:35 to 23:00)
+
+The live test at 22:21 showed a jumpy hand that left the view. This pass fixes that on the recorded clips. It is not yet tested live: the computer restarted before the live check.
+
+What changed:
+
+- Newest frame only: the live path already keeps one frame. It now logs the delay from phone capture to the frame message every 5 s (`delay_ms_p50`, `delay_ms_p95` in the status).
+- Work box: the fused wrist is clamped to 45 x 25 x 30 cm (x, y, z) in the core world (`fuse_box_centre`, `fuse_box_half`). `Hand.tsx` clamps the offset to the same half sizes.
+- Jump gate: a fix more than 8 cm from the last good one is held back until 5 fixes in a row agree (`fuse_jump_m`, `fuse_jump_frames`).
+- One Euro filter on the fused wrist (`fuse_one_euro_min_cutoff` 1.0, `fuse_one_euro_beta` 2.0). The tracker's own filter is off, so the position is filtered once. The 1.5 m/s ceiling stays: without it the one-hand clip has 9 to 12 jumps a minute, with it 3.
+- Two hands keep the blob nearer their last good position, so crossing hands do not swap.
+- Motion scale 0.6 about the lock anchor (`motion_scale`). Height comes from the table: core y = `floor_y_m` + 0.6 x height above the table.
+- Axis test `tests/test_root_axes.py`: a synthetic riser camera, landscape and portrait. Hand right, toward the camera and up move the 3D hand the same three ways.
+
+Results (`tools.hand_root_check`, a jump is a step over 8 cm between frames):
+
+| Clip | Hand | Jumps per minute before | Jumps per minute after | Inside the box before | Inside the box after | Live rate before | Live rate after |
+|---|---|---|---|---|---|---|---|
+| bench-gloves-1 | left | 28.5 | 0.0 | 86.4% | 100% | 63.0% | 67.2% |
+| bench-gloves-1 | right | 34.5 | 1.5 | 59.1% | 100% | 78.9% | 66.5% |
+| bench-onehand-1 | right | 52.5 | 3.0 | 78.6% | 100% | 96.3% | 93.0% |
+
+Not measured: the delay on the clips (the check tool has no render clock). The live log line reports it; the 22:21 run had a 700 ms old depth frame while the test suites starved the core.
+
+Checks after the pass: core suite 280 passed, 1 skipped (22:52); frontend 537 vitest tests passed (22:43).
+
+Verdict: clearly better on the clips. The flag stays off by default until a live check with both gloves and the phone confirms it.
+
+## Delay per stage (Sat 23:00 to 23:30)
+
+Not tested with the phone: no hardware was attached after the restart.
+
+How to read it live: the core logs `hand root stages (ms)` every 5 s and serves `GET /debug/delay`. In the browser, set localStorage `apprentice.delayProbe` to `1` (or to the core's base URL when the viewer runs on another machine) and call `window.__handDelay.report()`.
+
+| Stage | Median (ms) | Worst (ms) | Measured on |
+|---|---|---|---|
+| Phone capture to arrival on the Mac, above the fastest frame | 681 to 860 | 1678 to 2802 | the two gloved recordings from 20:22 and 20:26 |
+| Arrival to processing done | 21 | 77 | replay of bench-gloves-1 through the live path |
+| Processing done to the core tick | 11 | 29 | same replay |
+| Core tick to the socket write | 8 | 13 | same replay |
+| Core tick to received in the browser (bridge and backend included) | 9 | 1518 (page load) | same replay, headless Chrome on the core's machine |
+| Received to drawn | 11 | 145 | same replay, headless Chrome |
+
+The biggest stage is the first one: phone to Mac. The phone made a frame every 33 ms, but frames reached the Mac every 38 to 43 ms, at 4 MB a second, and the delay stood at 0.5 to 1.6 s. The absolute value is unknown because the two clocks differ; the number is the excess over the fastest frame. The recordings ran with the gzip recorder in the reader thread (19 ms a packet) on a loaded machine, so the live value may be lower. The live log line now shows it.
+
+Changes for delay:
+
+- `GeppettoDepthCamera`: the reader thread keeps only the newest raw packet; decoding waits for `read()`.
+- `/ws/gloves` clients queue two frames at most (was 64).
+- Wrist filter presets, `fuse_preset` in `[camera.root]`: "steady" (default; beta 2, derivative cutoff 1 Hz, the stabilisation-pass value) and "fast" (beta 6, cutoff 2 Hz). Numbers for "fast": Simulated 12 cm reach: lag 165 ms to 130 ms. Clips: jumps a minute 0.0, 1.5, 3.0 become 1.5, 3.0, 4.5; still jitter 6.7 mm to 8.0 mm at worst.
+- Frontend: the wrist position blend is 15 ms (was 45 ms).
+- Prediction along the velocity (`fuse_lead_max_ms`) is written and off: it cuts the lag to 55 ms but overshoots a stop by 3 to 5 cm.
+
+If the first stage is still large with the phone: shrink the packet in the app (208 KB now: depth 98 KB, confidence 49 KB, JPEG about 60 KB) and send the phone's wall clock so the stage is measured in absolute terms. Both need an app rebuild.
+
+Viewer on another machine: `tick_to_received` then includes the clock difference of the two machines. The probe marks this with `viewer_on_core_machine: false`.
+
+Checks: core suite 281 passed, 1 skipped on the final values (23:45); frontend lint, 537 tests, build.
