@@ -82,6 +82,7 @@ class TrackerConfig:
     arm_min_px: int = 1200               # a hand 30 to 50 cm from the phone covers thousands of depth pixels
     arm_confirm_frames: int = 3          # the gate must pass now and in this many of the last arm_confirm_window frames
     arm_confirm_window: int = 5
+    max_candidates: int = 4              # the shape gate scores at most this many blobs, largest first
     # 3D view only, never the yaw: a flat hand lies within millimetres of the table. The plane
     # fit RMS on the first real clip is 1.2 mm, so high-confidence points this far above the
     # table stop counting as table, and those joined to a confirmed arm count as arm.
@@ -323,6 +324,7 @@ class DepthTracker:
         blob = None
         self._shape_pass = False
         order = [k for k in np.argsort(-stats[1:, cv2.CC_STAT_AREA]) + 1 if stats[k, cv2.CC_STAT_AREA] >= cfg.min_blob_px]
+        order = order[:max(1, cfg.max_candidates)]   # time: a person in view makes many blobs
         if order:
             blob = lab == order[0]               # the largest, shown even when it is not an arm
             if cfg.gate == "shape":
@@ -468,7 +470,7 @@ class DepthTracker:
         axis_pca = axis.copy()
         obs.elongation = float(math.sqrt(max(w[1], 1e-12) / max(w[0], 1e-12)))
         obs.width_m = float(math.sqrt(12.0 * max(w[0], 0.0)))   # full width of a uniform band
-        if cfg.cylinder:
+        if cfg.cylinder and (cfg.gate != "shape" or self._shape_pass):   # no time on blobs already rejected
             d3 = self._cylinder_axis(q[sel], axis, cam_bench, obs)
             if d3 is not None:
                 obs.axis_tilt_deg = float(math.degrees(math.atan2(abs(d3[1]), np.hypot(d3[0], d3[2]))))
@@ -506,7 +508,8 @@ class DepthTracker:
             self._push_pass(passed)
             obs.shape["recent"] = int(sum(self._recent))
             obs.arm_found = passed and sum(self._recent) >= max(1, cfg.arm_confirm_frames)
-            obs.forearm_ok = obs.arm_found and obs.forearm_points >= cfg.min_forearm_points
+            # only a long, clear arm may move the glove yaw; a round blob is found but not trusted
+            obs.forearm_ok = obs.arm_found and obs.forearm_points >= cfg.min_forearm_points                 and obs.elongation >= cfg.min_elongation
             if obs.forearm_ok:
                 self.last_dir = obs.dir_bench
             return
