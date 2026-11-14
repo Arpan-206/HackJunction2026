@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { api, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { api, tutorialVideoOf, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApHeader } from '../ApHeader';
 import { Button, ButtonLink, Countdown, Disclosure } from '../../../components/ui';
@@ -10,10 +10,9 @@ import { CalibrationPanel } from '../../shared/CalibrationPanel';
 import { useCalibration } from '../../shared/useCalibration';
 import { PropSwitch } from '../../shared/PropSwitch';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
-import { MARGIN_INFO, roomFor, useMargin } from '../../shared/settings';
+import { MARGIN_INFO, roomFor, useMargin, useReducedMotion } from '../../shared/settings';
 import { combineHandScores } from './coach/twoHands';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
-import { useGuidance } from '../hooks/useGuidanceMode';
 import { configFromTolerance } from './coach/deviation';
 import { localScore } from './coach/localScore';
 import { attemptRetryLine, checkAttempt } from './coach/attemptGuard';
@@ -27,22 +26,13 @@ import { StageLadder } from './StageLadder';
 import { useStepPipeline } from './useStepPipeline';
 import { CoachPanel } from './CoachPanel';
 import { FingerSummary } from './FingerSummary';
-import { GuidanceModeSwitch } from './GuidanceModeSwitch';
-import { GhostOverlay } from './modes/GhostOverlay';
-import { Marionette } from './modes/Marionette';
-import { Shadow } from './modes/Shadow';
 import { ShadowPuppets } from './modes/ShadowPuppets';
-import { SideBySide } from './modes/SideBySide';
+import { PracticeStage, TRANSITION_MS } from './practice/PracticeStage';
 import { TypingDesk } from './modes/TypingDesk';
 import { Segmented } from './Segmented';
 import { ScoreCard } from './ScoreCard';
 import { preloadScoreScene } from './score/preload';
-import { useRobotStream } from '../../../api/useRobotStream';
-import type { HandStyle } from '../../../three';
-import { RobotPanel } from '../../shared/robot/RobotPanel';
-import { RobotTwin } from '../../shared/robot/RobotTwin';
-import { useRobotPane } from '../../shared/robot/robotPrefs';
-import '../../shared/robot/robot.css';
+import { TakeVideoPip, useTakeVideoPref } from './TakeVideoPip';
 
 type Phase = 'ready' | 'countdown' | 'running' | 'scoring' | 'result';
 
@@ -121,20 +111,23 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const navigate = useNavigate();
   const resultRef = useRef<HTMLDivElement>(null);
   const gloves = useGloveStream(true);
-  const guidance = useGuidance();
   // A two-handed step coaches one hand at a time on the stage (the learner picks which); every rep scores both hands.
   const twoHanded = step.hands === 'both';
   // Shadow puppets are learnt on the wall: the lamp's shadow theatre replaces the guidance modes.
   const theatre = lesson.skill === 'shadow_puppets';
-  // Touch typing is learnt at the desk: both hands over a QWERTY keyboard, the expert's as ghosts.
-  const desk = lesson.skill === 'touch_typing';
+  // Touch typing is learnt at the desk: both hands over a QWERTY keyboard, the expert's as ghosts. The skill is off the
+  // catalogue for now (no lesson carries the id), but the desk stays wired for when it comes back.
+  const desk = (lesson.skill as string) === 'touch_typing';
   const [coached, setCoached] = useState<Side>(stepSide(step));
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
   const [margin] = useMargin();
   const config = useMemo(() => configFromTolerance(step.tolerance, margin), [step.tolerance, margin]);
   const room = roomFor(step.tolerance, margin);
-  const { track, loading: refLoading, notice } = useReferenceTrack(step, side);
+  const { track, loading: refLoading, notice, video: takeVideo } = useReferenceTrack(step, side);
+  const [pipOn, setPipOn] = useTakeVideoPref();
+  // The video beside the expert: the webcam of the reference take, else the step's tutorial video, looped over the take.
+  const stageVideo = takeVideo ?? tutorialVideoOf(step);
   const calibration = useCalibration(side);
   const calibrated = calibration.latest !== null;
 
@@ -155,6 +148,30 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const endTimer = useRef<number | null>(null);
 
   const watching = pipe.stage === 'watch';
+  // "Try it out": the strings lift away and the expert's hand floats down into the ghost, then the reps begin.
+  const [reduceMotion] = useReducedMotion();
+  const [transitionAt, setTransitionAt] = useState<number | null>(null);
+  const endWatch = pipe.endWatch;
+  const practiceRef = useRef<HTMLDivElement>(null);
+  const tryItOut = useCallback(() => {
+    // On a phone the button sits below the panels: bring them back into view so the change is seen.
+    const panels = practiceRef.current;
+    if (panels && panels.getBoundingClientRect().top < 0) panels.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    if (reduceMotion) {
+      endWatch();
+      return;
+    }
+    setTransitionAt(performance.now());
+  }, [reduceMotion, endWatch]);
+  useEffect(() => {
+    if (transitionAt === null) return;
+    const id = window.setTimeout(() => {
+      endWatch();
+      setTransitionAt(null);
+    }, TRANSITION_MS);
+    return () => window.clearTimeout(id);
+  }, [transitionAt, endWatch]);
+  const ghostOn = pipe.stage !== 'blind';
   // Before a rep starts (and during its countdown) the room is a rehearsal: hands and strings move, nothing is judged.
   const rehearsing = !watching && (phase === 'ready' || phase === 'countdown');
   const policy = useMemo(() => (rehearsing ? { ...pipe.policy, rehearsal: true } : pipe.policy), [pipe.policy, rehearsing]);
@@ -174,20 +191,6 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     onRecordStart: () => recordStartRef.current(),
   });
 
-  // The robot twin beside the stage: a Dex3-1 that follows whoever the engine's source names, with strings from the
-  // human hand it copies (the lesson's expert, or the live glove the coach sees).
-  // Touch typing is a human-only skill: the Dex3-1 has no ring or little finger, so the desk keeps the full stage width.
-  const [robotPane, setRobotPane] = useRobotPane();
-  const twin = robotPane && !desk;
-  const robot = useRobotStream(twin);
-  const robotSource = robot.source ?? 'off';
-  const robotHuman = {
-    side,
-    style: (robotSource === 'learner' ? 'wood' : 'chalk') as HandStyle,
-    live: gloves.latest,
-    getFrame: () => (robotSource === 'lesson' ? coach.live.current.master : coach.live.current.learner),
-    label: robotSource === 'lesson' ? 'The lesson' : robotSource === 'master' ? 'The expert' : 'You',
-  };
 
   useEffect(() => {
     if (step.motion) gloves.setMotion(step.motion);
@@ -304,12 +307,13 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
     prop: shownProp(step.prop, showProps),
     cue: showProps ? 'none' : (step.prop ?? 'none'),
     policy,
-    toleranceDeg: config.toleranceDeg,
+    toleranceDeg: config.fingerToleranceDeg,
     combo: { count: pipe.machine.combo, need: pipe.cfg.cleanReps, snapKey: pipe.snapKey, played: playedSnap },
   };
   const goal = pipe.review ? 'Review: one blind try, no help.' : goalLine(pipe.last, pipe.stage);
-  const nextTo = index + 1 < total ? `/apprentice/lessons/${lessonId}/steps/${index + 1}` : hasTest ? `/apprentice/lessons/${lessonId}/test` : `/apprentice/lessons/${lessonId}`;
-  const nextLabel = index + 1 < total ? 'Next lesson' : hasTest ? 'Test your skills' : 'Finish';
+  // After the last lesson comes Play: the course's own game when it has one, else the round of called moves.
+  const nextTo = index + 1 < total ? `/apprentice/lessons/${lessonId}/steps/${index + 1}` : `/apprentice/lessons/${lessonId}/${hasTest ? 'test' : 'play'}`;
+  const nextLabel = index + 1 < total ? 'Next lesson' : 'Play';
   const busy = phase === 'countdown' || phase === 'running' || phase === 'scoring';
   const calPanel = (
     <CalibrationPanel
@@ -357,29 +361,29 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       ) : (
       <div className="ap-room__grid">
         <section className="ap-stage" aria-label="Training stage">
-          <div className={`ap-stage__row ${twin ? 'ap-stage__row--twin' : ''}`}>
-            <div className="ap-stage__canvas">
+          <div className="ap-stage__row">
+            <div ref={practiceRef} className={`ap-stage__canvas ${theatre || desk ? '' : 'ap-stage__canvas--practice'}`}>
               {refLoading || !track ? (
                 <p className="note ap-state">Loading the expert's recording...</p>
               ) : theatre ? (
                 <ShadowPuppets {...stageProps} step={step} />
               ) : desk ? (
                 <TypingDesk {...stageProps} step={step} solid={showProps} />
-              ) : guidance === 'marionette' ? (
-                <Marionette {...stageProps} />
-              ) : guidance === 'shadow' ? (
-                <Shadow {...stageProps} />
-              ) : guidance === 'ghost' ? (
-                <GhostOverlay {...stageProps} />
               ) : (
-                <SideBySide {...stageProps} />
+                <PracticeStage
+                  {...stageProps}
+                  phase={watching ? 'watch' : 'try'}
+                  transitionAt={transitionAt}
+                  video={
+                    stageVideo && pipOn ? <TakeVideoPip video={stageVideo} coach={coach} period={track.period} rate={watching ? watchRate : 1} onHide={() => setPipOn(false)} /> : null
+                  }
+                />
+              )}
+              {/* Shadow puppets and the desk keep the video in the stage's corner; gone with the ghost off, where the expert steps back. */}
+              {(theatre || desk) && stageVideo && pipOn && track && ghostOn && (
+                <TakeVideoPip video={stageVideo} coach={coach} period={track.period} rate={watching ? watchRate : 1} onHide={() => setPipOn(false)} />
               )}
             </div>
-            {twin && (
-              <div className="ap-stage__canvas ap-stage__canvas--robot">
-                <RobotTwin robot={robot} human={robotHuman} label="The Dex3-1 robot hand beside the hand that drives it, with a string to each fingertip" />
-              </div>
-            )}
           </div>
           <FingerSummary coach={coach} policy={policy} />
           <p className="ap-stage__cap">
@@ -415,14 +419,26 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
                   Finish attempt
                 </Button>
               ) : watching ? (
-                <Button large disabled={!track} onClick={pipe.endWatch}>
-                  Start with the strings
-                </Button>
+                <>
+                  <Button large disabled={!track || transitionAt !== null} onClick={tryItOut}>
+                    Try it out
+                  </Button>
+                  <ButtonLink variant="secondary" to={`/apprentice/lessons/${lessonId}/steps/${index}/tutorial`}>
+                    {step.tutorial_video || step.video_url ? "Watch the expert's tutorial" : 'Open the tutorial'}
+                  </ButtonLink>
+                </>
               ) : (
                 phase !== 'result' && (
-                  <Button large disabled={busy || !track} onClick={() => setPhase('countdown')}>
-                    {`Begin rep ${pipe.reps + 1}`}
-                  </Button>
+                  <>
+                    <label className="ap-toggle">
+                      <input type="checkbox" checked={ghostOn} disabled={busy || pipe.review} onChange={(e) => pipe.setGhost(e.target.checked)} />
+                      <span>Show the expert&rsquo;s ghost</span>
+                      <span className="note">{pipe.review ? 'Review is one try with the ghost off.' : 'Turn it off to try on your own. Only reps with the ghost off master the lesson.'}</span>
+                    </label>
+                    <Button large disabled={busy || !track} onClick={() => setPhase('countdown')}>
+                      {`Begin rep ${pipe.reps + 1}`}
+                    </Button>
+                  </>
                 )
               )}
               {phase === 'scoring' && <p className="note">Scoring your attempt...</p>}
@@ -434,11 +450,6 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             <CoachPanel coach={coach} policy={policy} mode={mode} running={phase === 'running' || phase === 'scoring'} />
           </div>
 
-          {twin && (
-            <div className="card ap-panel" aria-label="Robot hand">
-              <RobotPanel robot={robot} compact />
-            </div>
-          )}
 
           {/* Calibration is prominent only while the glove has never been calibrated; after that it lives in the settings. */}
           {!calibration.loading && !calibrated && calPanel}
@@ -449,18 +460,21 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
               <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p>
             ) : desk ? (
               <p className="note ap-field__hint">Typing is always shown at the desk: both your hands over the keyboard, the expert's as ghosts over them. The gloves feel which finger strikes, not which key it reaches.</p>
-            ) : (
-              <GuidanceModeSwitch />
-            )}
+            ) : null}
             <PropSwitch prop={step.prop} />
+            {stageVideo && (
+              <label className="ap-toggle">
+                <input type="checkbox" checked={pipOn} onChange={(e) => setPipOn(e.target.checked)} />
+                <span>Show the expert&rsquo;s video</span>
+                <span className="note">kept in time with the expert&rsquo;s hand (hidden while the ghost is off)</span>
+              </label>
+            )}
             {desk ? (
               <p className="note ap-field__hint">The robot hand has no ring or little finger, so touch typing is for human hands only.</p>
             ) : (
-              <label className="ap-toggle">
-                <input type="checkbox" checked={robotPane} onChange={(e) => setRobotPane(e.target.checked)} />
-                <span>Show the robot hand</span>
-                <span className="note">a Dex3-1 twin follows the glove beside the stage</span>
-              </label>
+              <p className="note ap-field__hint">
+                The Dex3-1 robot hand that copies the glove has its own screen: <Link to="/robot">open the robot hand</Link>.
+              </p>
             )}
             <div className="ap-field">
               <span className="ap-field__label">Practice</span>

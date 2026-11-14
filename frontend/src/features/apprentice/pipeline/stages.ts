@@ -1,11 +1,17 @@
 import { FINGERS, type Finger, type ScoreResult, type Step } from '../../../api/types';
 
-/** The four stages of one step: watch the master, then strings, ghost and blind as the help is taken away. */
+/**
+ * The stages of one step. Practice has two phases: Watch (the expert's hand works a puppet on strings beside the learner's
+ * own hand, nothing scored), then Try it, where the learner's ghost switch picks the stage: ghost on is 'ghost', ghost off is
+ * 'blind', and only clean reps with the ghost off master the step. 'strings' (a scored stage with strings to the learner's
+ * fingers) is no longer offered; it stays in the type so older practice logs still replay.
+ */
 export type Stage = 'watch' | 'strings' | 'ghost' | 'blind';
 
-export const STAGES: Stage[] = ['watch', 'strings', 'ghost', 'blind'];
+/** The stages the practice screen offers, in order. */
+export const STAGES: Stage[] = ['watch', 'ghost', 'blind'];
 
-export const STAGE_LABEL: Record<Stage, string> = { watch: 'Watch', strings: 'Strings', ghost: 'Ghost', blind: 'Blind' };
+export const STAGE_LABEL: Record<Stage, string> = { watch: 'Watch', strings: 'Strings', ghost: 'Ghost on', blind: 'Ghost off' };
 
 export interface PipelineConfig {
   /** Overall score from which a rep can be clean. */
@@ -65,9 +71,18 @@ export function initialState(stage: Stage = 'watch'): StageState {
   return { stage, combo: 0, repsInSet: 0, cleanInSet: 0, failedSets: 0, wrongFingers: [], mastered: false };
 }
 
-/** Moves on from watching to the strings. */
+/** Moves on from watching to trying it with the ghost. */
 export function finishWatch(state: StageState): StageState {
-  return state.stage === 'watch' ? { ...state, stage: 'strings', combo: 0, repsInSet: 0, cleanInSet: 0 } : state;
+  return state.stage === 'watch' ? { ...state, stage: 'ghost', combo: 0, repsInSet: 0, cleanInSet: 0 } : state;
+}
+
+/**
+ * The learner's ghost switch: ghost on is the 'ghost' stage, off is 'blind'. Switching starts a fresh count (combo, set and
+ * failed sets) at the chosen stage and keeps the mastery; watching, or choosing the stage already set, changes nothing.
+ */
+export function chooseStage(state: StageState, stage: 'ghost' | 'blind'): StageState {
+  if (state.stage === 'watch' || state.stage === stage) return state;
+  return { ...state, stage, combo: 0, repsInSet: 0, cleanInSet: 0, failedSets: 0 };
 }
 
 /** The fingers whose per-finger score fell short of the pass score. */
@@ -76,7 +91,7 @@ export function wrongFingersOf(score: Pick<ScoreResult, 'per_finger'>, passScore
 }
 
 function stageBelow(stage: Stage): Stage {
-  return stage === 'blind' ? 'ghost' : 'strings';
+  return stage === 'blind' ? 'ghost' : stage;
 }
 
 function stageAbove(stage: Stage): Stage {
@@ -114,7 +129,7 @@ export function applyRep(state: StageState, score: ScoreResult, cfg: PipelineCon
   if (s.repsInSet >= cfg.setSize) {
     const failed = s.cleanInSet < cfg.cleanReps;
     const failedSets = failed ? s.failedSets + 1 : 0;
-    if (failed && failedSets >= cfg.failedSetsToDrop && s.stage !== 'strings') {
+    if (failed && failedSets >= cfg.failedSetsToDrop && s.stage === 'blind') {
       s = { ...s, stage: stageBelow(s.stage), combo: 0, repsInSet: 0, cleanInSet: 0, failedSets: 0 };
       return { state: s, event: 'dropped', clean, setEnded: true, setFailed: true };
     }
@@ -124,12 +139,18 @@ export function applyRep(state: StageState, score: ScoreResult, cfg: PipelineCon
   return { state: s, event, clean, setEnded: false, setFailed: false };
 }
 
-/** Rebuilds the state of a step by replaying its staged attempts, oldest first. Attempts without a stage are skipped. */
+/**
+ * Rebuilds the state of a step by replaying its staged attempts, oldest first. Attempts without a stage are skipped. A rep
+ * logged at another stage than the machine is in means the learner flipped the ghost switch first, so the machine follows
+ * it there before the rep is applied (an older 'strings' rep starts the machine at the strings).
+ */
 export function replay(attempts: { stage?: Stage; score: ScoreResult }[], cfg: PipelineConfig = DEFAULT_CONFIG): StageState {
-  let s = initialState('strings');
+  let s = initialState('ghost');
   let any = false;
   for (const a of attempts) {
     if (!a.stage || a.stage === 'watch') continue;
+    if (!any && a.stage === 'strings') s = initialState('strings');
+    else if (a.stage !== s.stage && (a.stage === 'ghost' || a.stage === 'blind')) s = chooseStage(s, a.stage);
     any = true;
     s = applyRep(s, a.score, cfg).state;
   }

@@ -60,7 +60,7 @@ async function playRep(page, extra = '') {
   await page.waitForFunction(() => window.__apprenticeMock === true, null, { timeout: 15000 });
   // The first visit starts with Watch; a later one remembers the stage and offers the next rep straight away.
   const begin = page.getByRole('button', { name: /Begin rep \d+/ });
-  const watch = page.getByRole('button', { name: /Start with the strings/ });
+  const watch = page.getByRole('button', { name: /Try it out|Start with the strings/ });
   await visible(begin.or(watch), 'room ready');
   if (await watch.count()) await watch.click();
   await begin.click();

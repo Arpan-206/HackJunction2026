@@ -115,21 +115,14 @@ try {
   await page.getByRole('radio', { name: 'Apprentice glove' }).click();
   await page.waitForFunction(() => /Following the apprentice glove/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
 
-  step('training room: the robot pane sits beside the stage and can be hidden in the room settings');
+  step('training room: the practice stage is the expert and you only; the robot hand is one link away');
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/steps/0?mock=1`);
-  await expectVisible(page.getByRole('button', { name: /Start with the strings/ }), 'Start with the strings button');
-  await expectVisible(page.locator('.ap-stage__canvas--robot'), 'robot pane beside the stage');
-  await expectVisible(page.locator('.ap-side .rb-panel'), 'robot panel in the side column');
-  await page.waitForFunction(() => /Following|rests|Waiting|No glove/.test(document.querySelector('.ap-side .rb-state')?.textContent ?? ''), null, { timeout: 20000 });
-  console.log(`  room state: ${await page.locator('.ap-side .rb-state').first().innerText()}`);
-  await settle(3000);
-  await shot('03-room');
+  await expectVisible(page.getByRole('button', { name: /Try it out|Start with the strings/ }), 'Try it out button');
+  if (await page.locator('.ap-stage__canvas--robot').count()) throw new Error('the robot twin no longer sits in the training room');
   await page.getByText('Room settings').click();
-  await page.getByRole('checkbox', { name: /Show the robot hand/ }).click();
-  await settle(500);
-  if (await page.locator('.ap-stage__canvas--robot').count()) throw new Error('the robot pane should hide when the switch is off');
-  await page.getByRole('checkbox', { name: /Show the robot hand/ }).click();
-  await expectVisible(page.locator('.ap-stage__canvas--robot'), 'robot pane back on');
+  await expectVisible(page.getByRole('link', { name: 'open the robot hand' }), 'link to the robot screen');
+  await settle(2000);
+  await shot('03-room');
 
   step('expert studio: the robot fold under the live stage');
   await page.goto(`${BASE}/expert/scratch?mock=1`);

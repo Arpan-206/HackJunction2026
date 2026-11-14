@@ -5,13 +5,14 @@ import { RoleSelect } from './RoleSelect';
 import { HandLab } from './HandLab';
 import { MasterHome } from '../features/master/MasterHome';
 import { MasterGenerate, MasterLesson, MasterScratch } from '../features/master/pages';
-import { ApprenticeHome, ApprenticeLesson, ApprenticeSkill, ApprenticeStep, ApprenticeTest } from '../features/apprentice/pages';
+import { ApprenticeHome, ApprenticeLesson, ApprenticePlay, ApprenticeSkill, ApprenticeStep, ApprenticeTest, ApprenticeTutorial } from '../features/apprentice/pages';
 
 const Playground = lazy(() => import('../playground/Playground'));
 const DesignRoute = lazy(() => import('../design/DesignRoute'));
 const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen'));
 const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
 const RobotScreen = lazy(() => import('../features/shared/robot/RobotScreen'));
+const HandCameraView = lazy(() => import('../dev/HandCameraView'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -27,6 +28,7 @@ export function App() {
       <Route path="/playground" element={<Suspense fallback={null}><Playground /></Suspense>} />
       <Route path="/design" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
       <Route path="/design/:frame" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
+      <Route path="/dev/hand-camera" element={<Suspense fallback={null}><HandCameraView /></Suspense>} />
       <Route element={<AppShell />}>
         <Route path="/expert" element={<MasterHome />} />
         <Route path="/expert/scratch" element={<MasterScratch />} />
@@ -42,6 +44,8 @@ export function App() {
         <Route path="/apprentice/lessons/:lessonId" element={<ApprenticeLesson />} />
         <Route path="/apprentice/lessons/:lessonId/steps/:stepIndex" element={<ApprenticeStep />} />
         <Route path="/apprentice/lessons/:lessonId/test" element={<ApprenticeTest />} />
+        <Route path="/apprentice/lessons/:lessonId/steps/:stepIndex/tutorial" element={<ApprenticeTutorial />} />
+        <Route path="/apprentice/lessons/:lessonId/play" element={<ApprenticePlay />} />
         <Route path="/lab" element={<HandLab />} />
         <Route path="/gloves" element={<Suspense fallback={null}><GlovesScreen /></Suspense>} />
         <Route path="/gloves/calibrate" element={<Suspense fallback={null}><CalibrateScreen /></Suspense>} />

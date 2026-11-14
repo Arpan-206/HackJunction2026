@@ -1,6 +1,8 @@
 // Walks touch typing in mock mode (no Python backend needed): the skill page, a lesson room at the desk, the air typing
 // game to its result, and the "Type on your keyboard" mode until the simulated glove shows a fingering correction.
 // Fails on any console error or uncaught page error. Screenshots go to docs/screens/typing-*.png.
+// Parked: touch typing is off the catalogue (the four demo skills only) and its seed lesson no longer ships, so this walk
+// fails until a touch typing lesson is served again. The typing engine it exercises is kept in the code.
 // Run: node e2e/typing-walk.mjs   (starts the Vite dev server on :5184 if nothing answers there; E2E_PORT picks the port).
 // Playwright is taken from the repo's genui package (E2E_PLAYWRIGHT overrides the path), so the frontend gains no dependency.
 import { spawn } from 'node:child_process';
@@ -63,10 +65,10 @@ try {
 
   step('lesson room: F and J at the desk, both hands over the chalk keyboard, the expert as ghosts');
   await page.goto(`${BASE}/apprentice/lessons/seed-touch-typing/steps/1`);
-  await expectVisible(page.getByRole('button', { name: /Start with the strings/ }), 'Start with the strings button');
+  await expectVisible(page.getByRole('button', { name: /Try it out|Start with the strings/ }), 'Start with the strings button');
   await settle(3000);
   await shot('02-room');
-  await page.getByRole('button', { name: /Start with the strings/ }).click();
+  await page.getByRole('button', { name: /Try it out|Start with the strings/ }).click();
   await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button at the desk');
   await page.getByRole('button', { name: /Begin (rep|attempt) 1/ }).click();
   await settle(4500);

@@ -3,7 +3,7 @@ import type { ScoreResult, Step } from '../../../api';
 import { logAttempt, useLoggedAttempts } from '../../shared/practiceLog';
 import { setLine, stageLine } from '../pipeline/coachLines';
 import { dayKey, deriveStep, startingPoint } from '../pipeline/progress';
-import { applyRep, configFor, finishWatch, initialState, replay, type PipelineConfig, type RepOutcome, type Stage, type StageEvent, type StageState } from '../pipeline/stages';
+import { applyRep, chooseStage, configFor, finishWatch, initialState, replay, type PipelineConfig, type RepOutcome, type Stage, type StageEvent, type StageState } from '../pipeline/stages';
 import { policyForStage, type AttemptPolicy } from './coach/fade';
 
 export interface PipelineLines {
@@ -32,11 +32,13 @@ export interface StepPipeline {
   /** Logs a scored rep, moves the machine and returns what happened. */
   submit: (score: ScoreResult) => RepOutcome;
   endWatch: () => void;
+  /** The ghost switch: on is the ghost stage, off the blind stage (a fresh count either way). */
+  setGhost: (on: boolean) => void;
   restart: () => void;
 }
 
 /**
- * Drives one step through Watch, Strings, Ghost and Blind. The starting stage is rebuilt from the attempt log, so a learner
+ * Drives one step through Watch, then Ghost on and Ghost off (the learner's switch). The starting stage is rebuilt from the attempt log, so a learner
  * returns to where they left off; every scored rep is logged with its stage so ranks and review dates can be derived later.
  */
 export function useStepPipeline(lessonId: string, step: Step, demo: boolean): StepPipeline {
@@ -64,7 +66,7 @@ export function useStepPipeline(lessonId: string, step: Step, demo: boolean): St
   const submit = useCallback(
     (score: ScoreResult): RepOutcome => {
       let outcome = applyRep(machine, score, cfg);
-      logAttempt(lessonId, step.id, score, { stage: machine.stage === 'watch' ? 'strings' : machine.stage, kind: review ? 'review' : 'practice' });
+      logAttempt(lessonId, step.id, score, { stage: machine.stage === 'watch' ? 'ghost' : machine.stage, kind: review ? 'review' : 'practice' });
       if (review) {
         // A missed review sends the step back to the Ghost stage for a set; a clean one leaves it mastered.
         if (!outcome.clean) outcome = { ...outcome, state: { ...initialState('ghost'), mastered: true }, event: 'dropped' };
@@ -87,13 +89,17 @@ export function useStepPipeline(lessonId: string, step: Step, demo: boolean): St
   );
 
   const endWatch = useCallback(() => setMachine((m) => finishWatch(m)), []);
+  const setGhost = useCallback((on: boolean) => {
+    setMachine((m) => chooseStage(m, on ? 'ghost' : 'blind'));
+    setSetScores([]);
+  }, []);
   const restart = useCallback(() => {
-    setMachine({ ...initialState('strings'), mastered: machine.mastered });
+    setMachine({ ...initialState('watch'), mastered: machine.mastered });
     setSetScores([]);
     setEvent('none');
     setLines({ stage: '', set: '' });
   }, [machine.mastered]);
 
   const policy = useMemo(() => policyForStage(machine.stage, machine.wrongFingers, reps + 1), [machine.stage, machine.wrongFingers, reps]);
-  return { cfg, machine, stage: machine.stage, policy, review, snapKey, lines, event, reps, last, submit, endWatch, restart };
+  return { cfg, machine, stage: machine.stage, policy, review, snapKey, lines, event, reps, last, submit, endWatch, setGhost, restart };
 }

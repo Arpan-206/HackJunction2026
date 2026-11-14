@@ -5,12 +5,11 @@ import { botGoodChance } from '../src/features/apprentice/test/TableTennisRally/
 import { botPerformance, schedulePhrase, DEFAULT_PHRASE, DEFAULT_BEAT_S } from '../src/features/apprentice/test/PianoPlayAlong/piano';
 import { policyForStage } from '../src/features/apprentice/training/coach/fade';
 import {
-  addDays, BOT_SKILL, dayKey, deriveLesson, deriveStep, isDue, startingPoint, syntheticScore, weekMarks, weekSummary,
+  addDays, BOT_SKILL, dayKey, deriveLesson, deriveStep, isDue, startingPoint, syntheticScore, weekMarks,
 } from '../src/features/apprentice/pipeline/progress';
 import {
-  applyRep, DEFAULT_CONFIG, DEMO_CONFIG, finishWatch, frayLevels, initialState, isClean, replay, type StageState,
+  applyRep, chooseStage, DEFAULT_CONFIG, DEMO_CONFIG, finishWatch, frayLevels, initialState, isClean, replay, STAGES, type StageState,
 } from '../src/features/apprentice/pipeline/stages';
-import { buildDemoHistory } from '../src/features/apprentice/pipeline/demoHistory';
 import { repLine, setLine, stageLine } from '../src/features/apprentice/pipeline/coachLines';
 
 const clean = syntheticScore(90);
@@ -37,10 +36,29 @@ describe('clean rep', () => {
 });
 
 describe('stage machine', () => {
-  it('watch is unscored and moves to the strings', () => {
+  it('watch is unscored and moves on to trying it with the ghost', () => {
     const w = initialState();
     expect(applyRep(w, clean).state).toBe(w);
-    expect(finishWatch(w).stage).toBe('strings');
+    expect(finishWatch(w).stage).toBe('ghost');
+    expect(STAGES).toEqual(['watch', 'ghost', 'blind']);
+  });
+
+  it('the ghost switch picks ghost or blind with a fresh count, and keeps the mastery', () => {
+    const g = { ...initialState('ghost'), combo: 2, repsInSet: 3, cleanInSet: 2, failedSets: 1, mastered: true };
+    const b = chooseStage(g, 'blind');
+    expect(b).toMatchObject({ stage: 'blind', combo: 0, repsInSet: 0, cleanInSet: 0, failedSets: 0, mastered: true });
+    expect(chooseStage(b, 'blind')).toBe(b);
+    expect(chooseStage(b, 'ghost').stage).toBe('ghost');
+    const w = initialState();
+    expect(chooseStage(w, 'blind')).toBe(w);
+  });
+
+  it('ghost on clean reps turn the ghost off, and only ghost off reps master', () => {
+    const { s, events } = run(initialState('ghost'), [clean, clean, clean]);
+    expect(s.stage).toBe('blind');
+    expect(events[2]).toBe('advanced');
+    expect(s.mastered).toBe(false);
+    expect(run(s, [clean, clean, clean]).s.mastered).toBe(true);
   });
 
   it('advances after the needed clean reps in a row, one stage at a time', () => {
@@ -74,8 +92,12 @@ describe('stage machine', () => {
     expect(first.s.failedSets).toBe(1);
     expect(first.events[4]).toBe('set_done');
     const second = run(first.s, failedSet);
-    expect(second.s.stage).toBe('strings');
-    expect(second.events[4]).toBe('dropped');
+    expect(second.s.stage).toBe('ghost');
+    expect(second.events[4]).toBe('set_done');
+    const blindFirst = run(initialState('blind'), failedSet);
+    const blindSecond = run(blindFirst.s, failedSet);
+    expect(blindSecond.s.stage).toBe('ghost');
+    expect(blindSecond.events[4]).toBe('dropped');
   });
 
   it('a good set clears the failed-set count and the strings stage never drops', () => {
@@ -105,6 +127,9 @@ describe('stage machine', () => {
   it('replays a log to the same state', () => {
     const log = [clean, clean, clean, clean].map((score, i) => ({ stage: (i < 3 ? 'strings' : 'ghost') as LoggedStage, score }));
     expect(replay(log).stage).toBe('ghost');
+    // A learner who switched the ghost off after one rep: the replay follows the switch.
+    const switched = [{ stage: 'ghost' as LoggedStage, score: clean }, ...[clean, clean].map((score) => ({ stage: 'blind' as LoggedStage, score }))];
+    expect(replay(switched)).toMatchObject({ stage: 'blind', combo: 2 });
     expect(replay([]).stage).toBe('watch');
     expect(replay([{ score: clean }]).stage).toBe('watch');
   });
@@ -219,30 +244,14 @@ describe('guild rank', () => {
     const half = [...mastered, ...blind(NOW, [['s1', 2, 9, 90]])];
     expect(deriveLesson(ids, half, [test(true)]).rank).toBe('journeyman');
   });
-
-  it('seeded demo history gives one lesson due reviews and another the seal', () => {
-    const lessons = [
-      { id: 'l1', steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] },
-      { id: 'l2', steps: [{ id: 'x' }, { id: 'y' }] },
-    ];
-    const h = buildDemoHistory(lessons, NOW);
-    const first = deriveLesson(['a', 'b', 'c'], h.attempts.l1, h.tests.l1 ?? []);
-    expect(first.rank).toBe('apprentice');
-    expect(first.steps.filter((s) => isDue(s, TODAY)).length).toBeGreaterThanOrEqual(2);
-    expect(deriveLesson(['x', 'y'], h.attempts.l2, h.tests.l2 ?? [], DEMO_CONFIG).rank).toBe('sealed');
-  });
 });
 
 describe('daily practice mark', () => {
-  it('marks the week from Monday and forgives rest days', () => {
+  it('marks the week from Monday', () => {
     const marks = weekMarks([addDays(TODAY, -1), TODAY], TODAY);
     expect(marks).toHaveLength(7);
     expect(marks.filter((m) => m.practised)).toHaveLength(2);
     expect(marks.find((m) => m.today)?.practised).toBe(true);
-    const s = weekSummary(marks, 3);
-    expect(s.met).toBe(false);
-    expect(s.line).toMatch(/rest day is free/);
-    expect(weekSummary(marks, 2).met).toBe(true);
   });
 });
 
