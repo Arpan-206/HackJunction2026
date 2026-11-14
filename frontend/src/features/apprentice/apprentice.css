@@ -316,10 +316,8 @@
   gap: 0.4rem;
 }
 .ap-field__label {
-  font: 600 max(1rem, var(--step--1)) var(--font-ui);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-2);
+  font: 600 max(1.0625rem, var(--step-0)) var(--font-ui);
+  color: var(--text);
 }
 .ap-field__hint {
   margin: 0;
