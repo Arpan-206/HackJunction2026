@@ -2,9 +2,12 @@
 
 import math
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import TypeAdapter
 
-from app.schemas.motion import FingerSequence, HoldPose
+from app.schemas.motion import FingerSequence, HoldPose, MotionSpec
+from app.services import scoring
 from app.services.motion import synthesiser
 
 MOTION = {"preset": "finger_sequence", "sequence": [1, 2, 3, 4, 5], "beat_ms": 620}
@@ -183,3 +186,41 @@ def test_held_pose_still_scores_finger_errors(client: TestClient) -> None:
     result = client.post("/api/score", json={"reference_motion": GRIP, "attempt_frames": _hold_frames(3.0, phase_s=2.0, index_extra_rad=0.2)}).json()
     assert result["worst_finger"] == "index" and result["per_finger"]["index"] < 90 and result["within_tolerance"] is False
     assert "index" in result["hint"] and "ms" not in result["hint"]
+
+
+def _phase_locked_frames(motion: dict, period_s: float, duration_s: float, t0: float = 0.0) -> list[dict]:
+    """Frames like the glove simulator: the global clock is far from zero but the attempt is phase-locked to the motion period."""
+    spec = TypeAdapter(MotionSpec).validate_python(motion)
+    base = 40 * period_s
+    out = []
+    t = t0
+    while t < duration_s:
+        out.append(synthesiser.frame_at(spec, base + t, ("right",)).model_copy(update={"t": t}).model_dump(mode="json"))
+        t += 1 / FPS
+    return out
+
+
+@pytest.mark.parametrize(
+    ("motion", "period_s", "duration_s"),
+    [
+        ({"preset": "grip_and_swing", "grip": "shakehand", "swing": "forehand", "beat_ms": 1500}, 1.5, 4.5),
+        ({"preset": "grip_and_swing", "grip": "shakehand", "swing": "forehand", "beat_ms": 1500}, 1.5, 5.5),
+        ({"preset": "finger_sequence", "sequence": [1, 2, 3, 4, 5, 4, 3, 2, 1], "beat_ms": 620}, 5.58, 3.7),
+        ({"preset": "finger_sequence", "sequence": [1, 2, 3, 4, 5, 4, 3, 2, 1], "beat_ms": 620}, 5.58, 5.0),
+    ],
+)
+@pytest.mark.parametrize("t0", [0.0, 0.03])
+def test_phase_locked_attempt_with_global_clock_offset_scores_on_time(
+    client: TestClient, motion: dict, period_s: float, duration_s: float, t0: float
+) -> None:
+    """Breathing must repeat with the motion period, else a phase-locked attempt on a global clock reads as late."""
+    frames = _phase_locked_frames(motion, period_s, duration_s, t0)
+    result = client.post("/api/score", json={"reference_motion": motion, "attempt_frames": frames}).json()
+    assert result["timing"] >= 99 and result["within_tolerance"] is True, result
+
+
+@pytest.mark.parametrize("beat_ms", [600, 900, 1500, 3000])
+def test_swing_reference_is_not_static(beat_ms: int) -> None:
+    """The swing's finger signal is small, so its breathing must not cancel it below the static-reference threshold."""
+    spec = TypeAdapter(MotionSpec).validate_python({"preset": "grip_and_swing", "grip": "penhold", "swing": "backhand", "beat_ms": beat_ms})
+    assert not scoring.is_static(scoring.resample(synthesiser.synthesise(spec, "right", 12.0, 30.0), "right"))

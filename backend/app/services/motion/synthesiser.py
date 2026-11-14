@@ -88,9 +88,33 @@ def pose_at(spec: MotionSpec, t: float) -> Pose:
     return Pose((c.IDLE_CURL,) * 5)
 
 
-def _flexion(curls: tuple[float, ...], t: float) -> dict[str, tuple[float, float, float]]:
+def motion_period(spec: MotionSpec) -> float | None:
+    """Seconds after which a moving motion repeats exactly, or None for held poses and idle."""
+    if isinstance(spec, FingerSequence):
+        return spec.beat_ms / 1000.0 * len(spec.sequence)
+    if isinstance(spec, (GripAndSwing, Pinch)):
+        return spec.beat_ms / 1000.0
+    return None
+
+
+def _breathing(t: float, period: float | None) -> float:
+    """Breathing offset in radians at time t.
+
+    The simulator runs on a global clock and attempts are phase-locked to the motion period, while the reference is
+    synthesised from t=0, so breathing must repeat with the motion period or the two drift apart. A moving motion gets
+    the whole number of breaths per period nearest the natural rate, as a cosine that peaks mid-period: that lines the
+    peak up with the swing contact squeeze so the finger range of a swing stays clear of the static threshold.
+    Held poses and idle keep the free-running rate.
+    """
+    if period is None:
+        return math.sin(t * c.BREATHE_RATE) * c.BREATHE_AMPLITUDE
+    cycles = max(1, round(period * c.BREATHE_RATE / (2 * math.pi)))
+    return -math.cos(t * 2 * math.pi * cycles / period) * c.BREATHE_AMPLITUDE
+
+
+def _flexion(curls: tuple[float, ...], t: float, period: float | None = None) -> dict[str, tuple[float, float, float]]:
     """Convert curls to per-joint flexion in radians, with a slight breathing motion."""
-    breathe = math.sin(t * c.BREATHE_RATE) * c.BREATHE_AMPLITUDE
+    breathe = _breathing(t, period)
     out: dict[str, tuple[float, float, float]] = {}
     for i, name in enumerate(c.FINGERS):
         curl = max(c.CURL_MIN, min(c.CURL_MAX, curls[i]))
@@ -113,7 +137,7 @@ def hand_frame(spec: MotionSpec, side: Side, t: float) -> HandFrame:
         side=side,
         wrist_quat=tuple(round(v, c.FRAME_DECIMALS) for v in quat),  # type: ignore[arg-type]
         wrist_pos=None,
-        flexion=_flexion(pose.curls, t),
+        flexion=_flexion(pose.curls, t, motion_period(spec)),
         spread=FingerValues(),
     )
 

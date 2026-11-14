@@ -26,3 +26,6 @@ test-results/
 Thumbs.db
 .idea/
 .vscode/
+
+# Windows shell crash dumps
+*.stackdump
