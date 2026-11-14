@@ -23,9 +23,11 @@ import { withHatching } from './sketch';
 
 /**
  * How a hand is drawn. chalk: master, wood: apprentice, ghost: translucent overlay, shadow: dark guidance,
- * sketch: the expert's codex hand, lit toon shading with iron-gall hatching and a heavier ink outline.
+ * sketch: the expert's codex hand, lit toon shading with iron-gall hatching and a heavier ink outline. robot: the
+ * five-finger humanoid robot hand, the same mesh in light steel with hard toon bands, deep seams at the creases and
+ * bronze ball joints (added by the rig, see robotHandParts.ts).
  */
-export type HandStyle = 'chalk' | 'wood' | 'ghost' | 'shadow' | 'sketch';
+export type HandStyle = 'chalk' | 'wood' | 'ghost' | 'shadow' | 'sketch' | 'robot';
 
 let gradient: DataTexture | null = null;
 
@@ -219,9 +221,17 @@ function withRimAndFade<M extends Material>(mat: M, rim: number, rimColor: Color
 }
 
 /** How much each lit style darkens the folds between fingers and the creases (the mesh's aCavity), 0..1. */
-const CAVITY = { chalk: 0.4, sketch: 0.45, wood: 0.55 };
+const CAVITY = { chalk: 0.4, sketch: 0.45, wood: 0.55, robot: 0.75 };
 /** How much each lit style darkens a surface turning away from the eye (EDGE_FRAG), 0..1. */
-const EDGE = { chalk: 0.45, sketch: 0.2, wood: 0.5 };
+const EDGE = { chalk: 0.45, sketch: 0.2, wood: 0.5, robot: 0.4 };
+
+/**
+ * The humanoid robot hand's steel, the same light iron as the Dex3-1 twin (robot/robotMaterials.ts) so the two robots
+ * read as one workshop's machines. Dark iron would vanish on the walnut bench.
+ */
+export const ROBOT_STEEL = '#8d949e';
+/** Dull dark bronze for the robot's ball joints: darker than the Dex3-1 rings so it never reads as the gold of mastery. */
+export const ROBOT_BRONZE = '#6f5a43';
 
 export interface HandMaterialSet {
   /** The hand's skin material. One per hand, so fingers are tinted through `setTint`, not by swapping materials. */
@@ -230,6 +240,8 @@ export interface HandMaterialSet {
   line: Material | null;
   /** Translucent styles: a depth-only material drawn just before the fill. */
   prepass?: Material;
+  /** The robot style: the material of its ball joints. */
+  accent?: Material;
   /** Base colour of the fill. */
   base: Color;
   /** Tints one finger (null clears it). Cheap: it writes two uniforms. */
@@ -274,6 +286,14 @@ export function createHandMaterials(style: HandStyle, stage: StageColors, tint?:
     const set = finish(withRimAndFade(fill, ghost ? 0.55 : 0.25, rim), null, base);
     // Depth-only pass drawn just before the fill, so only the nearest layer of the one translucent skin shows.
     set.prepass = track(new MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true }));
+    return set;
+  }
+
+  if (style === 'robot') {
+    const base = new Color(tint ?? ROBOT_STEEL);
+    // The props' three hard bands, not the hand's soft ramp: plated steel, not skin.
+    const set = finish(new MeshToonMaterial({ color: base.clone(), gradientMap: toonGradient() }), outlineMaterial(stage.ink, 0.014), base, CAVITY.robot, EDGE.robot);
+    set.accent = track(new MeshToonMaterial({ color: ROBOT_BRONZE, gradientMap: toonGradient() }));
     return set;
   }
 
