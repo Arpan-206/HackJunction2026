@@ -13,6 +13,7 @@ final class FrameServer {
     private let lock = NSLock()
     // queue only
     private var listener: NWListener?
+    private var wantListening = false
     private var connection: NWConnection?
     // lock protected
     private var ready = false
@@ -34,7 +35,25 @@ final class FrameServer {
 
     func ensureListening() {
         queue.async {
+            self.wantListening = true
             if self.listener == nil { self.startListener() }
+        }
+    }
+
+    /// Drop the listener and bind again. iOS invalidates a listener while the app is in the
+    /// background or the phone is locked; after that the port refuses every connection until
+    /// a new listener binds, so the app calls this whenever it becomes active.
+    func restart() {
+        queue.async {
+            self.wantListening = true
+            if let l = self.listener {
+                self.listener = nil
+                l.cancel()
+            }
+            self.connection?.cancel()
+            self.connection = nil
+            self.setFlags(ready: false, inFlight: false)
+            self.startListener()
         }
     }
 
@@ -76,7 +95,15 @@ final class FrameServer {
                     self.listener = nil
                     self.queue.asyncAfter(deadline: .now() + 1) { if self.listener == nil { self.startListener() } }
                 case .cancelled:
-                    if self.listener === l { self.listener = nil }
+                    if self.listener === l {
+                        self.listener = nil
+                        if self.wantListening {
+                            self.report("listener closed; retrying", false)
+                            self.queue.asyncAfter(deadline: .now() + 1) { if self.listener == nil { self.startListener() } }
+                        }
+                    }
+                case .waiting(let error):
+                    self.report("listener waiting: \(error)", false)
                 default:
                     break
                 }

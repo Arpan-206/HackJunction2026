@@ -34,6 +34,11 @@ final class DepthStreamer: NSObject, ObservableObject, ARSessionDelegate {
 
     private var serverStarted = false
 
+    /// Bind the listener again after the app comes back to the foreground.
+    func restartServer() {
+        server.restart()
+    }
+
     func start() {
         guard ARWorldTrackingConfiguration.isSupported,
               ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) else {
