@@ -1,13 +1,16 @@
 """Check every language-model path the backend can use and print one table.
 
 Run from backend/:  uv run python scripts/llm_health.py
-                    uv run python scripts/llm_health.py --only ollama,openai   (no Gemini request)
+                    uv run python scripts/llm_health.py --only openai   (no Gemini request)
 
 Rows:
 - gemini: the Gemini API with GEMINI_API_KEY and GEMINI_MODEL. One short request, counted in the Gemini budget.
-- ollama: the local Ollama server at OLLAMA_URL with OLLAMA_MODEL (default gemma4:e4b).
-- openai: the OpenAI-compatible endpoint. OPENAI_BASE_URL if set, else base_url in verda/out/endpoint.json.
+- openai: Gemma on Verda, or any OpenAI-compatible endpoint. OPENAI_BASE_URL if set, else base_url in verda/out/endpoint.json.
   The key is OPENAI_API_KEY, else VERDA_INFERENCE_KEY. Nothing is deployed; a torn-down endpoint shows as unreachable.
+
+A second table shows, for each role (coach hint, plan, lesson generation, motion from text), the chain the
+backend builds from LLM_PROVIDER, LLM_FALLBACK and LLM_ROUTES, and the provider that would answer now: the first
+one in the chain that answered above, else offline. A provider skipped with --only counts as not answering.
 
 Settings come from backend/.env (the file the backend reads) and the repo-root .env. Keys are never printed.
 The exit code is 0 when at least one model answered, else 1.
@@ -32,13 +35,14 @@ from dotenv import dotenv_values  # noqa: E402
 from app.core.config import Settings  # noqa: E402
 from app.services.llm.base import LLMRequest  # noqa: E402
 from app.services.llm.gemini import GeminiLLM  # noqa: E402
-from app.services.llm.ollama import OllamaLLM  # noqa: E402
 from app.services.llm.openai_compat import OpenAICompatLLM  # noqa: E402
+from app.services.llm.registry import ROLES, LLMState  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parent.parent
 REPO = BACKEND.parent
 ENDPOINT_FILE = REPO / "verda" / "out" / "endpoint.json"
-PROVIDERS = ("gemini", "ollama", "openai")
+PROVIDERS = ("gemini", "openai")
+ROLE_NAMES = {"hint": "coach hint", "plan": "plan", "lesson": "lesson generation", "motion": "motion from text"}
 PROBE_TIMEOUT_S = 5.0
 ANSWER_TIMEOUT_S = 60.0
 FIRST_WORDS = 8
@@ -140,25 +144,6 @@ async def check_gemini(settings: Settings, secrets: list[str]) -> Row:
     return row
 
 
-async def check_ollama(settings: Settings, secrets: list[str]) -> Row:
-    """The local Ollama server: is it up, is the model pulled, does it answer."""
-    row = Row("ollama", settings.ollama_model)
-    base = settings.ollama_url.rstrip("/")
-    try:
-        async with httpx.AsyncClient(timeout=PROBE_TIMEOUT_S) as client:
-            version = (await client.get(f"{base}/api/version")).json().get("version", "?")
-            tags = (await client.get(f"{base}/api/tags")).json().get("models", [])
-    except (httpx.HTTPError, ValueError):
-        row.words = f"no server at {base}; start it with: ollama serve"
-        return row
-    row.reachable = f"yes (v{version})"
-    pulled = {m.get("name") for m in tags}
-    if settings.ollama_model not in pulled:
-        row.words = f"{settings.ollama_model} not pulled; run: ollama pull {settings.ollama_model}"
-        return row
-    return await _ask(row, OllamaLLM(settings.ollama_url, settings.ollama_model), secrets)
-
-
 async def check_openai(settings: Settings, env: dict[str, str], secrets: list[str]) -> Row:
     """The OpenAI-compatible endpoint (vLLM on Verda or any other). Read-only: nothing is deployed."""
     info = _endpoint()
@@ -181,10 +166,35 @@ async def check_openai(settings: Settings, env: dict[str, str], secrets: list[st
     return await _ask(row, OpenAICompatLLM(base, key, model), secrets)
 
 
+def role_table(state: LLMState, rows: list[Row]) -> list[tuple[str, str, str]]:
+    """For each role: its chain after the fallback rules, and who would answer now."""
+    healthy = {r.provider for r in rows if r.answered == "yes"} | {"fake"}
+    table = []
+    for role in ROLES:
+        chain = state.chain_for(role)
+        last = "offline note" if role == "hint" else "template"
+        if chain == ["fake"]:
+            table.append((ROLE_NAMES[role], "fake", "fake (no model)"))
+            continue
+        now = next((name for name in chain if name in healthy), f"offline ({last})")
+        table.append((ROLE_NAMES[role], " then ".join([*chain, last]), now))
+    return table
+
+
+def render_roles(table: list[tuple[str, str, str]]) -> str:
+    """The role table as plain text."""
+    return _table(("role", "chain", "answers now"), table)
+
+
 def render(rows: list[Row]) -> str:
-    """A plain text table."""
+    """The provider table as plain text."""
     head = ("provider", "model", "reachable", "answered", "latency", "first words or reason")
-    cells = [head] + [(r.provider, r.model, r.reachable, r.answered, r.latency, r.words) for r in rows]
+    return _table(head, [(r.provider, r.model, r.reachable, r.answered, r.latency, r.words) for r in rows])
+
+
+def _table(head: tuple[str, ...], body: list[tuple[str, ...]]) -> str:
+    """Columns padded to width; the last column is left ragged."""
+    cells = [head, *body]
     widths = [max(len(row[i]) for row in cells) for i in range(len(head) - 1)]
 
     def line(row: tuple[str, ...]) -> str:
@@ -201,18 +211,19 @@ async def main(only: list[str]) -> int:
     secrets = _secrets(env)
     jobs = {
         "gemini": lambda: check_gemini(settings, secrets),
-        "ollama": lambda: check_ollama(settings, secrets),
         "openai": lambda: check_openai(settings, env, secrets),
     }
-    rows = await asyncio.gather(*(jobs[name]() for name in only))
-    print(f"LLM_PROVIDER={settings.llm_provider}  LLM_FALLBACK={settings.llm_fallback}")
-    print(render(list(rows)))
+    rows = list(await asyncio.gather(*(jobs[name]() for name in only)))
+    print(f"LLM_PROVIDER={settings.llm_provider}  LLM_FALLBACK={settings.llm_fallback}  LLM_ROUTES={settings.llm_routes or '-'}")
+    print(render(rows))
+    print()
+    print(render_roles(role_table(LLMState(settings), rows)))
     return 0 if any(r.answered == "yes" for r in rows) else 1
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--only", default=",".join(PROVIDERS), help="comma-separated subset of gemini,ollama,openai")
+    parser.add_argument("--only", default=",".join(PROVIDERS), help="comma-separated subset of gemini,openai")
     names = [n.strip() for n in parser.parse_args().only.split(",") if n.strip()]
     bad = [n for n in names if n not in PROVIDERS]
     if bad:
