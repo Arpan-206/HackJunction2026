@@ -195,6 +195,7 @@ def test_only_the_four_demo_skills_ship(client: TestClient) -> None:
         "piano",
         "finnish_fingerspelling",
         "shadow_puppets",
+        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
     }
     assert client.get("/api/moves", params={"skill": "crochet"}).status_code == 422
 
@@ -242,4 +243,5 @@ def test_a_retired_seed_in_the_store_is_removed_before_it_is_read(tmp_path) -> N
         "piano",
         "finnish_fingerspelling",
         "shadow_puppets",
+        "fingerspelling",  # the American alphabet drill (/apprentice/fingerspelling), not in the catalogue
     }

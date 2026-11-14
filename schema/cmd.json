@@ -43,7 +43,9 @@
         "coach_answer",
         "subscribe",
         "ping",
-        "set_robot_source"
+        "set_robot_source",
+        "keystroke",
+        "typing_reset"
       ]
     },
     "args": {

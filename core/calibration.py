@@ -100,6 +100,23 @@ class HandCalibration:
         mask[FLEX_SLOTS] = True
         return mask & ((self.fist - self.flat) > self.min_range_deg)
 
+    def slot_weights(self) -> np.ndarray:
+        """(18,) 1 or 0 per angle slot for the scorer: 0 on a flexion joint this calibration marks unusable.
+
+        An unusable joint stays raw while its neighbours are calibrated, so its
+        error against a calibrated reference means nothing. Spread slots stay 1.
+        """
+        w = np.ones(H.N_ANGLES)
+        w[FLEX_SLOTS] = self.usable[FLEX_SLOTS].astype(float)
+        return w
+
+    def finger_weights(self) -> dict[str, float]:
+        """1 per finger with at least one usable flexion joint, else 0 (the finger cannot be judged)."""
+        use = self.usable
+        return {
+            f: 1.0 if bool(use[H.FLEXION_SLOTS[f]].any()) else 0.0 for f in H.FINGERS
+        }
+
     def apply(self, angles: np.ndarray) -> np.ndarray:
         a = np.asarray(angles, dtype=float)
         use = self.usable
@@ -118,6 +135,10 @@ class HandCalibration:
         return {
             **self.origin,
             "usable_joints": int(self.usable.sum()),
+            "unusable": [
+                H.ANGLE_NAMES[i] for i in FLEX_SLOTS if not bool(self.usable[i])
+            ],
+            "finger_weights": self.finger_weights(),
             "flat_deg": {
                 f: round(float(np.mean(self.flat[H.FLEXION_SLOTS[f]])), 1)
                 for f in H.FINGERS
@@ -145,8 +166,15 @@ def make_hand_calibration(
     cal_cfg,
     hand_cfg,
     origin: dict,
+    thumb_triples: dict | None = None,
 ) -> HandCalibration:
-    """Build from backend triples. Without a fist the range is the nominal span (origin says so)."""
+    """Build from backend triples. Without a fist the range is the nominal span (origin says so).
+
+    A thumb-folded capture (the backend's optional `thumb` phase, from the demo
+    table's guest calibration) replaces the fist as the closed end of the thumb
+    range: in a loose fist the thumb moves only about 14 degrees from flat, so
+    the fist alone makes the thumb range tiny or unusable.
+    """
     full = nominal_full(hand_cfg)
     flat = triples_to_angles(flat_triples)
     if _phase_present(fist_triples):
@@ -155,6 +183,12 @@ def make_hand_calibration(
     else:
         fist = flat + full
         origin = {**origin, "range": "nominal"}
+    if _phase_present(thumb_triples):
+        folded = triples_to_angles(thumb_triples)
+        fist = fist.copy()
+        for s in H.FLEXION_SLOTS["thumb"]:
+            fist[s] = folded[s]
+        origin = {**origin, "thumb": "measured"}
     return HandCalibration(
         side=side,
         flat=flat,
@@ -228,7 +262,13 @@ def load_hand(
             "created_at": (rng or rec).get("created_at"),
         }
         return make_hand_calibration(
-            side, flat, rng.get("fist") if rng else None, cal_cfg, hand_cfg, origin
+            side,
+            flat,
+            rng.get("fist") if rng else None,
+            cal_cfg,
+            hand_cfg,
+            origin,
+            rng.get("thumb") if rng else None,
         )
     cands = [
         r
@@ -244,7 +284,7 @@ def load_hand(
         "created_at": rng.get("created_at"),
     }
     return make_hand_calibration(
-        side, rng["flat"], rng.get("fist"), cal_cfg, hand_cfg, origin
+        side, rng["flat"], rng.get("fist"), cal_cfg, hand_cfg, origin, rng.get("thumb")
     )
 
 

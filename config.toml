@@ -96,6 +96,9 @@ clip_high = 1.0
 max_gain = 2.0
 
 [camera]
+# Depth step (core/camera/depth_live.py): table, forearm, glove yaw correction, /ws/depth.
+# Off by default; python -m core --depth turns it on. Nothing verified on real depth yet.
+depth_enabled = false
 device = 0
 video = ""
 mirror = true
@@ -124,8 +127,10 @@ pinch_off_m = 0.030
 joint_decimals = 4
 
 [score]
-perfect_deg = 8
-wrong_deg = 45
+# 15 / 60 from the real-capture study on calibrated angles (STATUS-core.md): the
+# right pose passes 100%, the wrong pose 3%. SPEC's 8 / 45 passed the right pose 67%.
+perfect_deg = 15
+wrong_deg = 60
 pass_score = 0.85
 ema_tau_ms = 150
 move_window_ms = 250
@@ -134,6 +139,10 @@ stuck_s = 5.0
 hold_ms_default = 500
 timing_hint_ms = 150
 spread_weight = 0.5
+# The one to fix (frame `worst`, its hint, the summary's fingers) is only ever
+# a finger whose step weight is at least this (STATUS-weights.md). With no
+# finger that heavy, the heaviest non-zero fingers stand in.
+focus_min_weight = 0.3
 
 [score.camera]
 # Wider tolerances when either hand being scored comes from the camera.
@@ -149,6 +158,19 @@ static_finger_deg = 15
 static_finger_weight = 0.5
 hold_fraction = 0.5
 default_weights = { thumb = 1.0, index = 1.0, middle = 1.0, ring = 1.0, little = 1.0 }
+# Step weight = static x consistency x chart x calibration (core/recorder.py
+# step_weights, STATUS-weights.md). Consistency: steps whose key poses differ by
+# at most take_match_deg (largest per-finger mean flexion difference) are takes
+# of one pose, or task_config `takes = N` says the lesson is N repeats of one
+# sequence. A finger whose flexion varies across takes by a standard deviation
+# of consistent_deg or less keeps weight 1; inconsistent_deg or more drops to
+# inconsistent_floor. Chart: fingers the task's chart names for the step (typing
+# keys, piano notes, task_config `fingers`) keep 1, the rest chart_other_weight.
+take_match_deg = 12
+consistent_deg = 4
+inconsistent_deg = 15
+inconsistent_floor = 0.2
+chart_other_weight = 0.2
 
 [session]
 default_roles = { left = "free", right = "learner" }
@@ -193,6 +215,20 @@ rest_tau_ms = 2000
 good_ms = 120
 near_ms = 300
 default_tempo_bpm = 70
+
+[typing]
+# Typing task (core/tasks/typing.py). Keystrokes move a finger far less than a
+# piano press: the first real-glove typing capture (14 Nov) gave 2 presses in 64 s
+# with the [piano] thresholds and 46 with these. Still unvalidated: no clean capture yet.
+press_velocity_deg_s = 60
+press_min_deg = 4
+release_deg = 2
+rest_tau_ms = 2000
+# Window around each keydown, and how a finger wins it.
+pre_ms = 150
+post_ms = 120
+min_peak_deg_s = 40.0
+clear_ratio = 1.5
 
 [robot]
 # Robot hand output: the 18 angle features retargeted to joint targets.
@@ -247,3 +283,59 @@ weights = { middle_mcp = 1.0 }
 finger = "middle"
 offset_deg = 0.0
 weights = { middle_pip = 0.7, middle_dip = 0.5 }
+
+[camera.geppetto_depth]
+# Our own iPhone app (ios/GeppettoDepth). WiFi for now: the phone's address from Settings > Wi-Fi.
+# For the cable (30 fps, steady): run ios/mac/forward.sh and set host = "127.0.0.1".
+host = "10.0.34.248"
+port = 7700
+timeout_s = 5.0
+min_confidence = 1
+
+[camera.depth]
+# Depth tracking on the GeppettoDepth stream (core/camera/depth_track.py). Tested on the
+# fake bench scene only (core/camera/fake_depth.py); tune on a real bench recording with
+# python -m tools.depth_check. Metres, degrees, pixels at the 256x192 depth resolution.
+min_confidence = 1
+band_min_m = 0.012
+band_max_m = 0.35
+max_range_m = 1.0
+min_blob_px = 150
+forearm_len_m = 0.15
+min_elongation = 1.8
+min_forearm_points = 40
+ransac_iters = 60
+ransac_tol_m = 0.006
+max_tilt_deg = 25.0
+table_band_m = 0.01
+# Core yaw of the phone's viewing direction on the table: 180 when it faces the person
+# across the bench, 0 when it looks the same way as the person.
+camera_yaw_deg = 180.0
+cloud_points = 2000
+cloud_hz = 10.0
+dark_min_px = 120
+# Arm shape gates (tools/depth_check.py on captures/bench-3: a crisps bag and a laptop
+# sleeve passed as arms until these were added). Real arms are not measured yet.
+cylinder = true
+arm_width_min_m = 0.01
+arm_width_max_m = 0.16
+arm_radius_min_m = 0.015
+arm_radius_max_m = 0.07
+cylinder_max_rms_m = 0.012
+require_entry = true
+arm_max_tilt_deg = 40.0
+# Glove yaw drift correction, applied in the session tick to this side's wrist yaw.
+correct_yaw = true
+side = "right"
+# "lock": learn the depth minus glove offset over lock_s, then remove drift from it.
+# "table": trust camera_yaw_deg and pull the glove to the bench yaw.
+reference = "lock"
+lock_s = 2.0
+lock_min_samples = 20
+# Slow offset: time constant tau_s (SPEC.md asks 2 percent a frame at 30 Hz, about 1.65 s).
+tau_s = 1.5
+outlier_deg = 25.0
+outlier_run = 45
+max_correction_deg = 60.0
+stale_ms = 300.0
+

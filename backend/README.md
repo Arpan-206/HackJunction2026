@@ -1,6 +1,6 @@
 # Geppetto backend
 
-FastAPI service for Geppetto: streams smoothed glove frames over WebSocket, stores lessons, recordings and calibrations as JSON files, scores attempts, and generates lessons with Gemini, Gemma (Ollama) or an offline fake provider. The API and data contract is `../docs/CONTRACT.md`.
+FastAPI service for Geppetto: streams smoothed glove frames over WebSocket, stores lessons, recordings and calibrations as JSON files, scores attempts, and generates lessons with Gemini, Gemma on Verda or an offline fake provider. The API and data contract is `../docs/CONTRACT.md`.
 
 ## Run
 
@@ -23,13 +23,11 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `LLM_PROVIDER` | `fake` | `fake`, `gemini` or `ollama` |
+| `LLM_PROVIDER` | `fake` | `fake`, `gemini` or `openai` |
 | `GEMINI_API_KEY` | none | Required for `gemini` |
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model name |
 | `GEMINI_HINT_MODEL` | `gemini-3.5-flash-lite` | Model for live coach hints (same model by default, so both share its 500 per day free quota) |
 | `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET` | 80% of the free limit | Override the request budgets |
-| `OLLAMA_URL` | `http://localhost:11434` | Ollama server |
-| `OLLAMA_MODEL` | `gemma4:e4b` | Use `gemma4:12b` with 12 to 16 GB of VRAM |
 | `GLOVE_SOURCE` | `simulator` | `simulator`, `rokoko_udp`, `rokoko_sdk` (stub) or `external` |
 | `ROKOKO_UDP_PORT` | `14043` | Studio Custom Streaming port |
 | `DATA_DIR` | `./data` | Lessons, recordings and calibrations (JSON files) |

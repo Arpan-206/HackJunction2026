@@ -4,6 +4,7 @@ import type { Lesson } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink, Card, TextArea } from '../../../components/ui';
 import { ASSISTANT_OFF, useAssistant } from '../../shared/assistant';
+import { ModelLabel } from '../../shared/ModelLabel';
 import { LessonEditor } from '../components/LessonEditor';
 import { blankStep, newStepId, SKILLS } from '../lib';
 import { EXAMPLE_PROMPTS, useGenerate, VIDEO_MAX_MB } from './useGenerate';
@@ -162,6 +163,7 @@ export function GenerateSteps() {
             <p className="mst-gen__provider">
               {draftNote(g.result.provider, g.source === 'video')}
             </p>
+            <ModelLabel provider={g.result.provider} />
           </div>
           <LessonEditor key={g.generation} lesson={g.result.lesson} onSave={save} saveLabel="Save lesson" />
         </section>

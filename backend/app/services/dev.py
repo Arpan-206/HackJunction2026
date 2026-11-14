@@ -24,6 +24,8 @@ class DevService:
             llm_provider=self._llm.name,  # type: ignore[arg-type]
             simulator_motion=self._gloves.simulator_motion,
             gemini_budget=self._llm.budgets(),
+            llm_chain=self._llm.chain,
+            llm_answered_by=self._llm.last_answered,
         )
 
     async def apply(self, patch: DevStatePatch) -> DevState:

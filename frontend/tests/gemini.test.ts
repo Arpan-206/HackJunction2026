@@ -34,6 +34,6 @@ describe('motionProviderLine', () => {
     expect(motionProviderLine('fake')).toMatch(/keyword rules while the AI Assistant was unavailable/);
     // Provider names stay in the developer panel: users only ever read "the AI Assistant".
     expect(motionProviderLine('gemini')).toBe('Read by the AI Assistant.');
-    expect(motionProviderLine('ollama')).not.toMatch(/Gemma|Gemini|ollama/i);
+    expect(motionProviderLine('openai')).not.toMatch(/Gemma|Gemini|Verda/i);
   });
 });

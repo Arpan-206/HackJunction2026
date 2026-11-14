@@ -1,0 +1,27 @@
+[project]
+name = "geppetto-verda"
+version = "0.1.0"
+description = "Geppetto on Verda: Gemma 4 behind vLLM turns a recorded demonstration into a lesson"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "verda>=1.25.0",
+    "httpx>=0.28",
+    "python-dotenv>=1.0",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.9",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "fastapi>=0.115",
+    "google-genai>=1.0",
+    "python-multipart>=0.0.33",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

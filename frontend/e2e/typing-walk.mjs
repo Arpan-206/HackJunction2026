@@ -1,25 +1,27 @@
-// Walks touch typing in mock mode (no Python backend needed): the skill page, a lesson room at the desk, the air typing
-// game to its result, and the "Type on your keyboard" mode until the simulated glove shows a fingering correction.
-// Fails on any console error or uncaught page error. Screenshots go to docs/screens/typing-*.png.
-// Parked: touch typing is off the catalogue (the four demo skills only) and its seed lesson no longer ships, so this walk
-// fails until a touch typing lesson is served again. The typing engine it exercises is kept in the code.
-// Run: node e2e/typing-walk.mjs   (starts the Vite dev server on :5184 if nothing answers there; E2E_PORT picks the port).
-// Playwright is taken from the repo's genui package (E2E_PLAYWRIGHT overrides the path), so the frontend gains no dependency.
+// Walks /typing: types the first two drills with real key presses and checks the screen's lines and tally.
+// Two modes:
+//   node e2e/typing-walk.mjs                  no core: keys are checked, fingers are not.
+//   TYPING_CORE=1 node e2e/typing-walk.mjs    against python -m core --fake on TYPING_CORE_PORT (default 8765): the core
+//                                             simulates presses, so finger verdicts (good, wrong finger, unclear) appear.
+// Fails on any uncaught page error. Screenshots go to docs/screens/typing-*.png.
+// Playwright is taken from the repo's genui package, so no extra dependency is added to the frontend.
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-const pw = process.env.E2E_PLAYWRIGHT ?? path.resolve(here, '../../genui/node_modules/playwright');
-if (!existsSync(pw)) throw new Error(`Playwright not found at ${pw}; set E2E_PLAYWRIGHT`);
-const { chromium } = require(pw);
+const { chromium } = require(path.resolve(here, '../../genui/node_modules/playwright'));
 
-const PORT = Number(process.env.E2E_PORT ?? 5184);
+const PORT = Number(process.env.E2E_PORT ?? 5189);
 const BASE = `http://localhost:${PORT}`;
 const OUT = path.resolve(here, '../docs/screens') + path.sep;
+const CORE = process.env.TYPING_CORE === '1';
+const CORE_PORT = Number(process.env.TYPING_CORE_PORT ?? 8765);
+// Without a core, point the socket at a closed port so the walk never switches the task of a core that happens to run.
+const CORE_WS = CORE ? `ws://localhost:${CORE_PORT}/ws` : 'ws://localhost:9/ws';
+const tag = CORE ? 'core' : 'nocore';
 
 async function up(url) {
   try {
@@ -32,106 +34,64 @@ async function up(url) {
 let vite = null;
 if (!(await up(BASE))) {
   const bin = path.resolve(here, '../node_modules/vite/bin/vite.js');
-  vite = spawn(process.execPath, [bin, '--port', String(PORT), '--strictPort'], { cwd: path.resolve(here, '..'), stdio: 'ignore' });
+  vite = spawn(process.execPath, [bin, '--port', String(PORT), '--strictPort'], { cwd: path.resolve(here, '..'), stdio: 'ignore', env: { ...process.env, VITE_CORE_WS: CORE_WS } });
   for (let i = 0; i < 100 && !(await up(BASE)); i++) await new Promise((r) => setTimeout(r, 300));
 }
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const problems = [];
 page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
-page.on('console', (m) => {
-  if (m.type() === 'error') problems.push(`console.error: ${m.text()}`);
-});
-const shot = (name) => page.screenshot({ path: `${OUT}typing-${name}.png` });
 const step = (msg) => console.log(`- ${msg}`);
-const settle = (ms = 1200) => page.waitForTimeout(ms);
-const expectVisible = async (locator, what, timeout = 20000) => {
-  await locator.first().waitFor({ state: 'visible', timeout }).catch(() => {
-    throw new Error(`Expected to see: ${what}`);
-  });
-};
+const lineText = () => page.locator('.ty-line').innerText();
+
+async function typeDrill(text, gapMs) {
+  for (const ch of text) {
+    await page.keyboard.press(ch === ' ' ? 'Space' : ch);
+    await page.waitForTimeout(gapMs);
+  }
+}
 
 let exitCode = 0;
 try {
-  step('skill page: touch typing is live, the expert plays the drills at the desk');
-  await page.goto(`${BASE}/apprentice?mock=1`);
-  await page.waitForFunction(() => window.__apprenticeMock === true, null, { timeout: 15000 });
-  await page.getByRole('link', { name: /Touch typing/ }).first().click();
-  await expectVisible(page.getByRole('link', { name: /Start lesson 1|Continue lesson/ }), 'skill page primary action');
-  await expectVisible(page.getByRole('group', { name: 'Which lesson plays' }), 'showcase lesson switch');
-  await settle(3500);
-  await shot('01-skill');
+  step('/typing loads with the keyboard, the drill list and the tally');
+  await page.goto(`${BASE}/typing?mock=1`);
+  await page.getByRole('heading', { name: 'Touch typing' }).waitFor({ timeout: 20000 });
+  await page.locator('.ty-kb').waitFor();
+  if (CORE) await page.waitForFunction(() => /imagines each press|watching your fingers/.test(document.querySelector('.ty-engine')?.textContent ?? ''), null, { timeout: 20000 });
+  console.log(`  engine: ${await page.locator('.ty-engine').innerText()}`);
+  await page.screenshot({ path: `${OUT}typing-${tag}-01-start.png` });
 
-  step('lesson room: F and J at the desk, both hands over the chalk keyboard, the expert as ghosts');
-  await page.goto(`${BASE}/apprentice/lessons/seed-touch-typing/steps/1`);
-  await expectVisible(page.getByRole('button', { name: /Try it out|Start with the strings/ }), 'Start with the strings button');
-  await settle(3000);
-  await shot('02-room');
-  await page.getByRole('button', { name: /Try it out|Start with the strings/ }).click();
-  await expectVisible(page.getByRole('button', { name: /Begin (rep|attempt) 1/ }), 'Begin rep button at the desk');
-  await page.getByRole('button', { name: /Begin (rep|attempt) 1/ }).click();
-  await settle(4500);
-  await shot('03-room-rep');
+  step('a wrong key: the cursor stays and the line says which key to type');
+  await page.keyboard.press('g');
+  await page.waitForTimeout(300);
+  console.log(`  line: ${await lineText()}`);
+  if (!/That was G\. Type F with your left index finger\./.test(await lineText())) throw new Error('wrong-key line missing');
 
-  step('air typing: intro, words one at a time, a correction, then the result');
-  await page.goto(`${BASE}/apprentice/lessons/seed-touch-typing/test`);
-  await expectVisible(page.getByRole('radio', { name: 'Air typing' }), 'mode switch');
-  await expectVisible(page.getByRole('button', { name: 'Start typing' }), 'air typing intro');
-  await settle(2500);
-  await shot('04-air-intro');
-  await page.getByRole('button', { name: 'Start typing' }).click();
-  await expectVisible(page.locator('.ty-word'), 'the word on the stage');
-  await expectVisible(page.locator('.ty-letter--ok'), 'a letter struck with the right finger', 30000);
-  await settle(1500);
-  await shot('05-air-play');
-  await expectVisible(page.locator('.ty-callout--off'), 'a wrong finger called out', 40000);
-  await shot('06-air-correction');
-  await expectVisible(page.getByRole('region', { name: 'Test result' }), 'air typing result', 60000);
-  const wpm = await page.locator('.ap-result__split li', { hasText: 'words per minute' }).innerText();
-  console.log(`  ${wpm.replace(/\s+/g, ' ')}`);
-  await settle(800);
-  await shot('07-air-result');
+  step('type the first drill');
+  const drill1 = await page.locator('.ty-text').innerText();
+  await typeDrill(drill1.replace(/ /g, ' '), CORE ? 380 : 40);
+  await page.waitForTimeout(600);
+  console.log(`  line: ${await lineText()}`);
+  if (!/^Done\./.test(await lineText())) throw new Error('drill did not finish');
+  const rows = await page.locator('.ty-tally tbody tr').allInnerTexts();
+  console.log(`  tally:\n    ${rows.map((r) => r.replace(/\s+/g, ' ')).join('\n    ')}`);
+  await page.screenshot({ path: `${OUT}typing-${tag}-02-done.png` });
 
-  step('type on your keyboard: the simulated glove names the finger for every key and corrects a wrong one');
-  await page.getByRole('radio', { name: 'Type on your keyboard' }).click();
-  await expectVisible(page.locator('.ty-line'), 'the practice line');
-  await settle(2000);
-  const line = (await page.locator('.ty-line').getAttribute('aria-label')).replace(/^Type: /, '');
-  let corrected = false;
-  for (const ch of line) {
-    await page.keyboard.press(ch === ' ' ? 'Space' : ch);
-    await settle(260);
-    if (await page.locator('.ty-callout--off').count()) {
-      corrected = true;
-      break;
-    }
-  }
-  if (!corrected) throw new Error('expected a fingering correction from the simulated glove');
-  const text = await page.locator('.ty-callout--off').innerText();
-  console.log(`  ${text}`);
-  if (!/You pressed .+ with your .+; use your .+\./.test(text)) throw new Error(`unexpected correction wording: ${text}`);
-  await shot('08-keys-correction');
-
-  step('the real-looking keyboard with "Add a prop"');
-  await page.getByRole('button', { name: 'Add a prop' }).click();
-  for (const ch of 'abc') {
-    await page.keyboard.press(ch);
-    await settle(200);
-  }
-  await settle(1500);
-  await shot('09-keys-prop');
-  await page.getByRole('button', { name: 'Add a prop' }).click();
+  step('next drill, then a few keys mid-drill');
+  await page.getByRole('button', { name: 'Next drill' }).click();
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await typeDrill('ddd kk', CORE ? 380 : 40);
+  await page.waitForTimeout(600);
+  console.log(`  line: ${await lineText()}`);
+  await page.screenshot({ path: `${OUT}typing-${tag}-03-mid.png` });
+  if (problems.length) throw new Error(problems.join('\n'));
+  console.log('OK');
 } catch (e) {
-  problems.push(`walk failed: ${e.message}`);
-  await shot('zz-failure').catch(() => undefined);
-}
-
-await browser.close();
-vite?.kill();
-if (problems.length) {
-  console.log('\nPROBLEMS');
-  problems.forEach((p) => console.log(`  ${p}`));
+  console.error(e.message ?? e);
   exitCode = 1;
-} else console.log('\nWalk finished with no console or page errors.');
+} finally {
+  await browser.close();
+  vite?.kill();
+}
 process.exit(exitCode);

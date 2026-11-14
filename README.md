@@ -69,7 +69,7 @@ Details and wiring: `docs/HARDWARE_INTEGRATION.md`.
 
 ## LLM providers
 
-Set `LLM_PROVIDER`: `fake` (default, offline, deterministic), `gemini` (needs `GEMINI_API_KEY`) or `ollama` (`OLLAMA_URL`, `OLLAMA_MODEL`). Other variables: `GEMINI_MODEL`, `GEMINI_HINT_MODEL`, `GLOVE_SOURCE`, `ROKOKO_UDP_PORT`, `DATA_DIR`. See `backend/.env.example`. Never commit `.env`.
+Set `LLM_PROVIDER`: `fake` (default, offline, deterministic), `gemini` (needs `GEMINI_API_KEY`) or `openai` (Gemma on Verda, `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`). Other variables: `GEMINI_MODEL`, `GEMINI_HINT_MODEL`, `GLOVE_SOURCE`, `ROKOKO_UDP_PORT`, `DATA_DIR`. See `backend/.env.example`. Never commit `.env`.
 
 Gemini free-tier limiter (`backend/app/services/llm/rate_limit.py`, numbers in `backend/app/constants.py`): requests are counted per model, with a sliding 60 second window and a per-day counter saved to `gemini_usage.json` (the day resets at midnight Pacific). The budget is 80 percent of the free limit, so the demo should not meet a real 429. Overrides: `GEMINI_RPM_BUDGET`, `GEMINI_RPD_BUDGET`.
 

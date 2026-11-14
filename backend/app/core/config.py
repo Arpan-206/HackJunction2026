@@ -20,9 +20,23 @@ class Settings(BaseSettings):
     gemini_hint_model: str = c.GEMINI_HINT_MODEL
     gemini_rpm_budget: int | None = None
     gemini_rpd_budget: int | None = None
-    ollama_url: str = c.DEFAULT_OLLAMA_URL
-    ollama_model: str = c.DEFAULT_OLLAMA_MODEL
-    llm_provider: Literal["fake", "gemini", "ollama"] = "fake"
+    openai_base_url: str = "http://localhost:8000"
+    openai_api_key: str | None = None
+    openai_model: str = c.DEFAULT_OPENAI_MODEL
+    llm_provider: Literal["fake", "gemini", "openai"] = "fake"
+    # Providers tried after the first one fails, comma separated (gemini, openai); the first one is skipped.
+    # openai joins only when OPENAI_BASE_URL is set. After the last one the coach shows its offline note.
+    # "none" keeps one provider.
+    llm_fallback: str = "gemini,openai"
+    # Per-role first provider, for example "lesson=openai,plan=openai" sends those roles to Gemma on Verda first.
+    llm_routes: str = ""
+    # The tuned coach (coach_tune/): with COACH_MODEL=tuned and TUNED_BASE_URL set, live hints try the small fine-tuned
+    # Gemma first, then the chain above. Off by default.
+    coach_model: Literal["default", "tuned"] = "default"
+    tuned_base_url: str = ""
+    tuned_api_key: str | None = None
+    tuned_model: str = c.DEFAULT_TUNED_MODEL
+    tuned_lang: Literal["en", "de", "fi"] = "en"
     glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
         "simulator"
     )

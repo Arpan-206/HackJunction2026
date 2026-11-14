@@ -42,3 +42,6 @@ Thumbs.db
 
 # Windows shell crash dumps
 *.stackdump
+
+# coach-tune lane: dataset, labels, adapter (local only)
+coach_tune/out/

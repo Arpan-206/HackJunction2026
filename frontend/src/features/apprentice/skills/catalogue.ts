@@ -178,10 +178,13 @@ export function keyPoseTime(spec: MotionSpec | null): number {
  * Merges the catalogue with the lessons from the API, grouping lessons by their skill. Known skills keep catalogue order; a
  * skill id the catalogue lacks becomes a live skill with defaults. Live skills come first, then the workshop.
  */
+/** Skills with seed lessons that stay off the dashboard: the American alphabet drill is reached at /apprentice/fingerspelling (the catalogue shows the Finnish skill). */
+const HIDDEN_SKILLS: ReadonlySet<string> = new Set(['fingerspelling']);
+
 export function buildSkills(lessons: Lesson[], catalogue: CatalogueEntry[] = CATALOGUE): SkillView[] {
   const bySkill = new Map<string, Lesson[]>();
   for (const l of newestPerTitle(lessons)) {
-    if (!l.steps.length) continue;
+    if (!l.steps.length || HIDDEN_SKILLS.has(String(l.skill))) continue;
     const id = String(l.skill);
     bySkill.set(id, [...(bySkill.get(id) ?? []), l]);
   }

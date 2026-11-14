@@ -1,0 +1,42 @@
+/* The REPLAY corner mark: walnut ink on paper colours in every theme, readable from 3 m, never clickable, above
+   everything (dialogs and the dev panel included). Not a pill: a square-cornered label plate with a ruled edge. */
+.replay-mark {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  padding: 0.55rem 1.1rem 0.6rem 1.3rem;
+  background: #3b2716;
+  color: #f4ecd8;
+  border-left: 3px double #f4ecd8;
+  border-bottom: 3px double #f4ecd8;
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  user-select: none;
+}
+
+.replay-mark__word {
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.replay-mark__note {
+  font-family: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+@media print {
+  .replay-mark {
+    position: absolute;
+  }
+}

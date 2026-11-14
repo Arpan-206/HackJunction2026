@@ -21,3 +21,4 @@ export { RobotHand, RobotStrings, loadRobotModel, useRobotModel, parseUrdf, type
 export { STRING_POINTS, writeStringSegments } from './stringMath';
 export { TypingKeyboard } from './TypingKeyboard';
 export { keyCenter, KEY_PITCH, TYPING_HAND_X, TYPING_HAND_Y } from './typingLayout';
+export { PreviewHost, HandPreview } from './Preview';

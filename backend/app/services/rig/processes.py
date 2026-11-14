@@ -63,7 +63,15 @@ def sdk_bin(configured: Path | None) -> Path | None:
         base = Path(local) / c.ROKOKO_SDK_DIRNAME if local else None
     if base is None:
         return None
-    candidates = (base / c.ROKOKO_SDK_BIN, base)
+    home = os.environ.get("ROKOKO_SDK_HOME")
+    unix_default = Path.home() / ".local" / "share" / "rokoko-device-sdk"   # the SDK's own install script on macOS and Linux
+    candidates = tuple(
+        p for p in (
+            base / c.ROKOKO_SDK_BIN if base else None, base,
+            Path(home) / c.ROKOKO_SDK_BIN if home else None, Path(home) if home else None,
+            unix_default / c.ROKOKO_SDK_BIN, unix_default,
+        ) if p is not None
+    )
     return next((p for p in candidates if (p / c.ROKOKO_SOLVER_EXE).exists()), None)
 
 

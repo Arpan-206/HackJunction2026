@@ -122,7 +122,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
   const side = twoHanded ? coached : stepSide(step);
   const [showProps] = useShowProps();
   const [margin] = useMargin();
-  const config = useMemo(() => configFromTolerance(step.tolerance, margin), [step.tolerance, margin]);
+  const config = useMemo(() => configFromTolerance(step.tolerance, margin, step.weights), [step.tolerance, margin, step.weights]);
   const room = roomFor(step.tolerance, margin);
   const { track, loading: refLoading, notice, video: takeVideo } = useReferenceTrack(step, side);
   const [pipOn, setPipOn] = useTakeVideoPref();
@@ -232,9 +232,9 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
       const sideField = step.hands === 'left' || step.hands === 'right' ? { side: step.hands } : {};
       const req: ScoreRequest | null =
         attempt && step.reference_recording_id
-          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+          ? { reference_recording_id: step.reference_recording_id, ...attempt, tolerance: step.tolerance, margin, ...(step.weights ? { weights: step.weights } : {}), ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
           : attempt && step.motion
-            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, margin, ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
+            ? { reference_motion: step.motion, ...attempt, tolerance: step.tolerance, margin, ...(step.weights ? { weights: step.weights } : {}), ...sideField, ...(calibrated ? { use_latest_calibration: true } : {}) }
             : null;
       if (req && twoHanded) {
         // The scorer judges one hand per call: score each hand, then keep the weaker hand's result (see combineHandScores).
@@ -341,6 +341,7 @@ function Room({ lesson, lessonId, lessonTitle, step, index, total, hasTest, dev,
             pose={track ? track.handAt(track.period * SCORE_POSE_AT) : null}
             side={side}
             tolerance={step.tolerance}
+            light={config.light}
             attempt={pipe.reps}
             lines={{ rep: repLine(result.score), stage: pipe.lines.stage, set: pipe.lines.set }}
             clean={result.outcome.clean}

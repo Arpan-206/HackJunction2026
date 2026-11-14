@@ -196,3 +196,18 @@ coverage (robot joints over human flexion joints, so index and middle score
 at most 2/3) times one minus the mean clipping loss. CONTRACT.md has no
 robot field, so the block is served on its own socket `/ws/robot` as well as
 inside `frame` on `/ws`.
+
+## D26. Depth camera: one DepthFrame type, PathOn's Record3DStream read from its documented layout
+
+The iPhone LiDAR comes from the free Record3DStream app (PathOn) today and
+from our own ARKit app (lane arkit-app, ios/) later. Hand tracking should not
+care which, so `core/camera/depth.py` defines the one `DepthFrame` type and
+the `DepthSource` protocol (start, stop, read, status) both readers produce.
+The PathOn app serves a binary TCP stream, not HTTP: the address it shows is
+a socket, so nothing opens in a browser. Its SDK is proprietary and
+non-commercial, so `core/camera/record3dstream.py` is our own reader of the
+packet layout the SDK documents (REC3D v2 header, intrinsics, transform,
+depth, JPEG, confidence, IMU); nothing of theirs is vendored. Host and port
+live in config.toml `[camera.record3dstream]`. ARKit always fills depth
+(no holes), so missing data is read from the confidence map: pixels below
+`min_confidence` count as missing (`DepthFrame.depth_ok`).

@@ -1,6 +1,6 @@
 # Making Gemini and Gemma central
 
-Today: `backend/app/services/llm/` has providers `fake`, `gemini`, `ollama` (registry in `registry.py`, contract in `base.py`: `LLMRequest`, `generate_json`, `generate_text`). It is used for lesson generation (`lesson_generator.py`) and hint rephrasing (`coach.py`). That reads as bolted on, because the demo works identically without it. Goal: at least one beat where the demo is impossible without Gemini, and one where it is impossible without Gemma offline.
+Today: `backend/app/services/llm/` has providers `fake`, `gemini`, `openai` (Gemma on Verda; registry in `registry.py`, contract in `base.py`: `LLMRequest`, `generate_json`, `generate_text`). It is used for lesson generation (`lesson_generator.py`) and hint rephrasing (`coach.py`). That reads as bolted on, because the demo works identically without it. Goal: at least one beat where the demo is impossible without Gemini, and one where it is impossible without Gemma offline.
 
 Facts to rely on (research/05): current models `gemini-3.8-flash` (code default), Gemma 4 (E2B, E4B, 26B, 31B, 12B) with function calling and JSON output, Apache 2.0. Free tier rate limits are per project and unpublished; cache results. No public DeepMind brief or Gemma rule was found: ask at the workshop. Claims about Gemini Live below are unverified: check docs before committing.
 
@@ -8,7 +8,7 @@ Facts to rely on (research/05): current models `gemini-3.8-flash` (code default)
 
 | # | Feature | Impact | Build | Hours |
 |---|---|---|---|---|
-| 1 | Gemma offline toggle (ops only, `ollama.py` and the provider switch exist) | 4 | trivial | 1 to 1.5 |
+| 1 | Gemma offline toggle (ops only, the `openai` provider and the provider switch exist) | 4 | trivial | 1 to 1.5 |
 | 2 | Standalone Gemini video to lesson (upload, then the existing validate loop) | 5 | medium | 4 to 5 |
 | 3 | `POST /api/coach/plan` Gemini practice plan from attempt scores (built, fake provider tested; add the frontend card) | 4 | easy | 2 |
 | 4 | `POST /api/motion/from_text` text to `MotionSpec` (built, fake provider tested; add the input) | 3 | easy | 1.5 |
@@ -50,7 +50,7 @@ Plug-in point: new method `generate_from_video` next to `lesson_generator.py`, n
 
 Behaviour: a toggle "Offline mode (Gemma on this laptop)" in the dev panel, next to the existing provider switch. Pull the plug on Wi-Fi on stage and the coach still talks. That is a memorable beat for a DeepMind judge.
 
-Plug-in point: nothing new in code. `ollama.py` and the `/dev/state` provider switch exist. Work is operational: `ollama pull gemma4:e4b`, warm it up (first call is slow), set `OLLAMA_NUM_CTX` low enough for speed. Add the toggle label to the dev panel and a small badge "Gemma, offline" in the coach hint card showing `provider` from the response (already returned by `/coach/hint`).
+Plug-in point: nothing new in code. the `openai_compat.py` provider and the `/dev/state` provider switch exist. Work is operational: bring up the Verda endpoint (docs/VERDA.md) and warm it up (first call is slow). Add the toggle label to the dev panel and a small badge "Gemma, offline" in the coach hint card showing `provider` from the response (already returned by `/coach/hint`).
 
 Risk: E4B latency on a laptop without a GPU. Measure; if over 5 s, ask for a 15-word hint.
 

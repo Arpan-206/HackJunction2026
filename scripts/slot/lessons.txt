@@ -1,0 +1,6 @@
+# Demo lessons for step 8, one title per line. Each gets three takes:
+# make the pose, freeze two seconds, then do the move.
+# Edit this list before the slot; lines starting with # are ignored.
+Pinch and release
+Fist to open hand
+Point and wave

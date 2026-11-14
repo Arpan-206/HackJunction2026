@@ -15,6 +15,7 @@ import { App } from './app/App';
 import { ThemeProvider } from './theme';
 import { ToastProvider } from './components/ui';
 import { DevPanel } from './dev/DevPanel';
+import { ReplayBadge } from './features/shared/replay/ReplayBadge';
 
 /** Installs the in-browser mock backend first when it is requested or the real backend is down (see src/mock). */
 const mockReady = import('./mock/install').then((m) => m.maybeInstallMock()).catch(() => false);
@@ -25,6 +26,8 @@ void mockReady.then(() => createRoot(document.getElementById('root') as HTMLElem
       <ToastProvider>
         <BrowserRouter>
           <App />
+          {/* Outside the shell, the kiosk switch and the dev panel: nothing hides it while the core plays a recording. */}
+          <ReplayBadge />
         </BrowserRouter>
         <DevPanel />
       </ToastProvider>

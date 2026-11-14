@@ -32,6 +32,36 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--replay-loop", action="store_true", help="loop the replay file")
     ap.add_argument(
+        "--replay-start",
+        type=float,
+        default=None,
+        metavar="S",
+        help="with --replay: start this many capture seconds in (tools/capture_inventory.py time base)",
+    )
+    ap.add_argument(
+        "--replay-seconds",
+        type=float,
+        default=None,
+        metavar="D",
+        help="with --replay: play only D seconds from --replay-start",
+    )
+    ap.add_argument(
+        "--replay-speed",
+        type=float,
+        default=1.0,
+        help="with --replay: playback speed (1.0 = real time)",
+    )
+    ap.add_argument(
+        "--replay-stream",
+        action="store_true",
+        help="with --replay and no window: read the capture from disk each pass (for a long file)",
+    )
+    ap.add_argument(
+        "--replay-continuous",
+        action="store_true",
+        help="with --replay-loop: shift timestamps each pass so the core sees one unbroken take",
+    )
+    ap.add_argument(
         "--capture",
         metavar="FILE",
         help="write the raw RGMP bytes received to this file (for --replay later)",
@@ -93,6 +123,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="score on raw angles (no per-wearer calibration)",
     )
+    ap.add_argument(
+        "--depth",
+        action="store_true",
+        help="depth step on: read the GeppettoDepth phone ([camera.geppetto_depth]), find table and forearm, "
+        "correct the glove yaw, serve /ws/depth (same as [camera] depth_enabled = true)",
+    )
+    ap.add_argument(
+        "--depth-host",
+        metavar="HOST:PORT",
+        help="GeppettoDepth address for --depth (default from [camera.geppetto_depth]); "
+        "a fake phone is python -m core.camera.fake_depth",
+    )
+    ap.add_argument(
+        "--depth-fake",
+        action="store_true",
+        help="with --depth: render the fake bench scene in process instead of reading a phone",
+    )
     ap.add_argument("--log-level", default="info")
     args = ap.parse_args(argv)
 
@@ -137,7 +184,15 @@ def main(argv: list[str] | None = None) -> int:
         from .rgmp import GloveSource
 
         core.replay_server = ReplayServer(
-            Path(args.replay), host="127.0.0.1", port=0, loop=args.replay_loop
+            Path(args.replay),
+            host="127.0.0.1",
+            port=0,
+            loop=args.replay_loop,
+            speed=args.replay_speed,
+            start_s=args.replay_start,
+            seconds=args.replay_seconds,
+            stream=args.replay_stream,
+            continuous=args.replay_continuous,
         )
         core.glove_source = GloveSource(
             cfg, core.clock, logs_dir=core.logs_dir, replay=core.replay_server
@@ -171,6 +226,20 @@ def main(argv: list[str] | None = None) -> int:
         ) as e:  # mediapipe or the model file missing must not stop the server
             log.error("camera source unavailable: %s", e)
 
+    if args.depth or args.depth_fake or bool(cfg.camera.get("depth_enabled", False)):
+        try:
+            from .camera.depth_live import DepthTracking, FakeDepthSource
+
+            if args.depth_host:
+                h, p = args.depth_host.rsplit(":", 1)
+                cfg.camera.geppetto_depth.host, cfg.camera.geppetto_depth.port = h, int(p)
+            src = FakeDepthSource(clock=core.clock) if args.depth_fake else None
+            core.session.depth = DepthTracking.from_config(cfg, core.clock, source=src)
+            log.info("depth step on (%s)", "fake scene" if args.depth_fake else
+                     f"{cfg.camera.geppetto_depth.host}:{cfg.camera.geppetto_depth.port}")
+        except Exception as e:  # depth must never stop the server
+            log.error("depth step unavailable: %s", e)
+
     if args.lesson:
         core.session.load_lesson(args.lesson)
     if args.mode:
@@ -188,7 +257,8 @@ def main(argv: list[str] | None = None) -> int:
         port,
         "  FAKE MODE" if args.fake else "",
     )
-    uvicorn.run(app, host=host, port=port, log_level=args.log_level)
+    # bounded graceful shutdown: open sockets are closed by the lifespan; anything left is cut after 3 s
+    uvicorn.run(app, host=host, port=port, log_level=args.log_level, timeout_graceful_shutdown=3)
     return 0
 
 

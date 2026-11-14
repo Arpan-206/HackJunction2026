@@ -1,0 +1,392 @@
+{
+  "id": "seed-fingerspelling-n-z",
+  "title": "Fingerspelling: the letters N to Z",
+  "skill": "fingerspelling",
+  "summary": "The second half of the American manual alphabet, one handshape per lesson, each finger checked.",
+  "master_name": "Demo expert",
+  "source": "seed",
+  "created_at": "2026-11-14T00:00:00+00:00",
+  "steps": [
+    {
+      "id": "seed-fs-n",
+      "title": "Lesson 1: The letter N",
+      "instruction": "The thumb tucked under the first two fingers, which fold over it.",
+      "move_id": "fs_n",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.85,
+          "index": 0.85,
+          "middle": 0.85,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-o",
+      "title": "Lesson 2: The letter O",
+      "instruction": "A tapered hand: every finger curved to touch the tip of the thumb.",
+      "move_id": "fs_o",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.5,
+          "index": 0.6,
+          "middle": 0.6,
+          "ring": 0.6,
+          "little": 0.6
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-p",
+      "title": "Lesson 3: The letter P",
+      "instruction": "The K shape turned so the middle finger points to the floor.",
+      "move_id": "fs_p",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.4,
+              "index": 0,
+              "middle": 0,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 1200,
+            "pitch": -1.1
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-q",
+      "title": "Lesson 4: The letter Q",
+      "instruction": "The G shape turned so the thumb and index finger point to the floor.",
+      "move_id": "fs_q",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.1,
+              "index": 0,
+              "middle": 1,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 1200,
+            "pitch": -1.1
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-r",
+      "title": "Lesson 5: The letter R",
+      "instruction": "The index and middle finger straight and crossed, the others closed.",
+      "move_id": "fs_r",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0,
+          "middle": 0.1,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-s",
+      "title": "Lesson 6: The letter S",
+      "instruction": "A fist with the thumb across the front of the fingers.",
+      "move_id": "fs_s",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 1,
+          "middle": 1,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-t",
+      "title": "Lesson 7: The letter T",
+      "instruction": "A fist with the thumb tucked under the index finger only.",
+      "move_id": "fs_t",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.8,
+          "index": 0.9,
+          "middle": 1,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-u",
+      "title": "Lesson 8: The letter U",
+      "instruction": "The index and middle finger straight up and together, the others closed.",
+      "move_id": "fs_u",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0,
+          "middle": 0,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-v",
+      "title": "Lesson 9: The letter V",
+      "instruction": "The index and middle finger straight up and spread, the others closed.",
+      "move_id": "fs_v",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0,
+          "middle": 0,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-w",
+      "title": "Lesson 10: The letter W",
+      "instruction": "Three fingers straight up and spread, the thumb holding the little finger down.",
+      "move_id": "fs_w",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.8,
+          "index": 0,
+          "middle": 0,
+          "ring": 0,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-x",
+      "title": "Lesson 11: The letter X",
+      "instruction": "A hook: the index finger raised and bent, the others closed.",
+      "move_id": "fs_x",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0.7,
+          "index": 0.55,
+          "middle": 1,
+          "ring": 1,
+          "little": 1
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-y",
+      "title": "Lesson 12: The letter Y",
+      "instruction": "Horns: the thumb and little finger straight out, the others closed.",
+      "move_id": "fs_y",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "hold_pose",
+        "pose": {
+          "thumb": 0,
+          "index": 1,
+          "middle": 1,
+          "ring": 1,
+          "little": 0
+        }
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    },
+    {
+      "id": "seed-fs-z",
+      "title": "Lesson 13: The letter Z",
+      "instruction": "The index finger points and traces a Z in the air: across, down at a slant, across.",
+      "move_id": "fs_z",
+      "hands": "right",
+      "prop": "none",
+      "motion": {
+        "preset": "keyframes",
+        "keys": [
+          {
+            "pose": {
+              "thumb": 0.7,
+              "index": 0,
+              "middle": 1,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 400,
+            "yaw": 0.3,
+            "pitch": 0.25
+          },
+          {
+            "pose": {
+              "thumb": 0.7,
+              "index": 0,
+              "middle": 1,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 400,
+            "yaw": -0.3,
+            "pitch": 0.25
+          },
+          {
+            "pose": {
+              "thumb": 0.7,
+              "index": 0,
+              "middle": 1,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 400,
+            "yaw": 0.3,
+            "pitch": -0.25
+          },
+          {
+            "pose": {
+              "thumb": 0.7,
+              "index": 0,
+              "middle": 1,
+              "ring": 1,
+              "little": 1
+            },
+            "ms": 400,
+            "yaw": -0.3,
+            "pitch": -0.25
+          }
+        ]
+      },
+      "reference_recording_id": null,
+      "repetitions": 3,
+      "tolerance": {
+        "angle_deg": 22,
+        "timing_ms": 300
+      },
+      "video_url": null
+    }
+  ],
+  "test": null
+}

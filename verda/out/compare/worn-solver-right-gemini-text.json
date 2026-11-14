@@ -1,0 +1,120 @@
+{
+  "recording": "worn-solver-right",
+  "path": "gemini-text",
+  "t": "2026-11-14T10:32:29+00:00",
+  "input_text": "Teach the hand skill shown in this recording.\n\nRECORDED DEMONSTRATION (measured by the gloves):\nRecording title: Worn Smartgloves II capture, right hand.\nDemonstrating hand: right. Duration 25.1 s, 67 glove samples. The recorder cut it into 3 step(s) at the moments the hand was still.\nFinger travel over the whole take (flexion range, degrees): thumb 35, index 64, middle 71, ring 69, little 58.\nSteps, in order:\n1. Step 1 (held still, 8.4 s): thumb half bent, index half bent, middle half bent, ring half bent, little half bent. Most bent: little at 37 degrees. Picture: step_00.jpg.\n2. Step 2 (held still, 8.4 s): thumb straight, index straight, middle straight, ring straight, little straight. Most bent: little at 21 degrees. Picture: step_01.jpg.\n3. Step 3 (held still, 8.4 s): thumb half bent, index straight, middle straight, ring curled, little half bent. Most bent: ring at 71 degrees. Picture: step_02.jpg.",
+  "lesson": {
+    "title": "Lesson: Hand Poses",
+    "skill": "general",
+    "summary": "A 3-step lesson practicing different hand poses with the right hand.",
+    "master_name": "Expert",
+    "source": "generated",
+    "steps": [
+      {
+        "id": "step_1",
+        "title": "Lesson 1: Half Bent Pose",
+        "instruction": "Keep your thumb, index, middle, ring, and little fingers half bent.",
+        "move_id": "general_power_grip",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 0.5,
+            "index": 0.5,
+            "middle": 0.5,
+            "ring": 0.5,
+            "little": 0.5
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 1,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "step_2",
+        "title": "Lesson 2: Straight Pose",
+        "instruction": "Straighten all your fingers completely.",
+        "move_id": "general_spread",
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 0.0,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 0.0,
+            "little": 0.0
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 1,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      },
+      {
+        "id": "step_3",
+        "title": "Lesson 3: Curled Ring Pose",
+        "instruction": "Curl your ring finger inward while keeping your index and middle fingers straight.",
+        "move_id": null,
+        "hands": "right",
+        "prop": "none",
+        "motion": {
+          "preset": "hold_pose",
+          "pose": {
+            "thumb": 0.5,
+            "index": 0.0,
+            "middle": 0.0,
+            "ring": 1.0,
+            "little": 0.5
+          },
+          "left_pose": null
+        },
+        "reference_recording_id": null,
+        "repetitions": 1,
+        "tolerance": {
+          "angle_deg": 18.0,
+          "timing_ms": 250.0
+        },
+        "video_url": null
+      }
+    ],
+    "test": null,
+    "id": "9bafedf556fc",
+    "created_at": "2026-11-14T10:32:29.508558+00:00"
+  },
+  "provider": "gemini",
+  "attempts": 1,
+  "latency_s": 1.76,
+  "model": "gemini-3.5-flash-lite",
+  "digest": {
+    "title": "Lesson: Hand Poses",
+    "skill": "general",
+    "steps": 3,
+    "step_titles": [
+      "Lesson 1: Half Bent Pose",
+      "Lesson 2: Straight Pose",
+      "Lesson 3: Curled Ring Pose"
+    ],
+    "move_ids": [
+      "general_power_grip",
+      "general_spread",
+      null
+    ],
+    "presets": [
+      "hold_pose",
+      "hold_pose",
+      "hold_pose"
+    ]
+  }
+}
