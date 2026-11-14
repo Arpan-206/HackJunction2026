@@ -61,16 +61,19 @@ To add a theme:
 
 ## Hand styles
 
-`<Hand style=...>` in `src/three/Hand.tsx`. All styles share one articulated rig (`handRig.ts`): lofted palm with thenar and hypothenar pads, a thumb web, knuckle bumps, three phalanges per finger. Poses are mutated in `useFrame`; nothing re-renders per frame.
+`<Hand style=...>` in `src/three/Hand.tsx`. Every style draws the same single skinned hand: the WebXR Input Profiles `generic-hand` mesh (the hand WebXR hand-tracking viewers use), loaded once from `public/models/hands/right.glb` and shared by every instance. `handModel.ts` welds, reorients, subdivides and smooths it into hand space and lengthens the wrist into a short forearm; `handPose.ts` rebuilds its 25 joints as a bone chain and maps the contract's flexion triples onto bone rotations about flex axes measured from the bind pose (tested in `tests/handPose.test.ts`); `handRig.ts` makes one instance (bones, skinned mesh, skinned outline hull). Left hands mirror the right one. Poses are mutated in `useFrame`; nothing re-renders per frame. The hand appears once the model has loaded (`<Hand>` suspends on its own).
 
 | style | use | look |
 |---|---|---|
-| `chalk` | master | toon-shaded chalk, inked back-face outline, glove cuff |
-| `wood` | apprentice | carved wooden marionette: CC0 ambientCG Wood049 colour, normal and roughness maps, separated segments, ball joints and dowel pegs at every joint |
-| `ghost` | overlays | translucent white heightening, stencil-masked so overlapping segments do not double up |
-| `shadow` | shadow guidance | dark translucent silhouette (same stencil trick) |
+| `chalk` | master | toon-shaded chalk, inked skinned outline |
+| `sketch` | expert codex | sepia toon shading with iron-gall hatching and a heavier ink outline |
+| `wood` | apprentice | carved wood: CC0 ambientCG Wood049 colour, normal and roughness maps, grain running along the fingers |
+| `ghost` | overlays | translucent, fresnel rim, fading out along the forearm; a depth pre-pass keeps only the nearest layer |
+| `shadow` | shadow guidance | dark translucent silhouette (same pre-pass and fade) |
 
-Wood textures live in `public/textures/wood/` (source and licence in `SOURCE.md`).
+Per-finger tints (vermilion corrections, the gold focus finger) are uniforms read through per-vertex finger weights, so a tint stops at the knuckle crease. The hand lab's Anatomy tab (`/lab`, then Anatomy) holds open, fist, pinch, point, palm-up, two-hand and racket-grip poses for checking the hand; `node e2e/hand-shots.mjs <outDir> [prefix]` screenshots it and the design frames with hands.
+
+Wood textures live in `public/textures/wood/` (source and licence in `SOURCE.md`). The hand model is MIT licensed, Copyright (c) 2019 Amazon, from the WebXR Input Profiles assets (`@webxr-input-profiles/assets`, https://github.com/immersive-web/webxr-input-profiles); the notice and the list of load-time modifications are in `public/models/hands/LICENSE.md`.
 
 Pose input, in priority order: `getFrame(t)`, `live` (a ref to the latest GloveFrame), `frame`, `motion` (local preview synthesiser), then a relaxed rest pose. Frames pass through `HandSmoother` (exponential smoothing, time constant `tau`, default 45 ms, `smoothing={false}` to disable).
 

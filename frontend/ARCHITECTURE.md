@@ -29,6 +29,7 @@ src/
   state/settings.ts        local UI prefs (guidance mode), useSettings()
   dev/                     DevPanel (delete before the demo)
 public/textures/wood/      CC0 wood maps + SOURCE.md
+public/models/hands/       skinned hand mesh (WebXR generic-hand, MIT) + LICENSE.md
 docs/screens/              reference screenshots
 ```
 
@@ -50,7 +51,7 @@ Routes are defined once in `src/app/App.tsx`. Feature agents replace the page co
 
 ## three/ overview
 
-- `Hand.tsx`: the hand (props below). `handRig.ts` builds it, `materials.ts` styles it, `smoothing.ts` smooths input, `motion.ts` previews MotionSpecs locally (the backend owns the canonical synthesiser).
+- `Hand.tsx`: the hand (props below). `handModel.ts` loads the shared skinned mesh (`public/models/hands/right.glb`, MIT), `handPose.ts` holds the bone layout and the flexion-to-bone maths, `handRig.ts` builds one instance, `materials.ts` styles it, `smoothing.ts` smooths input, `motion.ts` previews MotionSpecs locally (the backend owns the canonical synthesiser).
 - `Stage.tsx`: `HandCanvas` (Canvas + theme bridge + `Stage` + presets) and `Stage` (carta azzurra background, lights, drafting grid, construction circle, contact shadow, limited OrbitControls).
 - `props.tsx`: `Racket` (child of Hand), `Keyboard`.
 - `overlays.tsx`: `JointRings`, `FingertipTrails` (also reachable through `Hand showJoints showTrails`).
