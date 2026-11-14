@@ -9,6 +9,7 @@ from app.services.calibration import CalibrationService
 from app.services.container import Services
 from app.services.dev import DevService
 from app.services.drafts import DraftService
+from app.services.files import FileLocator
 from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
@@ -114,6 +115,11 @@ def _wearer_calibrations(s: ServicesDep) -> WearerCalibrationService:
     return s.wearer_calibrations
 
 
+def _files(s: ServicesDep) -> FileLocator:
+    """Return the stored-file locator (dev aid)."""
+    return s.files
+
+
 def _llm(s: ServicesDep) -> LLMState:
     """Return the LLM state."""
     return s.llm
@@ -132,6 +138,7 @@ PlannerDep = Annotated[PlanService, Depends(_planner)]
 MotionTextDep = Annotated[MotionTextService, Depends(_motion_text)]
 VisionDep = Annotated[MediaPipeHands, Depends(_vision)]
 DevDep = Annotated[DevService, Depends(_dev)]
+FilesDep = Annotated[FileLocator, Depends(_files)]
 GlovesDep = Annotated[GloveManager, Depends(_gloves)]
 LLMDep = Annotated[LLMState, Depends(_llm)]
 GloveRigDep = Annotated[GloveRigService, Depends(_rig)]

@@ -14,6 +14,7 @@ from app.services.bundles import BundleService
 from app.services.calibration import CalibrationService
 from app.services.dev import DevService
 from app.services.drafts import DraftService
+from app.services.files import FileLocator
 from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
@@ -59,6 +60,8 @@ class Services:
     # Expert training persistence: the scratch draft on disk and file bundles.
     drafts: DraftService
     bundles: BundleService
+    # Dev aid: stored files by kind and id, for "Open file location".
+    files: FileLocator
 
 
 log = logging.getLogger(__name__)
@@ -101,10 +104,13 @@ def build_services(settings: Settings) -> Services:
     rig = GloveRigService(settings, gloves)
     _log_saved_calibrations(calibrations)
     drafts = DraftService(JsonStore(data / c.DRAFTS_DIR_NAME, DraftDoc))
+    lessons = LessonService(lesson_store)
+    media = MediaService(data / c.MEDIA_DIR_NAME)
+    bundles = BundleService(data, TakesService(recorder), drafts)
     return Services(
         settings=settings,
         moves=moves,
-        lessons=LessonService(lesson_store),
+        lessons=lessons,
         llm=llm,
         generator=LessonGenerator(llm, moves),
         coach=CoachService(llm),
@@ -112,7 +118,7 @@ def build_services(settings: Settings) -> Services:
         motion_text=MotionTextService(llm),
         gloves=gloves,
         recorder=recorder,
-        media=MediaService(data / c.MEDIA_DIR_NAME),
+        media=media,
         calibrations=calibrations,
         scoring=ScoringService(recorder, calibrations),
         takes=TakesService(recorder),
@@ -126,5 +132,6 @@ def build_services(settings: Settings) -> Services:
             calibrations,
         ),
         drafts=drafts,
-        bundles=BundleService(data, TakesService(recorder), drafts),
+        bundles=bundles,
+        files=FileLocator(data, media, lessons, bundles),
     )
