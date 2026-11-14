@@ -32,7 +32,7 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 | `ROKOKO_UDP_PORT` | `14043` | Studio Custom Streaming port |
 | `DATA_DIR` | `./data` | Lessons, recordings and calibrations (JSON files) |
 | `OPENAI_BASE_URL` or `VERDA_GEMMA_URL` | none | The model hosted on Verda (Gemma 4 behind vLLM, OpenAI-compatible); empty keeps Verda out of every chain. See `../docs/MODELS.md` |
-| `OPENAI_API_KEY` or `VERDA_INFERENCE_KEY` | none | Its bearer key |
+| `OPENAI_API_KEY` or `VERDA_INFERENCE_KEY` | none | Its bearer key. Each `VERDA_` name fills its `OPENAI_` setting when that is absent or empty |
 | `OPENAI_MODEL` or `VERDA_GEMMA_MODEL` | `google/gemma-4-31B-it` | The served model |
 | `CORE_EXPORT` | `true` | Also write every take and lesson as a local core lesson folder (below) |
 | `CORE_EXPORT_DIR` | `DATA_DIR/core_lessons` | Where those folders go |
@@ -52,14 +52,24 @@ Copy `.env.example` to `.env` to configure. With no configuration the backend ru
 
 ## Core lesson export (local)
 
-Every stored take and lesson is also written, on this machine, as a core lesson folder (`../SPEC.md` "Lesson files": `lesson.json` with schema `geppetto.lesson/1`, `trace.npz`, `frames/step_XX.jpg`), the format Arpan's side reads: the core's lesson loader, the local training and tuning tools (`../coach_tune/build_dataset.py`, `../weights/check_lessons.py`) and `../verda/gemma_client.py`, which turns a folder into the request to the model hosted on Verda. Verda hosts inference only: nothing is uploaded and nothing trains there.
+Every stored take and lesson is also written, on this machine, as a core lesson folder (`../SPEC.md` "Lesson files": `lesson.json` with schema `geppetto.lesson/1`, `trace.npz`, `frames/step_XX.jpg`). That is the one format Arpan's side reads, so a take recorded in our app works with his pipeline as it is. Nothing is uploaded: Verda hosts the model for inference only, and all training runs locally.
 
-- Layout: `DATA_DIR/core_lessons/takes/<take id>-<side>/` (one per hand), `DATA_DIR/core_lessons/lessons/<lesson id>/` (the recorded steps joined, one core step each, named and noted from the lesson; steps with no take are listed as skipped), `DATA_DIR/core_lessons/manifest.json` (source file, fingerprint, folders, hands, steps, pictures, `glove_source` (`glove`, or `fake` for simulator takes), and the reason for anything skipped).
-- Automatic: a worker in the backend syncs at start-up, right after a take is stopped or deleted and a lesson is saved, and every 30 s (bundle imports). The files in `recordings/` and `lessons/` stay the source of truth.
-- The core's own recorder (imported read only from the repo root) cuts the steps and weighs the fingers. Joint positions come from the core's synthetic hand bent to the measured angles. Angles are raw glove flexion (backend calibration not applied).
+- Layout: `DATA_DIR/core_lessons/takes/<take id>-<side>/` (one per hand), `DATA_DIR/core_lessons/lessons/<lesson id>/` (the recorded steps joined, one core step each, named and noted from the lesson; steps with no take are listed as skipped), `DATA_DIR/core_lessons/manifest.json` (source file, fingerprint, folders, hands, steps, pictures, `glove_source` (`glove`, or `fake` for simulator takes), the calibration used per hand, and the reason for anything skipped). `backend/data/` is git-ignored, so none of it is committed.
+- Automatic: a worker in the backend syncs at start-up, right after a take is stopped or deleted and a lesson is saved, and every 30 s (bundle imports). The files in `recordings/` and `lessons/` stay the source of truth. `CORE_EXPORT=false` turns it off; `CORE_EXPORT_DIR` moves it.
+- The core's own recorder (imported read only from the repo root) cuts the steps and weighs the fingers. Joint positions come from the core's synthetic hand bent to the measured angles (our frames carry angles, not positions). A real glove take gets the flat and fist calibration the live core would apply (`../core/calibration.py`, reading this backend's `calibrations/` and `glove_calibrations/`), so its angles match the lessons the core records itself; a simulator take, or a glove take with no calibration saved, stays raw. A new calibration rebuilds the glove folders.
 - By hand: `uv run python scripts/core_export_sync.py`. Code: `app/services/core_export.py`. Tests: `tests/test_core_export.py`.
 
-To send one take or lesson to the model on Verda (key pose sketches as pictures plus a glove trace summary, Lesson JSON back): `uv run python scripts/verda_lesson.py <take or lesson id> [--side left] [--dry-run] [--save]`. `--dry-run` prints what the model would get and calls nothing; `--save` stores the lesson in `DATA_DIR/lessons`. It needs the deployment up (`../verda/deploy.py`).
+Who reads the folders, all local (paths from the repo root):
+
+| Tool | Command | Reads |
+| --- | --- | --- |
+| The core's loader | `core.recorder.Lesson.load(folder)` | one folder |
+| Finger weights | `python weights/check_lessons.py backend/data/core_lessons/takes/<id>-right` | one or more folders |
+| LeRobot robot dataset | `cd export && uv run geppetto-export --lessons-dir ../backend/data/core_lessons/takes` | every `*/lesson.json` under the folder |
+| Lesson from a recording (inference on Verda) | `uv run python scripts/verda_lesson.py <take or lesson id>` in `backend/` | one folder |
+| Coach tuning dataset | `coach_tune/build_dataset.py` | only `lessons/` of Arpan's checkout today (a fixed path); it needs a lessons folder option to read these |
+
+To send one take or lesson to the model on Verda (key pose sketches as pictures plus a glove trace summary, Lesson JSON back): `uv run python scripts/verda_lesson.py <take or lesson id> [--side left] [--dry-run] [--save]`. `--dry-run` prints what the model would get and calls nothing; `--save` stores the lesson in `DATA_DIR/lessons`. This is the only network call: one chat request to the Verda endpoint (`VERDA_GEMMA_URL`, else `base_url` in `../verda/out/endpoint.json`) with the bearer key `VERDA_INFERENCE_KEY`. The deployment must be up (`../verda/deploy.py`, billed per hour).
 
 ## Gemini request budget
 
