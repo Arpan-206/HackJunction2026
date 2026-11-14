@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Apprentice: experts record hand skills with Rokoko gloves, learners train against them in 3D. See README.md for the overview.
+Geppetto (working name in code and older docs: Apprentice): experts record hand skills with Rokoko gloves, learners train against them in 3D. See README.md for the overview and RECONCILE.md for how the two halves of the repo fit.
 
 ## Repo map
 
@@ -10,12 +10,14 @@ Apprentice: experts record hand skills with Rokoko gloves, learners train agains
 - `frontend/src/`: `api/` (client.ts, types.ts, schemas.ts, hooks); `app/` (routes, shell, role select, HandLab); `features/apprentice/` (`skills` = dashboard, search, skill page and catalogue; `library` = Today panel; `course`, `training`, `test`, `pipeline` = stages, progress, rank, coach lines, demo history); `features/master/` (expert screens: scratch, generate, lesson); `features/shared/`; `mock/` (browser port of the backend: router.ts, scoring.ts, synth.ts, glove.ts, llm.ts, store.ts, install.ts); `three/` (Stage, Hand, handRig, overlays, ShadowTheatre for the shadow puppets wall, sketchProps for propless cues); `playground/`; `dev/` (DevPanel); `state/`; `theme/`.
 - `frontend/tests/` vitest; `frontend/e2e/` Playwright scripts (Playwright comes from `genui/node_modules`).
 - `docs/`, `research/`, `PRODUCT.md`, `frontend/ARCHITECTURE.md`.
+- `core/` (Python 3.12, SPEC.md): the glove engine. `rgmp.py` and `rcsp.py` read the Rokoko hand solver and driver directly; `hand.py` (26 joints, 18 angles), `recorder.py`, `scorer.py`, `session.py` (modes, roles, steps, ghost), `coach.py` (rule lines), `camera/` (MediaPipe fallback), `tasks/`, `fake.py`, `server.py` (`/ws` per SPEC.md, plus `/api/*` and `/ws/gloves` per CONTRACT.md in `compat.py`). `schema/`: JSON Schema for every `/ws` message. `tools/`: `ingest_bridge.py` (core to `backend/` `/ws/ingest`), `replay.py`, `rgmp_tee.py`, `ws_log.py`, `fake_rgmp_server.py`, `debug_view.html`. `tests/`: the core's pytest suite. `STATUS.md`, `DECISIONS.md`, `RECONCILE.md`: what works, why, and how the halves join.
 
 ## Run
 
 - Backend (in `backend/`): `uv sync`, then `uv run uvicorn app.main:app --port 8000 --reload`. Tests: `uv run pytest -q`.
 - Frontend (in `frontend/`): `npm install`, `npm run dev` (port 5173), `npm run build`, `npm run lint`, `npm test`, `npm run e2e` (backend up), `node e2e/mock-walk.mjs` and `node e2e/settings-walk.mjs` (no backend; `E2E_PORT` picks the port), `node e2e/learner-real.mjs` (backend with `GLOVE_SOURCE=simulator`, `LLM_PROVIDER=fake`).
 - Local runs: `LLM_PROVIDER=fake`. Mock mode: `?mock=1` / `?mock=0` / `VITE_MOCK=1`, automatic when `/api/health` fails. Dev panel `?dev=1` (per tab, sessionStorage; `?dev=0` clears). Routes: `/expert`, `/apprentice`, `/playground`, `/lab`.
+- Core (repo root): `source .venv/bin/activate` (made with `uv venv --python 3.12`, deps in `requirements.txt`), `python -m pytest -q` (core tests only), `python -m core --fake` (no hardware, debug view at `http://localhost:8765/debug`), `python -m core --solver HOST:12277 --rcsp HOST:45451` (real gloves), `python -m tools.ingest_bridge` (feed `backend/`). Full commands and the first-glove checklist: `STATUS.md`.
 - Python uses uv only. Never write `pip install` or manual venvs.
 - Settings: the "Settings" entry in the rail footer (bottom bar on a phone) opens `features/shared/SettingsDialog.tsx`, a modal with the AI Assistant switch, the margin of error, the score view (3D default, or flat chart), "Add a prop" and reduced motion, all in localStorage (`features/shared/settings.ts`, keys `apprentice.margin`, `apprentice.scoreView`, `apprentice.reduceMotion`). The 3D score flips to the flat chart and back on click, tap, Enter or Space.
 - AI Assistant switch: "Enable AI Assistant" in Settings (localStorage `apprentice.assistant`, default on; the rail shows "AI Assistant on/off" as plain text) gates every language-model feature. The flag lives in `frontend/src/features/shared/assistant.ts`; `api/client.ts` refuses `/lessons/generate`, `/lessons/generate_from_video`, `/coach/hint`, `/coach/plan` and `/motion/from_text` before any fetch while it is off (the mock router refuses them too). New LLM endpoints must be added to `ASSISTANT_PATHS`.
@@ -24,13 +26,24 @@ Apprentice: experts record hand skills with Rokoko gloves, learners train agains
 
 ## Hard rules
 
-1. `docs/CONTRACT.md` is the API source of truth. Any API change updates it, `frontend/src/api/types.ts` and the mock router `frontend/src/mock/router.ts` together.
+1. `docs/CONTRACT.md` is the API source of truth for `backend/` and `frontend/`. Any API change updates it, `frontend/src/api/types.ts` and the mock router `frontend/src/mock/router.ts` together. `SPEC.md` and `schema/` govern `core/` and its `/ws`. Both contracts are frozen; the join is `tools/ingest_bridge.py` (RECONCILE.md section 0). One owner per capability: gloves in and the live practice screen are `core/`; lessons, generation and coach text are `backend/`; one displayed score, the core's live score as 0 to 100.
 2. `frontend/src/mock/scoring.ts` and `synth.ts` are ports of `backend/app/services/scoring.py` and `motion/synthesiser.py`. Change both sides together and keep `frontend/tests/mock-scoring.test.ts` (pinned values) passing.
 3. Never call paid APIs in tests. `backend/tests/conftest.py` blanks the Gemini key. Never print or copy a key from `backend/.env`; name variables only (`backend/.env.example`). Never commit `.env`.
 4. No em dashes anywhere (code, docs, commits). Use a hyphen, comma or colon.
 5. Design: Renaissance bottega theme. Gold only for mastery. Vermilion only for corrections. Malachite for correct. No status pills, no kicker labels. Text at least 16px, readable from 3 m.
 6. User-facing copy says "expert", not "master" (the top rank is "Sealed", and the seal reads "Sealed by {expert name}"). Wire fields such as `master_name` and code paths under `features/master` keep their names. Any language model in the UI is named openly as "the AI Assistant" (the switch reads "Enable AI Assistant"): never "Gemini", "Gemma" or "coach" in user copy (provider names only in the dev panel). The algorithmic scorer and the live finger corrections are not the AI Assistant.
 7. Commit only when asked; then push to the branch remote, authored as the user only, no Claude trailers. Ask before force push or push to main.
+8. Naming: the product is **Geppetto**. "Apprentice" was the working name. Titles, headings, page `<title>`, package descriptions, prompts and pitch copy say Geppetto. The learner role and rank keep the word "apprentice" (routes `/apprentice`, "I am an apprentice", ranks Apprentice, Journeyman, Sealed), and code paths, localStorage keys and wire fields keep their names. The rename is not done yet; see the checklist below.
+
+## Rename checklist (Apprentice to Geppetto, product name only)
+
+Do these in one pass, then delete this section. Leave the learner role, ranks, routes, keys and code paths alone.
+
+- [ ] `README.md` line 1 and 3 (done), `frontend/README.md` line 1, `backend/README.md` lines 1 and 3, `docs/CONTRACT.md` line 1, `docs/ideas/PITCH.md` (title and the close line), `docs/ideas/VIDEO_SCRIPT.md` title, `docs/ideas/DEMO_RUNBOOK.md` step wording, `PRODUCT.md` lines 21 and 25.
+- [ ] `frontend/index.html` `<title>`; `frontend/src/app/RoleSelect.tsx` `roles__brand` heading; `frontend/src/app/AppShell.tsx` `aria-label="Apprentice home"` (the rail entry labelled "Apprentice" is the role, keep it); `frontend/package.json` `name`.
+- [ ] `backend/app/constants.py` `APP_TITLE` and the module docstring; `backend/pyproject.toml` `description`; the three prompts in `backend/app/services/llm/lesson_generator.py`, `motion_text.py`, `plan.py` ("the Apprentice smart-glove trainer" and similar).
+- [ ] `frontend/src/mock/install.ts` header `X-Apprentice-Mock` can stay (internal); `frontend/src/dev/DevPanel.tsx` "Apprentice guidance default" is the role, keep it.
+- [ ] `research/` files keep history as written; do not edit.
 
 ## Unverified
 

@@ -1,6 +1,6 @@
-# Apprentice
+# Geppetto
 
-Apprentice is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), an optional AI Assistant (a language model, Gemini by default) drafts lessons and practice plans, the learner chooses a margin of error from strict to "just trying it", and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
+Geppetto (working name in the code: Apprentice) is a hand-skill trainer built for Junction 2026 (Rokoko Smartgloves II track). An expert records a skill with Rokoko gloves, and a learner trains against it in 3D with marionette strings, a ghost hand and a shadow as guidance. Each attempt is scored per finger with dynamic time warping (DTW), an optional AI Assistant (a language model, Gemini by default) drafts lessons and practice plans, the learner chooses a margin of error from strict to "just trying it", and a staged learning pipeline leads to a test (table tennis grip and swing, piano).
 
 The backend is FastAPI (Python 3.12, uv). The frontend is React, Vite and three.js. The frontend can run alone in mock mode, with no backend.
 
