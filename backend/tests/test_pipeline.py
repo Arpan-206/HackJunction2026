@@ -3,12 +3,11 @@
 import math
 
 import numpy as np
-from fastapi.testclient import TestClient
-
 from app.schemas.motion import FingerSequence, GripAndSwing
 from app.services.gloves.rokoko_mapper import angle_to_quat, map_payload
 from app.services.motion import synthesiser
 from app.services.smoothing.one_euro import GloveSmoother, OneEuroFilter
+from fastapi.testclient import TestClient
 
 
 def test_one_euro_reduces_jitter_variance() -> None:
@@ -40,9 +39,22 @@ def test_smoother_disabled_is_passthrough_and_deadband_holds() -> None:
     assert smoother.apply(frame) is frame
     smoother.configure(enabled=True)
     first = smoother.apply(frame)
-    wobble = frame.model_copy(update={"t": 1 / 60, "hands": [
-        h.model_copy(update={"flexion": {k: tuple(v + 0.001 for v in vals) for k, vals in h.flexion.items()}})
-        for h in frame.hands]})
+    wobble = frame.model_copy(
+        update={
+            "t": 1 / 60,
+            "hands": [
+                h.model_copy(
+                    update={
+                        "flexion": {
+                            k: tuple(v + 0.001 for v in vals)
+                            for k, vals in h.flexion.items()
+                        }
+                    }
+                )
+                for h in frame.hands
+            ],
+        }
+    )
     assert smoother.apply(wobble).hands[0].flexion == first.hands[0].flexion
 
 
@@ -63,7 +75,12 @@ def test_websocket_streams_frames_and_accepts_motion(client: TestClient) -> None
     with client.websocket_connect("/ws/gloves") as ws:
         first = ws.receive_json()
         assert first["source"] == "simulator" and len(first["hands"]) == 2
-        ws.send_json({"type": "set_motion", "motion": {"preset": "pinch", "fingers": [2], "beat_ms": 500}})
+        ws.send_json(
+            {
+                "type": "set_motion",
+                "motion": {"preset": "pinch", "fingers": [2], "beat_ms": 500},
+            }
+        )
         for _ in range(30):
             ws.receive_json()
     assert client.get("/api/dev/state").json()["simulator_motion"]["preset"] == "pinch"
@@ -74,11 +91,19 @@ def test_rokoko_mapper_v3_and_unknown_shape() -> None:
     ident = {"x": 0, "y": 0, "z": 0, "w": 1}
     q = angle_to_quat(0.5)
     bend = {"x": q[0], "y": q[1], "z": q[2], "w": q[3]}
-    body = {"rightHand": {"rotation": ident}, "rightIndexProximal": {"rotation": bend},
-            "rightIndexMedial": {"rotation": bend}, "rightIndexDistal": {"rotation": bend}}
-    hands = map_payload({"version": 3, "scene": {"actors": [{"name": "a", "body": body}]}})
+    body = {
+        "rightHand": {"rotation": ident},
+        "rightIndexProximal": {"rotation": bend},
+        "rightIndexMedial": {"rotation": bend},
+        "rightIndexDistal": {"rotation": bend},
+    }
+    hands = map_payload(
+        {"version": 3, "scene": {"actors": [{"name": "a", "body": body}]}}
+    )
     assert [h.side for h in hands] == ["right"]
     index = hands[0].flexion["index"]
-    assert math.isclose(index[0], 0.5, abs_tol=1e-3) and math.isclose(index[1], 0.0, abs_tol=1e-3)
+    assert math.isclose(index[0], 0.5, abs_tol=1e-3) and math.isclose(
+        index[1], 0.0, abs_tol=1e-3
+    )
     assert hands[0].flexion["thumb"] == (0.0, 0.0, 0.0)
     assert map_payload({"something": "else"}) == []

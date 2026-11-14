@@ -25,7 +25,9 @@ class GeminiLLM:
     name = "gemini"
     supports_video = True
 
-    def __init__(self, api_key: str | None, model: str, limiter: RateLimiter | None = None) -> None:
+    def __init__(
+        self, api_key: str | None, model: str, limiter: RateLimiter | None = None
+    ) -> None:
         """Remember credentials; nothing is contacted until a call is made. Every generate call spends from limiter."""
         self._api_key = api_key
         self._model = model
@@ -37,7 +39,9 @@ class GeminiLLM:
         if not self._api_key:
             raise ServiceUnavailableError("GEMINI_API_KEY is not set")
         if self._client is None:
-            from google import genai  # noqa: PLC0415 - heavy import, only needed for this provider
+            from google import (
+                genai,
+            )
 
             self._client = genai.Client(api_key=self._api_key)
         return self._client
@@ -47,29 +51,39 @@ class GeminiLLM:
         if request.video_path:
             limit = c.LLM_GEMINI_VIDEO_TIMEOUT_S
         else:
-            limit = c.LLM_GEMINI_HINT_TIMEOUT_S if request.task == "hint" else c.LLM_GEMINI_TIMEOUT_S
+            limit = (
+                c.LLM_GEMINI_HINT_TIMEOUT_S
+                if request.task == "hint"
+                else c.LLM_GEMINI_TIMEOUT_S
+            )
         try:
-            return await asyncio.wait_for(self._generate(request, as_json), timeout=limit)
+            return await asyncio.wait_for(
+                self._generate(request, as_json), timeout=limit
+            )
         except TimeoutError as exc:
             raise LLMTimeoutError(f"Gemini did not answer within {limit:g} s") from exc
 
     async def _upload_video(self, client: Any, request: LLMRequest) -> Any:
         """Upload the video, poll until Gemini reports it ACTIVE, and return the file."""
         assert request.video_path is not None
-        file = await client.aio.files.upload(file=request.video_path, config={"mime_type": request.video_mime})
+        file = await client.aio.files.upload(
+            file=request.video_path, config={"mime_type": request.video_mime}
+        )
         deadline = time.monotonic() + c.VIDEO_PROCESSING_TIMEOUT_S
         while _state_name(file) != "ACTIVE":
             if _state_name(file) == "FAILED":
                 raise ServiceUnavailableError("Gemini could not process the video")
             if time.monotonic() > deadline:
-                raise LLMTimeoutError(f"Gemini did not finish processing the video within {c.VIDEO_PROCESSING_TIMEOUT_S:g} s")
+                raise LLMTimeoutError(
+                    f"Gemini did not finish processing the video within {c.VIDEO_PROCESSING_TIMEOUT_S:g} s"
+                )
             await asyncio.sleep(c.VIDEO_POLL_INTERVAL_S)
             file = await client.aio.files.get(name=file.name)
         return file
 
     async def _generate(self, request: LLMRequest, as_json: bool) -> str:
         """Run the underlying generate_content call without a time limit."""
-        from google.genai import types  # noqa: PLC0415
+        from google.genai import types
 
         model = request.model or self._model
         client = self._get_client()
@@ -78,7 +92,9 @@ class GeminiLLM:
         # Gemini 3.6+ ignores temperature, top_p and top_k (and will reject them later), so only thinking is tuned.
         config: dict[str, Any] = {
             "system_instruction": request.system,
-            "thinking_config": types.ThinkingConfig(thinking_level=c.GEMINI_THINKING_LEVEL),
+            "thinking_config": types.ThinkingConfig(
+                thinking_level=c.GEMINI_THINKING_LEVEL
+            ),
         }
         if as_json:
             config["response_mime_type"] = "application/json"
@@ -87,11 +103,16 @@ class GeminiLLM:
         uploaded = None
         if request.video_path:
             uploaded = await self._upload_video(client, request)
-            video = types.Part.from_uri(file_uri=uploaded.uri, mime_type=request.video_mime or uploaded.mime_type)
+            video = types.Part.from_uri(
+                file_uri=uploaded.uri,
+                mime_type=request.video_mime or uploaded.mime_type,
+            )
             contents = [video, request.prompt]
         try:
             response = await client.aio.models.generate_content(
-                model=model, contents=contents, config=types.GenerateContentConfig(**config)
+                model=model,
+                contents=contents,
+                config=types.GenerateContentConfig(**config),
             )
         except Exception as exc:
             if getattr(exc, "code", None) == c.HTTP_TOO_MANY_REQUESTS:
@@ -99,7 +120,9 @@ class GeminiLLM:
                     self._limiter.penalise(model)
                 raise RateLimitedError(f"Gemini answered 429 for {model}") from exc
             if getattr(exc, "code", None) == c.HTTP_SERVICE_UNAVAILABLE:
-                raise LLMTimeoutError(f"Gemini model {model} is overloaded (503)") from exc  # retrying only burns quota
+                raise LLMTimeoutError(
+                    f"Gemini model {model} is overloaded (503)"
+                ) from exc  # retrying only burns quota
             raise
         finally:
             if uploaded is not None:

@@ -1,4 +1,5 @@
 """Small quaternion and vector helpers. Quaternions are x, y, z, w."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -20,12 +21,14 @@ def quat_normalize(q: np.ndarray) -> np.ndarray:
 def quat_mul(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     ax, ay, az, aw = a
     bx, by, bz, bw = b
-    return np.array([
-        aw * bx + ax * bw + ay * bz - az * by,
-        aw * by - ax * bz + ay * bw + az * bx,
-        aw * bz + ax * by - ay * bx + az * bw,
-        aw * bw - ax * bx - ay * by - az * bz,
-    ])
+    return np.array(
+        [
+            aw * bx + ax * bw + ay * bz - az * by,
+            aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw,
+            aw * bw - ax * bx - ay * by - az * bz,
+        ]
+    )
 
 
 def quat_conj(q: np.ndarray) -> np.ndarray:
@@ -34,11 +37,13 @@ def quat_conj(q: np.ndarray) -> np.ndarray:
 
 def quat_to_matrix(q: np.ndarray) -> np.ndarray:
     x, y, z, w = quat_normalize(q)
-    return np.array([
-        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
-        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
-        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
-    ])
+    return np.array(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ]
+    )
 
 
 def quat_from_matrix(m: np.ndarray) -> np.ndarray:
@@ -101,7 +106,9 @@ def yaw_quat(yaw_rad: float) -> np.ndarray:
 class OneEuroFilter:
     """One Euro filter for a vector signal. min_cutoff in Hz, beta unitless."""
 
-    def __init__(self, min_cutoff: float = 1.5, beta: float = 0.05, d_cutoff: float = 1.0) -> None:
+    def __init__(
+        self, min_cutoff: float = 1.5, beta: float = 0.05, d_cutoff: float = 1.0
+    ) -> None:
         self.min_cutoff = float(min_cutoff)
         self.beta = float(beta)
         self.d_cutoff = float(d_cutoff)

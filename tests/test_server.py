@@ -12,7 +12,13 @@ from tests.conftest import ROOT
 @pytest.fixture
 def fake_app(tmp_path):
     cfg = load_config(ROOT / "config.toml")
-    core = Core(cfg, fake=True, validate=True, lessons_dir=tmp_path / "lessons", logs_dir=tmp_path / "logs")
+    core = Core(
+        cfg,
+        fake=True,
+        validate=True,
+        lessons_dir=tmp_path / "lessons",
+        logs_dir=tmp_path / "logs",
+    )
     core.session.attempts_log = tmp_path / "logs" / "attempts.jsonl"
     app = create_app(core)
     with TestClient(app) as client:
@@ -32,15 +38,23 @@ def recv_until(ws, kind, limit=200):
 def test_http_routes(fake_app):
     core, client = fake_app
     h = client.get("/health").json()
-    assert h["ok"] and h["fake"] and h["mode"] == "learn" and h["lesson_id"] == "fake-demo"
+    assert (
+        h["ok"] and h["fake"] and h["mode"] == "learn" and h["lesson_id"] == "fake-demo"
+    )
     lessons = client.get("/lessons").json()
-    assert [l["id"] for l in lessons] == ["fake-demo", "fake-wave"] and lessons[0]["steps_total"] == 4
+    assert [l["id"] for l in lessons] == ["fake-demo", "fake-wave"] and lessons[0][
+        "steps_total"
+    ] == 4
     lj = client.get("/lessons/fake-demo").json()
     assert lj["schema"] == "geppetto.lesson/1"
     core.schemas.validate("lesson", lj)
     assert client.get("/lessons/nope").status_code == 404
     r = client.get("/lessons/fake-demo/frames/step_00.jpg")
-    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg" and len(r.content) > 1000
+    assert (
+        r.status_code == 200
+        and r.headers["content-type"] == "image/jpeg"
+        and len(r.content) > 1000
+    )
     assert client.get("/lessons/fake-demo/frames/step_99.jpg").status_code == 404
     assert client.get("/schema/frame.json").json()["$id"].endswith("frame.json")
     assert client.get("/schema/nope.json").status_code == 404
@@ -54,7 +68,10 @@ def test_ws_hello_frames_and_acks(fake_app, schemas):
         hello = json.loads(ws.receive_text())
         assert hello["type"] == "hello"
         schemas.validate_message(hello)
-        assert hello["session"]["mode"] == "learn" and hello["lessons"][0]["id"] == "fake-demo"
+        assert (
+            hello["session"]["mode"] == "learn"
+            and hello["lessons"][0]["id"] == "fake-demo"
+        )
         sess = json.loads(ws.receive_text())
         assert sess["type"] == "session"
         schemas.validate_message(sess)
@@ -64,7 +81,10 @@ def test_ws_hello_frames_and_acks(fake_app, schemas):
 
         frame, seen = recv_until(ws, "frame")
         schemas.validate_message(frame)
-        assert frame["hands"]["right"]["role"] == "learner" and frame["hands"]["right"]["source"] == "glove"
+        assert (
+            frame["hands"]["right"]["role"] == "learner"
+            and frame["hands"]["right"]["source"] == "glove"
+        )
         assert frame["ghost"]["right"]["placement"] == "on_learner"
         assert frame["score"]["hand"] == "right"
         # several more frames, all valid, seq increasing
@@ -80,15 +100,37 @@ def test_ws_hello_frames_and_acks(fake_app, schemas):
         schemas.validate_message(ack)
         assert ack["id"] == "c-1" and ack["ok"] and "t" in ack["result"]
 
-        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "c-2", "name": "set_mode", "args": {"mode": "nope"}}))
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "cmd",
+                    "id": "c-2",
+                    "name": "set_mode",
+                    "args": {"mode": "nope"},
+                }
+            )
+        )
         ack, _ = recv_until(ws, "ack")
-        assert ack["id"] == "c-2" and not ack["ok"] and ack["error"]["code"] == "bad_args"
+        assert (
+            ack["id"] == "c-2" and not ack["ok"] and ack["error"]["code"] == "bad_args"
+        )
 
         ws.send_text("this is not json")
         ack, _ = recv_until(ws, "ack")
         assert not ack["ok"] and ack["error"]["code"] == "bad_args"
 
-        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "c-3", "name": "subscribe", "args": {"rate_hz": 15, "rots": True}}))
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "cmd",
+                    "id": "c-3",
+                    "name": "subscribe",
+                    "args": {"rate_hz": 15, "rots": True},
+                }
+            )
+        )
         ack, _ = recv_until(ws, "ack")
         assert ack["ok"] and ack["result"] == {"rate_hz": 15.0, "rots": True}
         f, _ = recv_until(ws, "frame")
@@ -96,7 +138,17 @@ def test_ws_hello_frames_and_acks(fake_app, schemas):
         assert len(f["hands"]["right"]["rots"]) == 26
         schemas.validate_message(f)
 
-        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "c-4", "name": "set_mode", "args": {"mode": "playback"}}))
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "cmd",
+                    "id": "c-4",
+                    "name": "set_mode",
+                    "args": {"mode": "playback"},
+                }
+            )
+        )
         ack, seen = recv_until(ws, "ack")
         assert ack["ok"]
         sess, _ = recv_until(ws, "session")
@@ -131,7 +183,17 @@ def test_fake_learner_passes_steps(fake_app, schemas):
 def test_fake_wave_lesson_moves_the_ghost(fake_app, schemas):
     core, client = fake_app
     with client.websocket_connect("/ws") as ws:
-        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "w1", "name": "lesson_load", "args": {"lesson_id": "fake-wave"}}))
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "cmd",
+                    "id": "w1",
+                    "name": "lesson_load",
+                    "args": {"lesson_id": "fake-wave"},
+                }
+            )
+        )
         ack, _ = recv_until(ws, "ack")
         assert ack["ok"] and ack["result"]["steps_total"] == 1
         # learn mode on a move step: ghost time advances, timing_ms is an integer
@@ -143,12 +205,25 @@ def test_fake_wave_lesson_moves_the_ghost(fake_app, schemas):
         assert f2["score"] is not None and isinstance(f2["score"]["timing_ms"], int)
         assert 0 < f2["score"]["step_progress"] <= 1
         schemas.validate_message(f2)
-        ws.send_text(json.dumps({"v": 1, "type": "cmd", "id": "w2", "name": "set_mode", "args": {"mode": "playback"}}))
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "cmd",
+                    "id": "w2",
+                    "name": "set_mode",
+                    "args": {"mode": "playback"},
+                }
+            )
+        )
         ack, _ = recv_until(ws, "ack")
         assert ack["ok"]
         f, _ = recv_until(ws, "frame")
         g1 = f["ghost"]["right"]["joints"]
         for _ in range(6):
             f, _ = recv_until(ws, "frame")
-        assert f["ghost"]["right"]["joints"] != g1 and f["ghost"]["right"]["placement"] == "recorded"
+        assert (
+            f["ghost"]["right"]["joints"] != g1
+            and f["ghost"]["right"]["placement"] == "recorded"
+        )
     assert core.validation_errors == 0, core.last_validation_error

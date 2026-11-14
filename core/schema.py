@@ -1,4 +1,5 @@
 """JSON Schema registry. If code and schema disagree, the schema wins."""
+
 from __future__ import annotations
 
 import json
@@ -53,7 +54,10 @@ class SchemaRegistry:
         self._validators[name].validate(obj)
 
     def errors(self, name: str, obj: Any) -> list[str]:
-        return [f"{'/'.join(str(p) for p in e.absolute_path)}: {e.message}" for e in self._validators[name].iter_errors(obj)]
+        return [
+            f"{'/'.join(str(p) for p in e.absolute_path)}: {e.message}"
+            for e in self._validators[name].iter_errors(obj)
+        ]
 
     def validate_message(self, msg: dict) -> None:
         """Validate any WebSocket message by its `type` field."""

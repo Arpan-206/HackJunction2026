@@ -58,7 +58,9 @@ def build_services(settings: Settings) -> Services:
     gloves = GloveManager(settings, GloveSmoother())
     recorder = Recorder(JsonStore(data / "recordings", Recording))
     gloves.add_sink(recorder.push)
-    calibrations = CalibrationService(JsonStore(data / "calibrations", Calibration), gloves)
+    calibrations = CalibrationService(
+        JsonStore(data / "calibrations", Calibration), gloves
+    )
     rig = GloveRigService(settings, gloves)
     return Services(
         settings=settings,
@@ -76,5 +78,10 @@ def build_services(settings: Settings) -> Services:
         vision=MediaPipeHands(),
         dev=DevService(gloves, llm),
         rig=rig,
-        wearer_calibrations=WearerCalibrationService(JsonStore(data / "glove_calibrations", WearerCalibration), gloves, rig, calibrations),
+        wearer_calibrations=WearerCalibrationService(
+            JsonStore(data / "glove_calibrations", WearerCalibration),
+            gloves,
+            rig,
+            calibrations,
+        ),
     )

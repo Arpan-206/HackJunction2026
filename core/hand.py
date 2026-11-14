@@ -9,6 +9,7 @@ Frames
   with the world. ``xr_base = R(wrist_q) @ local``.
 * world: ``wrist_p + xr_base``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,12 +20,32 @@ import numpy as np
 from . import geom
 
 JOINT_NAMES: list[str] = [
-    "palm", "wrist",
-    "thumb_metacarpal", "thumb_proximal", "thumb_distal", "thumb_tip",
-    "index_metacarpal", "index_proximal", "index_intermediate", "index_distal", "index_tip",
-    "middle_metacarpal", "middle_proximal", "middle_intermediate", "middle_distal", "middle_tip",
-    "ring_metacarpal", "ring_proximal", "ring_intermediate", "ring_distal", "ring_tip",
-    "little_metacarpal", "little_proximal", "little_intermediate", "little_distal", "little_tip",
+    "palm",
+    "wrist",
+    "thumb_metacarpal",
+    "thumb_proximal",
+    "thumb_distal",
+    "thumb_tip",
+    "index_metacarpal",
+    "index_proximal",
+    "index_intermediate",
+    "index_distal",
+    "index_tip",
+    "middle_metacarpal",
+    "middle_proximal",
+    "middle_intermediate",
+    "middle_distal",
+    "middle_tip",
+    "ring_metacarpal",
+    "ring_proximal",
+    "ring_intermediate",
+    "ring_distal",
+    "ring_tip",
+    "little_metacarpal",
+    "little_proximal",
+    "little_intermediate",
+    "little_distal",
+    "little_tip",
 ]
 JOINT_INDEX = {n: i for i, n in enumerate(JOINT_NAMES)}
 FINGERS = ["thumb", "index", "middle", "ring", "little"]
@@ -34,17 +55,42 @@ FINGER_BASE = {"thumb": 2, "index": 6, "middle": 11, "ring": 16, "little": 21}
 TIP = {"thumb": 5, "index": 10, "middle": 15, "ring": 20, "little": 25}
 
 # Angle feature slots. 0-1 thumb, 2-13 four fingers x (MCP, PIP, DIP), 14-17 spreads.
-FLEXION_SLOTS = {"thumb": [0, 1], "index": [2, 3, 4], "middle": [5, 6, 7], "ring": [8, 9, 10], "little": [11, 12, 13]}
-SPREAD_SLOTS = {14: ("thumb", "index"), 15: ("index", "middle"), 16: ("middle", "ring"), 17: ("ring", "little")}
-FINGER_SPREAD_SLOTS = {f: [s for s, pair in SPREAD_SLOTS.items() if f in pair] for f in FINGERS}
+FLEXION_SLOTS = {
+    "thumb": [0, 1],
+    "index": [2, 3, 4],
+    "middle": [5, 6, 7],
+    "ring": [8, 9, 10],
+    "little": [11, 12, 13],
+}
+SPREAD_SLOTS = {
+    14: ("thumb", "index"),
+    15: ("index", "middle"),
+    16: ("middle", "ring"),
+    17: ("ring", "little"),
+}
+FINGER_SPREAD_SLOTS = {
+    f: [s for s, pair in SPREAD_SLOTS.items() if f in pair] for f in FINGERS
+}
 N_ANGLES = 18
 ANGLE_NAMES = [
-    "thumb_mcp", "thumb_ip",
-    "index_mcp", "index_pip", "index_dip",
-    "middle_mcp", "middle_pip", "middle_dip",
-    "ring_mcp", "ring_pip", "ring_dip",
-    "little_mcp", "little_pip", "little_dip",
-    "spread_thumb_index", "spread_index_middle", "spread_middle_ring", "spread_ring_little",
+    "thumb_mcp",
+    "thumb_ip",
+    "index_mcp",
+    "index_pip",
+    "index_dip",
+    "middle_mcp",
+    "middle_pip",
+    "middle_dip",
+    "ring_mcp",
+    "ring_pip",
+    "ring_dip",
+    "little_mcp",
+    "little_pip",
+    "little_dip",
+    "spread_thumb_index",
+    "spread_index_middle",
+    "spread_middle_ring",
+    "spread_ring_little",
 ]
 
 Side = Literal["left", "right"]
@@ -61,7 +107,12 @@ def angle_features(joints: np.ndarray) -> np.ndarray:
     proximal_bone = {"thumb": b1}
     for k, f in enumerate(["index", "middle", "ring", "little"]):
         b = FINGER_BASE[f]
-        m, p, i, d = J[b + 1] - J[b], J[b + 2] - J[b + 1], J[b + 3] - J[b + 2], J[b + 4] - J[b + 3]
+        m, p, i, d = (
+            J[b + 1] - J[b],
+            J[b + 2] - J[b + 1],
+            J[b + 3] - J[b + 2],
+            J[b + 4] - J[b + 3],
+        )
         a[2 + 3 * k] = geom.angle_between_deg(m, p)
         a[3 + 3 * k] = geom.angle_between_deg(p, i)
         a[4 + 3 * k] = geom.angle_between_deg(i, d)
@@ -71,7 +122,9 @@ def angle_features(joints: np.ndarray) -> np.ndarray:
     return a
 
 
-def curl_from_angles(angles: np.ndarray, full_deg: float, full_thumb_deg: float) -> dict[str, float]:
+def curl_from_angles(
+    angles: np.ndarray, full_deg: float, full_thumb_deg: float
+) -> dict[str, float]:
     out = {}
     for f in FINGERS:
         full = full_thumb_deg if f == "thumb" else full_deg
@@ -94,7 +147,9 @@ class PinchTracker:
         self.off_m = float(off_m)
         self.state = {f: False for f in PINCH_FINGERS}
 
-    def update(self, joints: np.ndarray) -> tuple[dict[str, bool], list[tuple[str, str]]]:
+    def update(
+        self, joints: np.ndarray
+    ) -> tuple[dict[str, bool], list[tuple[str, str]]]:
         """Return (state, events). events are (finger, 'pinch_down'|'pinch_up')."""
         d = pinch_distances(joints)
         events = []
@@ -115,7 +170,9 @@ def mirror_local(joints_local: np.ndarray) -> np.ndarray:
     return out
 
 
-def local_to_world(joints_local: np.ndarray, wrist_p: np.ndarray, wrist_q: np.ndarray) -> np.ndarray:
+def local_to_world(
+    joints_local: np.ndarray, wrist_p: np.ndarray, wrist_q: np.ndarray
+) -> np.ndarray:
     return np.asarray(wrist_p, dtype=float) + geom.rotate(wrist_q, joints_local)
 
 
@@ -131,17 +188,19 @@ class HandState:
     device_id: int
     source: Literal["glove", "camera"]
     t_us: int
-    joints_local: np.ndarray                 # (26, 3) wrist frame
-    wrist_p: np.ndarray                      # (3,) world
-    wrist_q: np.ndarray                      # (4,) world, x y z w
-    rots_local: np.ndarray | None = None     # (26, 4) wrist frame, optional
+    joints_local: np.ndarray  # (26, 3) wrist frame
+    wrist_p: np.ndarray  # (3,) world
+    wrist_q: np.ndarray  # (4,) world, x y z w
+    rots_local: np.ndarray | None = None  # (26, 4) wrist frame, optional
     tracked: bool = True
     anchor: Literal["camera", "held", "rest"] = "rest"
     heading_reliable: bool = True
     role: Literal["master", "learner", "free"] = "free"
     angles: np.ndarray = field(default_factory=lambda: np.zeros(N_ANGLES))
     curl: dict[str, float] = field(default_factory=dict)
-    pinch: dict[str, bool] = field(default_factory=lambda: {f: False for f in PINCH_FINGERS})
+    pinch: dict[str, bool] = field(
+        default_factory=lambda: {f: False for f in PINCH_FINGERS}
+    )
 
     def joints_world(self) -> np.ndarray:
         return local_to_world(self.joints_local, self.wrist_p, self.wrist_q)
@@ -163,8 +222,10 @@ class HandState:
             "tracked": bool(self.tracked),
             "anchor": self.anchor,
             "source": self.source,
-            "wrist": {"p": [float(x) for x in np.round(self.wrist_p, decimals)],
-                      "q": [float(x) for x in np.round(self.wrist_q, 5)]},
+            "wrist": {
+                "p": [float(x) for x in np.round(self.wrist_p, decimals)],
+                "q": [float(x) for x in np.round(self.wrist_q, 5)],
+            },
             "joints": jw.tolist(),
             "angles": [float(x) for x in np.round(self.angles, 1)],
             "curl": {f: round(float(v), 3) for f, v in self.curl.items()},
@@ -202,12 +263,16 @@ def joint_rotations(joints_local: np.ndarray) -> np.ndarray:
     return rots
 
 
-def finish_hand(h: HandState, hand_cfg, pinch_tracker: PinchTracker | None = None) -> list[tuple[str, str]]:
+def finish_hand(
+    h: HandState, hand_cfg, pinch_tracker: PinchTracker | None = None
+) -> list[tuple[str, str]]:
     """Fill angles, curl, pinch and (if missing) joint rotations on a HandState. Returns pinch events."""
     h.angles = angle_features(h.joints_local)
     if h.rots_local is None:
         h.rots_local = joint_rotations(h.joints_local)
-    h.curl = curl_from_angles(h.angles, hand_cfg.curl_full_deg, hand_cfg.curl_full_thumb_deg)
+    h.curl = curl_from_angles(
+        h.angles, hand_cfg.curl_full_deg, hand_cfg.curl_full_thumb_deg
+    )
     if pinch_tracker is None:
         pinch_tracker = PinchTracker(hand_cfg.pinch_on_m, hand_cfg.pinch_off_m)
     h.pinch, events = pinch_tracker.update(h.joints_local)
@@ -251,13 +316,17 @@ def synth_joints(
     spread_deg adds extra abduction fan (positive = fingers apart).
     """
     curl = dict(curl or {})
-    sx = -1.0 if side == "right" else 1.0   # thumb side
+    sx = -1.0 if side == "right" else 1.0  # thumb side
     J = np.zeros((26, 3))
-    J[1] = 0.0                              # wrist at origin
+    J[1] = 0.0  # wrist at origin
     for f in ["index", "middle", "ring", "little"]:
         base = FINGER_BASE[f]
         c = float(curl.get(f, 0.0))
-        angs = joint_angles.get(f) if joint_angles and f in joint_angles else (c * 90.0,) * 3
+        angs = (
+            joint_angles.get(f)
+            if joint_angles and f in joint_angles
+            else (c * 90.0,) * 3
+        )
         fan = np.radians(_FAN_DEG[f] * (1.0 + spread_deg / 10.0)) * (-sx)
         d0 = np.array([-np.sin(fan), 0.0, -np.cos(fan)])
         start = np.array([_BASE_X[f] * (-sx), 0.0, -0.012])
@@ -273,7 +342,11 @@ def synth_joints(
             J[base + 2 + k] = pos
     # Thumb
     c = float(curl.get("thumb", 0.0))
-    tang = joint_angles.get("thumb") if joint_angles and "thumb" in joint_angles else (c * 60.0,) * 2
+    tang = (
+        joint_angles.get("thumb")
+        if joint_angles and "thumb" in joint_angles
+        else (c * 60.0,) * 2
+    )
     J[2] = np.array([sx * 0.018, -0.008, -0.015])
     d0 = geom.normalize(np.array([sx * 0.70, -0.20, -0.65]))
     tdown = np.array([-sx * 0.6, -0.6, -0.1])
@@ -303,10 +376,15 @@ def synth_hand(
     **kw,
 ) -> HandState:
     h = HandState(
-        side=side, device_id=device_id, source=source, t_us=t_us,
+        side=side,
+        device_id=device_id,
+        source=source,
+        t_us=t_us,
         joints_local=synth_joints(curl, side=side, **kw),
         wrist_p=np.asarray(wrist_p, dtype=float),
-        wrist_q=np.asarray(wrist_q if wrist_q is not None else geom.IDENTITY_Q, dtype=float),
+        wrist_q=np.asarray(
+            wrist_q if wrist_q is not None else geom.IDENTITY_Q, dtype=float
+        ),
     )
     if hand_cfg is not None:
         finish_hand(h, hand_cfg)
@@ -323,11 +401,18 @@ def synth_hand(
 
 # MediaPipe hand landmark indices.
 MP_WRIST = 0
-MP_THUMB = (1, 2, 3, 4)                 # CMC, MCP, IP, TIP
-MP_FINGER = {"index": (5, 6, 7, 8), "middle": (9, 10, 11, 12), "ring": (13, 14, 15, 16), "little": (17, 18, 19, 20)}
+MP_THUMB = (1, 2, 3, 4)  # CMC, MCP, IP, TIP
+MP_FINGER = {
+    "index": (5, 6, 7, 8),
+    "middle": (9, 10, 11, 12),
+    "ring": (13, 14, 15, 16),
+    "little": (17, 18, 19, 20),
+}
 
 
-def joints_from_mediapipe(lm: np.ndarray, metacarpal_fraction: float = 0.25) -> np.ndarray:
+def joints_from_mediapipe(
+    lm: np.ndarray, metacarpal_fraction: float = 0.25
+) -> np.ndarray:
     """21 MediaPipe landmarks (any frame) -> 26 OpenXR joints in the same frame.
 
     MediaPipe has no carpometacarpal joints for the four fingers; they are
@@ -337,7 +422,12 @@ def joints_from_mediapipe(lm: np.ndarray, metacarpal_fraction: float = 0.25) -> 
     J = np.zeros((26, 3))
     w = L[MP_WRIST]
     J[1] = w
-    J[2], J[3], J[4], J[5] = L[MP_THUMB[0]], L[MP_THUMB[1]], L[MP_THUMB[2]], L[MP_THUMB[3]]
+    J[2], J[3], J[4], J[5] = (
+        L[MP_THUMB[0]],
+        L[MP_THUMB[1]],
+        L[MP_THUMB[2]],
+        L[MP_THUMB[3]],
+    )
     for f, (mcp, pip, dip, tip) in MP_FINGER.items():
         b = FINGER_BASE[f]
         J[b] = w + metacarpal_fraction * (L[mcp] - w)
@@ -358,13 +448,17 @@ def mediapipe_from_joints(joints: np.ndarray) -> np.ndarray:
     return L
 
 
-def wrist_frame_from_joints(joints: np.ndarray, side: Side) -> tuple[np.ndarray, np.ndarray]:
+def wrist_frame_from_joints(
+    joints: np.ndarray, side: Side
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (wrist_p, wrist_q) so that joints_local = R(q)^T (joints - p) has
     fingers along -Z, dorsum +Y and the thumb side at -X (right) or +X (left)."""
     J = np.asarray(joints, dtype=float)
     p = J[1].copy()
     forward = geom.normalize(J[FINGER_BASE["middle"] + 1] - J[1])
-    across = J[FINGER_BASE["index"] + 1] - J[FINGER_BASE["little"] + 1]   # toward thumb side
+    across = (
+        J[FINGER_BASE["index"] + 1] - J[FINGER_BASE["little"] + 1]
+    )  # toward thumb side
     zc = -forward
     xc = -across if side == "right" else across
     xc = xc - np.dot(xc, zc) * zc
@@ -375,11 +469,23 @@ def wrist_frame_from_joints(joints: np.ndarray, side: Side) -> tuple[np.ndarray,
 
 
 def hand_from_joints_world(
-    joints_world: np.ndarray, side: Side, device_id: int, source: str, t_us: int,
+    joints_world: np.ndarray,
+    side: Side,
+    device_id: int,
+    source: str,
+    t_us: int,
     anchor: str = "camera",
 ) -> HandState:
     """Build a HandState from 26 joints already in world coordinates."""
     p, q = wrist_frame_from_joints(joints_world, side)
     local = geom.rotate_inv(q, np.asarray(joints_world) - p)
-    return HandState(side=side, device_id=device_id, source=source, t_us=t_us,
-                     joints_local=local, wrist_p=p, wrist_q=q, anchor=anchor)
+    return HandState(
+        side=side,
+        device_id=device_id,
+        source=source,
+        t_us=t_us,
+        joints_local=local,
+        wrist_p=p,
+        wrist_q=q,
+        anchor=anchor,
+    )

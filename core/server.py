@@ -2,6 +2,7 @@
 
 The Core owns the 30 Hz tick: poll sources, update the session, broadcast.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,7 +21,6 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from . import compat as compat_mod
 from . import fake as fake_mod
-from . import hand as H
 from .clock import Clock
 from .coach import Coach
 from .config import REPO_ROOT, Section, load_config
@@ -42,21 +42,38 @@ class ClientState:
 
 
 class Core:
-    def __init__(self, cfg: Section, *, fake: bool = False, validate: bool = True, clock: Clock | None = None,
-                 lessons_dir: Path | None = None, logs_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        cfg: Section,
+        *,
+        fake: bool = False,
+        validate: bool = True,
+        clock: Clock | None = None,
+        lessons_dir: Path | None = None,
+        logs_dir: Path | None = None,
+    ) -> None:
         self.cfg = cfg
         self.fake = fake
         self.validate = validate
         self.clock = clock or Clock()
         root = Path(cfg.get_path("_root", str(REPO_ROOT)))
-        self.lessons_dir = Path(lessons_dir) if lessons_dir else root / cfg.server.lessons_dir
+        self.lessons_dir = (
+            Path(lessons_dir) if lessons_dir else root / cfg.server.lessons_dir
+        )
         self.logs_dir = Path(logs_dir) if logs_dir else root / cfg.server.logs_dir
         self.lessons_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.schemas = SchemaRegistry(root / cfg.server.schema_dir)
         self.coach = Coach(None, cfg.coach, cfg.score.timing_hint_ms)
-        self.session = Session(cfg, self.clock, self.lessons_dir, self.coach, fake=fake,
-                               on_step=self._on_step, on_calibrate=self._on_calibrate)
+        self.session = Session(
+            cfg,
+            self.clock,
+            self.lessons_dir,
+            self.coach,
+            fake=fake,
+            on_step=self._on_step,
+            on_calibrate=self._on_calibrate,
+        )
         self.session.attempts_log = self.logs_dir / "attempts.jsonl"
         self.clients: dict[int, ClientState] = {}
         self.compat_clients: dict[int, ClientState] = {}
@@ -67,10 +84,10 @@ class Core:
         self.validation_errors = 0
         self.last_validation_error: str | None = None
         self.fake_source: fake_mod.FakeSource | None = None
-        self.glove_source: Any = None     # core.rgmp.GloveSource, attached by __main__
-        self.camera_source: Any = None    # core.camera.CameraSource, attached by __main__
-        self.rcsp_client: Any = None      # core.rcsp.RcspClient, attached by __main__
-        self.glove_control: Any = None    # core.rcsp.GloveControl, attached by __main__
+        self.glove_source: Any = None  # core.rgmp.GloveSource, attached by __main__
+        self.camera_source: Any = None  # core.camera.CameraSource, attached by __main__
+        self.rcsp_client: Any = None  # core.rcsp.RcspClient, attached by __main__
+        self.glove_control: Any = None  # core.rcsp.GloveControl, attached by __main__
         self.replay_server: Any = None
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
@@ -86,7 +103,7 @@ class Core:
         self.session.load_lesson(fake_mod.FAKE_LESSON_ID)
         self.session.roles = {"left": "free", "right": "learner"}
         self.session.handle_command("set_mode", {"mode": "learn"})
-        self.session.drain()   # startup chatter is not for anyone yet
+        self.session.drain()  # startup chatter is not for anyone yet
 
     def _on_step(self, step: int, t_us: int) -> None:
         if self.fake_source is not None:
@@ -99,8 +116,12 @@ class Core:
     # ------------------------------------------------------------------ sources
     def poll_sources(self, t_us: int) -> None:
         fake_hands = self.fake_source.poll(t_us) if self.fake_source is not None else {}
-        glove_hands = self.glove_source.poll(t_us) if self.glove_source is not None else {}
-        cam_hands = self.camera_source.poll(t_us) if self.camera_source is not None else {}
+        glove_hands = (
+            self.glove_source.poll(t_us) if self.glove_source is not None else {}
+        )
+        cam_hands = (
+            self.camera_source.poll(t_us) if self.camera_source is not None else {}
+        )
         for side in SIDES:
             src = self.session.sources.get(side, "glove")
             hand, events = None, []
@@ -137,7 +158,9 @@ class Core:
                 self.frames += 1
                 self.broadcast_frame(frame, t)
                 if self.compat_clients:
-                    text = json.dumps(compat_mod.glove_frame(self, t), separators=(",", ":"))
+                    text = json.dumps(
+                        compat_mod.glove_frame(self, t), separators=(",", ":")
+                    )
                     for c in list(self.compat_clients.values()):
                         self._enqueue(c, text)
                 if self.robot_clients and frame.get("robot"):
@@ -184,8 +207,14 @@ class Core:
             if c.rots:
                 if text_rots is None:
                     f2 = dict(frame)
-                    f2["hands"] = {s: (None if h is None else h.to_message(int(self.cfg.hand.joint_decimals), True))
-                                   for s, h in self.session.hands.items()}
+                    f2["hands"] = {
+                        s: (
+                            None
+                            if h is None
+                            else h.to_message(int(self.cfg.hand.joint_decimals), True)
+                        )
+                        for s, h in self.session.hands.items()
+                    }
                     for s, hm in f2["hands"].items():
                         if hm is not None:
                             hm["role"] = self.session.roles.get(s, "free")
@@ -249,11 +278,21 @@ class Core:
         self.robot_clients[key] = c
         sender = asyncio.create_task(self._sender(c))
         try:
-            hello = {"v": 1, "type": "hello", **{k: v for k, v in self.session.hello().items() if k not in ("v", "type")}}
+            hello = {
+                "v": 1,
+                "type": "hello",
+                **{
+                    k: v
+                    for k, v in self.session.hello().items()
+                    if k not in ("v", "type")
+                },
+            }
             await ws.send_text(json.dumps(hello, separators=(",", ":")))
             while True:
                 raw = await ws.receive_text()
-                ack = self.handle_cmd(c, raw)      # set_robot_source and friends work here too
+                ack = self.handle_cmd(
+                    c, raw
+                )  # set_robot_source and friends work here too
                 self._check(ack)
                 await ws.send_text(json.dumps(ack, separators=(",", ":")))
         except WebSocketDisconnect:
@@ -279,7 +318,10 @@ class Core:
                 except json.JSONDecodeError:
                     continue
                 if isinstance(msg, dict) and msg.get("type") == "set_motion":
-                    log.info("compat: set_motion ignored (no simulator presets in the core): %s", msg.get("motion"))
+                    log.info(
+                        "compat: set_motion ignored (no simulator presets in the core): %s",
+                        msg.get("motion"),
+                    )
         except WebSocketDisconnect:
             pass
         except Exception:
@@ -303,26 +345,60 @@ class Core:
         try:
             msg = json.loads(raw)
         except json.JSONDecodeError as e:
-            return {"v": 1, "type": "ack", "t": t, "id": "?", "ok": False,
-                    "error": {"code": "bad_args", "message": f"not JSON: {e}"}}
+            return {
+                "v": 1,
+                "type": "ack",
+                "t": t,
+                "id": "?",
+                "ok": False,
+                "error": {"code": "bad_args", "message": f"not JSON: {e}"},
+            }
         cid = str(msg.get("id", "?")) if isinstance(msg, dict) else "?"
         errors = self.schemas.errors("cmd", msg)
         if errors:
-            return {"v": 1, "type": "ack", "t": t, "id": cid, "ok": False,
-                    "error": {"code": "bad_args", "message": "; ".join(errors)[:300]}}
+            return {
+                "v": 1,
+                "type": "ack",
+                "t": t,
+                "id": cid,
+                "ok": False,
+                "error": {"code": "bad_args", "message": "; ".join(errors)[:300]},
+            }
         name, args = msg["name"], msg.get("args", {}) or {}
         try:
             result = self.session.handle_command(name, args)
             if name == "subscribe":
                 c.rate_hz, c.rots = float(result["rate_hz"]), bool(result["rots"])
-            return {"v": 1, "type": "ack", "t": self.clock.now_us(), "id": cid, "ok": True, "result": result}
+            return {
+                "v": 1,
+                "type": "ack",
+                "t": self.clock.now_us(),
+                "id": cid,
+                "ok": True,
+                "result": result,
+            }
         except CommandError as e:
-            return {"v": 1, "type": "ack", "t": self.clock.now_us(), "id": cid, "ok": False,
-                    "error": {"code": e.code, "message": e.message}}
+            return {
+                "v": 1,
+                "type": "ack",
+                "t": self.clock.now_us(),
+                "id": cid,
+                "ok": False,
+                "error": {"code": e.code, "message": e.message},
+            }
         except Exception as e:
             log.exception("command %s failed", name)
-            return {"v": 1, "type": "ack", "t": self.clock.now_us(), "id": cid, "ok": False,
-                    "error": {"code": "internal", "message": f"{type(e).__name__}: {e}"[:300]}}
+            return {
+                "v": 1,
+                "type": "ack",
+                "t": self.clock.now_us(),
+                "id": cid,
+                "ok": False,
+                "error": {
+                    "code": "internal",
+                    "message": f"{type(e).__name__}: {e}"[:300],
+                },
+            }
 
     # ------------------------------------------------------------------ http
     def tick_hz(self) -> float | None:
@@ -336,22 +412,56 @@ class Core:
         hands = self.session.hands
         return {
             "ok": True,
-            "gloves": {s: bool(hands.get(s) is not None and hands[s].tracked and hands[s].source == "glove") for s in SIDES},
-            "hands": {s: None if hands.get(s) is None else {"tracked": hands[s].tracked, "source": hands[s].source} for s in SIDES},
-            "anchor": self.session.anchor, "gemma": "off", "uptime_s": round(time.time() - self.started, 1),
-            "fake": self.fake, "frames": self.frames, "clients": len(self.clients),
-            "compat_clients": len(self.compat_clients), "robot_clients": len(self.robot_clients),
-            "robot": {"model": self.session.robot.model_name, "source": self.session.robot_source} if self.session.robot else {"error": self.session.robot_error},
+            "gloves": {
+                s: bool(
+                    hands.get(s) is not None
+                    and hands[s].tracked
+                    and hands[s].source == "glove"
+                )
+                for s in SIDES
+            },
+            "hands": {
+                s: None
+                if hands.get(s) is None
+                else {"tracked": hands[s].tracked, "source": hands[s].source}
+                for s in SIDES
+            },
+            "anchor": self.session.anchor,
+            "gemma": "off",
+            "uptime_s": round(time.time() - self.started, 1),
+            "fake": self.fake,
+            "frames": self.frames,
+            "clients": len(self.clients),
+            "compat_clients": len(self.compat_clients),
+            "robot_clients": len(self.robot_clients),
+            "robot": {
+                "model": self.session.robot.model_name,
+                "source": self.session.robot_source,
+            }
+            if self.session.robot
+            else {"error": self.session.robot_error},
             "tick_hz": self.tick_hz(),
-            "rgmp": None if self.glove_source is None else {"connected": self.glove_source.connected,
-                                                            "frames": self.glove_source.frames,
-                                                            "devices": dict(self.glove_source.sides)},
-            "rcsp": None if self.rcsp_client is None else {"connected": self.rcsp_client.connected.is_set()},
-            "camera": None if self.camera_source is None else {"frames": self.camera_source.frames,
-                                                               "detections": self.camera_source.detections,
-                                                               "error": self.camera_source.error},
-            "validation_errors": self.validation_errors, "last_validation_error": self.last_validation_error,
-            "mode": self.session.mode, "lesson_id": self.session.lesson.id if self.session.lesson else None,
+            "rgmp": None
+            if self.glove_source is None
+            else {
+                "connected": self.glove_source.connected,
+                "frames": self.glove_source.frames,
+                "devices": dict(self.glove_source.sides),
+            },
+            "rcsp": None
+            if self.rcsp_client is None
+            else {"connected": self.rcsp_client.connected.is_set()},
+            "camera": None
+            if self.camera_source is None
+            else {
+                "frames": self.camera_source.frames,
+                "detections": self.camera_source.detections,
+                "error": self.camera_source.error,
+            },
+            "validation_errors": self.validation_errors,
+            "last_validation_error": self.last_validation_error,
+            "mode": self.session.mode,
+            "lesson_id": self.session.lesson.id if self.session.lesson else None,
         }
 
 
@@ -374,7 +484,12 @@ def create_app(core: Core) -> FastAPI:
 
     app = FastAPI(title="Geppetto core", lifespan=lifespan)
     # the viewer dev server (another origin, e.g. :5173) fetches /lessons and /schema
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "OPTIONS"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["GET", "OPTIONS"],
+        allow_headers=["*"],
+    )
     app.state.core = core
 
     @app.websocket("/ws")
@@ -410,7 +525,10 @@ def create_app(core: Core) -> FastAPI:
     @app.get("/schema/{name}.json")
     def schema(name: str):
         if name not in core.schemas.docs:
-            return JSONResponse({"error": "not_found", "available": core.schemas.names()}, status_code=404)
+            return JSONResponse(
+                {"error": "not_found", "available": core.schemas.names()},
+                status_code=404,
+            )
         return JSONResponse(core.schemas.get(name))
 
     compat_mod.install_compat(app, core)
@@ -419,7 +537,9 @@ def create_app(core: Core) -> FastAPI:
     def debug_view():
         p = REPO_ROOT / "tools" / "debug_view.html"
         if not p.exists():
-            return JSONResponse({"error": "tools/debug_view.html missing"}, status_code=404)
+            return JSONResponse(
+                {"error": "tools/debug_view.html missing"}, status_code=404
+            )
         return FileResponse(p, media_type="text/html")
 
     return app

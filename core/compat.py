@@ -13,20 +13,20 @@ side, what the frontend committed on Fri night expects:
 
 See DECISIONS D22 for the mapping choices and their limits.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import time
-from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 
 from . import geom
 from . import hand as H
-from .recorder import Lesson, list_lessons
+from .recorder import list_lessons
 from .session import CommandError
 
 log = logging.getLogger("geppetto.compat")
@@ -44,17 +44,32 @@ def thumb_cmc_deg(joints_local: np.ndarray) -> float:
 def hand_to_glove_hand(h: H.HandState) -> dict:
     a = np.radians(np.asarray(h.angles, dtype=float))
     flexion = {
-        "thumb": [round(float(np.radians(thumb_cmc_deg(h.joints_local))), 4), round(float(a[0]), 4), round(float(a[1]), 4)],
+        "thumb": [
+            round(float(np.radians(thumb_cmc_deg(h.joints_local))), 4),
+            round(float(a[0]), 4),
+            round(float(a[1]), 4),
+        ],
     }
     for f in ["index", "middle", "ring", "little"]:
         s = H.FLEXION_SLOTS[f]
-        flexion[f] = [round(float(a[s[0]]), 4), round(float(a[s[1]]), 4), round(float(a[s[2]]), 4)]
-    spread = {"thumb": round(float(a[14]), 4), "index": round(float(a[15]), 4), "middle": 0.0,
-              "ring": round(float(a[16]), 4), "little": round(float(a[17]), 4)}
+        flexion[f] = [
+            round(float(a[s[0]]), 4),
+            round(float(a[s[1]]), 4),
+            round(float(a[s[2]]), 4),
+        ]
+    spread = {
+        "thumb": round(float(a[14]), 4),
+        "index": round(float(a[15]), 4),
+        "middle": 0.0,
+        "ring": round(float(a[16]), 4),
+        "little": round(float(a[17]), 4),
+    }
     return {
         "side": h.side,
         "wrist_quat": [round(float(x), 5) for x in h.wrist_q],
-        "wrist_pos": None if h.anchor == "rest" else [round(float(x), 4) for x in h.wrist_p],
+        "wrist_pos": None
+        if h.anchor == "rest"
+        else [round(float(x), 4) for x in h.wrist_p],
         "flexion": flexion,
         "spread": spread,
         # extra keys, ignored by the typed client but handy in the dev panel
@@ -65,7 +80,11 @@ def hand_to_glove_hand(h: H.HandState) -> dict:
 
 
 def glove_frame(core, t_us: int) -> dict:
-    hands = [hand_to_glove_hand(h) for s in ("left", "right") if (h := core.session.hands.get(s)) is not None]
+    hands = [
+        hand_to_glove_hand(h)
+        for s in ("left", "right")
+        if (h := core.session.hands.get(s)) is not None
+    ]
     if core.fake:
         source = "simulator"
     elif getattr(core, "replay_server", None) is not None:
@@ -73,7 +92,11 @@ def glove_frame(core, t_us: int) -> dict:
     else:
         srcs = {core.session.sources.get(s) for s in ("left", "right")}
         source = "rokoko_sdk" if "glove" in srcs else "simulator"
-    return {"t": round((t_us - core.compat_t0_us) / 1e6, 4), "source": source, "hands": hands}
+    return {
+        "t": round((t_us - core.compat_t0_us) / 1e6, 4),
+        "source": source,
+        "hands": hands,
+    }
 
 
 def lesson_to_compat(d: dict) -> dict:
@@ -82,47 +105,83 @@ def lesson_to_compat(d: dict) -> dict:
     skill = "piano" if task == "piano" else "general"
     steps = []
     for s in d.get("steps", []):
-        steps.append({
-            "id": f"{d['id']}/step/{s['index']}", "title": s.get("name", f"Step {s.get('index', 0) + 1}"),
-            "instruction": s.get("note") or f"{s.get('kind', 'hold')} step", "move_id": None,
-            "hands": (d.get("master") or {}).get("hand", "right"), "prop": "none", "motion": None,
-            "reference_recording_id": d["id"], "repetitions": 1, "tolerance": dict(DEFAULT_TOLERANCE),
-            "video_url": None,
-        })
+        steps.append(
+            {
+                "id": f"{d['id']}/step/{s['index']}",
+                "title": s.get("name", f"Step {s.get('index', 0) + 1}"),
+                "instruction": s.get("note") or f"{s.get('kind', 'hold')} step",
+                "move_id": None,
+                "hands": (d.get("master") or {}).get("hand", "right"),
+                "prop": "none",
+                "motion": None,
+                "reference_recording_id": d["id"],
+                "repetitions": 1,
+                "tolerance": dict(DEFAULT_TOLERANCE),
+                "video_url": None,
+            }
+        )
     return {
-        "id": d["id"], "title": d.get("title", d["id"]), "skill": skill,
+        "id": d["id"],
+        "title": d.get("title", d["id"]),
+        "skill": skill,
         "summary": f"{len(steps) or d.get('steps_total', 0)} steps, {d.get('duration_us', 0) / 1e6:.1f} s, source {d.get('source', 'glove')}",
-        "master_name": (d.get("master") or {}).get("name", "master"), "source": "scratch",
-        "steps": steps, "test": None, "created_at": d.get("created", ""),
+        "master_name": (d.get("master") or {}).get("name", "master"),
+        "source": "scratch",
+        "steps": steps,
+        "test": None,
+        "created_at": d.get("created", ""),
     }
 
 
-def rule_hint(deviations: dict, timing_ms: float | int | None, perfect_deg: float = 8.0, timing_hint_ms: float = 150.0) -> str:
+def rule_hint(
+    deviations: dict,
+    timing_ms: float | None,
+    perfect_deg: float = 8.0,
+    timing_hint_ms: float = 150.0,
+) -> str:
     """deviations: signed degrees per finger, positive = curled more than the reference (CONTRACT.md)."""
     if timing_ms is not None and abs(float(timing_ms)) >= timing_hint_ms:
-        return "Slow down, you are ahead of the hand." if float(timing_ms) < 0 else "A little faster."
+        return (
+            "Slow down, you are ahead of the hand."
+            if float(timing_ms) < 0
+            else "A little faster."
+        )
     if not deviations:
         return "Good. Next step."
     finger, dev = max(deviations.items(), key=lambda kv: abs(float(kv[1])))
     if abs(float(dev)) < perfect_deg:
         return "Good. Next step."
-    return f"Straighten your {finger} finger a little." if float(dev) > 0 else f"Curl your {finger} finger more."
+    return (
+        f"Straighten your {finger} finger a little."
+        if float(dev) > 0
+        else f"Curl your {finger} finger more."
+    )
 
 
 def install_compat(app: FastAPI, core) -> None:
     core.compat_clients = {}
     core.compat_t0_us = core.clock.now_us()
-    core.compat_dev = {"glove_source": "simulator" if core.fake else "rokoko_sdk",
-                       "smoothing": {"enabled": True, "min_cutoff": float(core.cfg.camera.one_euro_min_cutoff),
-                                     "beta": float(core.cfg.camera.one_euro_beta)},
-                       "llm_provider": "fake", "simulator_motion": {"preset": "idle"}}
+    core.compat_dev = {
+        "glove_source": "simulator" if core.fake else "rokoko_sdk",
+        "smoothing": {
+            "enabled": True,
+            "min_cutoff": float(core.cfg.camera.one_euro_min_cutoff),
+            "beta": float(core.cfg.camera.one_euro_beta),
+        },
+        "llm_provider": "fake",
+        "simulator_motion": {"preset": "idle"},
+    }
     core.compat_recordings: dict[str, dict] = {}
     r = APIRouter(prefix="/api")
 
     @r.get("/health")
     def health():
-        return {"status": "ok", "glove_source": core.compat_dev["glove_source"], "llm_provider": "fake",
-                "core": core.health()}
+        return {
+            "status": "ok",
+            "glove_source": core.compat_dev["glove_source"],
+            "llm_provider": "fake",
+            "core": core.health(),
+        }
 
     @r.get("/moves")
     def moves(skill: str | None = None):
@@ -133,7 +192,13 @@ def install_compat(app: FastAPI, core) -> None:
         out = []
         for s in list_lessons(core.lessons_dir):
             try:
-                out.append(lesson_to_compat(json.loads((core.lessons_dir / s["id"] / "lesson.json").read_text())))
+                out.append(
+                    lesson_to_compat(
+                        json.loads(
+                            (core.lessons_dir / s["id"] / "lesson.json").read_text()
+                        )
+                    )
+                )
             except Exception:
                 out.append(lesson_to_compat(s))
         return out
@@ -151,8 +216,13 @@ def install_compat(app: FastAPI, core) -> None:
     @r.post("/motion/preview")
     @r.post("/score")
     def not_tonight(lesson_id: str | None = None):
-        return JSONResponse({"detail": "not implemented in the core tonight; lessons are recorded from gloves "
-                             "(see SPEC.md record_start/record_stop over /ws)"}, status_code=501)
+        return JSONResponse(
+            {
+                "detail": "not implemented in the core tonight; lessons are recorded from gloves "
+                "(see SPEC.md record_start/record_stop over /ws)"
+            },
+            status_code=501,
+        )
 
     @r.post("/calibrations")
     def calibrate(body: dict):
@@ -163,12 +233,20 @@ def install_compat(app: FastAPI, core) -> None:
             return JSONResponse({"detail": e.message}, status_code=409)
         flat = {f: [0.0, 0.0, 0.0] for f in H.FINGERS}
         fist = {f: [1.5708, 1.5708, 1.5708] for f in H.FINGERS}
-        return {"id": f"cal-{int(time.time())}", "side": side, "flat": flat, "fist": fist,
-                "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        return {
+            "id": f"cal-{int(time.time())}",
+            "side": side,
+            "flat": flat,
+            "fist": fist,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        }
 
     @r.get("/calibrations/latest")
     def latest_calibration(side: str = "right"):
-        return JSONResponse({"detail": "no calibration stored; the core calibrates yaw only"}, status_code=404)
+        return JSONResponse(
+            {"detail": "no calibration stored; the core calibrates yaw only"},
+            status_code=404,
+        )
 
     @r.post("/recordings/start")
     def recording_start(body: dict | None = None):
@@ -176,12 +254,24 @@ def install_compat(app: FastAPI, core) -> None:
         try:
             if core.session.mode != "record":
                 core.session.handle_command("set_mode", {"mode": "record"})
-            res = core.session.handle_command("record_start", {"title": body.get("step_id") or body.get("lesson_id") or "frontend take"})
+            res = core.session.handle_command(
+                "record_start",
+                {
+                    "title": body.get("step_id")
+                    or body.get("lesson_id")
+                    or "frontend take"
+                },
+            )
         except CommandError as e:
             return JSONResponse({"detail": f"{e.code}: {e.message}"}, status_code=409)
         rid = f"rec-{int(time.time() * 1000)}"
-        core.compat_recordings[rid] = {"id": rid, "lesson_id": body.get("lesson_id"), "step_id": body.get("step_id"),
-                                       "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "hand": res["hand"]}
+        core.compat_recordings[rid] = {
+            "id": rid,
+            "lesson_id": body.get("lesson_id"),
+            "step_id": body.get("step_id"),
+            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "hand": res["hand"],
+        }
         return {"recording_id": rid}
 
     @r.post("/recordings/{rid}/stop")
@@ -195,8 +285,14 @@ def install_compat(app: FastAPI, core) -> None:
             return JSONResponse({"detail": f"{e.code}: {e.message}"}, status_code=409)
         lesson = core.session.lesson
         dur = (lesson.duration_us / 1e6) if lesson else 0.0
-        rec.update({"duration_s": round(dur, 3), "fps": float(core.cfg.record.rate_hz), "frames": [],
-                    "core_lesson_id": res.get("lesson_id")})
+        rec.update(
+            {
+                "duration_s": round(dur, 3),
+                "fps": float(core.cfg.record.rate_hz),
+                "frames": [],
+                "core_lesson_id": res.get("lesson_id"),
+            }
+        )
         return rec
 
     @r.get("/recordings/{rid}")
@@ -208,8 +304,15 @@ def install_compat(app: FastAPI, core) -> None:
 
     @r.post("/coach/hint")
     def coach_hint(body: dict):
-        return {"hint": rule_hint(body.get("deviations") or {}, body.get("timing_ms"),
-                                  float(core.cfg.score.perfect_deg), float(core.cfg.score.timing_hint_ms)), "provider": "rule"}
+        return {
+            "hint": rule_hint(
+                body.get("deviations") or {},
+                body.get("timing_ms"),
+                float(core.cfg.score.perfect_deg),
+                float(core.cfg.score.timing_hint_ms),
+            ),
+            "provider": "rule",
+        }
 
     @r.get("/dev/state")
     def dev_state():

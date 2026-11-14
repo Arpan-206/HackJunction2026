@@ -2,13 +2,12 @@
 
 No network calls live in this module or anywhere else in the core.
 """
+
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
-
-from . import hand as H
 
 RULE_LINES = {
     "too_flat": "Curl your {finger} finger more.",
@@ -30,7 +29,7 @@ TASK_KEYWORDS = {
 
 @dataclass
 class CoachLine:
-    kind: str                      # tip | praise | question | status
+    kind: str  # tip | praise | question | status
     text: str
     focus: str | None = None
     step: int | None = None
@@ -41,8 +40,16 @@ class CoachLine:
     id: str = ""
 
     def to_message(self) -> dict:
-        msg = {"id": self.id, "kind": self.kind, "text": self.text[:120], "focus": self.focus, "step": self.step,
-               "speak": bool(self.speak), "source": self.source, "hand": self.hand}
+        msg = {
+            "id": self.id,
+            "kind": self.kind,
+            "text": self.text[:120],
+            "focus": self.focus,
+            "step": self.step,
+            "speak": bool(self.speak),
+            "source": self.source,
+            "hand": self.hand,
+        }
         if self.kind == "question":
             msg["options"] = list(self.options or ["Yes", "No"])[:3]
         return msg
@@ -52,7 +59,9 @@ class CoachClient(Protocol):
     """What a model-backed coach must provide. Return None to fall back to rules."""
 
     def tip(self, summary: dict) -> CoachLine | None: ...
-    def name_steps(self, lesson_json: dict, digests: list[dict]) -> list[dict] | None: ...
+    def name_steps(
+        self, lesson_json: dict, digests: list[dict]
+    ) -> list[dict] | None: ...
     def configure(self, text: str, task_names: list[str]) -> dict | None: ...
     def phrase_question(self, context: dict) -> CoachLine | None: ...
 
@@ -68,11 +77,21 @@ class RuleCoach:
         step = summary.get("step", {}).get("index")
         hand = summary.get("hand")
         if summary.get("passed"):
-            return CoachLine("praise", RULE_LINES["passed"], None, step, self.speak, "rule", hand=hand)
+            return CoachLine(
+                "praise",
+                RULE_LINES["passed"],
+                None,
+                step,
+                self.speak,
+                "rule",
+                hand=hand,
+            )
         timing = summary.get("timing_ms")
         if timing is not None and abs(timing) >= self.timing_hint_ms:
             key = "early" if timing < 0 else "late"
-            return CoachLine("tip", RULE_LINES[key], None, step, self.speak, "rule", hand=hand)
+            return CoachLine(
+                "tip", RULE_LINES[key], None, step, self.speak, "rule", hand=hand
+            )
         fingers = summary.get("fingers") or {}
         if not fingers:
             return None
@@ -81,10 +100,18 @@ class RuleCoach:
         hint = info.get("hint")
         if hint not in RULE_LINES:
             return None
-        return CoachLine("tip", RULE_LINES[hint].format(finger=finger), finger, step, self.speak, "rule", hand=hand)
+        return CoachLine(
+            "tip",
+            RULE_LINES[hint].format(finger=finger),
+            finger,
+            step,
+            self.speak,
+            "rule",
+            hand=hand,
+        )
 
     def name_steps(self, lesson_json: dict, digests: list[dict]) -> list[dict] | None:
-        return None   # keeps the recorder's "auto" names
+        return None  # keeps the recorder's "auto" names
 
     def configure(self, text: str, task_names: list[str]) -> dict | None:
         low = text.lower()
@@ -94,14 +121,23 @@ class RuleCoach:
         return None
 
     def phrase_question(self, context: dict) -> CoachLine | None:
-        return CoachLine("question", "You did this two ways. Which one should I teach?", None,
-                         context.get("step"), self.speak, "rule", options=["The first", "The second"])
+        return CoachLine(
+            "question",
+            "You did this two ways. Which one should I teach?",
+            None,
+            context.get("step"),
+            self.speak,
+            "rule",
+            options=["The first", "The second"],
+        )
 
 
 class Coach:
     """Rate-limits and numbers lines from a CoachClient, falling back to rules."""
 
-    def __init__(self, client: CoachClient | None, coach_cfg, timing_hint_ms: float) -> None:
+    def __init__(
+        self, client: CoachClient | None, coach_cfg, timing_hint_ms: float
+    ) -> None:
         self.rules = RuleCoach(timing_hint_ms, coach_cfg.speak)
         self.client = client or self.rules
         self.min_interval_us = int(float(coach_cfg.min_interval_s) * 1e6)
@@ -115,7 +151,9 @@ class Coach:
         line.text = line.text[: self.text_max]
         return line
 
-    def on_summary(self, t_us: int, summary: dict, force: bool = False) -> CoachLine | None:
+    def on_summary(
+        self, t_us: int, summary: dict, force: bool = False
+    ) -> CoachLine | None:
         """One tip per learner at most every min_interval_s. A newer summary replaces a queued one."""
         hand = summary.get("hand") or "any"
         last = self._last_tip_us.get(hand)
@@ -139,8 +177,20 @@ class Coach:
                 out.append(line)
         return out
 
-    def status(self, text: str, step: int | None = None, speak: bool = False) -> CoachLine:
+    def status(
+        self, text: str, step: int | None = None, speak: bool = False
+    ) -> CoachLine:
         return self._stamp(CoachLine("status", text, None, step, speak, "rule"))
 
     def praise(self, step: int | None, hand: str | None) -> CoachLine:
-        return self._stamp(CoachLine("praise", RULE_LINES["passed"], None, step, self.rules.speak, "rule", hand=hand))
+        return self._stamp(
+            CoachLine(
+                "praise",
+                RULE_LINES["passed"],
+                None,
+                step,
+                self.rules.speak,
+                "rule",
+                hand=hand,
+            )
+        )

@@ -5,7 +5,6 @@ import math
 from pathlib import Path
 
 import pytest
-
 from app import constants as c
 from app.core.errors import ServiceUnavailableError
 from app.schemas.frames import GloveFrame
@@ -13,8 +12,13 @@ from app.services.gloves import rokoko_udp
 from app.services.gloves.rokoko_mapper import map_payload
 
 FIXTURES = Path(__file__).parent / "fixtures"
-FIST = {"thumb": (0.5, 0.6, 0.7), "index": (0.9, 1.45, 0.9), "middle": (0.9, 1.45, 0.9),
-        "ring": (0.9, 1.45, 0.9), "little": (0.9, 1.45, 0.9)}
+FIST = {
+    "thumb": (0.5, 0.6, 0.7),
+    "index": (0.9, 1.45, 0.9),
+    "middle": (0.9, 1.45, 0.9),
+    "ring": (0.9, 1.45, 0.9),
+    "little": (0.9, 1.45, 0.9),
+}
 
 
 def load(name: str) -> dict:
@@ -46,7 +50,11 @@ def test_single_finger_is_isolated(tag: str) -> None:
     """Curling only the index leaves the other fingers flat."""
     hand = map_payload(load(f"{tag}_index_half.json"))[0]
     assert math.isclose(hand.flexion["index"][1], 0.725, abs_tol=2e-3)
-    assert all(abs(a) < 1e-3 for f in ("middle", "ring", "little", "thumb") for a in hand.flexion[f])
+    assert all(
+        abs(a) < 1e-3
+        for f in ("middle", "ring", "little", "thumb")
+        for a in hand.flexion[f]
+    )
 
 
 @pytest.mark.parametrize("tag", ["v3", "v4"])
@@ -55,7 +63,9 @@ def test_sweep_frames_all_map_to_valid_glove_frames(tag: str) -> None:
     lines = (FIXTURES / f"{tag}_sweep.jsonl").read_text(encoding="utf8").splitlines()
     assert len(lines) > 10
     for line in lines:
-        frame = GloveFrame(t=0.0, source="rokoko_udp", hands=map_payload(json.loads(line)))
+        frame = GloveFrame(
+            t=0.0, source="rokoko_udp", hands=map_payload(json.loads(line))
+        )
         assert len(frame.hands) == 2
 
 
@@ -66,7 +76,12 @@ def test_v4_detected_by_payload_not_version_field() -> None:
     left_v3 = next(h for h in map_payload(load("v3_fist.json")) if h.side == "left")
     left_v4 = next(h for h in map_payload(v4) if h.side == "left")
     for finger in c.FINGERS:
-        assert all(math.isclose(a, b, abs_tol=2e-3) for a, b in zip(left_v3.flexion[finger], left_v4.flexion[finger], strict=True))
+        assert all(
+            math.isclose(a, b, abs_tol=2e-3)
+            for a, b in zip(
+                left_v3.flexion[finger], left_v4.flexion[finger], strict=True
+            )
+        )
 
 
 def test_meta_flags_skip_hands_without_gloves() -> None:
@@ -93,14 +108,16 @@ def test_decode_plain_and_lz4_datagrams() -> None:
     raw = json.dumps(load("v3_open.json")).encode()
     assert rokoko_udp.decode_datagram(raw)["version"] == 3
     try:
-        import lz4.frame  # noqa: PLC0415
+        import lz4.frame
     except ImportError:
         with pytest.raises(ServiceUnavailableError):
             rokoko_udp.decode_datagram(c.LZ4_FRAME_MAGIC + b"junk")
         return
     packed = lz4.frame.compress(raw)
     assert packed[:4] == c.LZ4_FRAME_MAGIC
-    assert rokoko_udp.decode_datagram(packed)["scene"]["actors"][0]["name"] == "Actor 01"
+    assert (
+        rokoko_udp.decode_datagram(packed)["scene"]["actors"][0]["name"] == "Actor 01"
+    )
 
 
 def test_udp_protocol_emits_frames_and_survives_garbage() -> None:

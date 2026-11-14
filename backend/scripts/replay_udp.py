@@ -20,14 +20,29 @@ FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 
 def main() -> int:
     """Send the frames and return a process exit code."""
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--file", type=Path, help="JSONL (one frame per line) or a single JSON frame")
-    parser.add_argument("--format", choices=("v3", "v4"), default="v3", help="bundled sweep to use when --file is not given")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--file", type=Path, help="JSONL (one frame per line) or a single JSON frame"
+    )
+    parser.add_argument(
+        "--format",
+        choices=("v3", "v4"),
+        default="v3",
+        help="bundled sweep to use when --file is not given",
+    )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=14043)
     parser.add_argument("--hz", type=float, default=60.0)
-    parser.add_argument("--lz4", action="store_true", help="LZ4 frame each datagram, like the Studio JSON (LZ4) formats")
-    parser.add_argument("--once", action="store_true", help="play the file once instead of looping")
+    parser.add_argument(
+        "--lz4",
+        action="store_true",
+        help="LZ4 frame each datagram, like the Studio JSON (LZ4) formats",
+    )
+    parser.add_argument(
+        "--once", action="store_true", help="play the file once instead of looping"
+    )
     args = parser.parse_args()
 
     path = args.file or FIXTURES / f"{args.format}_sweep.jsonl"
@@ -39,7 +54,7 @@ def main() -> int:
         return 1
     if args.lz4:
         try:
-            import lz4.frame  # noqa: PLC0415
+            import lz4.frame
         except ImportError:
             print("--lz4 needs the extra: uv sync --extra rokoko", file=sys.stderr)
             return 1
@@ -47,7 +62,9 @@ def main() -> int:
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     period = 1.0 / args.hz
-    print(f"Sending {len(frames)} frames from {path.name} to {args.host}:{args.port} at {args.hz:g} Hz (Ctrl+C to stop)")
+    print(
+        f"Sending {len(frames)} frames from {path.name} to {args.host}:{args.port} at {args.hz:g} Hz (Ctrl+C to stop)"
+    )
     sent = 0
     start = time.perf_counter()
     try:

@@ -11,17 +11,16 @@ from pathlib import Path
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["LLM_PROVIDER"] = "fake"
 
-import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.core.config import Settings  # noqa: E402
-from app.main import create_app  # noqa: E402
+import pytest
+from app.core.config import Settings
+from app.main import create_app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
 def _no_real_gemini(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make any attempt to build a real google-genai client fail loudly."""
-    from google import genai  # noqa: PLC0415
+    from google import genai
 
     def _forbidden(*_: object, **__: object) -> None:
         raise AssertionError("tests must never create a real Gemini client")
@@ -33,8 +32,13 @@ def _no_real_gemini(monkeypatch: pytest.MonkeyPatch) -> None:
 def client(tmp_path: Path) -> Iterator[TestClient]:
     """Yield a TestClient whose lifespan has started the simulator."""
     settings = Settings(
-        data_dir=tmp_path, llm_provider="fake", gemini_api_key=None, glove_source="simulator", rokoko_udp_port=0,
-        glove_monitor=False, glove_autostart="off",
+        data_dir=tmp_path,
+        llm_provider="fake",
+        gemini_api_key=None,
+        glove_source="simulator",
+        rokoko_udp_port=0,
+        glove_monitor=False,
+        glove_autostart="off",
     )
     with TestClient(create_app(settings)) as test_client:
         yield test_client

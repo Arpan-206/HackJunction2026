@@ -21,7 +21,7 @@ Clock = Callable[[], float]
 def pacific_day(now: float) -> str:
     """Return the Pacific-time calendar date of a Unix timestamp, the boundary at which Google resets daily quotas."""
     try:
-        from zoneinfo import ZoneInfo  # noqa: PLC0415
+        from zoneinfo import ZoneInfo
 
         tz: Any = ZoneInfo(c.GEMINI_PACIFIC_TZ)
     except Exception:  # noqa: BLE001 - no tz database on Windows without tzdata
@@ -38,7 +38,11 @@ class RateLimiter:
     """Counts Gemini requests per model. Minute timestamps live in memory; the day count is saved to disk."""
 
     def __init__(
-        self, path: Path, clock: Clock = time.time, rpm_override: int | None = None, rpd_override: int | None = None,
+        self,
+        path: Path,
+        clock: Clock = time.time,
+        rpm_override: int | None = None,
+        rpd_override: int | None = None,
     ) -> None:
         """Load today's counters from path (missing or corrupt files start empty)."""
         self._path = path
@@ -76,7 +80,9 @@ class RateLimiter:
 
     def _counts(self, model: str, now: float) -> tuple[int, int]:
         """Return (requests in the last minute, requests today), pruning stale state."""
-        stamps = [t for t in self._minute.get(model, []) if now - t < c.GEMINI_MINUTE_WINDOW_S]
+        stamps = [
+            t for t in self._minute.get(model, []) if now - t < c.GEMINI_MINUTE_WINDOW_S
+        ]
         self._minute[model] = stamps
         entry = self._days.get(model)
         today = pacific_day(now)
@@ -114,16 +120,22 @@ class RateLimiter:
             rpm, rpd = self.budgets(model)
             free_rpm, free_rpd = free_limits(model)
             return {
-                "model": model, "rpm_budget": rpm, "rpm_remaining": max(0, rpm - per_minute),
-                "rpd_budget": rpd, "rpd_remaining": max(0, rpd - per_day),
-                "free_rpm": free_rpm, "free_rpd": free_rpd,
+                "model": model,
+                "rpm_budget": rpm,
+                "rpm_remaining": max(0, rpm - per_minute),
+                "rpd_budget": rpd,
+                "rpd_remaining": max(0, rpd - per_day),
+                "free_rpm": free_rpm,
+                "free_rpd": free_rpd,
             }
 
 
 class TTLCache(Generic[T]):
     """A small in-memory cache whose entries expire after ttl seconds; the oldest entry is dropped when full."""
 
-    def __init__(self, ttl_s: float, max_entries: int, clock: Clock = time.monotonic) -> None:
+    def __init__(
+        self, ttl_s: float, max_entries: int, clock: Clock = time.monotonic
+    ) -> None:
         """Set the lifetime, capacity and time source."""
         self._ttl = ttl_s
         self._max = max_entries

@@ -19,9 +19,11 @@ def decode_datagram(data: bytes) -> dict:
     """Decode one datagram to a JSON object, decompressing LZ4 frames when the optional extra is installed."""
     if data[:4] == c.LZ4_FRAME_MAGIC:
         try:
-            import lz4.frame  # noqa: PLC0415 - optional dependency
+            import lz4.frame
         except ImportError as exc:
-            raise ServiceUnavailableError("LZ4 frames received but the 'rokoko' extra is not installed (uv sync --extra rokoko)") from exc
+            raise ServiceUnavailableError(
+                "LZ4 frames received but the 'rokoko' extra is not installed (uv sync --extra rokoko)"
+            ) from exc
         data = lz4.frame.decompress(data)
     return json.loads(data)
 
@@ -42,10 +44,20 @@ class _Protocol(asyncio.DatagramProtocol):
         except Exception:
             self._failures += 1
             if self._failures in (1, 100, 1000):
-                log.exception("Dropping undecodable Rokoko datagram from %s (count %d)", addr, self._failures)
+                log.exception(
+                    "Dropping undecodable Rokoko datagram from %s (count %d)",
+                    addr,
+                    self._failures,
+                )
             return
         if hands:
-            self._emit(GloveFrame(t=time.perf_counter() - self._origin, source="rokoko_udp", hands=hands))
+            self._emit(
+                GloveFrame(
+                    t=time.perf_counter() - self._origin,
+                    source="rokoko_udp",
+                    hands=hands,
+                )
+            )
 
 
 class RokokoUdpSource:
@@ -62,9 +74,13 @@ class RokokoUdpSource:
         """Open the UDP socket."""
         loop = asyncio.get_running_loop()
         try:
-            transport, _ = await loop.create_datagram_endpoint(lambda: _Protocol(emit), local_addr=("0.0.0.0", self.port))
+            transport, _ = await loop.create_datagram_endpoint(
+                lambda: _Protocol(emit), local_addr=("0.0.0.0", self.port)
+            )
         except OSError as exc:
-            raise ConflictError(f"Cannot listen on UDP port {self.port}: {exc}") from exc
+            raise ConflictError(
+                f"Cannot listen on UDP port {self.port}: {exc}"
+            ) from exc
         self._transport = transport  # type: ignore[assignment]
 
     async def stop(self) -> None:

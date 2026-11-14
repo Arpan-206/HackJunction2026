@@ -1,4 +1,5 @@
 """Synthetic hands and a synthetic lesson, so the whole pipeline runs with no hardware."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,10 +15,22 @@ FAKE_WAVE_ID = "fake-wave"
 
 # Poses the fake master teaches and the fake learner reaches, as per-finger curl.
 POSES: list[tuple[str, dict[str, float]]] = [
-    ("Open hand", {"thumb": 0.05, "index": 0.05, "middle": 0.05, "ring": 0.05, "little": 0.05}),
-    ("Fist", {"thumb": 0.95, "index": 0.95, "middle": 0.95, "ring": 0.95, "little": 0.95}),
-    ("Point", {"thumb": 0.50, "index": 0.05, "middle": 0.90, "ring": 0.90, "little": 0.90}),
-    ("Pinch", {"thumb": 0.65, "index": 0.80, "middle": 0.15, "ring": 0.15, "little": 0.15}),
+    (
+        "Open hand",
+        {"thumb": 0.05, "index": 0.05, "middle": 0.05, "ring": 0.05, "little": 0.05},
+    ),
+    (
+        "Fist",
+        {"thumb": 0.95, "index": 0.95, "middle": 0.95, "ring": 0.95, "little": 0.95},
+    ),
+    (
+        "Point",
+        {"thumb": 0.50, "index": 0.05, "middle": 0.90, "ring": 0.90, "little": 0.90},
+    ),
+    (
+        "Pinch",
+        {"thumb": 0.65, "index": 0.80, "middle": 0.15, "ring": 0.15, "little": 0.15},
+    ),
 ]
 
 
@@ -30,11 +43,21 @@ def blend(a: dict[str, float], b: dict[str, float], u: float) -> dict[str, float
     return {f: a[f] + (b[f] - a[f]) * u for f in H.FINGERS}
 
 
-def sway(t_s: float, side: str, rest_p: np.ndarray, amp: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+def sway(
+    t_s: float, side: str, rest_p: np.ndarray, amp: float = 1.0
+) -> tuple[np.ndarray, np.ndarray]:
     s = 1.0 if side == "right" else -1.0
-    p = rest_p + amp * np.array([0.02 * np.sin(0.7 * t_s + s), 0.012 * np.sin(1.1 * t_s), 0.01 * np.sin(0.4 * t_s)])
-    q = geom.quat_mul(geom.yaw_quat(0.18 * np.sin(0.5 * t_s + s)),
-                      geom.quat_from_axis_angle([1.0, 0.0, 0.0], 0.10 * np.sin(0.9 * t_s)))
+    p = rest_p + amp * np.array(
+        [
+            0.02 * np.sin(0.7 * t_s + s),
+            0.012 * np.sin(1.1 * t_s),
+            0.01 * np.sin(0.4 * t_s),
+        ]
+    )
+    q = geom.quat_mul(
+        geom.yaw_quat(0.18 * np.sin(0.5 * t_s + s)),
+        geom.quat_from_axis_angle([1.0, 0.0, 0.0], 0.10 * np.sin(0.9 * t_s)),
+    )
     return p, q
 
 
@@ -52,8 +75,13 @@ class FakeSource:
         self.t0_us = int(t0_us)
         self.sides = tuple(sides)
         self.hand_cfg = cfg.hand
-        self.rest = {s: np.asarray(cfg.rest_pose[s].p, dtype=float) for s in ("left", "right")}
-        self.pinch = {s: H.PinchTracker(cfg.hand.pinch_on_m, cfg.hand.pinch_off_m) for s in ("left", "right")}
+        self.rest = {
+            s: np.asarray(cfg.rest_pose[s].p, dtype=float) for s in ("left", "right")
+        }
+        self.pinch = {
+            s: H.PinchTracker(cfg.hand.pinch_on_m, cfg.hand.pinch_off_m)
+            for s in ("left", "right")
+        }
         self.device_ids = {"left": 1, "right": 2}
         self.target_step = 0
         self._target_since_us = self.t0_us
@@ -85,7 +113,10 @@ class FakeSource:
         return pose
 
     def free_curl(self, t_s: float) -> dict[str, float]:
-        return {f: float(0.5 + 0.45 * np.sin(2 * np.pi * t_s / 5.0 + 0.6 * i)) for i, f in enumerate(H.FINGERS)}
+        return {
+            f: float(0.5 + 0.45 * np.sin(2 * np.pi * t_s / 5.0 + 0.6 * i))
+            for i, f in enumerate(H.FINGERS)
+        }
 
     def poll(self, t_us: int) -> dict[str, H.HandState | None]:
         t_s = (t_us - self.t0_us) / 1e6
@@ -93,8 +124,15 @@ class FakeSource:
         for side in self.sides:
             curl = self.learner_curl(t_us) if side == "right" else self.free_curl(t_s)
             p, q = sway(t_s, side, self.rest[side])
-            h = H.synth_hand(side=side, curl=curl, wrist_p=p, wrist_q=q, t_us=t_us,
-                             device_id=self.device_ids[side], source="glove")
+            h = H.synth_hand(
+                side=side,
+                curl=curl,
+                wrist_p=p,
+                wrist_q=q,
+                t_us=t_us,
+                device_id=self.device_ids[side],
+                source="glove",
+            )
             h.anchor = "rest"
             h.tracked = True
             H.finish_hand(h, self.hand_cfg, self.pinch[side])
@@ -102,7 +140,9 @@ class FakeSource:
         return out
 
 
-def fake_master_curl(t_s: float, hold_s: float = 2.0, move_s: float = 1.0) -> tuple[dict[str, float], int]:
+def fake_master_curl(
+    t_s: float, hold_s: float = 2.0, move_s: float = 1.0
+) -> tuple[dict[str, float], int]:
     """Curl of the fake master at time t: pose k held, then a move to pose k+1."""
     seg = hold_s + move_s
     k = int(t_s // seg)
@@ -115,13 +155,26 @@ def fake_master_curl(t_s: float, hold_s: float = 2.0, move_s: float = 1.0) -> tu
     return blend(cur, nxt, _ease((within - hold_s) / move_s)), k
 
 
-def build_fake_lesson(cfg, lessons_dir: Path, hold_s: float = 2.0, move_s: float = 1.0,
-                      master_hand: str = "right") -> Lesson:
+def build_fake_lesson(
+    cfg,
+    lessons_dir: Path,
+    hold_s: float = 2.0,
+    move_s: float = 1.0,
+    master_hand: str = "right",
+) -> Lesson:
     """Record the fake master once and save it as lessons/fake-demo."""
     rec = Recorder(cfg.record, cfg.score.hold_ms_default)
     rate = float(cfg.fake.rate_hz)
     t0 = 0
-    rec.start(t0, "Fake demo: four hand shapes", "general", {}, master_hand, source="fake", master_name="fake")
+    rec.start(
+        t0,
+        "Fake demo: four hand shapes",
+        "general",
+        {},
+        master_hand,
+        source="fake",
+        master_name="fake",
+    )
     total_s = len(POSES) * (hold_s + move_s) - move_s
     n = int(total_s * rate)
     rest_p = np.asarray(cfg.rest_pose[master_hand].p, dtype=float)
@@ -129,7 +182,14 @@ def build_fake_lesson(cfg, lessons_dir: Path, hold_s: float = 2.0, move_s: float
         t_s = i / rate
         curl, k = fake_master_curl(t_s, hold_s, move_s)
         p, q = sway(t_s, master_hand, rest_p, amp=0.3)
-        h = H.synth_hand(side=master_hand, curl=curl, wrist_p=p, wrist_q=q, t_us=int(t_s * 1e6), device_id=2)
+        h = H.synth_hand(
+            side=master_hand,
+            curl=curl,
+            wrist_p=p,
+            wrist_q=q,
+            t_us=int(t_s * 1e6),
+            device_id=2,
+        )
         H.finish_hand(h, cfg.hand)
         rec.add(h)
     for k in range(1, len(POSES)):
@@ -145,19 +205,39 @@ def build_fake_lesson(cfg, lessons_dir: Path, hold_s: float = 2.0, move_s: float
 
 
 def wave_curl(t_s: float, period_s: float = 2.0) -> dict[str, float]:
-    return {f: float(0.5 + 0.45 * np.sin(2 * np.pi * t_s / period_s + 0.7 * i)) for i, f in enumerate(H.FINGERS)}
+    return {
+        f: float(0.5 + 0.45 * np.sin(2 * np.pi * t_s / period_s + 0.7 * i))
+        for i, f in enumerate(H.FINGERS)
+    }
 
 
-def build_fake_wave_lesson(cfg, lessons_dir: Path, seconds: float = 4.0, master_hand: str = "right") -> Lesson:
+def build_fake_wave_lesson(
+    cfg, lessons_dir: Path, seconds: float = 4.0, master_hand: str = "right"
+) -> Lesson:
     """A one-step `move` lesson: a finger wave, so the viewer can see a moving ghost and timing_ms."""
     rec = Recorder(cfg.record, cfg.score.hold_ms_default)
     rate = float(cfg.fake.rate_hz)
-    rec.start(0, "Fake wave: follow the fingers", "general", {}, master_hand, source="fake", master_name="fake")
+    rec.start(
+        0,
+        "Fake wave: follow the fingers",
+        "general",
+        {},
+        master_hand,
+        source="fake",
+        master_name="fake",
+    )
     rest_p = np.asarray(cfg.rest_pose[master_hand].p, dtype=float)
     for i in range(int(seconds * rate)):
         t_s = i / rate
         p, q = sway(t_s, master_hand, rest_p, amp=0.3)
-        h = H.synth_hand(side=master_hand, curl=wave_curl(t_s), wrist_p=p, wrist_q=q, t_us=int(t_s * 1e6), device_id=2)
+        h = H.synth_hand(
+            side=master_hand,
+            curl=wave_curl(t_s),
+            wrist_p=p,
+            wrist_q=q,
+            t_us=int(t_s * 1e6),
+            device_id=2,
+        )
         H.finish_hand(h, cfg.hand)
         rec.add(h)
     lesson = rec.stop(int(seconds * 1e6), save=True, lesson_id=FAKE_WAVE_ID)

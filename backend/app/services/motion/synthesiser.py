@@ -6,7 +6,16 @@ from dataclasses import dataclass
 from app import constants as c
 from app.schemas.common import FingerValues, Side
 from app.schemas.frames import GloveFrame, HandFrame
-from app.schemas.motion import FingerSequence, GripAndSwing, HoldPose, Idle, Keyframe, Keyframes, MotionSpec, Pinch
+from app.schemas.motion import (
+    FingerSequence,
+    GripAndSwing,
+    HoldPose,
+    Idle,
+    Keyframe,
+    Keyframes,
+    MotionSpec,
+    Pinch,
+)
 from app.services import geometry
 
 
@@ -28,10 +37,17 @@ def _sequence_pose(spec: FingerSequence, t: float) -> Pose:
     active = seq[idx] - 1
     nxt = seq[(idx + 1) % len(seq)] - 1
     phase = (t % beat) / beat
-    press = math.sin(phase / c.SEQ_PRESS_WINDOW * math.pi) if phase < c.SEQ_PRESS_WINDOW else 0.0
+    press = (
+        math.sin(phase / c.SEQ_PRESS_WINDOW * math.pi)
+        if phase < c.SEQ_PRESS_WINDOW
+        else 0.0
+    )
     lift = 0.0
     if phase > c.SEQ_LIFT_START:
-        lift = math.sin((phase - c.SEQ_LIFT_START) / (1 - c.SEQ_LIFT_START) * math.pi) * c.SEQ_LIFT_AMOUNT
+        lift = (
+            math.sin((phase - c.SEQ_LIFT_START) / (1 - c.SEQ_LIFT_START) * math.pi)
+            * c.SEQ_LIFT_AMOUNT
+        )
     curls = []
     for i in range(5):
         v = 0.0
@@ -51,13 +67,19 @@ def _swing_pose(spec: GripAndSwing, t: float) -> Pose:
     phase = (t % beat) / beat
     contact = 0.0
     if phase < c.SWING_BACKSWING_END:
-        yaw = c.SWING_BACKSWING_YAW * math.sin(phase / c.SWING_BACKSWING_END * math.pi / 2)
+        yaw = c.SWING_BACKSWING_YAW * math.sin(
+            phase / c.SWING_BACKSWING_END * math.pi / 2
+        )
     elif phase < c.SWING_CONTACT_END:
-        k = (phase - c.SWING_BACKSWING_END) / (c.SWING_CONTACT_END - c.SWING_BACKSWING_END)
+        k = (phase - c.SWING_BACKSWING_END) / (
+            c.SWING_CONTACT_END - c.SWING_BACKSWING_END
+        )
         yaw = c.SWING_BACKSWING_YAW - c.SWING_CONTACT_SWEEP * k
         contact = math.sin(k * math.pi)
     else:
-        yaw = c.SWING_FOLLOW_YAW * (1 - (phase - c.SWING_CONTACT_END) / (1 - c.SWING_CONTACT_END))
+        yaw = c.SWING_FOLLOW_YAW * (
+            1 - (phase - c.SWING_CONTACT_END) / (1 - c.SWING_CONTACT_END)
+        )
     if spec.swing == "backhand":
         yaw = -yaw
     squeeze = c.SWING_SQUEEZE * contact
@@ -119,7 +141,11 @@ def pose_at(spec: MotionSpec, t: float, side: Side = "right") -> Pose:
     if isinstance(spec, Pinch):
         return _pinch_pose(spec, t)
     if isinstance(spec, HoldPose):
-        pose = spec.left_pose if side == "left" and spec.left_pose is not None else spec.pose
+        pose = (
+            spec.left_pose
+            if side == "left" and spec.left_pose is not None
+            else spec.pose
+        )
         return Pose(tuple(pose.as_list()))
     if isinstance(spec, Keyframes):
         keys = spec.left_keys if side == "left" and spec.left_keys else spec.keys
@@ -154,7 +180,9 @@ def _breathing(t: float, period: float | None) -> float:
     return -math.cos(t * 2 * math.pi * cycles / period) * c.BREATHE_AMPLITUDE
 
 
-def _flexion(curls: tuple[float, ...], t: float, period: float | None = None) -> dict[str, tuple[float, float, float]]:
+def _flexion(
+    curls: tuple[float, ...], t: float, period: float | None = None
+) -> dict[str, tuple[float, float, float]]:
     """Convert curls to per-joint flexion in radians, with a slight breathing motion."""
     breathe = _breathing(t, period)
     out: dict[str, tuple[float, float, float]] = {}
@@ -163,7 +191,10 @@ def _flexion(curls: tuple[float, ...], t: float, period: float | None = None) ->
         scale = c.THUMB_FLEXION_SCALE if i == 0 else 1.0
         extra = breathe if i else 0.0
         joints = tuple(
-            round((c.RELAXED_FLEXION[i][s] + c.FULL_FLEXION[i][s] * curl + extra) * scale, c.FRAME_DECIMALS)
+            round(
+                (c.RELAXED_FLEXION[i][s] + c.FULL_FLEXION[i][s] * curl + extra) * scale,
+                c.FRAME_DECIMALS,
+            )
             for s in range(c.JOINTS_PER_FINGER)
         )
         out[name] = joints  # type: ignore[assignment]
@@ -185,12 +216,18 @@ def hand_frame(spec: MotionSpec, side: Side, t: float) -> HandFrame:
     )
 
 
-def frame_at(spec: MotionSpec, t: float, sides: tuple[Side, ...] = ("left", "right")) -> GloveFrame:
+def frame_at(
+    spec: MotionSpec, t: float, sides: tuple[Side, ...] = ("left", "right")
+) -> GloveFrame:
     """Synthesise a simulator frame for the given sides at time t."""
-    return GloveFrame(t=t, source="simulator", hands=[hand_frame(spec, s, t) for s in sides])
+    return GloveFrame(
+        t=t, source="simulator", hands=[hand_frame(spec, s, t) for s in sides]
+    )
 
 
-def synthesise(spec: MotionSpec, side: Side, duration_s: float, fps: float = c.STREAM_HZ) -> list[GloveFrame]:
+def synthesise(
+    spec: MotionSpec, side: Side, duration_s: float, fps: float = c.STREAM_HZ
+) -> list[GloveFrame]:
     """Return a duration_s long list of single-hand frames at fps."""
     count = max(1, int(round(duration_s * fps)))
     return [frame_at(spec, i / fps, (side,)) for i in range(count)]

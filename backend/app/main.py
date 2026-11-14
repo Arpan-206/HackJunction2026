@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import constants as c
 from app.api import ws
-from app.api.routes import ingest
 from app.api.router import api_router
+from app.api.routes import ingest
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.services.container import build_services
@@ -36,7 +36,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await services.gloves.stop()
 
     app = FastAPI(title=c.APP_TITLE, lifespan=lifespan)
-    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     register_error_handlers(app)
     app.include_router(api_router)
     app.include_router(ws.router)

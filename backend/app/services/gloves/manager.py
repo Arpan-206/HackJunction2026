@@ -62,7 +62,9 @@ class GloveManager:
 
     def subscribe(self) -> asyncio.Queue[GloveFrame]:
         """Return a new queue that receives smoothed frames; the oldest frame is dropped when it is full."""
-        queue: asyncio.Queue[GloveFrame] = asyncio.Queue(maxsize=c.SUBSCRIBER_QUEUE_SIZE)
+        queue: asyncio.Queue[GloveFrame] = asyncio.Queue(
+            maxsize=c.SUBSCRIBER_QUEUE_SIZE
+        )
         self._subscribers.add(queue)
         return queue
 
@@ -85,7 +87,9 @@ class GloveManager:
         try:
             await self.switch_source(self.requested)
         except Exception as exc:
-            log.warning("Glove source %s unavailable (%s); using simulator", self.requested, exc)
+            log.warning(
+                "Glove source %s unavailable (%s); using simulator", self.requested, exc
+            )
             await self.switch_source("simulator")
 
     async def switch_source(self, name: GloveSource) -> None:

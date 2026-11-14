@@ -1,9 +1,19 @@
 import asyncio
-import json
 
 import pytest
 
-from core.rcsp import HEADER, T_COMMAND, T_ERROR, T_EVENT, T_OK, GloveControl, RcspClient, RcspError, RcspParser, pack
+from core.rcsp import (
+    HEADER,
+    T_COMMAND,
+    T_ERROR,
+    T_EVENT,
+    T_OK,
+    GloveControl,
+    RcspClient,
+    RcspError,
+    RcspParser,
+    pack,
+)
 
 
 class FakeRcspServer:
@@ -23,13 +33,21 @@ class FakeRcspServer:
             w.close()
         try:
             await asyncio.wait_for(self.server.wait_closed(), 1.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
     async def push_button(self, device_id, kind):
         for w in self.writers:
-            w.write(pack(T_EVENT, {"Publisher": "DeviceEvents", "Topic": "ButtonPushed",
-                                   "EventData": {"DeviceId": device_id, "ButtonPushType": kind}}))
+            w.write(
+                pack(
+                    T_EVENT,
+                    {
+                        "Publisher": "DeviceEvents",
+                        "Topic": "ButtonPushed",
+                        "EventData": {"DeviceId": device_id, "ButtonPushType": kind},
+                    },
+                )
+            )
             await w.drain()
 
     async def handle(self, reader, writer):
@@ -45,25 +63,78 @@ class FakeRcspServer:
                     cmd, tid = body["Command"], body["TrackId"]
                     args = body.get("Arguments", {})
                     if cmd == "ListDevices":
-                        resp = {"Devices": [{"DeviceId": 7, "DeviceType": "Smartgloves II", "Connections": ["usb"]},
-                                            {"DeviceId": 8, "DeviceType": "Smartgloves II", "Connections": ["usb"]}]}
+                        resp = {
+                            "Devices": [
+                                {
+                                    "DeviceId": 7,
+                                    "DeviceType": "Smartgloves II",
+                                    "Connections": ["usb"],
+                                },
+                                {
+                                    "DeviceId": 8,
+                                    "DeviceType": "Smartgloves II",
+                                    "Connections": ["usb"],
+                                },
+                            ]
+                        }
                     elif cmd == "GetDeviceInfo":
-                        resp = {"DeviceId": args["DeviceId"], "Smartgloves": {"IsLeft": args["DeviceId"] == 7}}
+                        resp = {
+                            "DeviceId": args["DeviceId"],
+                            "Smartgloves": {"IsLeft": args["DeviceId"] == 7},
+                        }
                     elif cmd == "SetColorLed":
-                        self.leds.append((args["DeviceId"], args["Red"], args["Green"], args["Blue"]))
+                        self.leds.append(
+                            (args["DeviceId"], args["Red"], args["Green"], args["Blue"])
+                        )
                         resp = {}
-                    elif cmd in ("DeviceSubscribe", "Subscribe", "SubscribeToData", "ReinitAlgo"):
+                    elif cmd in (
+                        "DeviceSubscribe",
+                        "Subscribe",
+                        "SubscribeToData",
+                        "ReinitAlgo",
+                    ):
                         resp = {}
                     elif cmd == "Explode":
-                        writer.write(pack(T_ERROR, {"TrackId": tid, "Status": "Error", "Version": 1,
-                                                    "Error": {"Code": "UnknownCommand", "Message": "no"}}))
+                        writer.write(
+                            pack(
+                                T_ERROR,
+                                {
+                                    "TrackId": tid,
+                                    "Status": "Error",
+                                    "Version": 1,
+                                    "Error": {
+                                        "Code": "UnknownCommand",
+                                        "Message": "no",
+                                    },
+                                },
+                            )
+                        )
                         continue
                     else:
                         resp = {}
                     # an event may arrive between a command and its reply
                     if cmd == "Subscribe":
-                        writer.write(pack(T_EVENT, {"Publisher": "DeviceEvents", "Topic": "Connected", "EventData": {"DeviceId": 7}}))
-                    writer.write(pack(T_OK, {"TrackId": tid, "Status": "Ok", "Version": 1, "Response": resp}))
+                        writer.write(
+                            pack(
+                                T_EVENT,
+                                {
+                                    "Publisher": "DeviceEvents",
+                                    "Topic": "Connected",
+                                    "EventData": {"DeviceId": 7},
+                                },
+                            )
+                        )
+                    writer.write(
+                        pack(
+                            T_OK,
+                            {
+                                "TrackId": tid,
+                                "Status": "Ok",
+                                "Version": 1,
+                                "Response": resp,
+                            },
+                        )
+                    )
                 await writer.drain()
         except (ConnectionResetError, asyncio.CancelledError):
             pass
@@ -106,7 +177,7 @@ async def test_client_and_glove_control():
         await asyncio.sleep(0.05)
     assert ctl.side_of == {7: "left", 8: "right"}
     assert ("device", "left", {"device_id": 7, "state": "connected"}) in sess.events
-    assert srv.leds and srv.leds[0][1:] == (0, 60, 255)      # idle = blue
+    assert srv.leds and srv.leds[0][1:] == (0, 60, 255)  # idle = blue
     with pytest.raises(RcspError):
         await client.command("Explode")
     await srv.push_button(8, "DoublePress")
@@ -115,7 +186,9 @@ async def test_client_and_glove_control():
             break
         await asyncio.sleep(0.05)
     assert sess.buttons == [("right", "DoublePress")]
-    ctl.on_messages([{"type": "event", "name": "step_passed", "hand": "left", "data": {}}])
+    ctl.on_messages(
+        [{"type": "event", "name": "step_passed", "hand": "left", "data": {}}]
+    )
     await asyncio.sleep(0.1)
     assert (7, 0, 255, 0) in srv.leds
     await client.stop()

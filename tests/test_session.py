@@ -87,14 +87,23 @@ def test_learn_flow_passes_and_advances(sess, schemas):
     assert frame["ghost"]["right"]["lesson_t"] == s.lesson.steps[1].key_t_us
     schemas.validate_message(frame)
     lines = [json.loads(l) for l in s.attempts_log.read_text().splitlines()]
-    assert lines and lines[-1]["passed"] is True and lines[-1]["lesson_id"] == fake.FAKE_LESSON_ID
+    assert (
+        lines
+        and lines[-1]["passed"] is True
+        and lines[-1]["lesson_id"] == fake.FAKE_LESSON_ID
+    )
     for l in lines:
-        schemas.validate("step_summary", {k: v for k, v in l.items() if k not in ("t", "lesson_id", "mode")})
+        schemas.validate(
+            "step_summary",
+            {k: v for k, v in l.items() if k not in ("t", "lesson_id", "mode")},
+        )
 
 
 def test_ghost_is_mirrored_for_opposite_hand(sess):
     s, clock = sess
-    s.handle_command("lesson_load", {"lesson_id": fake.FAKE_LESSON_ID})   # master is the right hand
+    s.handle_command(
+        "lesson_load", {"lesson_id": fake.FAKE_LESSON_ID}
+    )  # master is the right hand
     s.handle_command("set_roles", {"left": "learner", "right": "free"})
     s.handle_command("set_mode", {"mode": "learn"})
     feed(s, clock, "left", fake.POSES[0][1], n=2)
@@ -161,7 +170,9 @@ def test_button_and_pinch_controls(sess):
     assert s.mode == "record" and s.recorder.active
     feed(s, clock, "right", fake.POSES[0][1], n=30)
     # control pinch held 500 ms marks a step
-    msgs = feed(s, clock, "right", fake.POSES[0][1], n=20, pinch=s.cfg.session.control_pinch)
+    msgs = feed(
+        s, clock, "right", fake.POSES[0][1], n=20, pinch=s.cfg.session.control_pinch
+    )
     assert types(msgs, "event", "step_marked")
     feed(s, clock, "right", fake.POSES[1][1], n=30)
     s.handle_button("right", "SinglePress")
@@ -192,7 +203,9 @@ def test_mirror_and_duel_and_playback(sess, schemas):
             s.update_hand(side, h)
         frame = s.tick(clock.now_us())
     schemas.validate_message(frame)
-    assert frame["ghost"]["right"]["source"] == "live" and frame["score"]["overall"] > 0.95
+    assert (
+        frame["ghost"]["right"]["source"] == "live" and frame["score"]["overall"] > 0.95
+    )
     s.drain()
     s.handle_command("set_mode", {"mode": "duel"})
     msgs = feed(s, clock, "right", fake.POSES[0][1], n=60)
@@ -228,7 +241,10 @@ def test_chords_task_state(sess):
     s.handle_command("set_mode", {"mode": "learn"})
     frame = s.tick(clock.now_us())
     assert frame["task"] == {"chord": "Open hand", "next": "Fist"}
-    assert s.handle_command("describe_task", {"text": "teach me a piano scale"})["task"] == "piano"
+    assert (
+        s.handle_command("describe_task", {"text": "teach me a piano scale"})["task"]
+        == "piano"
+    )
 
 
 def test_control_pinch_ignores_fist_and_other_hand(sess):
@@ -237,11 +253,17 @@ def test_control_pinch_ignores_fist_and_other_hand(sess):
     s.handle_command("set_mode", {"mode": "learn"})
     s.drain()
     # a fist with the little "pinch" flag set must not restart the step
-    msgs = feed(s, clock, "right", fake.POSES[1][1], n=30, pinch=s.cfg.session.control_pinch)
+    msgs = feed(
+        s, clock, "right", fake.POSES[1][1], n=30, pinch=s.cfg.session.control_pinch
+    )
     assert not types(msgs, "event", "step_restarted")
     # the free left hand must not control the learner's step either
-    msgs = feed(s, clock, "left", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch)
+    msgs = feed(
+        s, clock, "left", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch
+    )
     assert not types(msgs, "event", "step_restarted")
     # the learner's open hand with the gesture does
-    msgs = feed(s, clock, "right", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch)
+    msgs = feed(
+        s, clock, "right", fake.POSES[0][1], n=30, pinch=s.cfg.session.control_pinch
+    )
     assert types(msgs, "event", "step_restarted")

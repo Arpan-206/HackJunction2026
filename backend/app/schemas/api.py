@@ -48,7 +48,9 @@ class CalibrationRequest(BaseModel):
 
     side: Side
     phase: Literal["flat", "fist"]
-    duration_s: float = Field(default=c.CALIBRATION_DEFAULT_DURATION_S, gt=0, le=c.CALIBRATION_MAX_DURATION_S)
+    duration_s: float = Field(
+        default=c.CALIBRATION_DEFAULT_DURATION_S, gt=0, le=c.CALIBRATION_MAX_DURATION_S
+    )
 
 
 class RecordingStartRequest(BaseModel):
@@ -94,13 +96,19 @@ class CoachHintRequest(BaseModel):
     move_name: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
     deviations: FingerValues = Field(default_factory=FingerValues)
     joint_deviations: dict[Finger, list[float]] | None = Field(
-        default=None, description="Optional per finger [knuckle, middle joint, fingertip] signed degrees."
+        default=None,
+        description="Optional per finger [knuckle, middle joint, fingertip] signed degrees.",
     )
     timing_ms: float = 0.0
-    wrist_error_deg: float | None = Field(default=None, description="Signed wrist error about wrist_axis, in degrees.")
+    wrist_error_deg: float | None = Field(
+        default=None, description="Signed wrist error about wrist_axis, in degrees."
+    )
     wrist_axis: Literal["pitch", "yaw", "roll"] | None = None
     tolerance_deg: float = Field(default=c.DEFAULT_TOLERANCE_ANGLE_DEG, gt=0)
-    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The learner's margin of error; scales tolerance_deg and the hint thresholds.")
+    margin: Margin = Field(
+        default=c.DEFAULT_MARGIN,
+        description="The learner's margin of error; scales tolerance_deg and the hint thresholds.",
+    )
     attempt: int = Field(default=1, ge=1, le=c.HINT_MAX_ATTEMPT)
     last_hint: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
 
@@ -108,10 +116,19 @@ class CoachHintRequest(BaseModel):
 class HintDraft(BaseModel):
     """One live coaching cue: the model-written (or algorithmic) part of a hint response."""
 
-    hint: str = Field(description=f"One imperative sentence of at most {c.HINT_MAX_WORDS} words naming one finger (or the wrist) and one direction.")
-    focus_finger: Finger | None = Field(default=None, description="The single finger the hint is about; null for timing, wrist or praise.")
-    cue_type: CueType = Field(description="curl: bend more. extend: straighten or lift. timing: early or late. wrist: wrist angle. praise: nothing to fix.")
-    severity: Severity = Field(description="low: within tolerance, medium: up to twice the tolerance, high: beyond that.")
+    hint: str = Field(
+        description=f"One imperative sentence of at most {c.HINT_MAX_WORDS} words naming one finger (or the wrist) and one direction."
+    )
+    focus_finger: Finger | None = Field(
+        default=None,
+        description="The single finger the hint is about; null for timing, wrist or praise.",
+    )
+    cue_type: CueType = Field(
+        description="curl: bend more. extend: straighten or lift. timing: early or late. wrist: wrist angle. praise: nothing to fix."
+    )
+    severity: Severity = Field(
+        description="low: within tolerance, medium: up to twice the tolerance, high: beyond that."
+    )
 
     @field_validator("hint")
     @classmethod
@@ -224,7 +241,9 @@ class CoachPlanResponse(BaseModel):
     """What to practise next, plus a note for the master."""
 
     summary: str
-    drills: list[Drill] = Field(min_length=c.PLAN_MIN_DRILLS, max_length=c.PLAN_MAX_DRILLS)
+    drills: list[Drill] = Field(
+        min_length=c.PLAN_MIN_DRILLS, max_length=c.PLAN_MAX_DRILLS
+    )
     master_note: str
     provider: str
 
@@ -233,7 +252,9 @@ class CoachPlanDraft(BaseModel):
     """The model-written part of a practice plan (the provider is added by the server)."""
 
     summary: str
-    drills: list[Drill] = Field(min_length=c.PLAN_MIN_DRILLS, max_length=c.PLAN_MAX_DRILLS)
+    drills: list[Drill] = Field(
+        min_length=c.PLAN_MIN_DRILLS, max_length=c.PLAN_MAX_DRILLS
+    )
     master_note: str
 
     @field_validator("summary")
@@ -241,7 +262,9 @@ class CoachPlanDraft(BaseModel):
     def _short_summary(cls, value: str) -> str:
         """Reject summaries longer than the word limit."""
         if len(value.split()) > c.PLAN_SUMMARY_MAX_WORDS:
-            raise ValueError(f"summary must be at most {c.PLAN_SUMMARY_MAX_WORDS} words")
+            raise ValueError(
+                f"summary must be at most {c.PLAN_SUMMARY_MAX_WORDS} words"
+            )
         return value
 
 
@@ -262,8 +285,13 @@ class MotionDraft(BaseModel):
     def _beat_in_bounds(self) -> "MotionDraft":
         """Reject beat lengths outside the supported range."""
         beat = getattr(self.motion, "beat_ms", None)
-        if beat is not None and not c.MOTION_MIN_BEAT_MS <= beat <= c.MOTION_MAX_BEAT_MS:
-            raise ValueError(f"beat_ms must be between {c.MOTION_MIN_BEAT_MS} and {c.MOTION_MAX_BEAT_MS}")
+        if (
+            beat is not None
+            and not c.MOTION_MIN_BEAT_MS <= beat <= c.MOTION_MAX_BEAT_MS
+        ):
+            raise ValueError(
+                f"beat_ms must be between {c.MOTION_MIN_BEAT_MS} and {c.MOTION_MAX_BEAT_MS}"
+            )
         return self
 
 

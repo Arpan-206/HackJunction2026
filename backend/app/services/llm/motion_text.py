@@ -49,7 +49,9 @@ class MotionTextService:
         side = f"\nHAND: {request.side}" if request.side else ""
         parts = [f"REQUEST:\n{request.text}{side}"]
         if errors:
-            parts.append(f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}")
+            parts.append(
+                f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}"
+            )
         return "\n\n".join(parts)
 
     async def from_text(self, request: MotionFromTextRequest) -> MotionFromTextResponse:
@@ -59,20 +61,38 @@ class MotionTextService:
         fallback_provider = "fake"
         for attempt in range(1, 2 + c.LLM_MAX_RETRIES):
             llm_request = LLMRequest(
-                SYSTEM_PROMPT, self._prompt(request, errors), request.text, None, llm_schema(MotionDraft), "motion",
+                SYSTEM_PROMPT,
+                self._prompt(request, errors),
+                request.text,
+                None,
+                llm_schema(MotionDraft),
+                "motion",
             )
             try:
-                draft = MotionDraft.model_validate_json(await client.generate_json(llm_request))
+                draft = MotionDraft.model_validate_json(
+                    await client.generate_json(llm_request)
+                )
             except ValidationError as exc:
                 errors = str(exc)
             except LLMTimeoutError as exc:
-                log.warning("LLM timed out or rate limited (%s); falling back without retrying", exc)
-                fallback_provider = c.PROVIDER_RATE_LIMITED if isinstance(exc, RateLimitedError) else "fake"
+                log.warning(
+                    "LLM timed out or rate limited (%s); falling back without retrying",
+                    exc,
+                )
+                fallback_provider = (
+                    c.PROVIDER_RATE_LIMITED
+                    if isinstance(exc, RateLimitedError)
+                    else "fake"
+                )
                 break
             except Exception as exc:
                 errors = f"{type(exc).__name__}: {exc}"
                 log.warning("Motion LLM call failed on attempt %d: %s", attempt, exc)
             else:
-                return MotionFromTextResponse(**draft.model_dump(), provider=client.name)
+                return MotionFromTextResponse(
+                    **draft.model_dump(), provider=client.name
+                )
         log.warning("Falling back to keyword rules after failed attempts")
-        return MotionFromTextResponse(**template_motion(request.text).model_dump(), provider=fallback_provider)
+        return MotionFromTextResponse(
+            **template_motion(request.text).model_dump(), provider=fallback_provider
+        )

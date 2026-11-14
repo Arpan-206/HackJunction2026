@@ -35,13 +35,19 @@ async def _listen(websocket: WebSocket, gloves: GloveManager) -> None:
         message = await websocket.receive_json()
         if isinstance(message, dict) and message.get("type") == "set_motion":
             with contextlib.suppress(ValidationError):
-                gloves.set_simulator_motion(_motion_adapter.validate_python(message.get("motion")))
+                gloves.set_simulator_motion(
+                    _motion_adapter.validate_python(message.get("motion"))
+                )
 
 
-async def _until_done(group: anyio.abc.TaskGroup, work: Coroutine[Any, Any, None]) -> None:
+async def _until_done(
+    group: anyio.abc.TaskGroup, work: Coroutine[Any, Any, None]
+) -> None:
     """Run one half of the socket; when it ends for any reason (disconnect, send error) stop the other half."""
     try:
-        with contextlib.suppress(Exception):  # a dead socket ends the session; nothing to report to the client
+        with contextlib.suppress(
+            Exception
+        ):  # a dead socket ends the session; nothing to report to the client
             await work
     finally:
         group.cancel_scope.cancel()

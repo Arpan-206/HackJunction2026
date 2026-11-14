@@ -5,6 +5,7 @@
 Run this on Saturday morning for the 2-minute capture SPEC.md asks for. The
 file it writes is what tools/replay.py and `python -m core --replay` read.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +18,13 @@ from pathlib import Path
 log = logging.getLogger("rgmp_tee")
 
 
-async def tee(src_host: str, src_port: int, out: Path, serve_port: int | None, seconds: float | None) -> None:
+async def tee(
+    src_host: str,
+    src_port: int,
+    out: Path,
+    serve_port: int | None,
+    seconds: float | None,
+) -> None:
     clients: set[asyncio.StreamWriter] = set()
     buffered_definitions: list[bytes] = []
 
@@ -41,6 +48,7 @@ async def tee(src_host: str, src_port: int, out: Path, serve_port: int | None, s
     n = 0
     with open(out, "wb") as f:
         from core.rgmp import OUTER, PREFIX_DEFINITION
+
         pending = bytearray()
         while True:
             data = await reader.read(65536)
@@ -54,8 +62,8 @@ async def tee(src_host: str, src_port: int, out: Path, serve_port: int | None, s
                 prefix, length = OUTER.unpack_from(pending, 0)
                 if len(pending) < OUTER.size + length:
                     break
-                msg = bytes(pending[:OUTER.size + length])
-                del pending[:OUTER.size + length]
+                msg = bytes(pending[: OUTER.size + length])
+                del pending[: OUTER.size + length]
                 if prefix == PREFIX_DEFINITION:
                     buffered_definitions.append(msg)
             for c in list(clients):
@@ -74,10 +82,16 @@ async def tee(src_host: str, src_port: int, out: Path, serve_port: int | None, s
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--from", dest="src", default="127.0.0.1:12277", help="host:port of the solver")
+    ap.add_argument(
+        "--from", dest="src", default="127.0.0.1:12277", help="host:port of the solver"
+    )
     ap.add_argument("--out", required=True)
-    ap.add_argument("--serve", type=int, default=None, help="also re-serve the stream on this port")
-    ap.add_argument("--seconds", type=float, default=None, help="stop after this many seconds")
+    ap.add_argument(
+        "--serve", type=int, default=None, help="also re-serve the stream on this port"
+    )
+    ap.add_argument(
+        "--seconds", type=float, default=None, help="stop after this many seconds"
+    )
     logging.basicConfig(level="INFO")
     a = ap.parse_args()
     host, port = a.src.rsplit(":", 1)

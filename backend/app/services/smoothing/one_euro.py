@@ -18,8 +18,13 @@ def _alpha(dt: float, cutoff: float) -> float:
 class OneEuroFilter:
     """Casiez et al. (2012) adaptive low-pass filter for one scalar signal, with a deadband."""
 
-    def __init__(self, min_cutoff: float, beta: float, d_cutoff: float = c.SMOOTHING_D_CUTOFF,
-                 deadband: float = c.SMOOTHING_DEADBAND_RAD) -> None:
+    def __init__(
+        self,
+        min_cutoff: float,
+        beta: float,
+        d_cutoff: float = c.SMOOTHING_D_CUTOFF,
+        deadband: float = c.SMOOTHING_DEADBAND_RAD,
+    ) -> None:
         """Create a filter with the given tuning."""
         self.min_cutoff = min_cutoff
         self.beta = beta
@@ -70,7 +75,12 @@ class GloveSmoother:
     params: SmoothingParams = field(default_factory=SmoothingParams)
     _hands: dict[Side, _HandState] = field(default_factory=dict)
 
-    def configure(self, enabled: bool | None = None, min_cutoff: float | None = None, beta: float | None = None) -> None:
+    def configure(
+        self,
+        enabled: bool | None = None,
+        min_cutoff: float | None = None,
+        beta: float | None = None,
+    ) -> None:
         """Update parameters live; existing filters pick them up on the next sample."""
         if enabled is not None:
             self.params.enabled = enabled
@@ -92,7 +102,10 @@ class GloveSmoother:
         if side not in self._hands:
             n = len(c.FINGERS) * c.JOINTS_PER_FINGER
             self._hands[side] = _HandState(
-                [OneEuroFilter(self.params.min_cutoff, self.params.beta) for _ in range(n)]
+                [
+                    OneEuroFilter(self.params.min_cutoff, self.params.beta)
+                    for _ in range(n)
+                ]
             )
         return self._hands[side]
 
@@ -113,8 +126,16 @@ class GloveSmoother:
                 k += 1
             flexion[name] = (vals[0], vals[1], vals[2])
         raw = geometry.normalise(hand.wrist_quat)
-        state.quat = raw if state.quat is None else geometry.nlerp(
-            state.quat, raw, _alpha(dt if dt > 0 else c.SMOOTHING_FALLBACK_DT, self.params.min_cutoff)
+        state.quat = (
+            raw
+            if state.quat is None
+            else geometry.nlerp(
+                state.quat,
+                raw,
+                _alpha(
+                    dt if dt > 0 else c.SMOOTHING_FALLBACK_DT, self.params.min_cutoff
+                ),
+            )
         )
         quat = tuple(round(v, c.FRAME_DECIMALS) for v in state.quat)
         return hand.model_copy(update={"flexion": flexion, "wrist_quat": quat})
@@ -123,4 +144,6 @@ class GloveSmoother:
         """Return the smoothed frame, or the input untouched when smoothing is disabled."""
         if not self.params.enabled:
             return frame
-        return frame.model_copy(update={"hands": [self._smooth_hand(h, frame.t) for h in frame.hands]})
+        return frame.model_copy(
+            update={"hands": [self._smooth_hand(h, frame.t) for h in frame.hands]}
+        )

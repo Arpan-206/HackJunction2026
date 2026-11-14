@@ -77,9 +77,9 @@ Reader rules:
 class GloveSample:
     device_id: int
     hand: Literal["left", "right"]
-    t_us: int                 # core clock
-    joints: np.ndarray        # (26, 3) wrist-relative, xr_base, metres
-    rots: np.ndarray          # (26, 4) x, y, z, w
+    t_us: int  # core clock
+    joints: np.ndarray  # (26, 3) wrist-relative, xr_base, metres
+    rots: np.ndarray  # (26, 4) x, y, z, w
     heading_reliable: bool
 ```
 
@@ -112,13 +112,14 @@ A camera tells the core where each wrist is, because the gloves cannot. Start wi
 ```python
 @dataclass
 class CameraFrame:
-    t_us: int                    # core clock, arrival minus config.camera.latency_us
-    bgr: np.ndarray              # (H, W, 3) uint8
-    depth: np.ndarray | None     # (H, W) float32 metres, aligned to bgr
-    K: np.ndarray                # (3, 3) intrinsics
+    t_us: int  # core clock, arrival minus config.camera.latency_us
+    bgr: np.ndarray  # (H, W, 3) uint8
+    depth: np.ndarray | None  # (H, W) float32 metres, aligned to bgr
+    K: np.ndarray  # (3, 3) intrinsics
+
 
 class Camera(Protocol):
-    def read(self) -> CameraFrame | None: ...   # newest frame, never blocks
+    def read(self) -> CameraFrame | None: ...  # newest frame, never blocks
 ```
 
 | Adapter | Source | Depth | Intrinsics |
@@ -140,8 +141,8 @@ class Camera(Protocol):
 class WristObs:
     hand: Literal["left", "right"]
     t_us: int
-    p_cam: np.ndarray            # (3,) metres, camera frame
-    q_cam: np.ndarray | None     # (4,) x, y, z, w; marker only
+    p_cam: np.ndarray  # (3,) metres, camera frame
+    q_cam: np.ndarray | None  # (4,) x, y, z, w; marker only
     method: Literal["marker", "blob", "rest"]
 ```
 

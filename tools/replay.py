@@ -6,18 +6,18 @@ The capture is the bytes exactly as the solver sent them (definitions, data
 frames, disconnects). Definitions are sent at once on connect; data frames
 are paced by their timestamp_us differences.
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import logging
-import struct
 import sys
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, PREFIX_DEFINITION  # noqa: E402
+from core.rgmp import DATA_HDR, OUTER, PREFIX_DATA, PREFIX_DEFINITION
 
 log = logging.getLogger("replay")
 
@@ -40,7 +40,14 @@ def split_capture(data: bytes) -> list[tuple[int, int | None, bytes]]:
 
 
 class ReplayServer:
-    def __init__(self, path: Path, host: str = "127.0.0.1", port: int = 0, loop: bool = False, speed: float = 1.0) -> None:
+    def __init__(
+        self,
+        path: Path,
+        host: str = "127.0.0.1",
+        port: int = 0,
+        loop: bool = False,
+        speed: float = 1.0,
+    ) -> None:
         self.path = Path(path)
         self.host, self.port, self.loop, self.speed = host, port, loop, float(speed)
         self.messages = split_capture(self.path.read_bytes())
@@ -49,22 +56,33 @@ class ReplayServer:
         self.finished = False
         self.frames_sent = 0
         if not self.definitions:
-            raise ValueError(f"{self.path}: no RGMP definition found; is this a raw capture?")
+            raise ValueError(
+                f"{self.path}: no RGMP definition found; is this a raw capture?"
+            )
 
     async def start(self) -> None:
         self.server = await asyncio.start_server(self.handle, self.host, self.port)
         self.port = self.server.sockets[0].getsockname()[1]
-        log.info("replaying %s on %s:%d (%d messages, loop=%s)", self.path.name, self.host, self.port, len(self.messages), self.loop)
+        log.info(
+            "replaying %s on %s:%d (%d messages, loop=%s)",
+            self.path.name,
+            self.host,
+            self.port,
+            len(self.messages),
+            self.loop,
+        )
 
     async def stop(self) -> None:
         if self.server:
             self.server.close()
-            try:   # Python 3.12 wait_closed() can block while a handler lingers
+            try:  # Python 3.12 wait_closed() can block while a handler lingers
                 await asyncio.wait_for(self.server.wait_closed(), 1.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
-    async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def handle(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         try:
             while True:
                 for m in self.definitions:
@@ -78,7 +96,11 @@ class ReplayServer:
                 for prefix, ts, raw in self.messages:
                     if prefix == PREFIX_DEFINITION:
                         continue
-                    dev = DATA_HDR.unpack_from(raw, OUTER.size)[0] if prefix == PREFIX_DATA else None
+                    dev = (
+                        DATA_HDR.unpack_from(raw, OUTER.size)[0]
+                        if prefix == PREFIX_DATA
+                        else None
+                    )
                     if dev is not None and pacer is None:
                         pacer = dev
                     if ts is not None and dev == pacer:
@@ -89,7 +111,7 @@ class ReplayServer:
                                 delay = wall - time.monotonic()
                                 if delay > 0:
                                     await asyncio.sleep(delay)
-                            else:   # a gap or a jump in the capture: restart pacing from now
+                            else:  # a gap or a jump in the capture: restart pacing from now
                                 wall = time.monotonic()
                         prev_ts = ts
                     writer.write(raw)

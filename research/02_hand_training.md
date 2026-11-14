@@ -207,8 +207,10 @@ I did not find a published standard for verifying crowdsourced motion-capture le
 import numpy as np
 from dtaidistance import dtw_ndim
 
-def normalise(angles, lo, hi):          # angles: (T, n_fingers); lo/hi from calibration
+
+def normalise(angles, lo, hi):  # angles: (T, n_fingers); lo/hi from calibration
     return np.clip((angles - lo) / (hi - lo + 1e-6), 0, 1)
+
 
 def score_step(learner, master, tol=0.12, window=None):
     # learner, master: (T, n_fingers) normalised curl values, float64
@@ -217,8 +219,8 @@ def score_step(learner, master, tol=0.12, window=None):
     err = np.zeros(master.shape[1])
     for i, j in path:
         err += np.abs(master[i] - learner[j])
-    err /= len(path)                                   # per-finger mean abs error
-    finger_scores = 100 * np.exp(-(err / tol) ** 2)
+    err /= len(path)  # per-finger mean abs error
+    finger_scores = 100 * np.exp(-((err / tol) ** 2))
     return finger_scores.mean(), finger_scores, int(np.argmin(finger_scores))
 ```
 

@@ -5,6 +5,7 @@ the viewer contract are unchanged. `source` is "camera", `anchor` is "camera".
 Checked against the installed MediaPipe (1.2.x tasks API); see STATUS.md for
 what is tested (synthetic landmarks, video files) and what is not (live webcam).
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,8 +40,14 @@ def camera_to_world(xyz: np.ndarray, mirror: bool) -> np.ndarray:
     return out
 
 
-def landmarks_to_hand(world_lm: np.ndarray, norm_lm: np.ndarray, label: str, cam_cfg, t_us: int,
-                      wrist_filter: geom.OneEuroFilter | None = None) -> H.HandState:
+def landmarks_to_hand(
+    world_lm: np.ndarray,
+    norm_lm: np.ndarray,
+    label: str,
+    cam_cfg,
+    t_us: int,
+    wrist_filter: geom.OneEuroFilter | None = None,
+) -> H.HandState:
     """Pure conversion: 21 world landmarks (metres) + 21 normalised landmarks + 'Left'/'Right'."""
     mirror = bool(cam_cfg.mirror)
     side = label.strip().lower()
@@ -50,13 +57,19 @@ def landmarks_to_hand(world_lm: np.ndarray, norm_lm: np.ndarray, label: str, cam
         side = "right" if side == "left" else "left"
     J21 = camera_to_world(np.asarray(world_lm, dtype=float), mirror)
     J26 = H.joints_from_mediapipe(J21, float(cam_cfg.metacarpal_fraction))
-    h = H.hand_from_joints_world(J26, side, DEVICE_IDS[side], "camera", t_us, anchor="camera")
+    h = H.hand_from_joints_world(
+        J26, side, DEVICE_IDS[side], "camera", t_us, anchor="camera"
+    )
     # wrist position: no depth from a plain webcam, so a plane in front of the viewer
     xn, yn = float(norm_lm[0][0]), float(norm_lm[0][1])
     sx = 1.0 if mirror else -1.0
-    p = np.array([sx * (xn - 0.5) * float(cam_cfg.plane_width_m),
-                  float(cam_cfg.plane_y_m) + (0.5 - yn) * float(cam_cfg.plane_height_m),
-                  float(cam_cfg.plane_z_m)])
+    p = np.array(
+        [
+            sx * (xn - 0.5) * float(cam_cfg.plane_width_m),
+            float(cam_cfg.plane_y_m) + (0.5 - yn) * float(cam_cfg.plane_height_m),
+            float(cam_cfg.plane_z_m),
+        ]
+    )
     if wrist_filter is not None:
         p = wrist_filter(p, t_us)
     h.wrist_p = p
@@ -72,20 +85,37 @@ class CameraSource:
     """Reads a webcam (camera.device) or a video file (camera.video), runs the
     MediaPipe hand landmarker in a thread, and serves HandStates to the Core."""
 
-    def __init__(self, cfg, clock, model_path: str | Path | None = None, video: str | None = None,
-                 device: int | None = None) -> None:
+    def __init__(
+        self,
+        cfg,
+        clock,
+        model_path: str | Path | None = None,
+        video: str | None = None,
+        device: int | None = None,
+    ) -> None:
         self.cfg = cfg
         self.clock = clock
         self.cam = cfg.camera
         self.model_path = Path(model_path or self.cam.model_path)
         if not self.model_path.is_absolute():
-            self.model_path = Path(cfg.get_path("_root", str(REPO_ROOT))) / self.model_path
+            self.model_path = (
+                Path(cfg.get_path("_root", str(REPO_ROOT))) / self.model_path
+            )
         self.video = video if video is not None else (self.cam.video or None)
         self.device = int(self.cam.device if device is None else device)
         self.latest: dict[str, tuple[int, np.ndarray, np.ndarray]] = {}
-        self.pinch = {s: H.PinchTracker(cfg.hand.pinch_on_m, cfg.hand.pinch_off_m) for s in ("left", "right")}
-        self.filters = {s: geom.OneEuroFilter(self.cam.one_euro_min_cutoff, self.cam.one_euro_beta, self.cam.one_euro_d_cutoff)
-                        for s in ("left", "right")}
+        self.pinch = {
+            s: H.PinchTracker(cfg.hand.pinch_on_m, cfg.hand.pinch_off_m)
+            for s in ("left", "right")
+        }
+        self.filters = {
+            s: geom.OneEuroFilter(
+                self.cam.one_euro_min_cutoff,
+                self.cam.one_euro_beta,
+                self.cam.one_euro_d_cutoff,
+            )
+            for s in ("left", "right")
+        }
         self._last_hand: dict[str, H.HandState] = {}
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
@@ -95,7 +125,9 @@ class CameraSource:
         self.error: str | None = None
         self.finished = False
         if not self.model_path.exists():
-            raise FileNotFoundError(f"MediaPipe model missing at {self.model_path}. Run: python -m tools.fetch_models")
+            raise FileNotFoundError(
+                f"MediaPipe model missing at {self.model_path}. Run: python -m tools.fetch_models"
+            )
 
     # -- lifecycle -----------------------------------------------------------
     async def start(self) -> None:
@@ -110,6 +142,7 @@ class CameraSource:
     def _make_landmarker(self):
         import mediapipe as mp
         from mediapipe.tasks.python import BaseOptions, vision
+
         opts = vision.HandLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=str(self.model_path)),
             running_mode=vision.RunningMode.VIDEO,
@@ -123,6 +156,7 @@ class CameraSource:
     def _run(self) -> None:
         try:
             import cv2
+
             mp, landmarker = self._make_landmarker()
             cap = cv2.VideoCapture(self.video if self.video else self.device)
             if not cap.isOpened():
@@ -165,7 +199,9 @@ class CameraSource:
     def ingest(self, result: Any, t_us: int) -> None:
         """Store the newest landmarks per side from a HandLandmarkerResult."""
         found = {}
-        for hand_lm, world_lm, handed in zip(result.hand_landmarks, result.hand_world_landmarks, result.handedness):
+        for hand_lm, world_lm, handed in zip(
+            result.hand_landmarks, result.hand_world_landmarks, result.handedness
+        ):
             label = handed[0].category_name if handed else "Right"
             side = label.lower()
             if not self.cam.mirror:
@@ -195,7 +231,9 @@ class CameraSource:
                 out[side] = (prev, [])
                 continue
             try:
-                h = landmarks_to_hand(world, norm, label, self.cam, t_seen, self.filters[side])
+                h = landmarks_to_hand(
+                    world, norm, label, self.cam, t_seen, self.filters[side]
+                )
             except Exception as e:
                 log.warning("landmark conversion failed: %s", e)
                 out[side] = (None, [])

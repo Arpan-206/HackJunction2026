@@ -1,13 +1,17 @@
-import json
-
 import numpy as np
 import pytest
 
-from core import hand as H
 from core import fake
+from core import hand as H
 from core.coach import Coach, RuleCoach
-from core.recorder import Lesson, Recorder, Step, Trace, list_lessons, still_regions
-from core.scorer import MirrorScorer, StepScorer, Tolerances, dtw_path_costs, finger_errors, score_frame
+from core.recorder import Lesson, Recorder, list_lessons
+from core.scorer import (
+    MirrorScorer,
+    StepScorer,
+    Tolerances,
+    dtw_path_costs,
+    score_frame,
+)
 
 
 def tol(cfg):
@@ -35,14 +39,17 @@ def test_45_degree_offset_scores_zero_on_that_finger(cfg):
 
 def test_hint_directions(cfg):
     a = H.angle_features(H.synth_joints({"index": 0.5}))
-    flat = a.copy(); flat[H.FLEXION_SLOTS["index"]] -= 30
+    flat = a.copy()
+    flat[H.FLEXION_SLOTS["index"]] -= 30
     fs, _, _ = score_frame("right", flat, a, {}, tol(cfg))
     assert fs.worst == "index" and fs.hint == "too_flat"
     # spread slots are shared half and half, so push both of the middle finger's
-    spread = a.copy(); spread[[15, 16]] += 60
+    spread = a.copy()
+    spread[[15, 16]] += 60
     fs, _, _ = score_frame("right", spread, a, {}, tol(cfg))
     assert fs.worst == "middle" and fs.hint == "too_spread"
-    closed = a.copy(); closed[[15, 16]] -= 60
+    closed = a.copy()
+    closed[[15, 16]] -= 60
     fs, _, _ = score_frame("right", closed, a, {}, tol(cfg))
     assert fs.hint == "too_closed"
 
@@ -59,21 +66,28 @@ def fake_lesson(cfg, tmp_path):
     return fake.build_fake_lesson(cfg, tmp_path)
 
 
-def test_fake_lesson_has_four_hold_steps_and_validates(cfg, schemas, fake_lesson, tmp_path):
+def test_fake_lesson_has_four_hold_steps_and_validates(
+    cfg, schemas, fake_lesson, tmp_path
+):
     lesson = fake_lesson
     assert len(lesson.steps) == 4
     assert all(s.kind == "hold" for s in lesson.steps), [s.kind for s in lesson.steps]
     schemas.validate("lesson", lesson.to_json())
     reloaded = Lesson.load(tmp_path / fake.FAKE_LESSON_ID)
     assert all(s.frame == f"frames/step_{s.index:02d}.jpg" for s in reloaded.steps)
-    assert (tmp_path / fake.FAKE_LESSON_ID / "frames" / "step_03.jpg").stat().st_size > 1000
+    assert (
+        tmp_path / fake.FAKE_LESSON_ID / "frames" / "step_03.jpg"
+    ).stat().st_size > 1000
     assert reloaded.trace is not None and reloaded.trace.angles.shape[1] == 18
     assert reloaded.trace.joints.shape[1:] == (26, 3)
     assert len(list_lessons(tmp_path)) == 1
     # key poses match the pose table
     for s, (_, curl) in zip(reloaded.steps, fake.POSES):
         expect = H.angle_features(H.synth_joints(curl))
-        assert np.allclose(s.key_angles, expect, atol=2.0), (s.name, s.key_angles - expect)
+        assert np.allclose(s.key_angles, expect, atol=2.0), (
+            s.name,
+            s.key_angles - expect,
+        )
 
 
 def test_auto_boundaries_find_still_poses(cfg):
@@ -98,7 +112,10 @@ def test_no_marks_no_stillness_gives_one_move_step(cfg):
     rate = 60.0
     for i in range(int(4 * rate)):
         t_s = i / rate
-        curl = {f: 0.5 + 0.5 * np.sin(2 * np.pi * t_s / 1.5 + k) for k, f in enumerate(H.FINGERS)}
+        curl = {
+            f: 0.5 + 0.5 * np.sin(2 * np.pi * t_s / 1.5 + k)
+            for k, f in enumerate(H.FINGERS)
+        }
         rec.add(H.synth_hand(curl=curl, t_us=int(t_s * 1e6)))
     lesson = rec.stop(int(4e6), save=True, lesson_id="wave")
     assert len(lesson.steps) == 1 and lesson.steps[0].kind == "move"
@@ -112,7 +129,7 @@ def test_hold_step_passes_after_hold_ms(cfg, fake_lesson):
     flat = H.angle_features(H.synth_joints(fake.POSES[0][1]))
     t = 0
     fs = None
-    for _ in range(20):           # 20 frames of the wrong pose: no progress
+    for _ in range(20):  # 20 frames of the wrong pose: no progress
         t += 33_333
         fs = sc.update(t, flat, None)
     assert not fs.passed and fs.step_progress == 0.0 and fs.overall < 0.5
@@ -134,8 +151,13 @@ def test_move_step_timing_and_pass(cfg):
     rec = Recorder(cfg.record, 500)
     rec.start(0, "wave", "general", {}, "right")
     rate = 83.33
+
     def curl_at(t_s):
-        return {f: 0.5 + 0.45 * np.sin(2 * np.pi * t_s / 2.0 + 0.7 * k) for k, f in enumerate(H.FINGERS)}
+        return {
+            f: 0.5 + 0.45 * np.sin(2 * np.pi * t_s / 2.0 + 0.7 * k)
+            for k, f in enumerate(H.FINGERS)
+        }
+
     for i in range(int(4 * rate)):
         t_s = i / rate
         rec.add(H.synth_hand(curl=curl_at(t_s), t_us=int(t_s * 1e6)))
@@ -149,13 +171,15 @@ def test_move_step_timing_and_pass(cfg):
     while t < step.t1_us:
         t += 33_333
         ghost_t = t
-        learner = H.angle_features(H.synth_joints(curl_at((t + 100_000) / 1e6)))   # 100 ms ahead
+        learner = H.angle_features(
+            H.synth_joints(curl_at((t + 100_000) / 1e6))
+        )  # 100 ms ahead
         fs = sc.update(t, learner, ghost_t)
         if fs.timing_ms is not None:
             timings.append(fs.timing_ms)
     assert fs.passed, (sc.mean_overall, fs.step_progress)
     med = float(np.median(timings[5:]))
-    assert -160 < med < -40, med        # negative = early
+    assert -160 < med < -40, med  # negative = early
 
 
 def test_move_step_fails_when_learner_is_wrong(cfg):
@@ -163,7 +187,10 @@ def test_move_step_fails_when_learner_is_wrong(cfg):
     rec.start(0, "wave", "general", {}, "right")
     for i in range(240):
         t_s = i / 60
-        curl = {f: 0.5 + 0.45 * np.sin(2 * np.pi * t_s / 2.0 + k) for k, f in enumerate(H.FINGERS)}
+        curl = {
+            f: 0.5 + 0.45 * np.sin(2 * np.pi * t_s / 2.0 + k)
+            for k, f in enumerate(H.FINGERS)
+        }
         rec.add(H.synth_hand(curl=curl, t_us=int(t_s * 1e6)))
     lesson = rec.stop(int(4e6), save=True, lesson_id="wave")
     step = lesson.steps[0]
@@ -193,30 +220,65 @@ def test_summary_validates_against_schema(cfg, schemas, fake_lesson):
     s = sc.summary(t, "general", fake_lesson.title, stuck=True)
     schemas.validate("step_summary", s)
     assert s["stuck_s"] >= cfg.score.stuck_s
-    assert "index" not in s["fingers"]   # pointing step: index is straight in both poses
+    assert "index" not in s["fingers"]  # pointing step: index is straight in both poses
     assert s["fingers"]["middle"]["hint"] == "too_flat"
 
 
 def test_rule_coach_lines(cfg):
     rc = RuleCoach(cfg.score.timing_hint_ms)
-    line = rc.tip({"step": {"index": 1}, "passed": False, "timing_ms": None,
-                   "fingers": {"ring": {"score": 0.3, "err_deg": 34, "hint": "too_flat"},
-                               "index": {"score": 0.8, "err_deg": 15, "hint": None}}})
-    assert line.text == "Curl your ring finger more." and line.focus == "ring" and line.kind == "tip"
-    assert rc.tip({"step": {"index": 0}, "passed": True, "fingers": {}}).text == "Good. Next step."
-    assert rc.tip({"step": {"index": 0}, "passed": False, "timing_ms": -200, "fingers": {}}).text.startswith("Slow down")
-    assert rc.tip({"step": {"index": 0}, "passed": False, "timing_ms": 200, "fingers": {}}).text == "A little faster."
-    assert rc.tip({"step": {"index": 0}, "passed": False, "timing_ms": None, "fingers": {}}) is None
-    assert rc.configure("teach me a guitar chord", ["general", "chords"]) == {"task": "chords", "config": {}}
+    line = rc.tip(
+        {
+            "step": {"index": 1},
+            "passed": False,
+            "timing_ms": None,
+            "fingers": {
+                "ring": {"score": 0.3, "err_deg": 34, "hint": "too_flat"},
+                "index": {"score": 0.8, "err_deg": 15, "hint": None},
+            },
+        }
+    )
+    assert (
+        line.text == "Curl your ring finger more."
+        and line.focus == "ring"
+        and line.kind == "tip"
+    )
+    assert (
+        rc.tip({"step": {"index": 0}, "passed": True, "fingers": {}}).text
+        == "Good. Next step."
+    )
+    assert rc.tip(
+        {"step": {"index": 0}, "passed": False, "timing_ms": -200, "fingers": {}}
+    ).text.startswith("Slow down")
+    assert (
+        rc.tip(
+            {"step": {"index": 0}, "passed": False, "timing_ms": 200, "fingers": {}}
+        ).text
+        == "A little faster."
+    )
+    assert (
+        rc.tip(
+            {"step": {"index": 0}, "passed": False, "timing_ms": None, "fingers": {}}
+        )
+        is None
+    )
+    assert rc.configure("teach me a guitar chord", ["general", "chords"]) == {
+        "task": "chords",
+        "config": {},
+    }
 
 
 def test_coach_rate_limit(cfg, schemas):
     coach = Coach(None, cfg.coach, cfg.score.timing_hint_ms)
-    summary = {"hand": "right", "step": {"index": 0}, "passed": False, "timing_ms": None,
-               "fingers": {"ring": {"score": 0.3, "err_deg": 34, "hint": "too_flat"}}}
+    summary = {
+        "hand": "right",
+        "step": {"index": 0},
+        "passed": False,
+        "timing_ms": None,
+        "fingers": {"ring": {"score": 0.3, "err_deg": 34, "hint": "too_flat"}},
+    }
     l1 = coach.on_summary(0, summary)
     assert l1 is not None and l1.id == "k-1"
-    assert coach.on_summary(1_000_000, summary) is None          # within 4 s: queued
+    assert coach.on_summary(1_000_000, summary) is None  # within 4 s: queued
     assert coach.pending["right"] is summary
     l3 = coach.on_summary(int(4.1e6), summary)
     assert l3 is not None and l3.id == "k-2" and not coach.pending
@@ -226,15 +288,22 @@ def test_coach_rate_limit(cfg, schemas):
 
 def test_mirror_scorer(cfg):
     ms = MirrorScorer("left", cfg.score, tol(cfg), cfg.session.mirror_delay_ms)
+
     def curl_at(t_s):
-        return {f: 0.5 + 0.4 * np.sin(2 * np.pi * t_s / 2.0 + k) for k, f in enumerate(H.FINGERS)}
+        return {
+            f: 0.5 + 0.4 * np.sin(2 * np.pi * t_s / 2.0 + k)
+            for k, f in enumerate(H.FINGERS)
+        }
+
     t = 0
     fs = None
     for i in range(120):
         t += 33_333
         ms.push_master(t, H.angle_features(H.synth_joints(curl_at(t / 1e6))))
         # learner copies the master with the expected 300 ms reaction delay
-        fs = ms.update(t, H.angle_features(H.synth_joints(curl_at((t - 300_000) / 1e6))))
+        fs = ms.update(
+            t, H.angle_features(H.synth_joints(curl_at((t - 300_000) / 1e6)))
+        )
     assert fs is not None and fs.overall > 0.95 and abs(fs.timing_ms) <= 40
 
 

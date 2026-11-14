@@ -43,7 +43,9 @@ class PlanService:
         """Compose the user prompt, appending validation errors from the previous attempt if any."""
         parts = [f"SESSION:\n{request.model_dump_json()}"]
         if errors:
-            parts.append(f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}")
+            parts.append(
+                f"YOUR PREVIOUS ANSWER FAILED VALIDATION. Fix these errors and answer again:\n{errors}"
+            )
         return "\n\n".join(parts)
 
     async def plan(self, request: CoachPlanRequest) -> CoachPlanResponse:
@@ -53,15 +55,29 @@ class PlanService:
         fallback_provider = "fake"
         for attempt in range(1, 2 + c.LLM_MAX_RETRIES):
             llm_request = LLMRequest(
-                SYSTEM_PROMPT, self._prompt(request, errors), request.model_dump_json(), None, llm_schema(CoachPlanDraft), "plan",
+                SYSTEM_PROMPT,
+                self._prompt(request, errors),
+                request.model_dump_json(),
+                None,
+                llm_schema(CoachPlanDraft),
+                "plan",
             )
             try:
-                draft = CoachPlanDraft.model_validate_json(await client.generate_json(llm_request))
+                draft = CoachPlanDraft.model_validate_json(
+                    await client.generate_json(llm_request)
+                )
             except ValidationError as exc:
                 errors = str(exc)
             except LLMTimeoutError as exc:
-                log.warning("LLM timed out or rate limited (%s); falling back without retrying", exc)
-                fallback_provider = c.PROVIDER_RATE_LIMITED if isinstance(exc, RateLimitedError) else "fake"
+                log.warning(
+                    "LLM timed out or rate limited (%s); falling back without retrying",
+                    exc,
+                )
+                fallback_provider = (
+                    c.PROVIDER_RATE_LIMITED
+                    if isinstance(exc, RateLimitedError)
+                    else "fake"
+                )
                 break
             except Exception as exc:
                 errors = f"{type(exc).__name__}: {exc}"
@@ -69,4 +85,6 @@ class PlanService:
             else:
                 return CoachPlanResponse(**draft.model_dump(), provider=client.name)
         log.warning("Falling back to the fake plan after failed attempts")
-        return CoachPlanResponse(**template_plan(request).model_dump(), provider=fallback_provider)
+        return CoachPlanResponse(
+            **template_plan(request).model_dump(), provider=fallback_provider
+        )

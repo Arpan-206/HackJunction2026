@@ -16,10 +16,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import constants as c  # noqa: E402
-from app.services import geometry as g  # noqa: E402
-from app.services.gloves import rokoko_mapper as m  # noqa: E402
-from app.services.gloves.rokoko_udp import decode_datagram  # noqa: E402
+from app import constants as c
+from app.services import geometry as g
+from app.services.gloves import rokoko_mapper as m
+from app.services.gloves.rokoko_udp import decode_datagram
 
 HOLD_S = 3.0
 
@@ -62,10 +62,14 @@ def main() -> int:
     sock.bind(("0.0.0.0", args.port))
     shots = []
     for pose in ("FLAT open hand", "tight FIST"):
-        input(f"Hold a {pose} on the {args.side} hand, press Enter, keep still for {HOLD_S:g} s ")
+        input(
+            f"Hold a {pose} on the {args.side} hand, press Enter, keep still for {HOLD_S:g} s "
+        )
         shot = capture(sock)
         if shot is None:
-            print("No frames received; check Studio streaming (see docs/HARDWARE_INTEGRATION.md)")
+            print(
+                "No frames received; check Studio streaming (see docs/HARDWARE_INTEGRATION.md)"
+            )
             return 1
         shots.append(shot)
     chain = shots[0][1]
@@ -79,7 +83,9 @@ def main() -> int:
             norm = math.sqrt(sum(v * v for v in delta[:3])) or 1.0
             angle = 2 * math.atan2(norm, delta[3])
             axis = tuple(round(v / norm, 2) for v in delta[:3])
-            print(f"{finger:6s} joint {j}: {math.degrees(angle):6.1f} deg about local axis (x, y, z) = {axis}")
+            print(
+                f"{finger:6s} joint {j}: {math.degrees(angle):6.1f} deg about local axis (x, y, z) = {axis}"
+            )
     return 0
 
 

@@ -1,4 +1,5 @@
 """RCSP client: devices, glove button events and the ring LED. TCP 45451, JSON with an 8-byte header."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,22 +7,25 @@ import json
 import logging
 import struct
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 log = logging.getLogger("geppetto.rcsp")
 
-HEADER = struct.Struct("<BBBBI")   # marker 0xDC, version 1, header size 8, type, body length (LE)
+HEADER = struct.Struct(
+    "<BBBBI"
+)  # marker 0xDC, version 1, header size 8, type, body length (LE)
 MARKER, VERSION, HEADER_SIZE = 0xDC, 1, 8
 MAX_BODY = 8_000_000
 T_COMMAND, T_OK, T_ERROR, T_EVENT = 1, 2, 3, 4
 
 LED_COLOURS = {
-    "idle": (0, 60, 255),        # blue: tracked and idle
-    "recording": (255, 0, 0),    # red
-    "marked": (255, 255, 255),   # white flash
-    "passed": (0, 255, 0),       # green for 1 s
-    "busy": (255, 140, 0),       # amber: calibrating or waiting
-    "heading": (255, 0, 255),    # magenta: heading not reliable
+    "idle": (0, 60, 255),  # blue: tracked and idle
+    "recording": (255, 0, 0),  # red
+    "marked": (255, 255, 255),  # white flash
+    "passed": (0, 255, 0),  # green for 1 s
+    "busy": (255, 140, 0),  # amber: calibrating or waiting
+    "heading": (255, 0, 255),  # magenta: heading not reliable
     "off": (0, 0, 0),
 }
 
@@ -40,15 +44,20 @@ class RcspParser:
         out = []
         while len(self.buf) >= HEADER_SIZE:
             marker, version, hsize, mtype, length = HEADER.unpack_from(self.buf, 0)
-            if marker != MARKER or version != VERSION or hsize not in (0, HEADER_SIZE) \
-                    or mtype not in (T_COMMAND, T_OK, T_ERROR, T_EVENT) or length > MAX_BODY:
-                del self.buf[0]      # not a header: resync one byte further
+            if (
+                marker != MARKER
+                or version != VERSION
+                or hsize not in (0, HEADER_SIZE)
+                or mtype not in (T_COMMAND, T_OK, T_ERROR, T_EVENT)
+                or length > MAX_BODY
+            ):
+                del self.buf[0]  # not a header: resync one byte further
                 continue
             hsize = hsize or HEADER_SIZE
             if len(self.buf) < hsize + length:
                 break
-            body = bytes(self.buf[hsize:hsize + length])
-            del self.buf[:hsize + length]
+            body = bytes(self.buf[hsize : hsize + length])
+            del self.buf[: hsize + length]
             try:
                 parsed = json.loads(body.decode("utf-8")) if body else {}
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -68,8 +77,13 @@ class RcspError(Exception):
 
 
 class RcspClient:
-    def __init__(self, host: str, port: int, on_event: Callable[[dict], None] | None = None,
-                 reconnect_s: float = 2.0) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        on_event: Callable[[dict], None] | None = None,
+        reconnect_s: float = 2.0,
+    ) -> None:
         self.host, self.port = host, int(port)
         self.on_event = on_event
         self.reconnect_s = reconnect_s
@@ -113,8 +127,15 @@ class RcspClient:
             except (ConnectionRefusedError, OSError) as e:
                 self._failures = getattr(self, "_failures", 0) + 1
                 (log.warning if self._failures <= 2 else log.debug)(
-                    "RCSP connect to %s:%d failed: %s; retrying every %.1fs%s", self.host, self.port, e, self.reconnect_s,
-                    " (further retries logged at debug level)" if self._failures == 2 else "")
+                    "RCSP connect to %s:%d failed: %s; retrying every %.1fs%s",
+                    self.host,
+                    self.port,
+                    e,
+                    self.reconnect_s,
+                    " (further retries logged at debug level)"
+                    if self._failures == 2
+                    else "",
+                )
             finally:
                 self.connected.clear()
                 if self._writer is not None:
@@ -150,9 +171,16 @@ class RcspClient:
             fut.set_result(body.get("Response") or {})
         else:
             err = body.get("Error") or {}
-            fut.set_exception(RcspError(str(err.get("Code", "error")), str(err.get("Message", body.get("Status", "")))))
+            fut.set_exception(
+                RcspError(
+                    str(err.get("Code", "error")),
+                    str(err.get("Message", body.get("Status", ""))),
+                )
+            )
 
-    async def command(self, name: str, arguments: dict | None = None, timeout: float = 5.0) -> dict:
+    async def command(
+        self, name: str, arguments: dict | None = None, timeout: float = 5.0
+    ) -> dict:
         if self._writer is None:
             raise RcspError("disconnected", "not connected")
         self._track += 1
@@ -166,7 +194,7 @@ class RcspClient:
         await self._writer.drain()
         try:
             return await asyncio.wait_for(fut, timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._pending.pop(tid, None)
             raise RcspError("timeout", f"{name} got no reply in {timeout}s")
 
@@ -181,15 +209,28 @@ class RcspClient:
         return await self.command("SubscribeToData", {"DeviceId": device_id})
 
     async def device_subscribe(self, device_id: int, topics=("ButtonPushed",)) -> dict:
-        return await self.command("DeviceSubscribe", {"DeviceId": device_id,
-                                                      "Publishers": [{"Publisher": "DeviceEvents", "Topics": list(topics)}]})
+        return await self.command(
+            "DeviceSubscribe",
+            {
+                "DeviceId": device_id,
+                "Publishers": [{"Publisher": "DeviceEvents", "Topics": list(topics)}],
+            },
+        )
 
     async def subscribe(self, topics=("Connected", "Disconnected")) -> dict:
-        return await self.command("Subscribe", {"Publishers": [{"Publisher": "DeviceEvents", "Topics": list(topics)}]})
+        return await self.command(
+            "Subscribe",
+            {"Publishers": [{"Publisher": "DeviceEvents", "Topics": list(topics)}]},
+        )
 
-    async def set_color_led(self, device_id: int, rgb: tuple[int, int, int], led: str = "RingLed") -> dict:
+    async def set_color_led(
+        self, device_id: int, rgb: tuple[int, int, int], led: str = "RingLed"
+    ) -> dict:
         r, g, b = (int(max(0, min(255, c))) for c in rgb)
-        return await self.command("SetColorLed", {"DeviceId": device_id, "LedId": led, "Red": r, "Green": g, "Blue": b})
+        return await self.command(
+            "SetColorLed",
+            {"DeviceId": device_id, "LedId": led, "Red": r, "Green": g, "Blue": b},
+        )
 
     async def reinit_algo(self, device_id: int) -> dict:
         return await self.command("ReinitAlgo", {"DeviceId": device_id})
@@ -228,9 +269,13 @@ class GloveControl:
                 continue
             side = "left" if bool(is_left) else "right"
             self.side_of[did] = side
-            log.info("RCSP device %d is the %s glove (%s)", did, side, d.get("DeviceType"))
-            for coro in (self.client.device_subscribe(did),
-                         *( [self.client.subscribe_to_data(did)] if self.auto_stream else [] )):
+            log.info(
+                "RCSP device %d is the %s glove (%s)", did, side, d.get("DeviceType")
+            )
+            for coro in (
+                self.client.device_subscribe(did),
+                *([self.client.subscribe_to_data(did)] if self.auto_stream else []),
+            ):
                 try:
                     await coro
                 except RcspError as e:
@@ -249,11 +294,19 @@ class GloveControl:
             side = self.side_of.get(did)
             if side is None:
                 side = "left" if did % 2 == 0 else "right"
-            self.session.handle_button(side, str(data.get("ButtonPushType", "SinglePress")))
+            self.session.handle_button(
+                side, str(data.get("ButtonPushType", "SinglePress"))
+            )
         elif topic in ("Connected", "Disconnected"):
             did = int(data.get("DeviceId", -1))
-            self.session.emit_event("device", self.side_of.get(did), {"device_id": did,
-                                    "state": "connected" if topic == "Connected" else "lost"})
+            self.session.emit_event(
+                "device",
+                self.side_of.get(did),
+                {
+                    "device_id": did,
+                    "state": "connected" if topic == "Connected" else "lost",
+                },
+            )
 
     def desired_state(self, side: str) -> str:
         s = self.session

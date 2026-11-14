@@ -18,7 +18,9 @@ class DevService:
         params = self._gloves.smoother.params
         return DevState(
             glove_source=self._gloves.source_name,
-            smoothing=SmoothingState(enabled=params.enabled, min_cutoff=params.min_cutoff, beta=params.beta),
+            smoothing=SmoothingState(
+                enabled=params.enabled, min_cutoff=params.min_cutoff, beta=params.beta
+            ),
             llm_provider=self._llm.name,  # type: ignore[arg-type]
             simulator_motion=self._gloves.simulator_motion,
             gemini_budget=self._llm.budgets(),
@@ -32,6 +34,9 @@ class DevService:
             self._gloves.smoother.configure(**patch.smoothing.model_dump())
         if patch.llm_provider is not None:
             self._llm.select(patch.llm_provider)
-        if patch.glove_source is not None and patch.glove_source != self._gloves.source_name:
+        if (
+            patch.glove_source is not None
+            and patch.glove_source != self._gloves.source_name
+        ):
             await self._gloves.switch_source(patch.glove_source)
         return self.state()

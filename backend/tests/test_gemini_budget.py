@@ -4,11 +4,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app import constants as c
 from app.services.llm.gemini import GeminiLLM
 from app.services.llm.rate_limit import RateLimiter, TTLCache, free_limits, pacific_day
+from fastapi.testclient import TestClient
 
 MODEL = "gemini-3.8-flash"
 NOON_UTC = 1_800_000_000.0
@@ -39,7 +38,13 @@ def test_minute_window_slides(tmp_path: Path) -> None:
     """The fifth request inside a minute is refused; it is allowed again once the oldest has aged out."""
     clock = Clock()
     limiter = RateLimiter(tmp_path / "u.json", clock=clock, rpd_override=100)
-    assert [limiter.try_acquire(MODEL) for _ in range(5)] == [True, True, True, True, False]
+    assert [limiter.try_acquire(MODEL) for _ in range(5)] == [
+        True,
+        True,
+        True,
+        True,
+        False,
+    ]
     assert limiter.remaining(MODEL)["rpm_remaining"] == 0
     clock.now += c.GEMINI_MINUTE_WINDOW_S - 1
     assert limiter.try_acquire(MODEL) is False
@@ -62,7 +67,9 @@ def test_daily_budget_persists_across_restart_and_resets(tmp_path: Path) -> None
     assert RateLimiter(path, clock=clock, rpm_override=100).try_acquire(MODEL) is True
 
 
-def test_models_have_separate_budgets_and_corrupt_file_is_ignored(tmp_path: Path) -> None:
+def test_models_have_separate_budgets_and_corrupt_file_is_ignored(
+    tmp_path: Path,
+) -> None:
     """Each model counts on its own; a corrupt usage file starts from zero."""
     path = tmp_path / "u.json"
     path.write_text("not json", encoding="utf-8")
@@ -100,7 +107,9 @@ class StubClient:
         """Answer every call with text."""
         self.text = text
         self.calls: list[dict] = []
-        self.aio = SimpleNamespace(models=SimpleNamespace(generate_content=self._generate))
+        self.aio = SimpleNamespace(
+            models=SimpleNamespace(generate_content=self._generate)
+        )
 
     async def _generate(self, **kwargs: object) -> SimpleNamespace:
         """Record the call and return a response with .text."""
@@ -108,11 +117,15 @@ class StubClient:
         return SimpleNamespace(text=self.text)
 
 
-def _install_gemini(client: TestClient, answer: str, rpd: int = 100, rpm: int = 100) -> StubClient:
+def _install_gemini(
+    client: TestClient, answer: str, rpd: int = 100, rpm: int = 100
+) -> StubClient:
     """Replace the active provider with a GeminiLLM backed by a stub SDK client."""
     llm = client.app.state.services.llm
     data_dir = Path(client.app.state.services.settings.data_dir)
-    llm.limiter = RateLimiter(data_dir / "stub_usage.json", rpm_override=rpm, rpd_override=rpd)
+    llm.limiter = RateLimiter(
+        data_dir / "stub_usage.json", rpm_override=rpm, rpd_override=rpd
+    )
     stub = StubClient(answer)
     gemini = GeminiLLM("test-key", MODEL, llm.limiter)
     gemini._client = stub
@@ -120,7 +133,12 @@ def _install_gemini(client: TestClient, answer: str, rpd: int = 100, rpm: int = 
     return stub
 
 
-HINT_BODY = {"instruction": "Pinch", "move_name": "Pinch", "deviations": {"index": 25}, "timing_ms": 0}
+HINT_BODY = {
+    "instruction": "Pinch",
+    "move_name": "Pinch",
+    "deviations": {"index": 25},
+    "timing_ms": 0,
+}
 GOOD_HINT = '{"hint": "Lift your index finger a little.", "focus_finger": "index", "cue_type": "extend", "severity": "medium"}'
 
 
@@ -128,7 +146,10 @@ def test_gemini_call_uses_hint_model_and_low_thinking(client: TestClient) -> Non
     """Hints go to the hint model with thinking turned down and no temperature."""
     stub = _install_gemini(client, GOOD_HINT)
     body = client.post("/api/coach/hint", json=HINT_BODY).json()
-    assert body["provider"] == "gemini" and body["hint"] == "Lift your index finger a little."
+    assert (
+        body["provider"] == "gemini"
+        and body["hint"] == "Lift your index finger a little."
+    )
     call = stub.calls[0]
     assert call["model"] == c.GEMINI_HINT_MODEL
     assert call["config"].temperature is None
@@ -149,7 +170,11 @@ def test_exhausted_budget_falls_back_without_calling(client: TestClient) -> None
     client.post("/api/coach/hint", json={**HINT_BODY, "deviations": {"ring": 25}})
     body = client.post("/api/coach/hint", json=HINT_BODY).json()
     assert len(stub.calls) == 1
-    assert body["provider"] == c.PROVIDER_RATE_LIMITED and "index" in body["hint"] and body["cue_type"] == "extend"
+    assert (
+        body["provider"] == c.PROVIDER_RATE_LIMITED
+        and "index" in body["hint"]
+        and body["cue_type"] == "extend"
+    )
 
 
 def test_rate_limited_lesson_and_motion_fall_back(client: TestClient) -> None:
@@ -176,7 +201,12 @@ def test_429_marks_rate_limited(client: TestClient) -> None:
     stub.aio.models.generate_content = boom
     body = client.post("/api/coach/hint", json=HINT_BODY).json()
     assert body["provider"] == c.PROVIDER_RATE_LIMITED
-    assert client.app.state.services.llm.limiter.remaining(c.GEMINI_HINT_MODEL)["rpm_remaining"] == 0
+    assert (
+        client.app.state.services.llm.limiter.remaining(c.GEMINI_HINT_MODEL)[
+            "rpm_remaining"
+        ]
+        == 0
+    )
 
 
 def test_dev_state_exposes_budget(client: TestClient) -> None:
@@ -188,12 +218,15 @@ def test_dev_state_exposes_budget(client: TestClient) -> None:
     budgets = {b["model"]: b for b in rows}
     assert c.DEFAULT_GEMINI_MODEL == c.GEMINI_HINT_MODEL == "gemini-3.5-flash-lite"
     assert len(rows) == len(budgets)
-    assert budgets[c.GEMINI_HINT_MODEL]["rpd_budget"] == 400 and budgets[c.GEMINI_HINT_MODEL]["rpm_remaining"] == 8
+    assert (
+        budgets[c.GEMINI_HINT_MODEL]["rpd_budget"] == 400
+        and budgets[c.GEMINI_HINT_MODEL]["rpm_remaining"] == 8
+    )
 
 
 def test_no_real_client_in_tests() -> None:
     """The conftest guard makes building a real Gemini client impossible."""
-    from google import genai  # noqa: PLC0415
+    from google import genai
 
     with pytest.raises(AssertionError):
         genai.Client(api_key="x")

@@ -113,7 +113,12 @@ HINT_TIMING_MS = 120.0
 # say nothing about a finger, the timing or the wrist while it stays inside the widened band, so a slightly wrong swing
 # passes with no correction.
 MARGINS = ("strict", "standard", "relaxed", "just_trying")
-MARGIN_MULTIPLIERS = {"strict": 0.6, "standard": 1.0, "relaxed": 1.5, "just_trying": 2.5}
+MARGIN_MULTIPLIERS = {
+    "strict": 0.6,
+    "standard": 1.0,
+    "relaxed": 1.5,
+    "just_trying": 2.5,
+}
 MARGIN_QUIET = ("relaxed", "just_trying")
 DEFAULT_MARGIN = "standard"
 
@@ -236,7 +241,9 @@ ROKOKO_RCSP_PORT = 45451
 # through). `--emit both --emit-openxr` gives the core joints_local and joints_openxr; `--listen` serves 12277.
 ROKOKO_SOLVER_ARGS = ("--emit", "both", "--emit-openxr", "--listen", "127.0.0.1:12277")
 # The command a person runs when the driver is already up (the fix step for a missing solver).
-ROKOKO_SOLVER_MANUAL = "rkk-hand-solver --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277"
+ROKOKO_SOLVER_MANUAL = (
+    "rkk-hand-solver --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277"
+)
 ROKOKO_DRIVER_ARGS = ("--auto-stream-usb",)
 ROKOKO_SOLVER_LOG = "rkk-hand-solver.log"
 ROKOKO_STOP_TIMEOUT_S = 3.0
@@ -248,13 +255,31 @@ ROKOKO_DEVICE_REFRESH_S = 5.0
 ROKOKO_TAP_RECONNECT_S = 2.0
 ROKOKO_LOG_TAIL_BYTES = 16_000
 # RCSP ConnectionType values (sdk.rokoko.com/reference/rcsp) to what the status screen says.
-ROKOKO_CONNECTION_NAMES = {"serial": "usb", "usb": "usb", "udp": "wifi", "wifi": "wifi", "emulated": "emulated"}
+ROKOKO_CONNECTION_NAMES = {
+    "serial": "usb",
+    "usb": "usb",
+    "udp": "wifi",
+    "wifi": "wifi",
+    "emulated": "emulated",
+}
 # RCSP DeviceEvents topics the monitor listens to, and the Logs topics it keeps for the fix steps.
-ROKOKO_EVENT_TOPICS = ("Connected", "Disconnected", "Calibrated", "EmfSaturated", "GyrSaturated", "AccSaturated")
+ROKOKO_EVENT_TOPICS = (
+    "Connected",
+    "Disconnected",
+    "Calibrated",
+    "EmfSaturated",
+    "GyrSaturated",
+    "AccSaturated",
+)
 ROKOKO_LOG_TOPICS = ("Error", "Warning")
 ROKOKO_LOG_KEEP = 20
 # Driver output that means another program holds the USB devices (Rokoko Studio, usually), or that none were found.
-ROKOKO_BUSY_PATTERNS = ("access is denied", "device busy", "resource busy", "being used by another process")
+ROKOKO_BUSY_PATTERNS = (
+    "access is denied",
+    "device busy",
+    "resource busy",
+    "being used by another process",
+)
 ROKOKO_NO_USB_PATTERNS = ("no serial devices", "no usb devices", "no devices found")
 # STATUS_FLAGS names (sdk.rokoko.com/reference/products/smartgloves). Bits are looked up by name in each stream's
 # bit_mapping, never by position.
@@ -267,9 +292,20 @@ GLOVE_SATURATION_FLAGS = {
 GLOVE_HEADING_FLAG = "is_heading_reliable"
 GLOVE_SENSOR_NAMES = ("thumb", "index", "middle", "ring", "little", "arm", "hub")
 # RCSP saturation events, by topic, to the same sensor words; an event marks its glove for a few seconds.
-GLOVE_SATURATION_EVENTS = {"EmfSaturated": "EMF sensor", "GyrSaturated": "gyroscope", "AccSaturated": "accelerometer"}
+GLOVE_SATURATION_EVENTS = {
+    "EmfSaturated": "EMF sensor",
+    "GyrSaturated": "gyroscope",
+    "AccSaturated": "accelerometer",
+}
 GLOVE_SATURATION_EVENT_HOLD_S = 5.0
-GLOVE_BATTERY_KEYS = ("battery", "battery_pct", "batterylevel", "battery_level", "batterypercent", "batterypercentage")
+GLOVE_BATTERY_KEYS = (
+    "battery",
+    "battery_pct",
+    "batterylevel",
+    "battery_level",
+    "batterypercent",
+    "batterypercentage",
+)
 # Frame rates: the driver streams Smartgloves at 83.33 Hz; the app stream is about 60 Hz.
 GLOVE_RATE_WINDOW_S = 2.0
 # Measured 83.39 Hz per group on the real gloves; below 75 is worth a warning (core test agent, 14 Nov 2026).

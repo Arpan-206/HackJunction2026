@@ -26,10 +26,14 @@ class LessonService:
 
     def create(self, body: LessonBase) -> Lesson:
         """Store a new lesson with a fresh id and timestamp."""
-        return self._store.save(Lesson(**body.model_dump(), id=new_id(), created_at=utc_now_iso()))
+        return self._store.save(
+            Lesson(**body.model_dump(), id=new_id(), created_at=utc_now_iso())
+        )
 
     def update(self, lesson_id: str, body: LessonBase) -> Lesson:
         """Replace a lesson, keeping its creation time; creates it if the id is unknown (so generated lessons can be saved)."""
         existing = self._store.get(lesson_id)
         created = existing.created_at if existing else utc_now_iso()
-        return self._store.save(Lesson(**body.model_dump(), id=lesson_id, created_at=created))
+        return self._store.save(
+            Lesson(**body.model_dump(), id=lesson_id, created_at=created)
+        )

@@ -18,7 +18,10 @@ ws_router = APIRouter()
 async def ingest_frames(
     gloves: GlovesDep,
     body: dict = Body(...),  # noqa: B008
-    activate: bool = Query(False, description="Switch the glove source to 'external' first if it is not active"),
+    activate: bool = Query(
+        False,
+        description="Switch the glove source to 'external' first if it is not active",
+    ),
 ) -> dict[str, int]:
     """Push one GloveFrame, one HandFrame or {"frames": [...]}; 409 if the external source is not active."""
     return {"accepted": await gloves.ingest_async(body, activate=activate)}
@@ -38,11 +41,19 @@ async def ingest_stream(websocket: WebSocket, activate: bool = False) -> None:
                 except ValueError:
                     message = None
                 if not isinstance(message, dict):
-                    await websocket.send_json({"type": "error", "status": 422, "detail": "Each message must be a JSON object"})
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "status": 422,
+                            "detail": "Each message must be a JSON object",
+                        }
+                    )
                     continue
                 await services.gloves.ingest_async(message, activate=activate)
             except AppError as exc:
-                await websocket.send_json({"type": "error", "status": exc.status_code, "detail": exc.detail})
+                await websocket.send_json(
+                    {"type": "error", "status": exc.status_code, "detail": exc.detail}
+                )
     except WebSocketDisconnect:
         return
     finally:

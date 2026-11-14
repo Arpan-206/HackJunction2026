@@ -23,9 +23,13 @@ class CalibrationService:
         """Wire the store and the live glove pipeline."""
         self._store = store
         self._gloves = gloves
-        self._pending: dict[Side, dict[Phase, dict[str, tuple[float, float, float]]]] = {}
+        self._pending: dict[
+            Side, dict[Phase, dict[str, tuple[float, float, float]]]
+        ] = {}
 
-    async def _capture(self, side: Side, duration_s: float) -> dict[str, tuple[float, float, float]]:
+    async def _capture(
+        self, side: Side, duration_s: float
+    ) -> dict[str, tuple[float, float, float]]:
         """Average flexion for a side over duration_s of live frames."""
         queue = self._gloves.subscribe()
         samples: list[np.ndarray] = []
@@ -44,7 +48,10 @@ class CalibrationService:
         if not samples:
             raise BadRequestError(f"no {side} hand frames received during calibration")
         mean = np.mean(samples, axis=0)
-        return {f: (round(float(a), 4), round(float(b), 4), round(float(d), 4)) for f, (a, b, d) in zip(c.FINGERS, mean, strict=True)}
+        return {
+            f: (round(float(a), 4), round(float(b), 4), round(float(d), 4))
+            for f, (a, b, d) in zip(c.FINGERS, mean, strict=True)
+        }
 
     async def capture(self, side: Side, phase: Phase, duration_s: float) -> Calibration:
         """Capture one phase and return the calibration so far (the other phase is zeros until captured)."""
@@ -52,7 +59,8 @@ class CalibrationService:
         phases = self._pending.setdefault(side, {})
         phases[phase] = averaged
         calibration = Calibration(
-            id=new_id(), side=side,
+            id=new_id(),
+            side=side,
             **{name: phases[name] for name in ("flat", "fist") if name in phases},
             created_at=utc_now_iso(),
         )

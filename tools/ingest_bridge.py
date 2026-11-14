@@ -7,6 +7,7 @@ accepts {"t", "hands": [HandFrame...]} on /ws/ingest and re-emits them on its
 own /ws/gloves as source "replay" (docs/HARDWARE_INTEGRATION.md section 5).
 So: real gloves -> this core (RGMP) -> bridge -> their backend -> their frontend.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,9 +21,13 @@ HAND_KEYS = ("side", "wrist_quat", "wrist_pos", "flexion", "spread")
 
 async def bridge(core_url: str, backend_url: str, report_every: float = 5.0) -> None:
     import websockets
+
     while True:
         try:
-            async with websockets.connect(core_url, max_size=None) as src, websockets.connect(backend_url, max_size=None) as dst:
+            async with (
+                websockets.connect(core_url, max_size=None) as src,
+                websockets.connect(backend_url, max_size=None) as dst,
+            ):
                 log.info("bridging %s -> %s", core_url, backend_url)
                 n, errors = 0, 0
                 loop = asyncio.get_running_loop()
@@ -39,11 +44,22 @@ async def bridge(core_url: str, backend_url: str, report_every: float = 5.0) -> 
                 try:
                     async for raw in src:
                         f = json.loads(raw)
-                        hands = [{k: h.get(k) for k in HAND_KEYS if k in h} for h in f.get("hands", []) if h.get("tracked", True)]
-                        await dst.send(json.dumps({"t": f.get("t", 0.0), "hands": hands}, separators=(",", ":")))
+                        hands = [
+                            {k: h.get(k) for k in HAND_KEYS if k in h}
+                            for h in f.get("hands", [])
+                            if h.get("tracked", True)
+                        ]
+                        await dst.send(
+                            json.dumps(
+                                {"t": f.get("t", 0.0), "hands": hands},
+                                separators=(",", ":"),
+                            )
+                        )
                         n += 1
                         if loop.time() - last_report >= report_every:
-                            log.info("forwarded %d frames, %d backend errors", n, errors)
+                            log.info(
+                                "forwarded %d frames, %d backend errors", n, errors
+                            )
                             last_report = loop.time()
                 finally:
                     err_task.cancel()
@@ -58,6 +74,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--core", default="ws://localhost:8765/ws/gloves")
     ap.add_argument("--backend", default="ws://localhost:8000/ws/ingest?activate=1")
-    logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
     a = ap.parse_args()
     asyncio.run(bridge(a.core, a.backend))

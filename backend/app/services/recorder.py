@@ -12,7 +12,9 @@ from app.services.storage.json_store import JsonStore
 class _Take:
     """A recording in progress."""
 
-    def __init__(self, lesson_id: str | None, step_id: str | None, hands: Hands) -> None:
+    def __init__(
+        self, lesson_id: str | None, step_id: str | None, hands: Hands
+    ) -> None:
         """Start an empty take that keeps only the given hands ("both" keeps every hand)."""
         self.lesson_id = lesson_id
         self.step_id = step_id
@@ -29,7 +31,9 @@ class Recorder:
         self._store = store
         self._active: dict[str, _Take] = {}
 
-    def start(self, lesson_id: str | None, step_id: str | None, hands: Hands = "both") -> str:
+    def start(
+        self, lesson_id: str | None, step_id: str | None, hands: Hands = "both"
+    ) -> str:
         """Begin a new take and return its id. A one-handed take ("left" or "right") stores only that hand."""
         recording_id = new_id()
         self._active[recording_id] = _Take(lesson_id, step_id, hands)
@@ -43,7 +47,13 @@ class Recorder:
             if take.hands == "both":
                 take.frames.append(frame)
             else:
-                take.frames.append(frame.model_copy(update={"hands": [h for h in frame.hands if h.side == take.hands]}))
+                take.frames.append(
+                    frame.model_copy(
+                        update={
+                            "hands": [h for h in frame.hands if h.side == take.hands]
+                        }
+                    )
+                )
 
     def stop(self, recording_id: str) -> Recording:
         """Finish a take, rebase its timestamps to zero, persist and return it."""
@@ -51,12 +61,21 @@ class Recorder:
         if take is None:
             raise NotFoundError(f"no active recording {recording_id}")
         origin = take.frames[0].t if take.frames else 0.0
-        frames = [f.model_copy(update={"t": round(f.t - origin, c.FRAME_DECIMALS)}) for f in take.frames]
+        frames = [
+            f.model_copy(update={"t": round(f.t - origin, c.FRAME_DECIMALS)})
+            for f in take.frames
+        ]
         duration = frames[-1].t if frames else 0.0
         fps = (len(frames) - 1) / duration if duration > 0 else c.STREAM_HZ
         recording = Recording(
-            id=recording_id, lesson_id=take.lesson_id, step_id=take.step_id, started_at=take.started_at,
-            duration_s=duration, fps=round(fps, 2), hands=take.hands, frames=frames,
+            id=recording_id,
+            lesson_id=take.lesson_id,
+            step_id=take.step_id,
+            started_at=take.started_at,
+            duration_s=duration,
+            fps=round(fps, 2),
+            hands=take.hands,
+            frames=frames,
         )
         return self._store.save(recording)
 

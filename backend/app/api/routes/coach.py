@@ -3,7 +3,12 @@
 from fastapi import APIRouter
 
 from app.api.deps import CoachDep, PlannerDep
-from app.schemas.api import CoachHintRequest, CoachHintResponse, CoachPlanRequest, CoachPlanResponse
+from app.schemas.api import (
+    CoachHintRequest,
+    CoachHintResponse,
+    CoachPlanRequest,
+    CoachPlanResponse,
+)
 
 router = APIRouter(tags=["coach"])
 

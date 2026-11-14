@@ -23,10 +23,14 @@ class Settings(BaseSettings):
     ollama_url: str = c.DEFAULT_OLLAMA_URL
     ollama_model: str = c.DEFAULT_OLLAMA_MODEL
     llm_provider: Literal["fake", "gemini", "ollama"] = "fake"
-    glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = "simulator"
+    glove_source: Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"] = (
+        "simulator"
+    )
     rokoko_udp_port: int = c.ROKOKO_DEFAULT_PORT
     data_dir: Path = c.DEFAULT_DATA_DIR
-    cors_origins: list[str] = Field(default_factory=lambda: list(c.DEFAULT_CORS_ORIGINS))
+    cors_origins: list[str] = Field(
+        default_factory=lambda: list(c.DEFAULT_CORS_ORIGINS)
+    )
     # Real gloves (Rokoko Device SDK). The monitor watches the driver over RCSP and taps its RGMP for status flags.
     # Autostart runs rkk-hand-solver (which starts the driver) when nothing serves the driver port: "auto" does so only
     # with GLOVE_SOURCE=external, the real-glove route, so simulator sessions never touch the hardware.

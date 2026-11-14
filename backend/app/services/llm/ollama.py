@@ -23,9 +23,13 @@ class OllamaLLM:
     async def _call(self, request: LLMRequest, schema: dict[str, Any] | None) -> str:
         """Run one chat call, capping the total time at LLM_TIMEOUT_S."""
         try:
-            return await asyncio.wait_for(self._chat(request, schema), timeout=c.LLM_TIMEOUT_S)
+            return await asyncio.wait_for(
+                self._chat(request, schema), timeout=c.LLM_TIMEOUT_S
+            )
         except TimeoutError as exc:
-            raise LLMTimeoutError(f"Ollama did not answer within {c.LLM_TIMEOUT_S:g} s") from exc
+            raise LLMTimeoutError(
+                f"Ollama did not answer within {c.LLM_TIMEOUT_S:g} s"
+            ) from exc
 
     async def _chat(self, request: LLMRequest, schema: dict[str, Any] | None) -> str:
         """Run one non-streaming chat call."""

@@ -103,14 +103,18 @@ Python client (`pip install websockets`), pushing a bending index finger at 60 H
 ```python
 import asyncio, json, math, websockets
 
+
 async def main():
     async with websockets.connect("ws://localhost:8000/ws/ingest?activate=1") as ws:
         for i in range(600):
             c = 0.5 + 0.5 * math.sin(i / 20)
-            flex = {f: [0, 0, 0] for f in ("thumb", "index", "middle", "ring", "little")}
+            flex = {
+                f: [0, 0, 0] for f in ("thumb", "index", "middle", "ring", "little")
+            }
             flex["index"] = [0.9 * c, 1.1 * c, 0.6 * c]
             await ws.send(json.dumps({"side": "right", "flexion": flex}))
             await asyncio.sleep(1 / 60)
+
 
 asyncio.run(main())
 ```

@@ -48,8 +48,14 @@ class ExternalSource:
     def push(self, payload: dict[str, Any]) -> int:
         """Validate and emit one frame, a single hand or a batch; returns the number of frames emitted."""
         if self._emit is None:
-            raise SourceInactiveError("The external source is not active; POST /api/dev/state {\"glove_source\": \"external\"} or add ?activate=1")
-        items = payload.get("frames") if isinstance(payload.get("frames"), list) else [payload]
+            raise SourceInactiveError(
+                'The external source is not active; POST /api/dev/state {"glove_source": "external"} or add ?activate=1'
+            )
+        items = (
+            payload.get("frames")
+            if isinstance(payload.get("frames"), list)
+            else [payload]
+        )
         if len(items) > MAX_BATCH:
             raise InvalidFrameError(f"At most {MAX_BATCH} frames per request")
         frames = [self._to_frame(item) for item in items]
@@ -64,10 +70,19 @@ class ExternalSource:
         hands = item.get("hands")
         if hands is None and "side" in item:
             hands = [item]
-        hands = [{"wrist_quat": IDENTITY_QUAT, **h} if isinstance(h, dict) else h for h in hands or []]
+        hands = [
+            {"wrist_quat": IDENTITY_QUAT, **h} if isinstance(h, dict) else h
+            for h in hands or []
+        ]
         t = item.get("t")
-        t = float(t) if isinstance(t, (int, float)) else time.perf_counter() - self._origin
+        t = (
+            float(t)
+            if isinstance(t, (int, float))
+            else time.perf_counter() - self._origin
+        )
         try:
             return GloveFrame(t=t, source="replay", hands=hands)
         except ValidationError as exc:
-            raise InvalidFrameError(f"Invalid frame: {exc.errors(include_url=False, include_input=False)[:3]}") from exc
+            raise InvalidFrameError(
+                f"Invalid frame: {exc.errors(include_url=False, include_input=False)[:3]}"
+            ) from exc

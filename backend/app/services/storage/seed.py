@@ -12,7 +12,9 @@ from app.services.storage.json_store import JsonStore
 def load_seed_lessons() -> tuple[Lesson, ...]:
     """Load and validate the seed lessons shipped in app/data/seed."""
     files = sorted(c.SEED_DIR.glob("*.json"))
-    return tuple(Lesson.model_validate(json.loads(p.read_text(encoding="utf-8"))) for p in files)
+    return tuple(
+        Lesson.model_validate(json.loads(p.read_text(encoding="utf-8"))) for p in files
+    )
 
 
 def install_seed_lessons(store: JsonStore[Lesson]) -> None:

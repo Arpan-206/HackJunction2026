@@ -18,7 +18,9 @@ class LLMState:
         self._clients: dict[str, LLMClient] = {}
         self.name: str = settings.llm_provider
         self.limiter = RateLimiter(
-            settings.data_dir / c.GEMINI_USAGE_FILE, rpm_override=settings.gemini_rpm_budget, rpd_override=settings.gemini_rpd_budget,
+            settings.data_dir / c.GEMINI_USAGE_FILE,
+            rpm_override=settings.gemini_rpm_budget,
+            rpd_override=settings.gemini_rpd_budget,
         )
 
     @property
@@ -28,13 +30,17 @@ class LLMState:
 
     def budgets(self) -> list[dict]:
         """Remaining Gemini budget for the models in use (main and hint), for GET /dev/state."""
-        models = dict.fromkeys([self._settings.gemini_model, self._settings.gemini_hint_model])
+        models = dict.fromkeys(
+            [self._settings.gemini_model, self._settings.gemini_hint_model]
+        )
         return [self.limiter.remaining(m) for m in models]
 
     def _build(self, name: str) -> LLMClient:
         """Construct a provider by name."""
         if name == "gemini":
-            return GeminiLLM(self._settings.gemini_api_key, self._settings.gemini_model, self.limiter)
+            return GeminiLLM(
+                self._settings.gemini_api_key, self._settings.gemini_model, self.limiter
+            )
         if name == "ollama":
             return OllamaLLM(self._settings.ollama_url, self._settings.ollama_model)
         return FakeLLM()

@@ -4,15 +4,16 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app import constants as c
 from app.services.llm.gemini import GeminiLLM
+from fastapi.testclient import TestClient
 
 URL = "/api/lessons/generate_from_video"
 
 
-def _post(client: TestClient, data: bytes = b"x" * 100, mime: str = "video/mp4", **form: str):
+def _post(
+    client: TestClient, data: bytes = b"x" * 100, mime: str = "video/mp4", **form: str
+):
     """Upload a video with optional form fields."""
     return client.post(URL, files={"video": ("clip.mp4", data, mime)}, data=form)
 
@@ -20,7 +21,10 @@ def _post(client: TestClient, data: bytes = b"x" * 100, mime: str = "video/mp4",
 def test_fake_provider_returns_template_with_note(client: TestClient) -> None:
     """Offline providers return the template lesson and say the assistant could not watch the video."""
     body = _post(client, prompt="penhold table tennis grip").json()
-    assert body["provider"] == "fake" and "could not watch the video" in body["lesson"]["summary"]
+    assert (
+        body["provider"] == "fake"
+        and "could not watch the video" in body["lesson"]["summary"]
+    )
     assert body["lesson"]["skill"] == "table_tennis"
 
 
@@ -43,13 +47,17 @@ class _Files:
 
     async def upload(self, *, file, config=None):
         self.calls.append("upload")
-        return SimpleNamespace(name="files/1", uri="uri://1", state="PROCESSING", mime_type="video/mp4")
+        return SimpleNamespace(
+            name="files/1", uri="uri://1", state="PROCESSING", mime_type="video/mp4"
+        )
 
     async def get(self, *, name):
         self.calls.append("get")
         self.polls += 1
         state = "ACTIVE" if self.polls > 1 else "PROCESSING"
-        return SimpleNamespace(name=name, uri="uri://1", mime_type="video/mp4", state=state)
+        return SimpleNamespace(
+            name=name, uri="uri://1", mime_type="video/mp4", state=state
+        )
 
     async def delete(self, *, name):
         self.calls.append("delete")
@@ -67,10 +75,14 @@ class _Models:
         return SimpleNamespace(text=self.answer)
 
 
-def test_gemini_uploads_polls_then_generates(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gemini_uploads_polls_then_generates(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The Gemini path uploads, polls until ACTIVE, generates with the video part, then cleans up."""
     monkeypatch.setattr(c, "VIDEO_POLL_INTERVAL_S", 0.0)
-    lesson = client.post("/api/lessons/generate", json={"prompt": "piano scale"}).json()["lesson"]
+    lesson = client.post(
+        "/api/lessons/generate", json={"prompt": "piano scale"}
+    ).json()["lesson"]
     draft = {k: lesson[k] for k in ("title", "skill", "summary", "source", "steps")}
     calls: list[str] = []
     files, models = _Files(calls), _Models(calls, json.dumps(draft))

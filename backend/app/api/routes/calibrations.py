@@ -11,7 +11,9 @@ router = APIRouter(tags=["calibrations"])
 
 
 @router.post("/calibrations", response_model=Calibration)
-async def capture_calibration(body: CalibrationRequest, calibrations: CalibrationsDep) -> Calibration:
+async def capture_calibration(
+    body: CalibrationRequest, calibrations: CalibrationsDep
+) -> Calibration:
     """Capture one calibration phase from the live glove stream."""
     return await calibrations.capture(body.side, body.phase, body.duration_s)
 

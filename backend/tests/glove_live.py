@@ -175,10 +175,12 @@ class StreamSubscription:
     def __init__(self) -> None:
         self.sock: socket.socket | None = None
 
-    def __enter__(self) -> "StreamSubscription":
+    def __enter__(self) -> StreamSubscription:
         self.sock = socket.create_connection((HOST, RCSP_PORT), timeout=3)
         self.sock.settimeout(3)
-        ids = [d["DeviceId"] for d in self._call("ListDevices", 1)["Response"]["Devices"]]
+        ids = [
+            d["DeviceId"] for d in self._call("ListDevices", 1)["Response"]["Devices"]
+        ]
         for n, dev in enumerate(ids, start=2):
             reply = self._call("SubscribeToData", n, {"DeviceId": dev})
             if reply.get("Status") != "Ok":

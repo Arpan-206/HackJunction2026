@@ -1,4 +1,5 @@
 """Core clock: integer microseconds, monotonic, anchored to wall time at start."""
+
 from __future__ import annotations
 
 import time

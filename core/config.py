@@ -1,4 +1,5 @@
 """Load config.toml into attribute-accessible sections. Every threshold lives there."""
+
 from __future__ import annotations
 
 import tomllib
@@ -16,7 +17,9 @@ class Section(dict):
         try:
             return self[name]
         except KeyError as e:
-            raise AttributeError(f"config has no key {name!r} (available: {sorted(self.keys())})") from e
+            raise AttributeError(
+                f"config has no key {name!r} (available: {sorted(self.keys())})"
+            ) from e
 
     def __setattr__(self, name: str, value: Any) -> None:
         self[name] = value

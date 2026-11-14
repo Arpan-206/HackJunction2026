@@ -4,9 +4,10 @@ Without a camera this teaches fingering and rhythm on a table top. A press is a
 fast knuckle flexion that ends past the finger's resting value (SPEC). Verdicts
 compare the press time with the piece's beats at tempo_bpm.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -76,15 +77,24 @@ class Note:
 class PianoTask:
     """Schedules the piece and judges presses. Time 0 is when the task (re)starts."""
 
-    def __init__(self, piano_cfg, task_config: dict, t0_us: int, loop: bool = True) -> None:
+    def __init__(
+        self, piano_cfg, task_config: dict, t0_us: int, loop: bool = True
+    ) -> None:
         self.cfg = piano_cfg
         self.detector = PressDetector(piano_cfg)
-        self.tempo_bpm = float(task_config.get("tempo_bpm", piano_cfg.default_tempo_bpm))
-        self.notes = [Note(float(n["beat"]), str(n["finger"]), int(n.get("midi", 60))) for n in task_config.get("notes", [])]
+        self.tempo_bpm = float(
+            task_config.get("tempo_bpm", piano_cfg.default_tempo_bpm)
+        )
+        self.notes = [
+            Note(float(n["beat"]), str(n["finger"]), int(n.get("midi", 60)))
+            for n in task_config.get("notes", [])
+        ]
         self.t0_us = int(t0_us)
         self.loop = loop
         self.last: dict | None = None
-        self.piece_beats = (max(n.beat for n in self.notes) + 1.0) if self.notes else 0.0
+        self.piece_beats = (
+            (max(n.beat for n in self.notes) + 1.0) if self.notes else 0.0
+        )
         self._cycle = 0
 
     def beat_at(self, t_us: int) -> float:
@@ -110,7 +120,11 @@ class PianoTask:
                 if kind != "down":
                     continue
                 out.append(("finger_down", {"finger": f}))
-                cands = [n for n in self.notes if n.verdict is None and abs(self._note_t_us(n) - t_us) <= near]
+                cands = [
+                    n
+                    for n in self.notes
+                    if n.verdict is None and abs(self._note_t_us(n) - t_us) <= near
+                ]
                 if not cands:
                     continue
                 n = min(cands, key=lambda n: abs(self._note_t_us(n) - t_us))
@@ -118,25 +132,45 @@ class PianoTask:
                 if same:
                     n = min(same, key=lambda n: abs(self._note_t_us(n) - t_us))
                     dt = t_us - self._note_t_us(n)
-                    n.verdict = "good" if abs(dt) <= good else ("early" if dt < 0 else "late")
+                    n.verdict = (
+                        "good" if abs(dt) <= good else ("early" if dt < 0 else "late")
+                    )
                 else:
                     n.verdict = "wrong_finger"
                 self.last = {"finger": f, "midi": n.midi, "verdict": n.verdict}
-                out.append(("note", {"finger": f, "midi": n.midi, "verdict": n.verdict}))
+                out.append(
+                    ("note", {"finger": f, "midi": n.midi, "verdict": n.verdict})
+                )
         for n in self.notes:
             if n.verdict is None and t_us > self._note_t_us(n) + near:
                 n.verdict = "miss"
                 self.last = {"finger": n.finger, "midi": n.midi, "verdict": "miss"}
-                out.append(("note", {"finger": n.finger, "midi": n.midi, "verdict": "miss"}))
-        if self.notes and self.loop and self.beat_at(t_us) >= self.piece_beats and all(n.verdict for n in self.notes):
+                out.append(
+                    ("note", {"finger": n.finger, "midi": n.midi, "verdict": "miss"})
+                )
+        if (
+            self.notes
+            and self.loop
+            and self.beat_at(t_us) >= self.piece_beats
+            and all(n.verdict for n in self.notes)
+        ):
             self._restart_cycle(t_us)
         return out
 
     def state(self, t_us: int) -> dict:
-        nxt = sorted((n for n in self.notes if n.verdict is None), key=lambda n: n.beat)[:3]
+        nxt = sorted(
+            (n for n in self.notes if n.verdict is None), key=lambda n: n.beat
+        )[:3]
         return {
             "beat": round(self.beat_at(t_us), 2),
-            "next": [{"in_ms": int((self._note_t_us(n) - t_us) / 1000), "finger": n.finger, "midi": n.midi} for n in nxt],
+            "next": [
+                {
+                    "in_ms": int((self._note_t_us(n) - t_us) / 1000),
+                    "finger": n.finger,
+                    "midi": n.midi,
+                }
+                for n in nxt
+            ],
             "down": self.detector.down,
             "last": self.last,
             "cycle": self._cycle,
@@ -146,5 +180,10 @@ class PianoTask:
 def state(session) -> dict:
     pt = getattr(session, "piano", None)
     if pt is None:
-        return {"beat": 0.0, "next": [], "down": {f: False for f in H.FINGERS}, "last": None}
+        return {
+            "beat": 0.0,
+            "next": [],
+            "down": {f: False for f in H.FINGERS},
+            "last": None,
+        }
     return pt.state(session.now())

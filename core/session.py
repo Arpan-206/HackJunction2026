@@ -1,17 +1,19 @@
 """Modes, roles and the step state machine. Everything the viewer sees comes through here."""
+
 from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 
 from . import hand as H
 from .coach import Coach, CoachLine
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
-from .robot import SOURCES as ROBOT_SOURCES, Retargeter
+from .robot import SOURCES as ROBOT_SOURCES
+from .robot import Retargeter
 from .scorer import FrameScore, MirrorScorer, StepScorer, Tolerances
 from .tasks import TASKS, task_state
 from .tasks.piano import PianoTask
@@ -32,9 +34,16 @@ class CommandError(Exception):
 
 
 class Session:
-    def __init__(self, cfg, clock, lessons_dir: Path, coach: Coach, fake: bool = False,
-                 on_step: Callable[[int, int], None] | None = None,
-                 on_calibrate: Callable[[], None] | None = None) -> None:
+    def __init__(
+        self,
+        cfg,
+        clock,
+        lessons_dir: Path,
+        coach: Coach,
+        fake: bool = False,
+        on_step: Callable[[int, int], None] | None = None,
+        on_calibrate: Callable[[], None] | None = None,
+    ) -> None:
         self.cfg = cfg
         self.clock = clock
         self.lessons_dir = Path(lessons_dir)
@@ -49,7 +58,10 @@ class Session:
         self.lesson: Lesson | None = None
         self.step_index: int | None = None
         self.roles: dict[str, str] = dict(cfg.session.default_roles)
-        self.sources: dict[str, str] = {"left": cfg.sources.left, "right": cfg.sources.right}
+        self.sources: dict[str, str] = {
+            "left": cfg.sources.left,
+            "right": cfg.sources.right,
+        }
         self.tempo = float(cfg.session.tempo_default)
         self.loop = bool(cfg.session.loop_default)
         self.calibrated = False
@@ -61,7 +73,11 @@ class Session:
         self.mirror: MirrorScorer | None = None
         self.step_t0_us = 0
         self.playback_t0_us = 0
-        self.duel = {"round": 1, "rounds": int(cfg.session.duel_rounds), "wins": {"left": 0, "right": 0}}
+        self.duel = {
+            "round": 1,
+            "rounds": int(cfg.session.duel_rounds),
+            "wins": {"left": 0, "right": 0},
+        }
         self._pinch_hold: dict[str, int | None] = {"left": None, "right": None}
         self._pinch_fired: dict[str, bool] = {"left": False, "right": False}
         self.answers: dict[str, str] = {}
@@ -73,8 +89,10 @@ class Session:
         self.robot_source = "off"
         try:
             self.robot = Retargeter(cfg.robot, root)
-            self.robot_source = str(cfg.robot.source) if cfg.robot.source in ROBOT_SOURCES else "off"
-        except Exception as e:   # a missing URDF must not stop the server; the robot block is then absent
+            self.robot_source = (
+                str(cfg.robot.source) if cfg.robot.source in ROBOT_SOURCES else "off"
+            )
+        except Exception as e:  # a missing URDF must not stop the server; the robot block is then absent
             self.robot_error = f"{type(e).__name__}: {e}"
             log.warning("robot output disabled: %s", self.robot_error)
         self.attempts_log: Path | None = root / cfg.server.logs_dir / "attempts.jsonl"
@@ -86,8 +104,17 @@ class Session:
         try:
             self.attempts_log.parent.mkdir(parents=True, exist_ok=True)
             with open(self.attempts_log, "a") as f:
-                f.write(json.dumps({"t": self.now(), "lesson_id": self.lesson.id if self.lesson else None,
-                                    "mode": self.mode, **summary}) + "\n")
+                f.write(
+                    json.dumps(
+                        {
+                            "t": self.now(),
+                            "lesson_id": self.lesson.id if self.lesson else None,
+                            "mode": self.mode,
+                            **summary,
+                        }
+                    )
+                    + "\n"
+                )
         except OSError as e:
             log.warning("attempt log failed: %s", e)
 
@@ -100,21 +127,34 @@ class Session:
 
     def session_state(self) -> dict:
         return {
-            "mode": self.mode, "task": self.task,
+            "mode": self.mode,
+            "task": self.task,
             "lesson_id": self.lesson.id if self.lesson else None,
             "step": self.step_index if self.lesson else None,
             "steps_total": len(self.lesson.steps) if self.lesson else 0,
-            "roles": dict(self.roles), "recording": bool(self.recorder.active),
-            "calibrated": bool(self.calibrated), "anchor": self.anchor,
-            "tempo": float(self.tempo), "loop": bool(self.loop), "gemma": "off",
-            "sources": dict(self.sources), "robot_source": self.robot_source,
+            "roles": dict(self.roles),
+            "recording": bool(self.recorder.active),
+            "calibrated": bool(self.calibrated),
+            "anchor": self.anchor,
+            "tempo": float(self.tempo),
+            "loop": bool(self.loop),
+            "gemma": "off",
+            "sources": dict(self.sources),
+            "robot_source": self.robot_source,
         }
 
     def hello(self) -> dict:
-        return {**self.envelope("hello"), "joint_names": list(H.JOINT_NAMES), "fingers": list(H.FINGERS),
-                "tasks": list(TASKS), "modes": list(MODES), "lessons": list_lessons(self.lessons_dir),
-                "session": self.session_state(), "fake": bool(self.fake),
-                "robot": self.robot.describe() if self.robot is not None else None}
+        return {
+            **self.envelope("hello"),
+            "joint_names": list(H.JOINT_NAMES),
+            "fingers": list(H.FINGERS),
+            "tasks": list(TASKS),
+            "modes": list(MODES),
+            "lessons": list_lessons(self.lessons_dir),
+            "session": self.session_state(),
+            "fake": bool(self.fake),
+            "robot": self.robot.describe() if self.robot is not None else None,
+        }
 
     def lesson_message(self) -> dict | None:
         if self.lesson is None:
@@ -125,7 +165,14 @@ class Session:
         self.outbox.append({**self.envelope("session"), **self.session_state()})
 
     def emit_event(self, name: str, hand: str | None, data: dict | None = None) -> None:
-        self.outbox.append({**self.envelope("event"), "name": name, "hand": hand, "data": dict(data or {})})
+        self.outbox.append(
+            {
+                **self.envelope("event"),
+                "name": name,
+                "hand": hand,
+                "data": dict(data or {}),
+            }
+        )
 
     def emit_coach(self, line: CoachLine | None) -> None:
         if line is not None:
@@ -141,7 +188,12 @@ class Session:
         return out
 
     # ------------------------------------------------------------------ hands in
-    def update_hand(self, side: str, hand: H.HandState | None, pinch_events: list[tuple[str, str]] | None = None) -> None:
+    def update_hand(
+        self,
+        side: str,
+        hand: H.HandState | None,
+        pinch_events: list[tuple[str, str]] | None = None,
+    ) -> None:
         if hand is not None:
             hand.role = self.roles.get(side, "free")
         self.hands[side] = hand
@@ -151,12 +203,23 @@ class Session:
 
     def _control_pinch(self, side: str, hand: H.HandState | None) -> None:
         finger = self.cfg.session.control_pinch
-        pinched = bool(hand is not None and hand.tracked and hand.pinch.get(finger, False))
+        pinched = bool(
+            hand is not None and hand.tracked and hand.pinch.get(finger, False)
+        )
         if pinched:
             # only the hand in use, and only with the other fingers open (a fist is not a command)
-            active = (self.recorder.master_hand if self.recorder.active else None) if self.mode == "record" \
-                else (self.learner_sides() if self.mode in ("learn", "mirror", "duel") else None)
-            if active is not None and side not in (active if isinstance(active, list) else [active]):
+            active = (
+                (self.recorder.master_hand if self.recorder.active else None)
+                if self.mode == "record"
+                else (
+                    self.learner_sides()
+                    if self.mode in ("learn", "mirror", "duel")
+                    else None
+                )
+            )
+            if active is not None and side not in (
+                active if isinstance(active, list) else [active]
+            ):
                 pinched = False
             others = [hand.curl.get(f, 0.0) for f in ("index", "middle", "ring")]
             if max(others) > float(self.cfg.session.control_pinch_max_other_curl):
@@ -169,7 +232,11 @@ class Session:
         if self._pinch_hold[side] is None:
             self._pinch_hold[side] = t
             return
-        if self._pinch_fired[side] or t - self._pinch_hold[side] < self.cfg.session.control_pinch_hold_ms * 1000:
+        if (
+            self._pinch_fired[side]
+            or t - self._pinch_hold[side]
+            < self.cfg.session.control_pinch_hold_ms * 1000
+        ):
             return
         self._pinch_fired[side] = True
         try:
@@ -216,7 +283,9 @@ class Session:
         return ls[0] if ls else None
 
     def _tol_for(self, side: str) -> Tolerances:
-        camera = self.sources.get(side) == "camera" or (self.lesson is not None and self.lesson.source == "camera")
+        camera = self.sources.get(side) == "camera" or (
+            self.lesson is not None and self.lesson.source == "camera"
+        )
         sc = self.cfg.score.camera if camera else self.cfg.score
         return Tolerances(float(sc.perfect_deg), float(sc.wrong_deg))
 
@@ -225,16 +294,22 @@ class Session:
         return np.asarray(rp.p, dtype=float), np.asarray(rp.q, dtype=float)
 
     def _master_hand_for_recording(self) -> str:
-        masters = [s for s in self.sides_with_role("master") if self.hands.get(s) is not None]
+        masters = [
+            s for s in self.sides_with_role("master") if self.hands.get(s) is not None
+        ]
         if masters:
             return masters[0]
-        tracked = [s for s in SIDES if self.hands.get(s) is not None and self.hands[s].tracked]
+        tracked = [
+            s for s in SIDES if self.hands.get(s) is not None and self.hands[s].tracked
+        ]
         if tracked:
             return tracked[0]
         present = [s for s in SIDES if self.hands.get(s) is not None]
         if present:
             return present[0]
-        raise CommandError("bad_state", "no hand to record; set a master role or put a glove on")
+        raise CommandError(
+            "bad_state", "no hand to record; set a master role or put a glove on"
+        )
 
     # ------------------------------------------------------------------ steps
     def start_step(self, index: int, restart: bool = False) -> None:
@@ -243,14 +318,21 @@ class Session:
         self.step_index = int(index)
         step = self.lesson.steps[self.step_index]
         self.step_t0_us = t
-        sides = self.learner_sides() if self.mode != "duel" else [s for s in SIDES if self.roles.get(s) != "free"] or SIDES
+        sides = (
+            self.learner_sides()
+            if self.mode != "duel"
+            else [s for s in SIDES if self.roles.get(s) != "free"] or SIDES
+        )
         self.scorers = {}
         for s in sides:
             sc = StepScorer(s, self.lesson, step, self.cfg.score, self._tol_for(s))
             sc.reset_attempt(t)
             self.scorers[s] = sc
-        self.emit_event("step_restarted" if restart else "step_started", self.primary_learner(),
-                        {"step": self.step_index, "score": 0.0, "attempts": 1, "time_ms": 0})
+        self.emit_event(
+            "step_restarted" if restart else "step_started",
+            self.primary_learner(),
+            {"step": self.step_index, "score": 0.0, "attempts": 1, "time_ms": 0},
+        )
         if self.on_step is not None:
             self.on_step(self.step_index, t)
 
@@ -265,19 +347,41 @@ class Session:
         assert self.lesson is not None and self.step_index is not None
         fs = sc.last
         self.log_attempt(sc.summary(t_us, self.task, self.lesson.title, stuck=False))
-        self.emit_event("step_passed", side, {"step": self.step_index, "score": round(float(fs.overall), 3) if fs else 1.0,
-                                              "attempts": sc.attempt, "time_ms": int((t_us - self.step_t0_us) / 1000)})
+        self.emit_event(
+            "step_passed",
+            side,
+            {
+                "step": self.step_index,
+                "score": round(float(fs.overall), 3) if fs else 1.0,
+                "attempts": sc.attempt,
+                "time_ms": int((t_us - self.step_t0_us) / 1000),
+            },
+        )
         self.emit_coach(self.coach.praise(self.step_index, side))
         if self.mode == "duel":
             self.duel["wins"][side] += 1
-            self.emit_event("round_won", side, {"hand": side, "round": self.duel["round"]})
+            self.emit_event(
+                "round_won", side, {"hand": side, "round": self.duel["round"]}
+            )
             self.duel["round"] += 1
         nxt = self.step_index + 1
         if nxt >= len(self.lesson.steps):
-            self.emit_event("lesson_complete", side, {"step": self.step_index, "score": round(float(fs.overall), 3) if fs else 1.0,
-                                                      "attempts": sc.attempt, "time_ms": int((t_us - self.step_t0_us) / 1000)})
+            self.emit_event(
+                "lesson_complete",
+                side,
+                {
+                    "step": self.step_index,
+                    "score": round(float(fs.overall), 3) if fs else 1.0,
+                    "attempts": sc.attempt,
+                    "time_ms": int((t_us - self.step_t0_us) / 1000),
+                },
+            )
             if self.mode == "duel":
-                self.duel = {"round": 1, "rounds": self.duel["rounds"], "wins": {"left": 0, "right": 0}}
+                self.duel = {
+                    "round": 1,
+                    "rounds": self.duel["rounds"],
+                    "wins": {"left": 0, "right": 0},
+                }
             nxt = 0
         self.start_step(nxt)
         self.emit_session()
@@ -289,11 +393,21 @@ class Session:
         log.info("attempt failed: %s", summary)
         self.emit_coach(self.coach.on_summary(t_us, summary))
         if self.loop:
-            for other in self.scorers.values():      # duel: every hand starts the step again
+            for (
+                other
+            ) in self.scorers.values():  # duel: every hand starts the step again
                 other.new_attempt(t_us)
             self.step_t0_us = t_us
-            self.emit_event("step_restarted", side, {"step": self.step_index, "score": summary["overall"],
-                                                     "attempts": sc.attempt, "time_ms": 0})
+            self.emit_event(
+                "step_restarted",
+                side,
+                {
+                    "step": self.step_index,
+                    "score": summary["overall"],
+                    "attempts": sc.attempt,
+                    "time_ms": 0,
+                },
+            )
         else:
             self.start_step((self.step_index + 1) % len(self.lesson.steps))
             self.emit_session()
@@ -303,13 +417,28 @@ class Session:
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=True)
         self.log_attempt(summary)
         log.info("stuck: %s", summary)
-        self.emit_event("stuck", side, {"step": summary["step"]["index"], "score": summary["overall"],
-                                        "attempts": sc.attempt, "time_ms": int(summary["stuck_s"] * 1000)})
+        self.emit_event(
+            "stuck",
+            side,
+            {
+                "step": summary["step"]["index"],
+                "score": summary["overall"],
+                "attempts": sc.attempt,
+                "time_ms": int(summary["stuck_s"] * 1000),
+            },
+        )
         self.emit_coach(self.coach.on_summary(t_us, summary))
 
     # ------------------------------------------------------------------ ghosts
-    def _ghost_from_local(self, side: str, local: np.ndarray, source: str, lesson_t: int | None,
-                          placement: str = "on_learner", master_side: str | None = None) -> dict:
+    def _ghost_from_local(
+        self,
+        side: str,
+        local: np.ndarray,
+        source: str,
+        lesson_t: int | None,
+        placement: str = "on_learner",
+        master_side: str | None = None,
+    ) -> dict:
         if master_side is not None and master_side != side:
             local = H.mirror_local(local)
         h = self.hands.get(side)
@@ -319,10 +448,17 @@ class Session:
             p, q = self._rest(side)
         world = H.local_to_world(local, p, q)
         dec = int(self.cfg.hand.joint_decimals)
-        return {"joints": np.round(world, dec).tolist(),
-                "wrist": {"p": [float(x) for x in np.round(p, dec)], "q": [float(x) for x in np.round(q, 5)]},
-                "placement": placement, "source": source, "lesson_t": None if lesson_t is None else int(lesson_t),
-                "angles": [float(x) for x in np.round(H.angle_features(local), 1)]}
+        return {
+            "joints": np.round(world, dec).tolist(),
+            "wrist": {
+                "p": [float(x) for x in np.round(p, dec)],
+                "q": [float(x) for x in np.round(q, 5)],
+            },
+            "placement": placement,
+            "source": source,
+            "lesson_t": None if lesson_t is None else int(lesson_t),
+            "angles": [float(x) for x in np.round(H.angle_features(local), 1)],
+        }
 
     def _lesson_ghost(self, side: str, gt: int) -> dict:
         assert self.lesson is not None and self.step_index is not None
@@ -331,7 +467,9 @@ class Session:
             local = step.key_joints
         else:
             local = self.lesson.joints_local_at(min(max(gt, step.t0_us), step.t1_us))
-        return self._ghost_from_local(side, local, "lesson", gt, "on_learner", self.lesson.master_hand)
+        return self._ghost_from_local(
+            side, local, "lesson", gt, "on_learner", self.lesson.master_hand
+        )
 
     def _playback_ghost(self, t_us: int) -> tuple[str, dict]:
         assert self.lesson is not None
@@ -346,16 +484,26 @@ class Session:
             for i, s in enumerate(self.lesson.steps):
                 if s.t0_us <= lt < s.t1_us:
                     idx = i
-            local, wq = self.lesson.steps[idx].key_joints, self.lesson.steps[idx].key_wrist_q
+            local, wq = (
+                self.lesson.steps[idx].key_joints,
+                self.lesson.steps[idx].key_wrist_q,
+            )
             wp = np.full(3, np.nan)
         rp, _ = self._rest(side)
         p = rp if np.any(np.isnan(wp)) else np.asarray(wp, dtype=float)
         world = H.local_to_world(local, p, wq)
         dec = int(self.cfg.hand.joint_decimals)
-        ghost = {"joints": np.round(world, dec).tolist(),
-                 "wrist": {"p": [float(x) for x in np.round(p, dec)], "q": [float(x) for x in np.round(wq, 5)]},
-                 "placement": "recorded", "source": "lesson", "lesson_t": lt,
-                 "angles": [float(x) for x in np.round(H.angle_features(local), 1)]}
+        ghost = {
+            "joints": np.round(world, dec).tolist(),
+            "wrist": {
+                "p": [float(x) for x in np.round(p, dec)],
+                "q": [float(x) for x in np.round(wq, 5)],
+            },
+            "placement": "recorded",
+            "source": "lesson",
+            "lesson_t": lt,
+            "angles": [float(x) for x in np.round(H.angle_features(local), 1)],
+        }
         # playback: show the current step for the codex
         for i, s in enumerate(self.lesson.steps):
             if s.t0_us <= lt < s.t1_us and i != self.step_index:
@@ -368,13 +516,29 @@ class Session:
     def tick(self, t_us: int | None = None) -> dict:
         t = int(t_us) if t_us is not None else self.now()
         self.seq += 1
-        frame = {"v": 1, "type": "frame", "t": t, "seq": self.seq, "hands": {}, "ghost": {}, "score": None, "task": {}}
+        frame = {
+            "v": 1,
+            "type": "frame",
+            "t": t,
+            "seq": self.seq,
+            "hands": {},
+            "ghost": {},
+            "score": None,
+            "task": {},
+        }
         dec = int(self.cfg.hand.joint_decimals)
         for side in SIDES:
             h = self.hands.get(side)
-            frame["hands"][side] = None if h is None else h.to_message(dec, include_rots=False)
+            frame["hands"][side] = (
+                None if h is None else h.to_message(dec, include_rots=False)
+            )
 
-        if self.mode in ("learn", "duel") and self.lesson is not None and self.step_index is not None and self.scorers:
+        if (
+            self.mode in ("learn", "duel")
+            and self.lesson is not None
+            and self.step_index is not None
+            and self.scorers
+        ):
             gt = self.ghost_t(t)
             scores: dict[str, dict | None] = {}
             passed_side = None
@@ -384,11 +548,17 @@ class Session:
                 if h is not None and h.tracked:
                     fs = sc.update(t, h.angles, gt)
                 frame["ghost"][side] = self._lesson_ghost(side, gt)
-                scores[side] = fs.to_message() if fs is not None else (sc.last.to_message() if sc.last else None)
+                scores[side] = (
+                    fs.to_message()
+                    if fs is not None
+                    else (sc.last.to_message() if sc.last else None)
+                )
                 if fs is not None and fs.passed and passed_side is None:
                     passed_side = side
             if passed_side is not None:
-                self._advance_after_pass(passed_side, self.scorers.get(passed_side) or sc, t)
+                self._advance_after_pass(
+                    passed_side, self.scorers.get(passed_side) or sc, t
+                )
             else:
                 for side, sc in list(self.scorers.items()):
                     if sc.move_step_finished(gt):
@@ -406,8 +576,14 @@ class Session:
                 m, l = self.hands.get(masters[0]), self.hands.get(learners[0])
                 if m is not None and m.tracked:
                     self.mirror.push_master(t, m.angles)
-                    frame["ghost"][learners[0]] = self._ghost_from_local(learners[0], m.joints_local, "live", None,
-                                                                         "on_learner", masters[0])
+                    frame["ghost"][learners[0]] = self._ghost_from_local(
+                        learners[0],
+                        m.joints_local,
+                        "live",
+                        None,
+                        "on_learner",
+                        masters[0],
+                    )
                 if l is not None and l.tracked:
                     fs = self.mirror.update(t, l.angles)
                     frame["score"] = fs.to_message() if fs else None
@@ -441,7 +617,11 @@ class Session:
                     return h.angles, side, "hand"
             return None
         # lesson: the current step as the demonstrator, in learn, duel and playback modes
-        if self.lesson is None or self.step_index is None or self.mode not in ("learn", "duel", "playback"):
+        if (
+            self.lesson is None
+            or self.step_index is None
+            or self.mode not in ("learn", "duel", "playback")
+        ):
             return None
         step = self.lesson.steps[self.step_index]
         if self.mode == "playback" and self.lesson.trace is not None:
@@ -465,7 +645,9 @@ class Session:
         if src not in ROBOT_SOURCES:
             raise CommandError("bad_args", f"source must be one of {ROBOT_SOURCES}")
         if self.robot is None and src != "off":
-            raise CommandError("bad_state", f"robot output unavailable: {self.robot_error}")
+            raise CommandError(
+                "bad_state", f"robot output unavailable: {self.robot_error}"
+            )
         self.robot_source = src
         self.emit_session()
         return {"source": src, "model": self.robot.model_name if self.robot else None}
@@ -498,7 +680,9 @@ class Session:
             self._need_lesson()
         if mode == "mirror":
             if not self.sides_with_role("master") or not self.learner_sides():
-                raise CommandError("bad_state", "mirror needs one master and one learner role")
+                raise CommandError(
+                    "bad_state", "mirror needs one master and one learner role"
+                )
         if mode == "learn" and not self.learner_sides():
             raise CommandError("bad_state", "learn needs a learner role")
         if self.recorder.active and mode != "record":
@@ -509,11 +693,17 @@ class Session:
         self.mirror = None
         if mode in ("learn", "duel"):
             if mode == "duel":
-                self.duel = {"round": 1, "rounds": self.duel["rounds"], "wins": {"left": 0, "right": 0}}
+                self.duel = {
+                    "round": 1,
+                    "rounds": self.duel["rounds"],
+                    "wins": {"left": 0, "right": 0},
+                }
             self.start_step(self.step_index or 0)
         elif mode == "mirror":
             l = self.learner_sides()[0]
-            self.mirror = MirrorScorer(l, self.cfg.score, self._tol_for(l), self.cfg.session.mirror_delay_ms)
+            self.mirror = MirrorScorer(
+                l, self.cfg.score, self._tol_for(l), self.cfg.session.mirror_delay_ms
+            )
         elif mode == "playback":
             self.playback_t0_us = self.now()
             self.step_index = 0
@@ -521,12 +711,18 @@ class Session:
         return {"mode": self.mode}
 
     def _reset_task(self) -> None:
-        self.piano = PianoTask(self.cfg.piano, self.task_config, self.now(), self.loop) if self.task == "piano" else None
+        self.piano = (
+            PianoTask(self.cfg.piano, self.task_config, self.now(), self.loop)
+            if self.task == "piano"
+            else None
+        )
 
     def _piano_tick(self, t_us: int) -> None:
         if self.piano is None:
             return
-        side = self.primary_learner() or next((s for s in SIDES if self.hands.get(s) is not None), None)
+        side = self.primary_learner() or next(
+            (s for s in SIDES if self.hands.get(s) is not None), None
+        )
         h = self.hands.get(side) if side else None
         angles = h.angles if (h is not None and h.tracked) else None
         for name, data in self.piano.update(t_us, angles):
@@ -541,11 +737,21 @@ class Session:
             raise CommandError("bad_args", "config must be an object")
         if task == "piano":
             tempo = config.get("tempo_bpm", self.cfg.piano.default_tempo_bpm)
-            if not isinstance(tempo, (int, float)) or isinstance(tempo, bool) or tempo <= 0:
+            if (
+                not isinstance(tempo, (int, float))
+                or isinstance(tempo, bool)
+                or tempo <= 0
+            ):
                 raise CommandError("bad_args", "tempo_bpm must be a positive number")
             for n in config.get("notes", []):
-                if not isinstance(n, dict) or not isinstance(n.get("beat"), (int, float)) or n.get("finger") not in H.FINGERS:
-                    raise CommandError("bad_args", "each note needs a numeric beat and a finger name")
+                if (
+                    not isinstance(n, dict)
+                    or not isinstance(n.get("beat"), (int, float))
+                    or n.get("finger") not in H.FINGERS
+                ):
+                    raise CommandError(
+                        "bad_args", "each note needs a numeric beat and a finger name"
+                    )
         self.task, self.task_config = task, dict(config)
         self._reset_task()
         self.emit_session()
@@ -562,7 +768,11 @@ class Session:
         for side in SIDES:
             if self.hands.get(side) is not None:
                 self.hands[side].role = roles[side]
-        if self.mode in ("learn", "duel") and self.lesson is not None and self.step_index is not None:
+        if (
+            self.mode in ("learn", "duel")
+            and self.lesson is not None
+            and self.step_index is not None
+        ):
             if self.mode == "learn" and not self.learner_sides():
                 self.mode = "idle"
                 self.scorers = {}
@@ -571,7 +781,12 @@ class Session:
         if self.mode == "mirror":
             if self.sides_with_role("master") and self.learner_sides():
                 l = self.learner_sides()[0]
-                self.mirror = MirrorScorer(l, self.cfg.score, self._tol_for(l), self.cfg.session.mirror_delay_ms)
+                self.mirror = MirrorScorer(
+                    l,
+                    self.cfg.score,
+                    self._tol_for(l),
+                    self.cfg.session.mirror_delay_ms,
+                )
             else:
                 self.mode, self.mirror = "idle", None
         self.emit_session()
@@ -581,7 +796,9 @@ class Session:
         for side in SIDES:
             s = args.get(side, self.sources[side])
             if s not in SOURCES:
-                raise CommandError("bad_args", f"{side} source must be one of {SOURCES}")
+                raise CommandError(
+                    "bad_args", f"{side} source must be one of {SOURCES}"
+                )
             self.sources[side] = s
         self.emit_session()
         return {"sources": dict(self.sources)}
@@ -595,7 +812,9 @@ class Session:
         return {"what": "yaw"}
 
     def cmd_calibrate_camera(self, args: dict) -> dict:
-        raise CommandError("device", "no camera anchor tonight; wrist position uses the rest pose")
+        raise CommandError(
+            "device", "no camera anchor tonight; wrist position uses the rest pose"
+        )
 
     def cmd_record_start(self, args: dict) -> dict:
         if self.mode != "record":
@@ -605,8 +824,16 @@ class Session:
         side = self._master_hand_for_recording()
         title = str(args.get("title") or f"{self.task} lesson")
         source = self.sources.get(side, "glove")
-        self.recorder.start(self.now(), title, self.task, self.task_config, side,
-                            source=("fake" if self.fake else ("camera" if source == "camera" else "glove")))
+        self.recorder.start(
+            self.now(),
+            title,
+            self.task,
+            self.task_config,
+            side,
+            source=(
+                "fake" if self.fake else ("camera" if source == "camera" else "glove")
+            ),
+        )
         self.emit_event("recording_started", side, {"title": title})
         self.emit_session()
         return {"title": title, "hand": side}
@@ -631,7 +858,11 @@ class Session:
             lesson.save(self.lessons_dir)
             self.lesson = lesson
             self.step_index = 0
-            self.emit_event("recording_stopped", lesson.master_hand, {"lesson_id": lesson.id, "steps_total": len(lesson.steps)})
+            self.emit_event(
+                "recording_stopped",
+                lesson.master_hand,
+                {"lesson_id": lesson.id, "steps_total": len(lesson.steps)},
+            )
             self.emit_lesson()
             self.emit_session()
             return {"lesson_id": lesson.id, "steps_total": len(lesson.steps)}
@@ -646,7 +877,9 @@ class Session:
         try:
             lesson = Lesson.load(d)
         except Exception as e:
-            raise CommandError("internal", f"lesson {lesson_id!r} is unreadable: {e}") from e
+            raise CommandError(
+                "internal", f"lesson {lesson_id!r} is unreadable: {e}"
+            ) from e
         self.lesson = lesson
         self.step_index = 0
         self.task = lesson.task if lesson.task in TASKS else self.task
@@ -662,14 +895,24 @@ class Session:
 
     def cmd_lesson_load(self, args: dict) -> dict:
         lesson_id = args.get("lesson_id")
-        if not isinstance(lesson_id, str) or not lesson_id or "/" in lesson_id or lesson_id.startswith("."):
+        if (
+            not isinstance(lesson_id, str)
+            or not lesson_id
+            or "/" in lesson_id
+            or lesson_id.startswith(".")
+        ):
             raise CommandError("bad_args", "lesson_id must be a plain string")
         lesson = self.load_lesson(lesson_id)
         return {"lesson_id": lesson.id, "steps_total": len(lesson.steps)}
 
     def cmd_lesson_delete(self, args: dict) -> dict:
         lesson_id = args.get("lesson_id")
-        if not isinstance(lesson_id, str) or not lesson_id or "/" in lesson_id or lesson_id.startswith("."):
+        if (
+            not isinstance(lesson_id, str)
+            or not lesson_id
+            or "/" in lesson_id
+            or lesson_id.startswith(".")
+        ):
             raise CommandError("bad_args", "lesson_id must be a plain string")
         if not delete_lesson(self.lessons_dir, lesson_id):
             raise CommandError("not_found", f"no lesson {lesson_id!r}")
@@ -683,13 +926,17 @@ class Session:
     def _goto(self, index: int) -> dict:
         lesson = self._need_lesson()
         if not 0 <= index < len(lesson.steps):
-            raise CommandError("bad_args", f"step index out of range 0..{len(lesson.steps) - 1}")
+            raise CommandError(
+                "bad_args", f"step index out of range 0..{len(lesson.steps) - 1}"
+            )
         if self.mode in ("learn", "duel"):
             self.start_step(index)
         else:
             self.step_index = index
             if self.mode == "playback":
-                self.playback_t0_us = self.now() - int(lesson.steps[index].t0_us / max(self.tempo, 1e-6))
+                self.playback_t0_us = self.now() - int(
+                    lesson.steps[index].t0_us / max(self.tempo, 1e-6)
+                )
         self.emit_session()
         return {"step": self.step_index}
 
@@ -717,7 +964,11 @@ class Session:
     def cmd_set_tempo(self, args: dict) -> dict:
         f = args.get("factor")
         lo, hi = float(self.cfg.session.tempo_min), float(self.cfg.session.tempo_max)
-        if not isinstance(f, (int, float)) or isinstance(f, bool) or not (lo <= float(f) <= hi):
+        if (
+            not isinstance(f, (int, float))
+            or isinstance(f, bool)
+            or not (lo <= float(f) <= hi)
+        ):
             raise CommandError("bad_args", f"factor must be a number from {lo} to {hi}")
         self.tempo = float(f)
         self.emit_session()
@@ -739,7 +990,10 @@ class Session:
             raise CommandError("bad_args", "text must be a non-empty string")
         picked = self.coach.client.configure(text, TASKS)
         if picked is None:
-            raise CommandError("not_found", "no task matched that description (rule-based tonight, no model)")
+            raise CommandError(
+                "not_found",
+                "no task matched that description (rule-based tonight, no model)",
+            )
         self.task, self.task_config = picked["task"], dict(picked.get("config", {}))
         self._reset_task()
         self.emit_session()
@@ -756,7 +1010,11 @@ class Session:
         # Per-client; the server applies it. Validate here so the ack is uniform.
         rate = args.get("rate_hz", self.cfg.server.frame_rate_hz)
         lo, hi = int(self.cfg.session.rate_hz_min), int(self.cfg.session.rate_hz_max)
-        if not isinstance(rate, (int, float)) or isinstance(rate, bool) or not (lo <= rate <= hi):
+        if (
+            not isinstance(rate, (int, float))
+            or isinstance(rate, bool)
+            or not (lo <= rate <= hi)
+        ):
             raise CommandError("bad_args", f"rate_hz must be from {lo} to {hi}")
         rots = args.get("rots", False)
         if not isinstance(rots, bool):

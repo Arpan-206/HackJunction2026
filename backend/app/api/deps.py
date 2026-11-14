@@ -119,4 +119,6 @@ DevDep = Annotated[DevService, Depends(_dev)]
 GlovesDep = Annotated[GloveManager, Depends(_gloves)]
 LLMDep = Annotated[LLMState, Depends(_llm)]
 GloveRigDep = Annotated[GloveRigService, Depends(_rig)]
-WearerCalibrationsDep = Annotated[WearerCalibrationService, Depends(_wearer_calibrations)]
+WearerCalibrationsDep = Annotated[
+    WearerCalibrationService, Depends(_wearer_calibrations)
+]

@@ -30,12 +30,15 @@ Use generateContent for the hackathon since it is the long-stable path with Pyda
 Python (google-genai), from https://github.com/googleapis/python-genai :
 ```python
 from google import genai
-client = genai.Client()   # GEMINI_API_KEY env
+
+client = genai.Client()  # GEMINI_API_KEY env
 r = client.models.generate_content(
     model="gemini-3.8-flash",
     contents=prompt,
-    config={"response_mime_type": "application/json",
-            "response_json_schema": PageSpec.model_json_schema()},
+    config={
+        "response_mime_type": "application/json",
+        "response_json_schema": PageSpec.model_json_schema(),
+    },
 )
 spec = PageSpec.model_validate_json(r.text)
 ```

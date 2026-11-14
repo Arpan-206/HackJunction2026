@@ -9,7 +9,9 @@ from app import constants as c
 Side = Literal["left", "right"]
 Finger = Literal["thumb", "index", "middle", "ring", "little"]
 GloveSource = Literal["simulator", "rokoko_udp", "rokoko_sdk", "external"]
-Skill = Literal["table_tennis", "piano", "shadow_puppets", "surgical_grips", "crochet", "general"]
+Skill = Literal[
+    "table_tennis", "piano", "shadow_puppets", "surgical_grips", "crochet", "general"
+]
 Prop = Literal["none", "racket", "keyboard", "ball"]
 Hands = Literal["left", "right", "both"]
 # The learner's margin of error; see MARGINS in app/constants.py.

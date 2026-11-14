@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from core import hand as H
 from core import geom
+from core import hand as H
 
 
 def test_joint_order_matches_spec():
@@ -26,12 +26,16 @@ def test_fist_has_near_90_flexion():
 
 
 def test_mirror_gives_identical_angles():
-    J = H.synth_joints({"index": 0.7, "ring": 0.3, "thumb": 0.4}, side="right", spread_deg=5)
+    J = H.synth_joints(
+        {"index": 0.7, "ring": 0.3, "thumb": 0.4}, side="right", spread_deg=5
+    )
     a = H.angle_features(J)
     b = H.angle_features(H.mirror_local(J))
     assert np.allclose(a, b, atol=1e-6)
     # a built-in left hand is the mirror of the right
-    left = H.synth_joints({"index": 0.7, "ring": 0.3, "thumb": 0.4}, side="left", spread_deg=5)
+    left = H.synth_joints(
+        {"index": 0.7, "ring": 0.3, "thumb": 0.4}, side="left", spread_deg=5
+    )
     assert np.allclose(H.angle_features(left), a, atol=1e-6)
     assert np.allclose(left[:, 0], -J[:, 0])
 
@@ -74,11 +78,26 @@ def test_pinch_hysteresis(cfg):
 
 
 def test_hand_message_validates(cfg, schemas):
-    h = H.synth_hand(side="right", curl={"index": 0.3}, wrist_p=(0.1, 0.2, -0.3), hand_cfg=cfg.hand, device_id=3)
+    h = H.synth_hand(
+        side="right",
+        curl={"index": 0.3},
+        wrist_p=(0.1, 0.2, -0.3),
+        hand_cfg=cfg.hand,
+        device_id=3,
+    )
     h.role = "learner"
     h.rots_local = np.tile(geom.IDENTITY_Q, (26, 1))
     msg = h.to_message(decimals=4, include_rots=True)
-    frame = {"v": 1, "type": "frame", "t": 1, "seq": 0, "hands": {"left": None, "right": msg}, "ghost": {}, "score": None, "task": {}}
+    frame = {
+        "v": 1,
+        "type": "frame",
+        "t": 1,
+        "seq": 0,
+        "hands": {"left": None, "right": msg},
+        "ghost": {},
+        "score": None,
+        "task": {},
+    }
     schemas.validate("frame", frame)
     assert len(msg["rots"]) == 26
     assert msg["joints"][1] == pytest.approx([0.1, 0.2, -0.3])
@@ -102,9 +121,11 @@ def test_mediapipe_round_trip_preserves_angles():
     for f in ["index", "middle", "ring", "little"]:
         pip, dip = H.FLEXION_SLOTS[f][1], H.FLEXION_SLOTS[f][2]
         assert abs(a[pip] - b[pip]) < 1e-6 and abs(a[dip] - b[dip]) < 1e-6
-    assert np.allclose(a[:2], b[:2])           # thumb exact
-    assert np.allclose(a[14:], b[14:])         # spreads exact
-    assert np.all(np.abs(a[2:14] - b[2:14]) < 20.0)  # synthetic metacarpal bases sit off the wrist
+    assert np.allclose(a[:2], b[:2])  # thumb exact
+    assert np.allclose(a[14:], b[14:])  # spreads exact
+    assert np.all(
+        np.abs(a[2:14] - b[2:14]) < 20.0
+    )  # synthetic metacarpal bases sit off the wrist
 
 
 def test_wrist_frame_recovers_canonical_pose():
@@ -119,6 +140,6 @@ def test_wrist_frame_recovers_canonical_pose():
         # same frame up to the small tilt of the synthetic middle metacarpal
         assert np.allclose(H.angle_features(local2), H.angle_features(local), atol=1e-4)
         fwd = local2[H.FINGER_BASE["middle"] + 1] - local2[1]
-        assert fwd[2] < 0 and abs(fwd[0]) < 0.01     # fingers along -Z
+        assert fwd[2] < 0 and abs(fwd[0]) < 0.01  # fingers along -Z
         thumb_x = local2[H.TIP["thumb"]][0]
         assert (thumb_x < 0) if side == "right" else (thumb_x > 0)

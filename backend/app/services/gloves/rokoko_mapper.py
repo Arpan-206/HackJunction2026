@@ -47,7 +47,14 @@ def _quat(value: Any) -> geometry.Quat | None:
     """Parse a quaternion given as {x,y,z,w} or [x,y,z,w]."""
     try:
         if isinstance(value, dict):
-            return geometry.normalise((float(value["x"]), float(value["y"]), float(value["z"]), float(value["w"])))
+            return geometry.normalise(
+                (
+                    float(value["x"]),
+                    float(value["y"]),
+                    float(value["z"]),
+                    float(value["w"]),
+                )
+            )
         if isinstance(value, (list, tuple)) and len(value) == 4:
             return geometry.normalise(tuple(float(v) for v in value))  # type: ignore[arg-type]
     except (KeyError, TypeError, ValueError):
@@ -65,9 +72,14 @@ def _warn_once(shape: str, message: str) -> None:
 def bones_v3(actor: dict[str, Any]) -> Bones:
     """Return lower-cased joint name to world rotation for a v3 actor (body object keyed by joint)."""
     for candidate in (actor.get("body"), actor.get("gloves"), actor):
-        if isinstance(candidate, dict) and any(isinstance(v, dict) and "rotation" in v for v in candidate.values()):
-            return {k.lower(): q for k, v in candidate.items()
-                    if isinstance(v, dict) and (q := _quat(v.get("rotation"))) is not None}
+        if isinstance(candidate, dict) and any(
+            isinstance(v, dict) and "rotation" in v for v in candidate.values()
+        ):
+            return {
+                k.lower(): q
+                for k, v in candidate.items()
+                if isinstance(v, dict) and (q := _quat(v.get("rotation"))) is not None
+            }
     return {}
 
 
@@ -76,8 +88,13 @@ def bones_v4(newton: dict[str, Any]) -> Bones:
     joints = newton.get("joints")
     if not isinstance(joints, list):
         return {}
-    return {str(j["name"]).lower(): q for j in joints
-            if isinstance(j, dict) and "name" in j and (q := _quat(j.get("rotation"))) is not None}
+    return {
+        str(j["name"]).lower(): q
+        for j in joints
+        if isinstance(j, dict)
+        and "name" in j
+        and (q := _quat(j.get("rotation"))) is not None
+    }
 
 
 def _has_side(meta: Any, keys: dict[str, str], side: Side) -> bool:
@@ -105,9 +122,18 @@ def map_hand(bones: Bones, side: Side, chain_for: Any = v3_chain) -> HandFrame |
         parents = [wrist]
         for name in chain_for(side, fi):
             parents.append(bones.get(name, parents[-1]))
-        angles = [round(_flexion_between(parents[i], parents[i + 1]), c.FRAME_DECIMALS) for i in range(c.JOINTS_PER_FINGER)]
+        angles = [
+            round(_flexion_between(parents[i], parents[i + 1]), c.FRAME_DECIMALS)
+            for i in range(c.JOINTS_PER_FINGER)
+        ]
         flexion[finger] = (angles[0], angles[1], angles[2])
-    return HandFrame(side=side, wrist_quat=wrist, wrist_pos=None, flexion=flexion, spread=FingerValues())
+    return HandFrame(
+        side=side,
+        wrist_quat=wrist,
+        wrist_pos=None,
+        flexion=flexion,
+        spread=FingerValues(),
+    )
 
 
 def _scene(payload: dict[str, Any]) -> dict[str, Any]:
@@ -122,12 +148,29 @@ def entities(payload: dict[str, Any]) -> list[tuple[Bones, dict[str, str], Any, 
     found: list[tuple[Bones, dict[str, str], Any, Any]] = []
     for newton in scene.get("newtons") or []:
         if isinstance(newton, dict):
-            found.append((bones_v4(newton), c.ROKOKO_V4_META_HAND_KEYS, newton.get("meta"), v4_chain))
+            found.append(
+                (
+                    bones_v4(newton),
+                    c.ROKOKO_V4_META_HAND_KEYS,
+                    newton.get("meta"),
+                    v4_chain,
+                )
+            )
     for actor in scene.get("actors") or []:
         if isinstance(actor, dict):
-            found.append((bones_v3(actor), c.ROKOKO_V3_META_GLOVE_KEYS, actor.get("meta"), v3_chain))
+            found.append(
+                (
+                    bones_v3(actor),
+                    c.ROKOKO_V3_META_GLOVE_KEYS,
+                    actor.get("meta"),
+                    v3_chain,
+                )
+            )
     if not found:
-        _warn_once(",".join(sorted(payload)), "Unrecognised Rokoko frame (top-level keys: %s); expected scene.actors or scene.newtons")
+        _warn_once(
+            ",".join(sorted(payload)),
+            "Unrecognised Rokoko frame (top-level keys: %s); expected scene.actors or scene.newtons",
+        )
     return found
 
 
@@ -136,7 +179,10 @@ def map_payload(payload: dict[str, Any]) -> list[HandFrame]:
     hands: dict[str, HandFrame] = {}
     for bones, meta_keys, meta, chain_for in entities(payload):
         if not bones:
-            _warn_once("empty-actor", "Rokoko actor with no joints (%s); is the glove paired to an actor in Studio?")
+            _warn_once(
+                "empty-actor",
+                "Rokoko actor with no joints (%s); is the glove paired to an actor in Studio?",
+            )
             continue
         for side in c.SIDES:
             if side in hands or not _has_side(meta, meta_keys, side):  # type: ignore[arg-type]

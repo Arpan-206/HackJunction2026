@@ -58,10 +58,15 @@ class ScoreRequest(BaseModel):
     reference_recording_id: str | None = None
     reference_motion: MotionSpec | None = None
     attempt_recording_id: str | None = None
-    attempt_frames: list[GloveFrame] | None = Field(default=None, max_length=c.MAX_RECORDING_FRAMES)
+    attempt_frames: list[GloveFrame] | None = Field(
+        default=None, max_length=c.MAX_RECORDING_FRAMES
+    )
     side: Side | None = None
     tolerance: Tolerance = Field(default_factory=Tolerance)
-    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The learner's margin of error; scales the tolerance and the hint thresholds.")
+    margin: Margin = Field(
+        default=c.DEFAULT_MARGIN,
+        description="The learner's margin of error; scales the tolerance and the hint thresholds.",
+    )
     use_latest_calibration: bool = False
     attempt_calibration_id: str | None = None
     reference_calibration_id: str | None = None
@@ -70,7 +75,9 @@ class ScoreRequest(BaseModel):
     def _one_reference(self) -> "ScoreRequest":
         """Require exactly one reference source and at least one attempt source."""
         if (self.reference_recording_id is None) == (self.reference_motion is None):
-            raise ValueError("provide exactly one of reference_recording_id or reference_motion")
+            raise ValueError(
+                "provide exactly one of reference_recording_id or reference_motion"
+            )
         if self.attempt_recording_id is None and self.attempt_frames is None:
             raise ValueError("provide attempt_recording_id or attempt_frames")
         return self
@@ -86,4 +93,7 @@ class ScoreResult(BaseModel):
     worst_finger: Finger
     hint: str
     warnings: list[str] = Field(default_factory=list)
-    margin: Margin = Field(default=c.DEFAULT_MARGIN, description="The margin of error the score was judged with.")
+    margin: Margin = Field(
+        default=c.DEFAULT_MARGIN,
+        description="The margin of error the score was judged with.",
+    )

@@ -53,4 +53,7 @@ class JsonStore(Generic[M]):
     def list(self) -> list[M]:
         """Return every stored model, oldest file first."""
         files = sorted(self._dir.glob("*.json"), key=lambda p: p.stat().st_mtime)
-        return [self._model.model_validate_json(p.read_text(encoding="utf-8")) for p in files]
+        return [
+            self._model.model_validate_json(p.read_text(encoding="utf-8"))
+            for p in files
+        ]

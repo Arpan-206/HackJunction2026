@@ -35,17 +35,31 @@ def thresholds(
     threshold to its widened tolerance, so nothing inside the band is ever corrected. "standard" returns the constants.
     """
     k = c.MARGIN_MULTIPLIERS[margin]
-    angle, timing, wrist = angle_tol_deg * k, timing_tol_ms * k, c.HINT_WRIST_TOLERANCE_DEG * k
-    finger_min, timing_min, wrist_min = c.HINT_MIN_DEVIATION_DEG * k, c.HINT_TIMING_MS * k, c.HINT_WRIST_MIN_DEG * k
+    angle, timing, wrist = (
+        angle_tol_deg * k,
+        timing_tol_ms * k,
+        c.HINT_WRIST_TOLERANCE_DEG * k,
+    )
+    finger_min, timing_min, wrist_min = (
+        c.HINT_MIN_DEVIATION_DEG * k,
+        c.HINT_TIMING_MS * k,
+        c.HINT_WRIST_MIN_DEG * k,
+    )
     if margin in c.MARGIN_QUIET:
-        finger_min, timing_min, wrist_min = max(finger_min, angle), max(timing_min, timing), max(wrist_min, wrist)
+        finger_min, timing_min, wrist_min = (
+            max(finger_min, angle),
+            max(timing_min, timing),
+            max(wrist_min, wrist),
+        )
     return Thresholds(finger_min, timing_min, wrist_min, angle, timing, wrist)
 
 
 STANDARD = thresholds()
 
 
-def build_hint(deviations_deg: dict[str, float], timing_ms: float, limits: Thresholds = STANDARD) -> str:
+def build_hint(
+    deviations_deg: dict[str, float], timing_ms: float, limits: Thresholds = STANDARD
+) -> str:
     """Describe the biggest problem. Deviation is signed degrees of total finger flexion, summed over its joints (positive: curled too much); timing is positive when late."""
     finger = worst_finger(deviations_deg)
     deviation = deviations_deg.get(finger, 0.0)
@@ -61,9 +75,12 @@ def build_hint(deviations_deg: dict[str, float], timing_ms: float, limits: Thres
 
 _JOINT_PHRASES = ("from the knuckle", "at the middle joint", "at the fingertip")
 _WRIST_WORDS = {
-    ("pitch", True): "Lower your wrist {a}.", ("pitch", False): "Raise your wrist {a}.",
-    ("yaw", True): "Turn your wrist {a} to the left.", ("yaw", False): "Turn your wrist {a} to the right.",
-    ("roll", True): "Roll your wrist {a} counter-clockwise.", ("roll", False): "Roll your wrist {a} clockwise.",
+    ("pitch", True): "Lower your wrist {a}.",
+    ("pitch", False): "Raise your wrist {a}.",
+    ("yaw", True): "Turn your wrist {a} to the left.",
+    ("yaw", False): "Turn your wrist {a} to the right.",
+    ("roll", True): "Roll your wrist {a} counter-clockwise.",
+    ("roll", False): "Roll your wrist {a} clockwise.",
 }
 
 
@@ -94,12 +111,18 @@ def _worst_joint_phrase(joints: list[float] | None) -> str | None:
     if total <= 0:
         return None
     index = max(range(len(joints)), key=lambda i: abs(joints[i]))
-    return _JOINT_PHRASES[index] if abs(joints[index]) / total >= c.HINT_JOINT_SHARE else None
+    return (
+        _JOINT_PHRASES[index]
+        if abs(joints[index]) / total >= c.HINT_JOINT_SHARE
+        else None
+    )
 
 
 def _pick(candidates: list[str], last_hint: str | None) -> str:
     """Return the first candidate within the word limit that differs from the last hint, else the first within the limit."""
-    fits = [t for t in candidates if len(t.split()) <= c.HINT_MAX_WORDS] or candidates[:1]
+    fits = [t for t in candidates if len(t.split()) <= c.HINT_MAX_WORDS] or candidates[
+        :1
+    ]
     last = (last_hint or "").strip().lower()
     return next((t for t in fits if t.lower() != last), fits[0])
 
@@ -125,10 +148,14 @@ def _finger_hint(request: CoachHintRequest, finger: str, deviation: float) -> Hi
         f"{'Straighten' if too_curled else 'Bend'} your {label} {amount} more.",
     ]
     if move:
-        candidates.insert(0, f"Off on the {move}: {verb.lower()} your {label} {amount}{where}.")
+        candidates.insert(
+            0, f"Off on the {move}: {verb.lower()} your {label} {amount}{where}."
+        )
     text = _pick(candidates, request.last_hint)
     return HintDraft(
-        hint=text, focus_finger=finger, cue_type="extend" if too_curled else "curl",  # type: ignore[arg-type]
+        hint=text,
+        focus_finger=finger,
+        cue_type="extend" if too_curled else "curl",  # type: ignore[arg-type]
         severity=_severity(size / _limits(request).angle_tol_deg),
     )
 
@@ -137,11 +164,17 @@ def _timing_hint(request: CoachHintRequest) -> HintDraft:
     """Build a timing cue."""
     late, size = request.timing_ms > 0, abs(request.timing_ms)
     candidates = [
-        f"Start sooner, you are about {size:.0f} ms late." if late else f"Wait for the beat, you are about {size:.0f} ms early.",
-        "Move earlier and follow the guide hand's rhythm." if late else "Hold back and let the guide hand lead.",
+        f"Start sooner, you are about {size:.0f} ms late."
+        if late
+        else f"Wait for the beat, you are about {size:.0f} ms early.",
+        "Move earlier and follow the guide hand's rhythm."
+        if late
+        else "Hold back and let the guide hand lead.",
     ]
     return HintDraft(
-        hint=_pick(candidates, request.last_hint), focus_finger=None, cue_type="timing",
+        hint=_pick(candidates, request.last_hint),
+        focus_finger=None,
+        cue_type="timing",
         severity=_severity(size / _limits(request).timing_tol_ms),
     )
 
@@ -151,10 +184,16 @@ def _wrist_hint(request: CoachHintRequest) -> HintDraft:
     error = request.wrist_error_deg or 0.0
     template = _WRIST_WORDS.get((request.wrist_axis or "", error > 0))
     amount = _amount(abs(error))
-    candidates = [template.format(a=amount) if template else "Relax your wrist and match the guide hand's angle."]
+    candidates = [
+        template.format(a=amount)
+        if template
+        else "Relax your wrist and match the guide hand's angle."
+    ]
     candidates.append("Match the guide hand's wrist angle.")
     return HintDraft(
-        hint=_pick(candidates, request.last_hint), focus_finger=None, cue_type="wrist",
+        hint=_pick(candidates, request.last_hint),
+        focus_finger=None,
+        cue_type="wrist",
         severity=_severity(abs(error) / _limits(request).wrist_tol_deg),
     )
 
@@ -169,11 +208,19 @@ def build_hint_draft(request: CoachHintRequest) -> HintDraft:
         scored.append((abs(deviation) / limits.angle_tol_deg, "finger"))
     if abs(request.timing_ms) >= limits.timing_ms:
         scored.append((abs(request.timing_ms) / limits.timing_tol_ms, "timing"))
-    if request.wrist_error_deg is not None and abs(request.wrist_error_deg) >= limits.wrist_deg:
+    if (
+        request.wrist_error_deg is not None
+        and abs(request.wrist_error_deg) >= limits.wrist_deg
+    ):
         scored.append((abs(request.wrist_error_deg) / limits.wrist_tol_deg, "wrist"))
     if not scored:
-        praise = _pick(["Great match, hold that shape.", "Nice and steady, keep it going."], request.last_hint)
-        return HintDraft(hint=praise, focus_finger=None, cue_type="praise", severity="low")
+        praise = _pick(
+            ["Great match, hold that shape.", "Nice and steady, keep it going."],
+            request.last_hint,
+        )
+        return HintDraft(
+            hint=praise, focus_finger=None, cue_type="praise", severity="low"
+        )
     kind = max(scored)[1]
     if kind == "finger":
         return _finger_hint(request, finger, deviation)
