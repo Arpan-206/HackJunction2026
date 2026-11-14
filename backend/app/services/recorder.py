@@ -5,7 +5,8 @@ from app.core.errors import NotFoundError
 from app.core.utils import new_id, utc_now_iso
 from app.schemas.common import Hands
 from app.schemas.frames import GloveFrame
-from app.schemas.records import Recording
+from app.schemas.media import MediaRef
+from app.schemas.records import Recording, RecordingSummary
 from app.services.storage.json_store import JsonStore
 
 
@@ -85,3 +86,28 @@ class Recorder:
         if recording is None:
             raise NotFoundError(f"recording {recording_id} not found")
         return recording
+
+    def summaries(
+        self, step_id: str | None = None, lesson_id: str | None = None
+    ) -> list[RecordingSummary]:
+        """Return stored takes without frames, oldest first, optionally only those of one step or lesson."""
+        found = [
+            r
+            for r in self._store.list()
+            if (step_id is None or r.step_id == step_id)
+            and (lesson_id is None or r.lesson_id == lesson_id)
+        ]
+        found.sort(key=lambda r: r.started_at)
+        return [RecordingSummary.of(r) for r in found]
+
+    def set_video(self, recording_id: str, video: MediaRef | None) -> RecordingSummary:
+        """Attach the webcam video filmed during a stored take (None detaches it) and return the take's summary."""
+        recording = self.get(recording_id).model_copy(update={"video": video})
+        return RecordingSummary.of(self._store.save(recording))
+
+    def delete(self, recording_id: str) -> None:
+        """Delete a stored take, or discard one still recording; raise NotFoundError when neither exists."""
+        if self._active.pop(recording_id, None) is not None:
+            return
+        if not self._store.delete(recording_id):
+            raise NotFoundError(f"recording {recording_id} not found")

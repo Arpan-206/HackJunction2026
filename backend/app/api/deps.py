@@ -4,9 +4,11 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from app.services.bundles import BundleService
 from app.services.calibration import CalibrationService
 from app.services.container import Services
 from app.services.dev import DevService
+from app.services.drafts import DraftService
 from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
@@ -14,11 +16,13 @@ from app.services.llm.lesson_generator import LessonGenerator
 from app.services.llm.motion_text import MotionTextService
 from app.services.llm.plan import PlanService
 from app.services.llm.registry import LLMState
+from app.services.media import MediaService
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder
 from app.services.rig.calibration import WearerCalibrationService
 from app.services.rig.service import GloveRigService
 from app.services.scoring import ScoringService
+from app.services.takes import TakesService
 from app.services.vision.mediapipe_hands import MediaPipeHands
 
 
@@ -55,9 +59,19 @@ def _recorder(s: ServicesDep) -> Recorder:
     return s.recorder
 
 
+def _media(s: ServicesDep) -> MediaService:
+    """Return the expert media store."""
+    return s.media
+
+
 def _scoring(s: ServicesDep) -> ScoringService:
     """Return the scoring service."""
     return s.scoring
+
+
+def _takes(s: ServicesDep) -> TakesService:
+    """Return the takes-to-model service."""
+    return s.takes
 
 
 def _coach(s: ServicesDep) -> CoachService:
@@ -110,7 +124,9 @@ LessonsDep = Annotated[LessonService, Depends(_lessons)]
 GeneratorDep = Annotated[LessonGenerator, Depends(_generator)]
 CalibrationsDep = Annotated[CalibrationService, Depends(_calibrations)]
 RecorderDep = Annotated[Recorder, Depends(_recorder)]
+MediaDep = Annotated[MediaService, Depends(_media)]
 ScoringDep = Annotated[ScoringService, Depends(_scoring)]
+TakesDep = Annotated[TakesService, Depends(_takes)]
 CoachDep = Annotated[CoachService, Depends(_coach)]
 PlannerDep = Annotated[PlanService, Depends(_planner)]
 MotionTextDep = Annotated[MotionTextService, Depends(_motion_text)]
@@ -122,3 +138,18 @@ GloveRigDep = Annotated[GloveRigService, Depends(_rig)]
 WearerCalibrationsDep = Annotated[
     WearerCalibrationService, Depends(_wearer_calibrations)
 ]
+
+
+# Expert training persistence.
+def _drafts(s: ServicesDep) -> DraftService:
+    """Return the draft store."""
+    return s.drafts
+
+
+def _bundles(s: ServicesDep) -> BundleService:
+    """Return the bundle export and import service."""
+    return s.bundles
+
+
+DraftsDep = Annotated[DraftService, Depends(_drafts)]
+BundlesDep = Annotated[BundleService, Depends(_bundles)]

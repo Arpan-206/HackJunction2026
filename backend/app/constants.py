@@ -9,6 +9,8 @@ WS_INGEST_PATH = "/ws/ingest"
 DEFAULT_CORS_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SEED_DIR = Path(__file__).resolve().parent / "data" / "seed"
+# Every shipped seed lesson id starts with this; a stored one that no longer ships is removed at start-up.
+SEED_LESSON_PREFIX = "seed-"
 MOVES_FILE = Path(__file__).resolve().parent / "data" / "moves.json"
 DEFAULT_DATA_DIR = BACKEND_ROOT / "data"
 
@@ -103,6 +105,27 @@ MIN_SCORE_FRAMES = 2
 STATIC_REFERENCE_RANGE_DEG = 12.0
 STATIC_PRESETS = ("hold_pose", "idle")
 
+# Expert takes into a model (POST /recordings/model, services/takes.py): "best take + spread". The medoid take (smallest
+# total per-finger DTW distance to the others) becomes the reference, and each finger's tolerance is its robust spread
+# around the medoid (the TAKES_SPREAD_PERCENTILE of that finger's DTW error over the other takes) times
+# TAKES_TOLERANCE_SCALE, clamped to [FLOOR, CEIL]. Scale 2.5 puts a typical take-to-take wobble of about 7 degrees of total
+# flexion at the 18 degree default; the floor keeps a rock-steady finger humane for a learner with a different hand, the
+# ceiling (twice the default) stops a sloppy finger from being ignored. 2 takes are accepted with a warning; 3 to 5 is
+# the recommended range, so one stray take cannot pick the reference.
+TAKES_HARD_MIN = 2
+TAKES_MIN = 3
+TAKES_MAX = 5
+TAKES_SPREAD_PERCENTILE = 75.0
+TAKES_TOLERANCE_SCALE = 2.5
+TAKES_TOLERANCE_FLOOR_DEG = 10.0
+TAKES_TOLERANCE_CEIL_DEG = 36.0
+# A take is an outlier when its mean per-finger distance to the medoid exceeds TAKES_OUTLIER_FACTOR times the median
+# distance between the other takes (pairs not involving it) and is at least TAKES_OUTLIER_MIN_DEG, so a set of very
+# consistent takes never flags a take that is only a few degrees off. Needs 3 or more takes (with 2 nobody can tell
+# which one strayed).
+TAKES_OUTLIER_FACTOR = 2.0
+TAKES_OUTLIER_MIN_DEG = 12.0
+
 # Hint wording thresholds.
 HINT_MIN_DEVIATION_DEG = 4.0
 HINT_TIMING_MS = 120.0
@@ -156,6 +179,9 @@ DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 DEFAULT_OLLAMA_MODEL = "gemma4:e4b"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 LLM_TEMPERATURE = 0.4
+# A field whose json_schema_extra holds {LLM_SCHEMA_SKIP_KEY: True} is left out of every schema sent to a model (the
+# expert's take ids and per-finger tolerance, which only POST /recordings/model fills). Such a field needs a default.
+LLM_SCHEMA_SKIP_KEY = "x-llm-skip"
 
 # Gemini free tier (per project and per model; the day resets at midnight Pacific). The figures are not in the public
 # docs, they come from the AI Studio rate-limit screen as reported by third parties (research/06_gemini.md).
@@ -223,6 +249,16 @@ VIDEO_DEFAULT_PROMPT = "Teach the hand skill shown in this video."
 VIDEO_PROCESSING_TIMEOUT_S = 60.0
 VIDEO_POLL_INTERVAL_S = 1.0
 VIDEO_FAKE_NOTE = "The AI Assistant could not watch the video, so this is a generic template based on your text and the file name."
+
+# Expert media (POST /media): tutorial videos and the webcam filmed during a take, stored under <data_dir>/media.
+MEDIA_DIR_NAME = "media"
+MEDIA_MAX_BYTES = 200 * 1024 * 1024
+MEDIA_MIME_TYPES = VIDEO_MIME_TYPES
+MEDIA_SUFFIXES = VIDEO_SUFFIXES
+MEDIA_URL_PREFIX = f"{API_PREFIX}/media/"
+# Longest sync offset accepted (seconds into the video at which a take starts), and a sane cap on a stated duration.
+MEDIA_MAX_OFFSET_S = 3600.0
+MEDIA_MAX_DURATION_S = 4 * 3600.0
 
 # Real gloves through the Rokoko Device SDK (status screen, calibration area, demo mode). The core (repo root `core/`)
 # owns the glove data path; the backend only watches it: process and port checks, the driver's RCSP device list and
@@ -341,3 +377,22 @@ QUALITY_HEADING_GOOD = 0.95
 QUALITY_HEADING_FAIR = 0.6
 # Verification step: how far each finger's total flexion must travel (open to closed) for the hand to count as following.
 VERIFY_MIN_TRAVEL_DEG = 60.0
+
+# Expert training persistence: the scratch draft on disk, file bundles (export and import) and automatic backups.
+# One file per draft under <data_dir>/drafts; the draft itself is the frontend's object, kept as opaque JSON.
+DRAFTS_DIR_NAME = "drafts"
+DRAFT_KINDS = ("scratch",)
+DRAFT_MAX_BYTES = 512 * 1024
+# Oldest drafts beyond this many are pruned when a draft is saved.
+DRAFTS_KEEP = 20
+# Bundle file format (GET /lessons/{id}/export, GET /export/all, POST /lessons/import).
+BUNDLE_FORMAT = "geppetto.bundle"
+BUNDLE_FORMAT_VERSION = 1
+BUNDLE_FILE_SUFFIX = ".geppetto.json"
+# A referenced video is embedded as base64 only when it is this small; larger ones are listed by id.
+BUNDLE_MEDIA_EMBED_MAX_BYTES = 2 * 1024 * 1024
+# After every publish (POST or PUT /lessons) the lesson's bundle is written to <data_dir>/exports; the newest N per
+# lesson name are kept.
+EXPORTS_DIR_NAME = "exports"
+EXPORT_BACKUPS_KEEP = 5
+EXPORT_SLUG_MAX_CHARS = 48
