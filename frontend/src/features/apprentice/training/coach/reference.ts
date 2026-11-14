@@ -1,6 +1,7 @@
 import type { GloveFrame, HandFrame, MotionSpec, Side } from '../../../../api/types';
 import { handAt, framesDuration } from '../../../shared/playback';
 import { restFrame, synthFrame } from '../../../../three/motion';
+import { keysPeriod } from '../../../../mock/synth';
 import { flexionDegrees, type FingerValues } from './deviation';
 
 /** Seconds a static hold pose is practised for. */
@@ -15,6 +16,8 @@ export function motionPeriod(spec: MotionSpec | null): number {
     case 'grip_and_swing':
     case 'pinch':
       return Math.max(0.6, spec.beat_ms / 1000);
+    case 'keyframes':
+      return Math.max(0.6, keysPeriod(spec.keys));
     default:
       return HOLD_PERIOD_S;
   }

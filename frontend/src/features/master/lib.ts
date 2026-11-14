@@ -3,6 +3,9 @@ import type { MotionSpec, MoveKind, Prop, Side, Skill, Step, Tolerance } from '.
 export const SKILLS: { id: Skill; label: string }[] = [
   { id: 'table_tennis', label: 'Table Tennis' },
   { id: 'piano', label: 'Piano' },
+  { id: 'shadow_puppets', label: 'Shadow puppets' },
+  { id: 'surgical_grips', label: 'Surgical grips' },
+  { id: 'crochet', label: 'Crochet' },
   { id: 'general', label: 'General' },
 ];
 
@@ -82,6 +85,8 @@ export function motionLabel(m: MotionSpec | null): string {
       return 'Pinch';
     case 'hold_pose':
       return 'Held pose';
+    case 'keyframes':
+      return 'Key poses';
     default:
       return 'Rest';
   }

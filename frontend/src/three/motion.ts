@@ -1,6 +1,7 @@
 import { Euler, Quaternion, Vector3 } from 'three';
 import type { Finger, HandFrame, JointTriple, MotionSpec, Side } from '../api/types';
 import { FINGER_ORDER, FULL, RELAXED } from './anatomy';
+import { fromYawPitchRoll, keyframePose, keysPeriod } from '../mock/synth';
 
 /**
  * Local motion synthesiser, for PREVIEW ONLY: lets screens show animated guide hands when the backend is down.
@@ -77,7 +78,7 @@ const eul = new Euler();
 const qa = new Quaternion();
 const qb = new Quaternion();
 
-function poseAt(spec: MotionSpec, t: number): Pose {
+function poseAt(spec: MotionSpec, t: number, side: Side): Pose {
   switch (spec.preset) {
     case 'finger_sequence':
       return sequencePose(t, (spec.beat_ms || 620) / 1000, spec.sequence?.length ? spec.sequence : DEFAULT_SEQ);
@@ -86,7 +87,7 @@ function poseAt(spec: MotionSpec, t: number): Pose {
     case 'pinch':
       return pinchPose(t, (spec.beat_ms || 900) / 1000, spec.fingers);
     case 'hold_pose':
-      return holdPose(spec.pose);
+      return holdPose(side === 'left' && spec.left_pose ? spec.left_pose : spec.pose);
     default:
       return holdPose({ thumb: -0.05, index: -0.1, middle: -0.1, ring: -0.1, little: -0.1 });
   }
@@ -107,8 +108,15 @@ export function restFrame(side: Side = 'right'): HandFrame {
  * fingers forward. The index of the pressing finger (0 thumb .. 4 little) is returned alongside for key highlighting.
  */
 export function synthFrame(spec: MotionSpec, t: number, side: Side = 'right'): HandFrame & { active: number } {
-  const pose = poseAt(spec, t);
   const mirror = side === 'left' ? -1 : 1;
+  if (spec.preset === 'keyframes') {
+    // The same key maths as the backend synthesiser, so the guide and the simulated glove agree.
+    const keys = side === 'left' && spec.left_keys?.length ? spec.left_keys : spec.keys;
+    const k = keyframePose(keys, t, keysPeriod(spec.keys));
+    const q = fromYawPitchRoll(k.yaw * mirror, k.pitch, k.roll * mirror);
+    return { side, wrist_quat: q, wrist_pos: null, flexion: curlsToFlexion(k.curls), active: -1 };
+  }
+  const pose = poseAt(spec, t, side);
   const swinging = spec.preset === 'grip_and_swing';
   let quat: [number, number, number, number] = [0, 0, 0, 1];
   if (swinging) {

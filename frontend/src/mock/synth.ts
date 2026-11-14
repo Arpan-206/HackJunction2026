@@ -1,4 +1,4 @@
-import type { Finger, GloveFrame, HandFrame, JointTriple, MotionSpec, Side } from '../api/types';
+import type { Finger, GloveFrame, HandFrame, JointTriple, Keyframe, MotionSpec, Side } from '../api/types';
 
 /**
  * Faithful TypeScript port of backend/app/services/motion/synthesiser.py (and the quaternion helpers it uses).
@@ -51,13 +51,15 @@ const PINCH_FINGER_CURL = 0.5;
 const DEFAULT_SEQUENCE_BEAT_MS = 620;
 const DEFAULT_SWING_BEAT_MS = 1500;
 const DEFAULT_PINCH_BEAT_MS = 800;
+const KEYFRAME_BLEND = 0.5;
 
 type Quat = [number, number, number, number];
 
-interface Pose {
+export interface Pose {
   curls: number[];
   yaw: number;
   pitch: number;
+  roll: number;
 }
 
 const round = (v: number): number => {
@@ -128,7 +130,7 @@ function sequencePose(spec: Extract<MotionSpec, { preset: 'finger_sequence' }>, 
     if (i === next && i !== active) v -= lift;
     curls.push(v);
   }
-  return { curls, yaw: 0, pitch: 0 };
+  return { curls, yaw: 0, pitch: 0, roll: 0 };
 }
 
 function swingPose(spec: Extract<MotionSpec, { preset: 'grip_and_swing' }>, t: number): Pose {
@@ -148,7 +150,7 @@ function swingPose(spec: Extract<MotionSpec, { preset: 'grip_and_swing' }>, t: n
   if (spec.swing === 'backhand') yaw = -yaw;
   const squeeze = SWING_SQUEEZE * contact;
   const grip = GRIP_CURLS[spec.grip] ?? GRIP_CURLS.shakehand;
-  return { curls: grip.map((v) => v + squeeze), yaw, pitch: SWING_PITCH };
+  return { curls: grip.map((v) => v + squeeze), yaw, pitch: SWING_PITCH, roll: 0 };
 }
 
 function pinchPose(spec: Extract<MotionSpec, { preset: 'pinch' }>, t: number): Pose {
@@ -156,10 +158,46 @@ function pinchPose(spec: Extract<MotionSpec, { preset: 'pinch' }>, t: number): P
   const press = 0.5 - 0.5 * Math.cos((2 * Math.PI * mod(t, beat)) / beat);
   const curls = [PINCH_THUMB_CURL * press, 0, 0, 0, 0];
   for (const f of spec.fingers ?? []) curls[f - 1] = PINCH_FINGER_CURL * press;
-  return { curls, yaw: 0, pitch: 0 };
+  return { curls, yaw: 0, pitch: 0, roll: 0 };
 }
 
-function poseAt(spec: MotionSpec, t: number): Pose {
+const smoothstep = (k: number): number => {
+  const x = Math.max(0, Math.min(1, k));
+  return x * x * (3 - 2 * x);
+};
+
+/** Seconds one loop of keyframes lasts. */
+export const keysPeriod = (keys: Keyframe[]): number => keys.reduce((s, k) => s + k.ms, 0) / 1000;
+
+/**
+ * The pose at time t with the keys stretched to last `period` seconds. Each key owns a slot of its `ms`; over the first
+ * KEYFRAME_BLEND of the slot the hand eases in from the previous key (the last one for the first key), then holds it.
+ */
+export function keyframePose(keys: Keyframe[], t: number, period: number): Pose {
+  const scale = period / keysPeriod(keys);
+  const phase = mod(t, period);
+  let start = 0;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const slot = (key.ms / 1000) * scale;
+    if (phase < start + slot || i === keys.length - 1) {
+      const prev = keys[(i - 1 + keys.length) % keys.length];
+      const k = smoothstep((phase - start) / (slot * KEYFRAME_BLEND));
+      const mix = (a = 0, b = 0) => a + (b - a) * k;
+      return {
+        curls: FINGER_NAMES.map((n) => mix(prev.pose?.[n] ?? 0, key.pose?.[n] ?? 0)),
+        yaw: mix(prev.yaw, key.yaw),
+        pitch: mix(prev.pitch, key.pitch),
+        roll: mix(prev.roll, key.roll),
+      };
+    }
+    start += slot;
+  }
+  throw new Error('unreachable');
+}
+
+/** The pose a motion is in at time t seconds, for the given hand. */
+export function poseAt(spec: MotionSpec, t: number, side: Side = 'right'): Pose {
   switch (spec.preset) {
     case 'finger_sequence':
       return sequencePose(spec, t);
@@ -167,10 +205,16 @@ function poseAt(spec: MotionSpec, t: number): Pose {
       return swingPose(spec, t);
     case 'pinch':
       return pinchPose(spec, t);
-    case 'hold_pose':
-      return { curls: FINGER_NAMES.map((n) => spec.pose?.[n] ?? 0), yaw: 0, pitch: 0 };
+    case 'hold_pose': {
+      const pose = side === 'left' && spec.left_pose ? spec.left_pose : spec.pose;
+      return { curls: FINGER_NAMES.map((n) => pose?.[n] ?? 0), yaw: 0, pitch: 0, roll: 0 };
+    }
+    case 'keyframes': {
+      const keys = side === 'left' && spec.left_keys?.length ? spec.left_keys : spec.keys;
+      return keyframePose(keys, t, keysPeriod(spec.keys));
+    }
     default:
-      return { curls: [IDLE_CURL, IDLE_CURL, IDLE_CURL, IDLE_CURL, IDLE_CURL], yaw: 0, pitch: 0 };
+      return { curls: [IDLE_CURL, IDLE_CURL, IDLE_CURL, IDLE_CURL, IDLE_CURL], yaw: 0, pitch: 0, roll: 0 };
   }
 }
 
@@ -183,6 +227,8 @@ function motionPeriod(spec: MotionSpec): number | null {
       return (spec.beat_ms || DEFAULT_SWING_BEAT_MS) / 1000;
     case 'pinch':
       return (spec.beat_ms || DEFAULT_PINCH_BEAT_MS) / 1000;
+    case 'keyframes':
+      return keysPeriod(spec.keys);
     default:
       return null;
   }
@@ -214,9 +260,9 @@ function flexionFor(curls: number[], t: number, period: number | null): Record<F
 
 /** Synthesises one hand at time t (seconds). */
 export function handFrame(spec: MotionSpec, side: Side, t: number): HandFrame {
-  const pose = poseAt(spec, t);
+  const pose = poseAt(spec, t, side);
   const mirror = side === 'left' ? -1 : 1;
-  const q = fromYawPitchRoll(pose.yaw * mirror, pose.pitch, pose.yaw * SWING_ROLL_FACTOR * mirror);
+  const q = fromYawPitchRoll(pose.yaw * mirror, pose.pitch, (pose.yaw * SWING_ROLL_FACTOR + pose.roll) * mirror);
   return {
     side,
     wrist_quat: [round(q[0]), round(q[1]), round(q[2]), round(q[3])],

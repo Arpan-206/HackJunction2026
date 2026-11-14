@@ -10,7 +10,7 @@ Units: time in seconds (float), angles in radians, positions in metres. JSON key
 type Side = 'left' | 'right';
 type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-type Skill = 'table_tennis' | 'piano' | 'general';
+type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'general';
 type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 type Hands = Side | 'both';   // one hand (left or right) or two
 
@@ -36,8 +36,16 @@ type MotionSpec =
   | { preset: 'finger_sequence'; sequence: (1 | 2 | 3 | 4 | 5)[]; beat_ms: number }  // 1 thumb .. 5 little
   | { preset: 'grip_and_swing'; grip: 'shakehand' | 'penhold'; swing: 'forehand' | 'backhand'; beat_ms: number }
   | { preset: 'pinch'; fingers: (2 | 3)[]; beat_ms: number }
-  | { preset: 'hold_pose'; pose: Record<Finger, number> }                               // 0 open .. 1 curled
+  | { preset: 'hold_pose'; pose: Record<Finger, number>; left_pose?: Record<Finger, number> | null }  // 0 open .. 1 curled
+  | { preset: 'keyframes'; keys: Keyframe[]; left_keys?: Keyframe[] | null }
   | { preset: 'idle' };
+
+// hold_pose.left_pose: the left hand's shape when the two hands differ (the snail's shell); null mirrors `pose`.
+// keyframes: loop through key poses. Each key owns a slot of `ms`; the hand eases in from the previous key over the first
+// half of the slot, then holds it. Period = sum of keys[].ms. left_keys gives the left hand its own keys (crochet's yarn
+// hand), stretched to the same period; null mirrors `keys`. Wrist angles are radians in hand space: positive pitch lifts
+// the fingers, positive roll turns the thumb down (pronation of the right hand).
+interface Keyframe { pose: Record<Finger, number>; ms: number; yaw?: number; pitch?: number; roll?: number }
 
 // A move the master can pick in "Start from scratch". Catalog served by GET /api/moves.
 interface MoveKind {

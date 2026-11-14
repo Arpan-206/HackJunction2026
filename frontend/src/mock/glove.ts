@@ -170,7 +170,7 @@ export function getHub(): GloveHub {
   return hub;
 }
 
-const MOTION_PRESETS = ['finger_sequence', 'grip_and_swing', 'pinch', 'hold_pose', 'idle'];
+const MOTION_PRESETS = ['finger_sequence', 'grip_and_swing', 'pinch', 'hold_pose', 'keyframes', 'idle'];
 
 /** True for a payload that looks like a MotionSpec (the real backend validates the full schema). */
 export function isMotionSpec(value: unknown): value is MotionSpec {

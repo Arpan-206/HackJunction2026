@@ -38,6 +38,31 @@ class HoldPose(BaseModel):
 
     preset: Literal["hold_pose"] = "hold_pose"
     pose: FingerValues
+    left_pose: FingerValues | None = None
+    """The left hand's pose when the two hands make different shapes; None mirrors `pose`."""
+
+
+class Keyframe(BaseModel):
+    """One key of a keyframed motion: per-finger curls plus wrist angles in radians, reached and held over `ms`."""
+
+    pose: FingerValues
+    ms: float = Field(gt=0)
+    yaw: float = 0.0
+    pitch: float = 0.0
+    roll: float = 0.0
+
+
+class Keyframes(BaseModel):
+    """Loop through key poses: the hand eases into each key, then holds it for the rest of its slot.
+
+    Wrist angles are radians in hand space: positive pitch lifts the fingers, positive roll turns the thumb down
+    (pronation of the right hand). `left_keys` gives the left hand its own keys, stretched to the right hand's period;
+    None mirrors `keys`.
+    """
+
+    preset: Literal["keyframes"] = "keyframes"
+    keys: list[Keyframe] = Field(min_length=1)
+    left_keys: list[Keyframe] | None = Field(default=None, min_length=1)
 
 
 class Idle(BaseModel):
@@ -47,6 +72,6 @@ class Idle(BaseModel):
 
 
 MotionSpec = Annotated[
-    FingerSequence | GripAndSwing | Pinch | HoldPose | Idle,
+    FingerSequence | GripAndSwing | Pinch | HoldPose | Keyframes | Idle,
     Field(discriminator="preset"),
 ]

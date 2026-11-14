@@ -6,7 +6,7 @@
 export type Side = 'left' | 'right';
 export type Finger = 'thumb' | 'index' | 'middle' | 'ring' | 'little';
 export type GloveSource = 'simulator' | 'rokoko_udp' | 'rokoko_sdk' | 'external';
-export type Skill = 'table_tennis' | 'piano' | 'general';
+export type Skill = 'table_tennis' | 'piano' | 'shadow_puppets' | 'surgical_grips' | 'crochet' | 'general';
 export type Prop = 'none' | 'racket' | 'keyboard' | 'ball';
 /** Which hands a move, step or recording uses: one hand (left or right) or both. */
 export type Hands = Side | 'both';
@@ -39,8 +39,21 @@ export type MotionSpec =
   | { preset: 'finger_sequence'; sequence: (1 | 2 | 3 | 4 | 5)[]; beat_ms: number }
   | { preset: 'grip_and_swing'; grip: 'shakehand' | 'penhold'; swing: 'forehand' | 'backhand'; beat_ms: number }
   | { preset: 'pinch'; fingers: (2 | 3)[]; beat_ms: number }
-  | { preset: 'hold_pose'; pose: Record<Finger, number> }
+  | { preset: 'hold_pose'; pose: Record<Finger, number>; left_pose?: Record<Finger, number> | null }
+  | { preset: 'keyframes'; keys: Keyframe[]; left_keys?: Keyframe[] | null }
   | { preset: 'idle' };
+
+/**
+ * One key of a keyframes motion: curls, reached over the first half of a slot of `ms` and then held. Wrist angles are radians
+ * in hand space: positive pitch lifts the fingers, positive roll turns the thumb down (pronation of the right hand).
+ */
+export interface Keyframe {
+  pose: Record<Finger, number>;
+  ms: number;
+  yaw?: number;
+  pitch?: number;
+  roll?: number;
+}
 
 /** A move the master can pick in "Start from scratch". Catalogue served by GET /api/moves. */
 export interface MoveKind {

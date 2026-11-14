@@ -21,11 +21,13 @@ export const gloveFrameSchema = z.object({
 
 /** The learner's margin of error (see src/api/margin.ts). */
 export const marginSchema = z.enum(['strict', 'standard', 'relaxed', 'just_trying']);
+const keyframeSchema = z.object({ pose: z.record(finger, z.number()), ms: z.number().positive(), yaw: z.number().optional(), pitch: z.number().optional(), roll: z.number().optional() });
 
 export const motionSpecSchema = z.discriminatedUnion('preset', [
   z.object({ preset: z.literal('finger_sequence'), sequence: z.array(z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])), beat_ms: z.number() }),
   z.object({ preset: z.literal('grip_and_swing'), grip: z.enum(['shakehand', 'penhold']), swing: z.enum(['forehand', 'backhand']), beat_ms: z.number() }),
   z.object({ preset: z.literal('pinch'), fingers: z.array(z.union([z.literal(2), z.literal(3)])), beat_ms: z.number() }),
-  z.object({ preset: z.literal('hold_pose'), pose: z.record(finger, z.number()) }),
+  z.object({ preset: z.literal('hold_pose'), pose: z.record(finger, z.number()), left_pose: z.record(finger, z.number()).nullish() }),
+  z.object({ preset: z.literal('keyframes'), keys: z.array(keyframeSchema).min(1), left_keys: z.array(keyframeSchema).min(1).nullish() }),
   z.object({ preset: z.literal('idle') }),
 ]);

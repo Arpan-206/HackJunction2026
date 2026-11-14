@@ -78,6 +78,8 @@ GRIP_CURLS = {
 
 PINCH_THUMB_CURL = 0.45
 PINCH_FINGER_CURL = 0.5
+# Keyframes: share of each key's slot spent easing in from the previous key; the rest holds the key.
+KEYFRAME_BLEND = 0.5
 
 # One Euro filter defaults (Casiez et al. 2012), tuned for radians at about 60 Hz.
 SMOOTHING_ENABLED = True

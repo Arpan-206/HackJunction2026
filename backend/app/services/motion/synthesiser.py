@@ -6,17 +6,18 @@ from dataclasses import dataclass
 from app import constants as c
 from app.schemas.common import FingerValues, Side
 from app.schemas.frames import GloveFrame, HandFrame
-from app.schemas.motion import FingerSequence, GripAndSwing, HoldPose, Idle, MotionSpec, Pinch
+from app.schemas.motion import FingerSequence, GripAndSwing, HoldPose, Idle, Keyframe, Keyframes, MotionSpec, Pinch
 from app.services import geometry
 
 
 @dataclass(frozen=True)
 class Pose:
-    """Per-finger curl (0 open .. 1 curled) plus the wrist yaw and pitch offsets in radians."""
+    """Per-finger curl (0 open .. 1 curled) plus the wrist yaw, pitch and roll offsets in radians."""
 
     curls: tuple[float, ...]
     yaw: float = 0.0
     pitch: float = 0.0
+    roll: float = 0.0
 
 
 def _sequence_pose(spec: FingerSequence, t: float) -> Pose:
@@ -74,8 +75,43 @@ def _pinch_pose(spec: Pinch, t: float) -> Pose:
     return Pose(tuple(curls))
 
 
-def pose_at(spec: MotionSpec, t: float) -> Pose:
-    """Return the pose the motion is in at time t seconds."""
+def _smoothstep(k: float) -> float:
+    """Ease 0..1 in and out."""
+    k = max(0.0, min(1.0, k))
+    return k * k * (3 - 2 * k)
+
+
+def _keys_period(keys: list[Keyframe]) -> float:
+    """Seconds one loop of the keys lasts."""
+    return sum(k.ms for k in keys) / 1000.0
+
+
+def _keyframe_pose(keys: list[Keyframe], t: float, period: float) -> Pose:
+    """The pose at time t, with the keys stretched to last `period` seconds.
+
+    Each key owns a slot of its `ms`; over the first KEYFRAME_BLEND of the slot the hand eases in from the previous key
+    (the last one for the first key, so the loop is seamless), then it holds the key.
+    """
+    scale = period / _keys_period(keys)
+    phase = t % period
+    start = 0.0
+    for i, key in enumerate(keys):
+        slot = key.ms / 1000.0 * scale
+        if phase < start + slot or i == len(keys) - 1:
+            prev = keys[i - 1]
+            k = _smoothstep((phase - start) / (slot * c.KEYFRAME_BLEND))
+            a, b = prev.pose.as_list(), key.pose.as_list()
+            curls = tuple(x + (y - x) * k for x, y in zip(a, b, strict=True))
+            yaw = prev.yaw + (key.yaw - prev.yaw) * k
+            pitch = prev.pitch + (key.pitch - prev.pitch) * k
+            roll = prev.roll + (key.roll - prev.roll) * k
+            return Pose(curls, yaw=yaw, pitch=pitch, roll=roll)
+        start += slot
+    raise AssertionError("unreachable")
+
+
+def pose_at(spec: MotionSpec, t: float, side: Side = "right") -> Pose:
+    """Return the pose the motion is in at time t seconds, for the given hand."""
     if isinstance(spec, FingerSequence):
         return _sequence_pose(spec, t)
     if isinstance(spec, GripAndSwing):
@@ -83,7 +119,11 @@ def pose_at(spec: MotionSpec, t: float) -> Pose:
     if isinstance(spec, Pinch):
         return _pinch_pose(spec, t)
     if isinstance(spec, HoldPose):
-        return Pose(tuple(spec.pose.as_list()))
+        pose = spec.left_pose if side == "left" and spec.left_pose is not None else spec.pose
+        return Pose(tuple(pose.as_list()))
+    if isinstance(spec, Keyframes):
+        keys = spec.left_keys if side == "left" and spec.left_keys else spec.keys
+        return _keyframe_pose(keys, t, _keys_period(spec.keys))
     assert isinstance(spec, Idle)
     return Pose((c.IDLE_CURL,) * 5)
 
@@ -94,6 +134,8 @@ def motion_period(spec: MotionSpec) -> float | None:
         return spec.beat_ms / 1000.0 * len(spec.sequence)
     if isinstance(spec, (GripAndSwing, Pinch)):
         return spec.beat_ms / 1000.0
+    if isinstance(spec, Keyframes):
+        return _keys_period(spec.keys)
     return None
 
 
@@ -130,9 +172,10 @@ def _flexion(curls: tuple[float, ...], t: float, period: float | None = None) ->
 
 def hand_frame(spec: MotionSpec, side: Side, t: float) -> HandFrame:
     """Synthesise one hand at time t."""
-    pose = pose_at(spec, t)
+    pose = pose_at(spec, t, side)
     mirror = -1.0 if side == "left" else 1.0
-    quat = geometry.from_yaw_pitch_roll(pose.yaw * mirror, pose.pitch, pose.yaw * c.SWING_ROLL_FACTOR * mirror)
+    roll = (pose.yaw * c.SWING_ROLL_FACTOR + pose.roll) * mirror
+    quat = geometry.from_yaw_pitch_roll(pose.yaw * mirror, pose.pitch, roll)
     return HandFrame(
         side=side,
         wrist_quat=tuple(round(v, c.FRAME_DECIMALS) for v in quat),  # type: ignore[arg-type]
