@@ -415,6 +415,22 @@ export interface FileLocation {
   opened: boolean;
 }
 
+/** POST /dev/glove_compare: one guided capture of the glove compare page. session and slug: [A-Za-z0-9_-]{1,64}; index 0..99. */
+export interface GloveCompareSave {
+  session: string;
+  index: number;
+  slug: string;
+  data: Record<string, unknown>;
+  /** Side by side snapshot as a data:image/png;base64 URL. */
+  png?: string | null;
+}
+
+/** Where POST /dev/glove_compare wrote the capture (absolute paths; mock:// in mock mode). */
+export interface GloveCompareSaved {
+  json_path: string;
+  png_path: string | null;
+}
+
 /* ---- Real gloves: status, calibration area, demo mode (docs/CONTRACT.md "Real gloves") ---- */
 
 export type GloveConnection = 'usb' | 'wifi' | 'emulated' | 'unknown';

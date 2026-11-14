@@ -4,7 +4,7 @@ import type { StageColors } from '../theme/themes';
 import { FINGER_ORDER } from './anatomy';
 import { applyDualQuaternionBoneTransform, installDualQuaternionSkinning, skinWithDualQuaternions } from './dqSkinning';
 import type { HandTemplate } from './handModel';
-import { applyHandPose, createBones } from './handPose';
+import { applyHandPose, applyJointPose, createBones, THUMB_TUNING } from './handPose';
 import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
 import type { HandSmoother } from './smoothing';
 
@@ -97,7 +97,11 @@ export function buildHandRig(template: HandTemplate, style: HandStyle, stage: St
   };
 }
 
-/** Writes a smoothed pose onto the rig's bones. Pure mutation, no allocation. */
+/**
+ * Writes a smoothed pose onto the rig's bones: the angles, then, while the core's skeleton is on hand for this hand, every
+ * phalanx from its joint positions (blended in by the smoother's jointWeight). Pure mutation, no allocation.
+ */
 export function applyPose(rig: HandRig, s: HandSmoother): void {
-  applyHandPose(rig.bones, rig.template.layout, s.flex, s.spread);
+  applyHandPose(rig.bones, rig.template.layout, s.flex, s.spread, THUMB_TUNING, s.coreAngles);
+  if (s.jointWeight > 0) applyJointPose(rig.bones, rig.template.layout, s.joints, s.jointWeight);
 }

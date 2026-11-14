@@ -246,6 +246,7 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/dev/state` | partial of the above | new state |
 | GET | `/dev/locate?kind=&id=` | | `FileLocation` (see Dev file reveal) without opening anything; 403, 400, 404 and 422 as for `/dev/reveal` |
 | POST | `/dev/reveal` | `{kind: FileKind, id: string}` | `FileLocation`; opens the file manager on the backend machine with the file selected (see Dev file reveal) |
+| POST | `/dev/glove_compare` | `GloveCompareSave` (see Dev file reveal) | `GloveCompareSaved`; writes one guided capture of the glove compare page; 403 as for `/dev/reveal`, 422 on an unsafe `session` or `slug` |
 | GET | `/gloves/status` | | `GloveRigStatus` (see Real gloves) |
 | POST | `/gloves/driver` | `{action: 'start' or 'stop'}` | `GloveRigStatus` after the action; 409 while Rokoko Studio is open, 503 when the SDK is not found |
 | POST | `/gloves/reinit` | | `{devices: number}`: gloves that accepted RCSP `ReinitAlgo` (0 without a driver) |
@@ -268,6 +269,12 @@ interface FileLocation { kind: FileKind; id: string; path: string; opened: boole
 - `POST /dev/reveal` opens Windows Explorer with the file selected (`explorer /select,<path>`; `open -R` on macOS, `xdg-open` on the folder on Linux) and answers `opened: true`, or `opened: false` when no file manager could be started. `GET /dev/locate` only answers the path.
 - Safety: both answer only requests from this machine (client host `127.0.0.1`, `::1` or `localhost`) while `DEV_REVEAL` is on (setting `dev_reveal`, default `DEV_REVEAL_ENABLED = True` in `backend/app/constants.py`; `DEV_REVEAL=false` in `backend/.env` turns it off); otherwise 403. The Vite dev proxy calls from localhost, so a page served by Vite on another device would pass the host check: switch `DEV_REVEAL` off when the dev server is shared on a network. Ids must be safe ids (export names: letters, digits, `_`, `-` and `.`, no `..`), else 400; a path that resolves outside the data folder, or a file that does not exist, is 404; an unknown kind is 422.
 - Mock mode answers `mock://<folder>/<id>.json` with `opened: false` and opens nothing; the UI says "Sample data: no file on disk."
+- Glove compare (`/dev/glove-compare` in the frontend): `POST /dev/glove_compare` with `GloveCompareSave` writes `glove_compare/<session>/<index as 2 digits>-<slug>.json` under the data folder (the `data` object as is), plus `<same>.png` when `png` is a `data:image/png;base64,` URL, and answers `GloveCompareSaved` with absolute paths. Same localhost and `DEV_REVEAL` guard as the reveal. Mock mode answers `mock://glove_compare/...` paths and writes nothing.
+
+```ts
+interface GloveCompareSave { session: string; index: number; slug: string; data: Record<string, unknown>; png?: string | null }  // session, slug: [A-Za-z0-9_-]{1,64}; index 0..99
+interface GloveCompareSaved { json_path: string; png_path: string | null }
+```
 
 ## WebSocket
 

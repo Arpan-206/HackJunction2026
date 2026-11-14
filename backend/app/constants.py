@@ -402,6 +402,8 @@ EXPORT_SLUG_MAX_CHARS = 48
 # while the flag is on (env DEV_REVEAL=false turns it off). The kinds and the folder each one lives in under <data_dir>.
 DEV_REVEAL_ENABLED = True
 DEV_LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1")
+# Folder under the data dir where the glove compare page (/dev/glove-compare) saves its guided captures.
+GLOVE_COMPARE_DIR = "glove_compare"
 DEV_REVEAL_DIRS = {
     "recording": "recordings",
     "lesson": "lessons",

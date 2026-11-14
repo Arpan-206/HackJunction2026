@@ -5,6 +5,7 @@ import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../api/typ
 import { FINGER_ORDER } from './anatomy';
 import { loadHandTemplate, useHandTemplate, type HandTemplate } from './handModel';
 import { applyPose, buildHandRig, type HandRig } from './handRig';
+import { LiveJointsGate } from './liveJoints';
 import type { HandStyle } from './materials';
 import { restFrame, synthFrame } from './motion';
 import { FingertipTrails, JointRings } from './overlays';
@@ -160,6 +161,7 @@ function HandBody({
   const outer = useRef<Group>(null);
   const inner = useRef<Group>(null);
   const smoother = useMemo(() => new HandSmoother(), []);
+  const jointsGate = useMemo(() => new LiveJointsGate(), []);
   const rig = useMemo(() => buildHandRig(template, style, stage, side, tint), [template, style, stage, side, tint]);
   const rest = useMemo(() => restFrame(side), [side]);
   const pivot = useMemo(() => new Vector3(), []);
@@ -202,13 +204,18 @@ function HandBody({
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
     let target: HandFrame | null = null;
+    let joints: Float32Array | null = null;
     if (getFrame) target = getFrame(t);
-    if (!target && live) target = pickHand(live.current, side);
+    if (!target && live) {
+      target = pickHand(live.current, side);
+      // A live hand fed by the glove core is drawn from the core's full skeleton when it is on hand (three/liveJoints.ts).
+      joints = jointsGate.pick(live.current, target, side);
+    }
     if (!target && frame) target = frame;
     if (!target && motion) target = synthFrame(motion, t, side);
     if (!target) target = rest;
 
-    smoother.step(target, Math.min(delta, 0.1), smoothing);
+    smoother.step(target, Math.min(delta, 0.1), smoothing, joints);
     applyPose(rig, smoother);
     const g = inner.current;
     if (g) {

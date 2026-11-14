@@ -616,6 +616,17 @@ route('POST', '/dev/reveal', (req) => {
   return mockFile(b.kind, b.id);
 });
 route('GET', '/dev/locate', (req) => mockFile(req.query.get('kind'), req.query.get('id')));
+// Glove compare captures: nothing to save without a backend, so the paths say mock:// and nothing is written.
+route('POST', '/dev/glove_compare', (req) => {
+  const b = body(req);
+  const safe = (v: unknown) => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v);
+  if (!safe(b.session) || !safe(b.slug)) invalid('session and slug must be safe ids');
+  const index = Number(b.index);
+  if (!Number.isInteger(index) || index < 0 || index > 99) invalid('index must be 0 to 99');
+  if (!isObj(b.data)) invalid('data must be an object');
+  const stem = `mock://glove_compare/${b.session as string}/${String(index).padStart(2, '0')}-${b.slug as string}`;
+  return ok({ json_path: `${stem}.json`, png_path: typeof b.png === 'string' && b.png ? `${stem}.png` : null });
+});
 route('GET', '/dev/state', () => ok(getStore().dev));
 route('POST', '/dev/state', (req) => {
   const b = body(req);

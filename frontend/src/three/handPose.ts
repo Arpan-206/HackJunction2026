@@ -107,6 +107,11 @@ export interface HandLayout {
   fingers: FingerDesc[];
   /** Palm frame measured from the bind pose: palmar normal, radial (thumb side) and distal directions. */
   palm: PalmFrame;
+  /**
+   * Bind fan: the angle (radians, in the palm plane) of each finger's proximal phalanx away from the middle finger's,
+   * signed like the contract spread (positive away from the middle). Thumb and middle are 0.
+   */
+  fan: number[];
 }
 
 export interface PalmFrame {
@@ -229,8 +234,65 @@ export function buildLayout(world: (name: string) => { position: Vector3; quater
     return { joints, tip: index.get(chain[chain.length - 1]) as number, cup };
   });
 
-  return { bones, fingers, palm };
+  // Yaw of each proximal phalanx in the palm plane, relative to the middle finger's.
+  const yaw = (f: number) => {
+    const d = P(CHAINS[f][2]).clone().sub(P(CHAINS[f][1]));
+    return Math.atan2(d.dot(palm.radial), d.dot(palm.distal));
+  };
+  const fan = [0, yaw(1) - yaw(2), 0, yaw(2) - yaw(3), yaw(2) - yaw(4)];
+
+  return { bones, fingers, palm, fan };
 }
+
+/**
+ * Glove core angles. The core (core/compat.py) sends the solver's geometric angles: each flexion is the unsigned angle
+ * between two bones, the thumb's first value is the angle between the thumb and index metacarpals (a CMC stand-in), and
+ * each spread is the angle between neighbouring proximal phalanges (thumb-index, index-middle, middle-ring, ring-little;
+ * middle always 0). The contract's own sources (simulator, synthesiser, mock) send spread 0 at rest instead. A frame whose
+ * spread has that core signature is read with the core's meaning; everything else keeps the contract's.
+ */
+export function isCoreAngleSpread(spread: Partial<Record<string, number>> | null | undefined): boolean {
+  if (!spread) return false;
+  const { thumb = 0, index = 0, middle = 0, ring = 0, little = 0 } = spread;
+  return Math.abs(middle) < 1e-6 && thumb > 0.05 && index >= 0 && ring >= 0 && little >= 0 && index + ring + little > 0.02;
+}
+
+/**
+ * The yaw difference (radians, in the palm plane) between two neighbouring proximal phalanges, from the 3D angle between
+ * them and each one's flexion out of the palm plane: cos(angle) = cos f1 cos f2 cos(yaw) + sin f1 sin f2. With both
+ * fingers curled far the yaw is lost in the curl, so it fades to `rest`.
+ */
+function yawBetween(angle: number, f1: number, f2: number, rest: number): number {
+  const c = Math.cos(f1) * Math.cos(f2);
+  const y = c > 1e-3 ? Math.acos(Math.min(1, Math.max(-1, (Math.cos(angle) - Math.sin(f1) * Math.sin(f2)) / c))) : rest;
+  const trust = smoothstep(0.15, 0.5, c);
+  return rest + (y - rest) * trust;
+}
+
+/** The core's natural yaw between neighbouring proximal phalanges of a relaxed hand (radians): the fallback when curled. */
+const CORE_REST_YAW = 0.12;
+/** Contract spread (radians) the core's angles can ask for, so a noisy reading never splays a finger off the hand. */
+const CORE_SPREAD_LIMIT = { min: -0.3, max: 0.5 };
+
+/**
+ * Contract spreads (away from the middle finger, relative to the model's bind fan) from the core's inter-finger angles:
+ * each neighbour's yaw is recovered from the 3D angle and the two flexions, chained out from the middle finger, and the
+ * model's own fan is taken off. The thumb's spread is set by the caller.
+ */
+export function coreSpreadToContract(layout: HandLayout, flex: ArrayLike<number>, spread: ArrayLike<number>, out: number[]): number[] {
+  const mcp = (f: number) => flex[f * 3] ?? 0;
+  const im = yawBetween(spread[1] ?? 0, mcp(1), mcp(2), CORE_REST_YAW);
+  const mr = yawBetween(spread[3] ?? 0, mcp(2), mcp(3), CORE_REST_YAW);
+  const rl = yawBetween(spread[4] ?? 0, mcp(3), mcp(4), CORE_REST_YAW);
+  const clamp = (v: number) => Math.min(CORE_SPREAD_LIMIT.max, Math.max(CORE_SPREAD_LIMIT.min, v));
+  out[0] = 0;
+  out[1] = clamp(im - layout.fan[1]);
+  out[2] = 0;
+  out[3] = clamp(mr - layout.fan[3]);
+  out[4] = clamp(mr + rl - layout.fan[4]);
+  return out;
+}
+
 
 /** Local quaternion of one driven joint for a flexion and spread (radians); writes and returns `out`. */
 export function jointQuaternion(bind: Quaternion, j: JointDesc, flex: number, spread: number, roll: number, out: Quaternion): Quaternion {
@@ -241,11 +303,29 @@ export function jointQuaternion(bind: Quaternion, j: JointDesc, flex: number, sp
   return out;
 }
 
+const _spread: number[] = [0, 0, 0, 0, 0];
+
 /**
  * Writes a pose onto the bones: 15 flexion angles (finger-major, contract order) and 5 spreads. Pure mutation of the
- * bone quaternions, no allocation, safe to call every frame.
+ * bone quaternions, no allocation, safe to call every frame. With `coreAngles` the values carry the glove core's meaning
+ * (isCoreAngleSpread): the finger spreads are inter-finger angles, converted here, and the model's rest spread is not added
+ * to them, since the wearer's own fan is in the reading.
  */
-export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, flex: ArrayLike<number>, spread: ArrayLike<number>, thumb: ThumbTuning = THUMB_TUNING): void {
+export function applyHandPose(
+  bones: readonly Object3D[],
+  layout: HandLayout,
+  flex: ArrayLike<number>,
+  spread: ArrayLike<number>,
+  thumb: ThumbTuning = THUMB_TUNING,
+  coreAngles = false,
+): void {
+  if (coreAngles) {
+    // The thumb keeps the contract reading of its values: measured on a full recorded session (point, pinch, OK, claw,
+    // fist...) that sits closer to the core skeleton than inverting the CMC stand-in does.
+    const thumbSpread = spread[0] ?? 0;
+    spread = coreSpreadToContract(layout, flex, spread, _spread);
+    _spread[0] = thumbSpread;
+  }
   for (let f = 0; f < 5; f++) {
     const fd = layout.fingers[f];
     // Past a tight fist the model's fingertips would sink into its palm, so the PIP and DIP give way softly (the knuckle
@@ -269,7 +349,7 @@ export function applyHandPose(bones: readonly Object3D[], layout: HandLayout, fl
         a = j.bindFlex + swing;
         roll = swing * thumb.roll;
       } else if (f === 0) a = j.bindFlex + (a - j.bindFlex) * thumb.curl;
-      jointQuaternion(layout.bones[j.bone].quaternion, j, a, k === 0 ? (spread[f] ?? 0) + REST_SPREAD[f] : 0, roll, bones[j.bone].quaternion);
+      jointQuaternion(layout.bones[j.bone].quaternion, j, a, k === 0 ? (spread[f] ?? 0) + (coreAngles && f > 0 ? 0 : REST_SPREAD[f]) : 0, roll, bones[j.bone].quaternion);
     }
     if (fd.cup) {
       const mcp = Math.max(0, (flex[f * 3] ?? 0) - fd.joints[0].bindFlex);
@@ -367,6 +447,99 @@ function closePinch(bones: readonly Object3D[], layout: HandLayout, thumbCmc: nu
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
+}
+
+/**
+ * Joint positions from the glove core (core/hand.py JOINT_NAMES): 26 points, x y z each, in the wrist frame of a right
+ * hand (a left hand mirrored in x): fingers along -z, back of the hand +y, thumb towards -x. Index of each chain's first
+ * joint, in CHAINS order; chain joint k is CORE_BASE[f] + k.
+ */
+export const CORE_BASE = [2, 6, 11, 16, 21] as const;
+export const CORE_WRIST = 1;
+export const CORE_JOINTS = 26;
+
+/** Chain joints whose bone (towards the next joint) the core's positions drive: the three phalanges of each finger. */
+const JOINT_DRIVEN: readonly (readonly number[])[] = [
+  [0, 1, 2],
+  [1, 2, 3],
+  [1, 2, 3],
+  [1, 2, 3],
+  [1, 2, 3],
+];
+
+const _cw = new Vector3();
+const _cr = new Vector3();
+const _cd = new Vector3();
+const _cn = new Vector3();
+const _seg = new Vector3();
+const _dir = new Vector3();
+const _cur = new Vector3();
+const _bq = new Quaternion();
+const _wpq = new Quaternion();
+const _sw = new Quaternion();
+const _lq = new Quaternion();
+const _pos = new Vector3();
+const chainCache = new WeakMap<HandLayout, number[][]>();
+
+/** Bone index of every joint of every chain, in CHAINS order (cached per layout). */
+function chainBones(layout: HandLayout): number[][] {
+  let c = chainCache.get(layout);
+  if (!c) {
+    c = CHAINS.map((chain) => chain.map((n) => layout.bones.findIndex((d) => d.name === n)));
+    chainCache.set(layout, c);
+  }
+  return c;
+}
+
+function corePoint(j: ArrayLike<number>, i: number, out: Vector3): Vector3 {
+  return out.set(j[i * 3], j[i * 3 + 1], j[i * 3 + 2]);
+}
+
+/**
+ * Poses every phalanx from the core's joint positions, so the model shows exactly what the core's skeleton shows (the
+ * debug view at /debug draws the same points). Each bone direction is read in the wearer's palm frame and laid into the
+ * model's: the model's palm and metacarpals hold still, and every phalanx (thumb metacarpal included) takes the
+ * direction of its counterpart, turning by the smallest swing from its bind orientation so it keeps its natural twist.
+ * `weight` blends from the pose already on the bones (0) to the joint pose (1). Pure mutation, no allocation.
+ */
+export function applyJointPose(bones: readonly Object3D[], layout: HandLayout, joints: ArrayLike<number>, weight = 1): void {
+  if (weight <= 0 || joints.length < CORE_JOINTS * 3) return;
+  // The wearer's palm frame, same construction as palmFrame with a fixed handedness (the core's frame is right-handed).
+  const w = corePoint(joints, CORE_WRIST, _cw);
+  const knuckle = (f: number, out: Vector3) => corePoint(joints, CORE_BASE[f] + 1, out);
+  knuckle(2, _cd).sub(w);
+  if (_cd.lengthSq() < 1e-12) return;
+  _cd.normalize();
+  knuckle(1, _cr).sub(knuckle(4, _cn));
+  _cr.addScaledVector(_cd, -_cr.dot(_cd));
+  if (_cr.lengthSq() < 1e-12) return;
+  _cr.normalize();
+  _cn.crossVectors(_cr, _cd).normalize();
+  const m = layout.palm;
+  const cb = chainBones(layout);
+  for (let f = 0; f < 5; f++) {
+    for (const k of JOINT_DRIVEN[f]) {
+      const bi = cb[f][k];
+      // Target direction: the core's bone in its palm frame, rebuilt in the model's.
+      corePoint(joints, CORE_BASE[f] + k + 1, _seg).sub(corePoint(joints, CORE_BASE[f] + k, _dir));
+      if (_seg.lengthSq() < 1e-12) continue;
+      _seg.normalize();
+      const x = _seg.dot(_cr);
+      const y = _seg.dot(_cn);
+      const z = _seg.dot(_cd);
+      _dir.copy(m.radial).multiplyScalar(x).addScaledVector(m.palmar, y).addScaledVector(m.distal, z).normalize();
+      // The bone at its bind rotation under its parent as posed now, and the world swing that aims it.
+      const parent = layout.bones[bi].parent;
+      if (parent >= 0) boneWorld(bones, layout, parent, _pos, _wpq);
+      else _wpq.identity();
+      const bind = layout.bones[bi].quaternion;
+      _cur.copy(layout.bones[cb[f][k + 1]].position).normalize().applyQuaternion(_bq.copy(_wpq).multiply(bind));
+      _sw.setFromUnitVectors(_cur, _dir);
+      // local = parentWorld^-1 * swing * parentWorld * bind
+      _lq.copy(_wpq).invert().multiply(_sw).multiply(_wpq).multiply(bind).normalize();
+      bones[bi].quaternion.slerp(_lq, Math.min(1, weight));
+    }
+  }
 }
 
 /** Creates the bone hierarchy at its bind pose under `root` (the wrist is its child). Returns bones in layout order. */

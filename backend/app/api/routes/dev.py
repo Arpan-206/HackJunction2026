@@ -1,4 +1,7 @@
-"""Development routes: the live-tunable pipeline state, and the stored-file reveal for developers."""
+"""Development routes: the live-tunable pipeline state, the stored-file reveal and the glove compare captures."""
+
+import base64
+import json
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.concurrency import run_in_threadpool
@@ -11,6 +14,8 @@ from app.schemas.api import (
     DevStatePatch,
     FileKind,
     FileLocation,
+    GloveCompareSave,
+    GloveCompareSaved,
     RevealRequest,
 )
 from app.services import files as file_manager
@@ -72,3 +77,35 @@ async def reveal_file(body: RevealRequest, files: FilesDep) -> FileLocation:
     path = files.locate(body.kind, body.id)
     opened = await run_in_threadpool(file_manager.open_in_file_manager, path)
     return FileLocation(kind=body.kind, id=body.id, path=str(path), opened=opened)
+
+
+def _write_glove_compare(root, body: GloveCompareSave) -> GloveCompareSaved:
+    """Write one capture under <data>/glove_compare/<session>/ as <nn>-<slug>.json, and the snapshot as .png."""
+    folder = root / c.GLOVE_COMPARE_DIR / body.session
+    folder.mkdir(parents=True, exist_ok=True)
+    stem = f"{body.index:02d}-{body.slug}"
+    json_path = folder / f"{stem}.json"
+    json_path.write_text(json.dumps(body.data, separators=(",", ":")), encoding="utf-8")
+    png_path = None
+    prefix = "data:image/png;base64,"
+    if body.png and body.png.startswith(prefix):
+        png_path = folder / f"{stem}.png"
+        png_path.write_bytes(base64.b64decode(body.png[len(prefix) :]))
+    return GloveCompareSaved(
+        json_path=str(json_path.resolve()),
+        png_path=str(png_path.resolve()) if png_path else None,
+    )
+
+
+@router.post(
+    "/dev/glove_compare",
+    response_model=GloveCompareSaved,
+    dependencies=[Depends(_local_dev_only)],
+)
+async def save_glove_compare(
+    body: GloveCompareSave, services: ServicesDep
+) -> GloveCompareSaved:
+    """Save one guided capture of the glove compare page (core frames beside what the frontend drew)."""
+    return await run_in_threadpool(
+        _write_glove_compare, services.settings.data_dir, body
+    )

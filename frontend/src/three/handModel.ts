@@ -115,6 +115,8 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
     at.z = shortenPalm(at.z);
     world.set(n, { position: at, quaternion: rotQ.clone().multiply(bindQuat.get(n) as Quaternion) });
   });
+  // Joints where the glove core puts them: the bones move to the core skeleton's proportions, the skin follows below.
+  const refit = CORE_SKELETON_FIT ? fitToCoreSkeleton(world) : new Map<string, Matrix4>();
   const layout = buildLayout((n) => world.get(n) as { position: Vector3; quaternion: Quaternion });
 
   // Geometry: drop the UV split so the surface is one welded shell, then bring it into hand space.
@@ -131,6 +133,7 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   const remap = skeleton.bones.map((b) => layout.bones.findIndex((d) => d.name === b.name));
   const si = geo.attributes.skinIndex;
   for (let i = 0; i < si.count; i++) for (let c = 0; c < 4; c++) si.setComponent(i, c, Math.max(0, remap[si.getComponent(i, c)]));
+  if (refit.size) deformToFit(geo, layout.bones.map((b) => refit.get(b.name) ?? null));
 
   const wrist = layout.bones[0].worldPosition;
   const capped = closeHoles(geo);
@@ -158,6 +161,154 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   // the footprint does not, so an open hand and a fist both sit within about 0.15 of the ring centre.
   const centre = [(fp[0] + pc.x) / 2, (fp[1] + pc.z) / 2] as const;
   return { geometry: geo, layout, wristBack, centre };
+}
+
+/**
+ * The glove core's skeleton (core/hand.py, from the Rokoko hand solver): fixed for every wearer and both hands (measured
+ * on a full recorded session: every length and every palm joint has zero spread). Metres, in the wrist frame of a right
+ * hand: fingers along -z, back of the hand +y, thumb towards -x. Knuckles in finger order index to little; phalanx
+ * lengths per chain, thumb first (metacarpal, proximal, distal), then each finger's proximal, middle and distal.
+ */
+export const CORE_SKELETON = {
+  thumbCmc: [-0.0232, -0.0024, -0.0258],
+  knuckles: [
+    [-0.0097, 0.0011, -0.0841],
+    [0.0101, 0.0029, -0.0809],
+    [0.0292, 0.0019, -0.0738],
+    [0.0445, -0.0001, -0.0627],
+  ],
+  lengths: [
+    [0.0396, 0.0301, 0.0344],
+    [0.0458, 0.0282, 0.0276],
+    [0.047, 0.031, 0.03],
+    [0.0439, 0.0283, 0.0276],
+    [0.0355, 0.0223, 0.0228],
+  ],
+} as const;
+
+/** Off until the stage presets and puppet poses are retuned for the longer fingers (see fitToCoreSkeleton). */
+const CORE_SKELETON_FIT = false;
+
+/**
+ * How much of the thumb CMC's depth below the palm the fit takes from the core (0 keeps the model's): the core puts the
+ * joint level with the palm, but the model's thumb flesh sits below it, and pulling the joint up would drag the ball of
+ * the thumb into the back of the hand.
+ */
+const THUMB_CMC_DEPTH_FIT = 0;
+
+/**
+ * Moves the bind skeleton (hand space, in place) onto the core skeleton's proportions, so every joint the core draws has
+ * its counterpart where the core puts it: the knuckle line, each phalanx's length, the thumb's CMC. The core skeleton is
+ * read in its palm frame and laid into the model's, scaled so the wrist to middle fingertip length is the model's own
+ * (the hand keeps its size on stage). Bones keep their bind directions; metacarpal bases and the wrist stay. Returns, per
+ * moved bone, the affine map from its old bind frame to its new one, for the skin (deformToFit).
+ */
+function fitToCoreSkeleton(world: Map<string, { position: Vector3; quaternion: Quaternion }>): Map<string, Matrix4> {
+  const P = (n: string) => (world.get(n) as { position: Vector3 }).position;
+  const wrist = P(WRIST).clone();
+  // Model palm frame, fixed handedness (palmar = radial x distal), as applyJointPose reads the core's.
+  const mD = P(CHAINS[2][1]).clone().sub(wrist).normalize();
+  const mR = P(CHAINS[1][1]).clone().sub(P(CHAINS[4][1]));
+  mR.addScaledVector(mD, -mR.dot(mD)).normalize();
+  const mN = new Vector3().crossVectors(mR, mD).normalize();
+  const k0 = (i: number) => new Vector3(...CORE_SKELETON.knuckles[i]);
+  const cD = k0(1).normalize();
+  const cR = k0(0).sub(k0(3));
+  cR.addScaledVector(cD, -cR.dot(cD)).normalize();
+  const cN = new Vector3().crossVectors(cR, cD).normalize();
+  // Scale: the model's wrist to middle fingertip chain over the core's.
+  const mid = CHAINS[2];
+  let mLen = P(mid[1]).distanceTo(wrist);
+  for (let k = 1; k < 4; k++) mLen += P(mid[k + 1]).distanceTo(P(mid[k]));
+  const cLen = k0(1).length() + CORE_SKELETON.lengths[2].reduce((a, b) => a + b, 0);
+  const scale = mLen / cLen;
+  const map = (c: readonly number[]) => {
+    const v = new Vector3(c[0], c[1], c[2]);
+    return wrist.clone().addScaledVector(mR, v.dot(cR) * scale).addScaledVector(mN, v.dot(cN) * scale).addScaledVector(mD, v.dot(cD) * scale);
+  };
+
+  const old = new Map<string, Vector3>();
+  for (const c of CHAINS) for (const n of c) old.set(n, P(n).clone());
+  const at = (m: Map<string, Vector3>, n: string) => m.get(n) as Vector3;
+  const next = new Map<string, Vector3>();
+  CHAINS.forEach((chain, f) => {
+    let start: number;
+    if (f === 0) {
+      const cmc = map(CORE_SKELETON.thumbCmc);
+      const keep = at(old, chain[0]).clone().sub(wrist).dot(mN);
+      const got = cmc.clone().sub(wrist).dot(mN);
+      cmc.addScaledVector(mN, (keep - got) * (1 - THUMB_CMC_DEPTH_FIT));
+      next.set(chain[0], cmc);
+      start = 0;
+    } else {
+      next.set(chain[0], at(old, chain[0]).clone());
+      next.set(chain[1], map(CORE_SKELETON.knuckles[f - 1]));
+      start = 1;
+    }
+    for (let k = start; k < chain.length - 1; k++) {
+      const dir = at(old, chain[k + 1]).clone().sub(at(old, chain[k])).normalize();
+      next.set(chain[k + 1], at(next, chain[k]).clone().addScaledVector(dir, CORE_SKELETON.lengths[f][k - start] * scale));
+    }
+  });
+
+  // Per bone: old frame to new, v' = o' + R S (v - o), S stretching along the bone, R turning it onto its new direction.
+  // A bone with no child (the fingertip) moves with the bone before it.
+  const maps = new Map<string, Matrix4>();
+  for (const chain of CHAINS)
+    chain.forEach((n, k) => {
+      const last = k === chain.length - 1;
+      const base = last ? chain[k - 1] : n;
+      const child = last ? n : chain[k + 1];
+      const o = at(old, base);
+      const e = at(old, child).clone().sub(o);
+      const o2 = at(next, base);
+      const e2 = at(next, child).clone().sub(o2);
+      const r = e2.length() / Math.max(1e-9, e.length()) - 1;
+      const u = e.clone().normalize();
+      const S = new Matrix4().set(
+        1 + r * u.x * u.x, r * u.x * u.y, r * u.x * u.z, 0,
+        r * u.y * u.x, 1 + r * u.y * u.y, r * u.y * u.z, 0,
+        r * u.z * u.x, r * u.z * u.y, 1 + r * u.z * u.z, 0,
+        0, 0, 0, 1,
+      );
+      const R = new Quaternion().setFromUnitVectors(u, e2.clone().normalize());
+      const m = new Matrix4()
+        .makeTranslation(o2.x, o2.y, o2.z)
+        .multiply(new Matrix4().makeRotationFromQuaternion(R))
+        .multiply(S)
+        .multiply(new Matrix4().makeTranslation(-o.x, -o.y, -o.z));
+      maps.set(n, m);
+      const w = world.get(n) as { position: Vector3; quaternion: Quaternion };
+      w.position.copy(at(next, n));
+      w.quaternion.premultiply(R);
+    });
+  return maps;
+}
+
+/** Moves every vertex by the skin-weighted blend of its bones' refit maps (a bone without one stays). */
+function deformToFit(geo: BufferGeometry, maps: (Matrix4 | null)[]): void {
+  const pos = geo.attributes.position;
+  const si = geo.attributes.skinIndex;
+  const sw = geo.attributes.skinWeight;
+  const v = new Vector3();
+  const t = new Vector3();
+  const acc = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    acc.set(0, 0, 0);
+    let wsum = 0;
+    for (let c = 0; c < 4; c++) {
+      const w = sw.getComponent(i, c);
+      if (w <= 0) continue;
+      const m = maps[si.getComponent(i, c)];
+      t.copy(v);
+      if (m) t.applyMatrix4(m);
+      acc.addScaledVector(t, w);
+      wsum += w;
+    }
+    if (wsum > 0) pos.setXYZ(i, acc.x / wsum, acc.y / wsum, acc.z / wsum);
+  }
+  pos.needsUpdate = true;
 }
 
 /** Concentric rings laid across each hole when it is capped, so the wrist dome has rows to bend. */

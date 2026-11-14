@@ -3,7 +3,7 @@ import { CORE_PORT } from './useRobotStream';
 const ACK_TIMEOUT_MS = 3000;
 
 /** VITE_CORE_WS when set, otherwise the glove core on its own port on this page's host (route B). */
-function coreEndpoint(): string {
+export function coreEndpoint(): string {
   const env = import.meta.env.VITE_CORE_WS as string | undefined;
   if (env) return env;
   const host = typeof location !== 'undefined' ? location.hostname : 'localhost';

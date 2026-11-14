@@ -13,6 +13,7 @@ const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen')
 const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
 const RobotScreen = lazy(() => import('../features/shared/robot/RobotScreen'));
 const HandCameraView = lazy(() => import('../dev/HandCameraView'));
+const GloveCompare = lazy(() => import('../dev/GloveCompare'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -29,6 +30,7 @@ export function App() {
       <Route path="/design" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
       <Route path="/design/:frame" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
       <Route path="/dev/hand-camera" element={<Suspense fallback={null}><HandCameraView /></Suspense>} />
+      <Route path="/dev/glove-compare" element={<Suspense fallback={null}><GloveCompare /></Suspense>} />
       <Route element={<AppShell />}>
         <Route path="/expert" element={<MasterHome />} />
         <Route path="/expert/scratch" element={<MasterScratch />} />

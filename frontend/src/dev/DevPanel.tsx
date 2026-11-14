@@ -19,15 +19,17 @@ const MOTIONS: Record<string, MotionSpec> = {
 
 /** The free camera stage of the role select hand (src/dev/HandCameraView.tsx). */
 const HAND_CAMERA_PATH = '/dev/hand-camera';
+/** The core skeleton beside our hands, with guided captures (src/dev/GloveCompare.tsx). */
+const GLOVE_COMPARE_PATH = '/dev/glove-compare';
 
 /**
  * The panel sits outside the router, so move in-app through the history API (the router listens for popstate). A
  * modified click (new tab or window) is left to the browser. True when it navigated here, so the panel can fold away.
  */
-function openHandCamera(e: MouseEvent<HTMLAnchorElement>): boolean {
+function openHandCamera(e: MouseEvent<HTMLAnchorElement>, path = HAND_CAMERA_PATH): boolean {
   if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
   e.preventDefault();
-  window.history.pushState({}, '', HAND_CAMERA_PATH);
+  window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
   return true;
 }
@@ -97,6 +99,15 @@ function Body({ onLeave }: { onLeave: () => void }) {
         }}
       >
         Hand camera view
+      </a>
+      <a
+        className="dev__link"
+        href={GLOVE_COMPARE_PATH}
+        onClick={(e) => {
+          if (openHandCamera(e, GLOVE_COMPARE_PATH)) onLeave();
+        }}
+      >
+        Glove compare
       </a>
       <p className="dev__status">
         <span className={`dev__dot ${online ? 'dev__dot--ok' : ''}`} />

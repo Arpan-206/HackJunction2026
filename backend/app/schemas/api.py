@@ -1,6 +1,6 @@
 """Request and response bodies for the HTTP API that are not core contract types."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -317,6 +317,26 @@ class RevealRequest(BaseModel):
 
     kind: FileKind
     id: str = Field(min_length=1, max_length=160)
+
+
+class GloveCompareSave(BaseModel):
+    """POST /dev/glove_compare: one guided capture of the glove compare page, saved as JSON (and a PNG snapshot)."""
+
+    session: str = Field(pattern=c.SAFE_ID_PATTERN)
+    index: int = Field(ge=0, le=99)
+    slug: str = Field(pattern=c.SAFE_ID_PATTERN)
+    data: dict[str, Any]
+    png: str | None = Field(
+        default=None,
+        description="Side by side snapshot as a data:image/png;base64 URL.",
+    )
+
+
+class GloveCompareSaved(BaseModel):
+    """Where POST /dev/glove_compare wrote the capture."""
+
+    json_path: str
+    png_path: str | None = None
 
 
 class FileLocation(BaseModel):

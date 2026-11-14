@@ -206,3 +206,35 @@ def test_flag_off_is_forbidden(tmp_path: Path, launched: list[list[str]]) -> Non
             == 403
         )
     assert launched == []
+
+
+PNG_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+
+
+def test_glove_compare_saves_json_and_png_in_the_data_folder(
+    local: TestClient, tmp_path: Path
+) -> None:
+    body = {
+        "session": "s1",
+        "index": 3,
+        "slug": "point",
+        "data": {"core": [1, 2]},
+        "png": PNG_1PX,
+    }
+    r = local.post("/api/dev/glove_compare", json=body)
+    assert r.status_code == 200, r.text
+    out = r.json()
+    folder = tmp_path / c.GLOVE_COMPARE_DIR / "s1"
+    assert Path(out["json_path"]) == (folder / "03-point.json").resolve()
+    assert (folder / "03-point.json").read_text(encoding="utf-8") == '{"core":[1,2]}'
+    assert (folder / "03-point.png").read_bytes().startswith(b"\x89PNG")
+
+
+def test_glove_compare_rejects_unsafe_names_and_remote_callers(
+    local: TestClient, tmp_path: Path
+) -> None:
+    bad = {"session": "../x", "index": 1, "slug": "a", "data": {}}
+    assert local.post("/api/dev/glove_compare", json=bad).status_code == 422
+    with TestClient(create_app(_settings(tmp_path)), client=("10.0.0.9", 5)) as remote:
+        ok = {"session": "s", "index": 1, "slug": "a", "data": {}}
+        assert remote.post("/api/dev/glove_compare", json=ok).status_code == 403

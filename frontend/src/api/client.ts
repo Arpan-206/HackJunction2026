@@ -20,6 +20,8 @@ import type {
   DevStatePatch,
   FileKind,
   FileLocation,
+  GloveCompareSave,
+  GloveCompareSaved,
   GenerateLessonRequest,
   GenerateLessonResponse,
   HealthResponse,
@@ -252,6 +254,8 @@ export const api = {
   setDevState: (patch: DevStatePatch) => request<DevState>('POST', '/dev/state', patch),
   /** Dev only: open the file manager on the backend machine with a stored file selected; returns its path. */
   revealFile: (kind: FileKind, id: string) => request<FileLocation>('POST', '/dev/reveal', { kind, id }),
+  /** Dev only: save one glove compare capture under the data folder's glove_compare/<session>/. */
+  saveGloveCompare: (save: GloveCompareSave) => request<GloveCompareSaved>('POST', '/dev/glove_compare', save),
   /** Dev only: a stored file's absolute path, without opening anything. */
   locateFile: (kind: FileKind, id: string) => request<FileLocation>('GET', `/dev/locate${qs({ kind, id })}`),
 };
