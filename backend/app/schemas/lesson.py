@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app import constants as c
 from app.core.utils import new_id
-from app.schemas.common import Prop, Side, Skill, Tolerance
+from app.schemas.common import FingerValues, Prop, Side, Skill, Tolerance
 from app.schemas.motion import MotionSpec
 
 
@@ -37,6 +37,10 @@ class Step(BaseModel):
     repetitions: int = Field(default=c.DEFAULT_REPETITIONS, ge=1)
     tolerance: Tolerance = Field(default_factory=Tolerance)
     video_url: str | None = None
+    weights: FingerValues | None = Field(
+        default=None,
+        description="How much each finger counts on this step, 0 to 1; null counts every finger fully.",
+    )
 
 
 class TestSpec(BaseModel):

@@ -91,7 +91,12 @@ export interface Step {
   repetitions: number;
   tolerance: Tolerance;
   video_url: string | null;
+  /** How much each finger counts on this step, 0 to 1; null or absent counts every finger fully. */
+  weights?: FingerWeights | null;
 }
+
+/** Per-finger step weights, 0 to 1. A light finger costs less and is never named as the one to fix. */
+export type FingerWeights = Record<Finger, number>;
 
 export interface TestSpec {
   kind: 'table_tennis_rally' | 'piano_play_along';
@@ -210,6 +215,8 @@ export type ScoreRequest = (
   reference_calibration_id?: string;
   /** Which hand to score; omit to let the backend pick. */
   side?: Side;
+  /** The step's per-finger weights; omit to count every finger fully. */
+  weights?: FingerWeights | null;
 };
 
 export interface CoachHintRequest {

@@ -1,6 +1,7 @@
 import type {
   Calibration,
   Finger,
+  FingerWeights,
   GloveFrame,
   JointTriple,
   Lesson,
@@ -20,9 +21,10 @@ import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
 import { MOVES } from './seed';
-import { buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
+import { applyCalibrationMasks, buildHint, compare, resample, ScoringError, toResult, calibrateAttempt, STATIC_PRESETS, thresholds, DEFAULT_TOLERANCE_ANGLE_DEG } from './scoring';
 import { DEFAULT_MARGIN, isMargin } from '../api/margin';
 import { getStore } from './store';
+import { FINGERS } from '../api/types';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
 
@@ -127,7 +129,21 @@ function normaliseStep(raw: unknown): Step {
     repetitions: reps,
     tolerance: tolerance(raw.tolerance),
     video_url: (raw.video_url as string | null | undefined) ?? null,
+    weights: fingerWeights(raw.weights),
   };
+}
+
+/** Optional per-finger weights (Step.weights, ScoreRequest.weights): five numbers, or null. */
+function fingerWeights(v: unknown): FingerWeights | null {
+  if (v === undefined || v === null) return null;
+  if (!isObj(v)) return invalid('weights must be an object of five finger numbers');
+  const out = {} as FingerWeights;
+  for (const f of FINGERS) {
+    const n = v[f] === undefined ? 0 : Number(v[f]);
+    if (!Number.isFinite(n)) return invalid(`weights.${f} must be a number`);
+    out[f] = n;
+  }
+  return out;
 }
 
 function normaliseLesson(raw: unknown): LessonDraftBody {
@@ -243,6 +259,8 @@ function score(b: Record<string, unknown>): ScoreResult {
   }
 
   const warnings: string[] = [];
+  let weights: Partial<Record<Finger, number>> | null = fingerWeights(b.weights);
+  let jointMask: number[][] | null = null;
   const reference = resample(referenceFrames, sideName);
   let attempt = resample(attemptFrames, sideName);
   const ownId = b.attempt_calibration_id as string | undefined;
@@ -250,10 +268,15 @@ function score(b: Record<string, unknown>): ScoreResult {
   if (ownId || refId || b.use_latest_calibration === true) {
     const own = ownId ? getCalibration(ownId) : b.use_latest_calibration === true ? latestCalibration(sideName) : null;
     const refCal = refId ? getCalibration(refId) : null;
-    if (own) attempt = calibrateAttempt(attempt, own, refCal, warnings);
+    if (own) {
+      attempt = calibrateAttempt(attempt, own, refCal, warnings);
+      const masked = applyCalibrationMasks(own, weights, warnings);
+      jointMask = masked.jointMask;
+      weights = masked.weights;
+    }
   }
   const declaredStatic = hasRefMotion && STATIC_PRESETS.includes((b.reference_motion as { preset?: string }).preset ?? '') ? true : undefined;
-  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic), tol, chosen), warnings };
+  return { ...toResult(compare(reference, attempt, SCORE_FPS, declaredStatic, jointMask), tol, chosen, weights), warnings };
 }
 
 type Handler = (req: MockRequest, params: string[]) => Promise<MockResponse> | MockResponse;

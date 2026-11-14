@@ -70,6 +70,10 @@ class ScoreRequest(BaseModel):
     use_latest_calibration: bool = False
     attempt_calibration_id: str | None = None
     reference_calibration_id: str | None = None
+    weights: FingerValues | None = Field(
+        default=None,
+        description="The step's per-finger weights, 0 to 1; null counts every finger fully.",
+    )
 
     @model_validator(mode="after")
     def _one_reference(self) -> "ScoreRequest":
