@@ -8,7 +8,7 @@ src/
   app/                     App (route table), AppShell (lapis rail), RoleSelect (/), HandLab (/lab), app.css
   features/
     master/                MasterHome (/master) + placeholder pages: scratch, generate, lesson studio
-    apprentice/            placeholder pages: home, lesson, step, test
+    apprentice/            skills/ (dashboard, skill page, catalogue), course, training, test
   components/
     ui/                    UI kit: Button, ButtonLink, Card, Badge, Stepper, Countdown, RecordButton, Tabs, Field, TextArea, Toast
     PageHeader.tsx         standard screen header

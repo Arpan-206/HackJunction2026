@@ -11,9 +11,17 @@ npm run build    # tsc -b && vite build
 npm run lint
 ```
 
-Developer panel: renders only when switched on. Open any page with `?dev=1` to show it. The flag is remembered for that browser tab only (sessionStorage key `apprentice.flag.dev`), so a new tab or a new session starts without it; `?dev=0` clears it at once. The old sticky localStorage key `apprentice.devpanel` is deleted on sight. The same flag shows the "Load demo history" button on the library and the clumsy-apprentice switch in the training room's settings. The panel docks as a small tab on the right edge, and it also holds the theme switch. `VITE_DEV_PANEL` no longer forces it on.
+Developer panel: renders only when switched on. Open any page with `?dev=1` to show it. The flag is remembered for that browser tab only (sessionStorage key `apprentice.flag.dev`), so a new tab or a new session starts without it; `?dev=0` clears it at once. The old sticky localStorage key `apprentice.devpanel` is deleted on sight. The same flag shows the "Load demo history" button on the learner dashboard and the clumsy-apprentice switch in the training room's settings. The panel docks as a small tab on the right edge, and it also holds the theme switch. `VITE_DEV_PANEL` no longer forces it on.
 
 `/lab` is a gallery of every hand style, pose, prop and grip camera. Use it when touching `src/three/`.
+
+## Learner routes
+
+- `/apprentice`: the dashboard. The Today panel, a skill search (press `/` to focus it, Escape clears it; the last query is kept in sessionStorage `apprentice.skillQuery` for the tab only), quiet Level and Hands toggles, then one card per skill. Live skills come from the lessons the API serves, grouped by `skill`; the rest are "In the workshop" and dimmed.
+- `/apprentice/skills/:skillId`: one skill. A showcase replays lesson 1 and lesson 2 of its first course on the walnut bench, beside the description, level, hands, time to learn, one primary action ("Start lesson 1" or "Continue lesson N", to the training room), "Test your skills" when a course has a test, and the lesson list with progress from the practice log. Workshop skills say they are not teachable yet and have no start button.
+- `/apprentice/lessons/:lessonId` (course page), `.../steps/:stepIndex` (training room) and `.../test` are unchanged. `/apprentice/skills`, `/apprentice/lessons` and `/apprentice/library` redirect to the dashboard.
+
+The skill catalogue (names, descriptions, difficulty, keywords, hands, time to learn, key pose for the card still) lives in `src/features/apprentice/skills/catalogue.ts`, with the merge, the search filter and the per-skill progress as pure functions (`tests/skills.test.ts`). A lesson for a skill id the catalogue does not know shows up as a live skill with defaults. Card stills use the shared preview canvas (`HandPreview` with `decor`), so the grid costs one WebGL context.
 
 ## Structure
 

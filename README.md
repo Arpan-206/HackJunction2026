@@ -43,7 +43,7 @@ The expert chooses one hand (left or right) or two hands for each move or step. 
 
 ## Demo: two windows
 
-Open `http://localhost:5173/expert` in one window (record or generate a lesson) and `http://localhost:5173/apprentice` in another (train, score, test). `/` is the role picker. `/lab` is a hand lab page.
+Open `http://localhost:5173/expert` in one window (record or generate a lesson) and `http://localhost:5173/apprentice` in another (the skill dashboard: pick a skill, train, score, test). `/` is the role picker. `/lab` is a hand lab page.
 
 - Dev panel: add `?dev=1` to show it (remembered for the tab only, never across sessions), `?dev=0` to hide it.
 - Playground: `/playground` is a sandbox for the 3D hand and overlays.
