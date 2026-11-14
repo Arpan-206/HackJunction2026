@@ -23,6 +23,15 @@ with `python -m ios.mac.replay captures/bench.gdrec.gz --info`. The PathOn
 app is the WiFi fallback only: in its USB mode the phone refuses port 8888 and
 no other port of its own listens.
 
+**Bench capture (Sat 15:51, patched app):** `captures/bench-3.gdrec.gz`, 300
+frames at 30 fps, the phone on the bench with a hand on black fabric. The
+bench plane faced up, 0.19 m below the camera, and held the same height to
+the millimetre over the 10 s. Depth noise on a still scene: 1.8 mm on high
+confidence pixels, 59 mm on low confidence pixels, so mask by confidence
+(`DepthFrame.depth_ok`). Black fabric gives filled, smooth depth with low
+confidence; hands and objects give high confidence. The app preview is in
+colour. Reinstall path from the terminal is in `ios/README.md`.
+
 **On `main` now, all suites green** (core and decisions 203 tests, backend 255,
 frontend 296, lint and build):
 
