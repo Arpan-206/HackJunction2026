@@ -113,3 +113,12 @@ Do not run `rokoko-sdk` network configuration commands (GetNetworkConfiguration)
 - On Ctrl-C the driver sometimes prints `libc++abi: terminating` and exits with code 134 (abort). The ports close and nothing is left running.
 - Python tools print a `KeyboardInterrupt` traceback when stop.sh ends them. The capture files still close cleanly.
 - The backend's `/gloves` status shows `sdk_found: false` on macOS. It looks for Windows `.exe` names. It does not matter here, because live.sh starts the driver and the solver.
+
+## Glove-on results, Sat 14 Nov 13:19 (added by the dispatcher)
+
+- `scripts/live.sh arpan` from the main checkout: all seven parts up in about 1 s once the Rokoko desktop app was closed. Two earlier starts failed with "Error creating UDP server: bind: Address already in use" from the driver because that app and its device service held the port.
+- Driver and solver saw the right glove at once (device 291175775, "solving right hand from device 291175775 (group 0, 8 sensors, 83.33 Hz)"); the left glove (3552246405) appeared about nine minutes later after its USB was plugged in.
+- Core `/health`: `rgmp.connected true`, `devices {291175775: right, 3552246405: left}`, `rcsp.connected true`, both hands `tracked true`.
+- Captures: `solver_12277.rgmp` grew at about 160 KB/s, `driver_12276.rgmp` at about 60 KB/s; one hour is about 1.3 GB.
+- The frontend gloves screen and the core debug view both showed the hands. Calibration through the screen did not reach the backend on the first try; the API calls (`POST /api/calibrations` flat and fist per side, then `POST /api/gloves/calibrations/neutral` and `.../finish`) did, and the core loaded them on `calibrate`.
+- `scripts/stop.sh` has not yet been run against this glove run.

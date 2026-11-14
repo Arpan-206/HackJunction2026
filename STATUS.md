@@ -1,5 +1,53 @@
 # STATUS.md
 
+## Saturday 14 Nov, 14:40: handover to Szymon (read this first)
+
+Everything below this section is the overnight core report, still valid.
+This section is what changed on Saturday and where things stand.
+
+**On `main` now, all suites green** (core and decisions 203 tests, backend 255,
+frontend 296, lint and build):
+
+| Lane | What it added | Its note |
+| --- | --- | --- |
+| core | Per-wearer flat and fist calibration read from the backend's files; parity off; threshold study on real data | `STATUS-core.md` |
+| robot-view | Dex3-1 twin in the frontend from `/ws/robot`, `/robot` screen, source control | `frontend/STATUS-robot-view.md` |
+| decisions | Gemini Decisions adapter behind the core's coach interface, rule fallback, registered in `core/server.py` | `decisions/STATUS-decisions.md` |
+| export | Lessons plus Dex3-1 targets to LeRobot episodes, one command | `STATUS-export.md` |
+| verda | Gemma 4 31B on a Verda H200 behind vLLM, measured, torn down; 3.94 USD spent | `verda/STATUS-verda.md`, `docs/VERDA.md` |
+| typing | Typing task, `/typing` screen, keystroke verdicts, accuracy tool, `[typing]` thresholds | `STATUS-typing.md` |
+| weights | Per-finger step weights (take consistency x task chart x calibration mask) in both scorers and the practice view | `STATUS-weights.md` |
+| rokoko-setup | Rokoko SDK installed and activated on this Mac; `scripts/live.sh`, `scripts/stop.sh`, `docs/GLOVE-SLOT.md` | `STATUS-rokoko-setup.md` |
+
+**Glove slot, 13:19 to 14:20, both Smartgloves II on this Mac, through
+route B** (core reads the solver; the bridge feeds the backend; the frontend
+reads the backend):
+
+| Check | Result |
+| --- | --- |
+| Live stack | `scripts/live.sh arpan` brought up driver, solver, two raw captures, core, bridge, backend, frontend. Two earlier attempts failed because the Rokoko desktop app held the driver's UDP port; quit it first (GLOVE-SLOT step 0) |
+| Gloves | right device 291175775 and left 3552246405, both solved at 83.3 Hz, both tracked in the core |
+| Raw captures | `logs/live/20261114-131952/` (untracked, about 1 GB solver plus 0.3 GB driver for the hour); replay any window with `--replay` |
+| Calibration | flat and fist captured through the backend API for wearer "arpan", linked by a neutral record, loaded by the core. Right glove calibrated well (knuckle ranges 37 to 49 deg). Left glove ranges 0.7 to 8 deg: loose or mis-seated, redo it |
+| Held pose copied by the same glove | 3 of 3 hold steps passed within 2 s, scores 0.95, 0.995, 1.00. The sensing and the scorer are proven |
+| Three-take continuous lesson (crochet style) in the expert screens | mid 70s when the expert copies himself: a lesson and margin problem, not a sensing problem. Record clear poses for visitors; set the margin from the expert's own spread |
+| Typing finger detection | two clean runs: 17% and 31% of keys got a clear finger, 6% and 4% matched the chart. The solver's angles do not show keystrokes. Keep typing as a drill without a finger verdict, or try the raw driver stream |
+
+**Decisions taken today**: route B, one owner per capability, both contracts
+frozen (`RECONCILE.md` section 0). The product name is Geppetto; the rename
+checklist in `CLAUDE.md` is still open. Thresholds: start pose lessons at
+`perfect_deg = 15`, `wrong_deg = 60` (patch in `STATUS-core.md`, not applied).
+
+**Patches written by lanes for a human, not applied**: expert takes to
+`Step.weights` in the expert screens (`STATUS-weights.md`, six lines);
+`backend/app/constants.py` uses `.exe` names so `/gloves` reports the SDK as
+missing on the Mac (`STATUS-rokoko-setup.md`); the decisions rubric into the
+scorer and `/health` counters (`decisions/STATUS-decisions.md`, optional).
+
+**Running on this Mac at handover**: the live stack from 13:19 is still up
+and capturing. Stop it with `scripts/stop.sh`. No lane session is running.
+Keys and tokens are in the git-ignored `.env` at the repo root.
+
 Written Sat 14 Nov 2026, 05:00 Helsinki time, updated 10:55, on branch
 `core-overnight` (pushed to origin at 07:15, merged with `main` as of `9810bf5`). Everything below runs with no hardware. Read the three lists in
 order: works and is tested; written but untested; what to check first with the
