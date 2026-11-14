@@ -2,6 +2,7 @@ import { Group, Matrix4, Skeleton, SkinnedMesh, type Bone, type Object3D, type V
 import type { Finger, Side } from '../api/types';
 import type { StageColors } from '../theme/themes';
 import { FINGER_ORDER } from './anatomy';
+import { installDualQuaternionSkinning } from './dqSkinning';
 import type { HandTemplate } from './handModel';
 import { applyHandPose, createBones } from './handPose';
 import { createHandMaterials, type HandMaterialSet, type HandStyle } from './materials';
@@ -35,6 +36,8 @@ export interface HandRig {
 }
 
 const IDENTITY = new Matrix4();
+
+installDualQuaternionSkinning();
 
 /**
  * Builds one hand instance from the shared template: its own bones and skeleton, the skinned mesh and, for inked
