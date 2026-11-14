@@ -18,6 +18,21 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**Third batch (Sat 18:55 on), merged so far:** expert-priors (core 210
+pass). `core/priors/`: an ASL letter recogniser on the 18 angles (20 classes,
+J and Z excluded, G/Q, K/P and H/U/V merged; leave-one-session-out top-1
+67.4 %, top-2 87.7 %, calibrated confidence), a FurElise piano posture checker
+(47 training pieces, held-out pianists inside the expert band 85 to 98 % per
+joint; suggested piano tolerances about 7 perfect and 20 to 23 wrong, config
+unchanged at 15/60), both as optional coach facts behind the environment
+flags PRIORS_ASL and PRIORS_PIANO, off by default, and a provenance test (no
+Gemini, no Decisions API, no logs/live data in training). PianoMotion10M was
+dropped: CC BY-NC-ND and MANO-gated. Not tested on real piano or real
+fingerspelling: record one glove piano take and one fingerspelled alphabet,
+then `python -m core.priors.real_check`. `docs/PRIORS.md`,
+`STATUS-expert-priors.md`. Verda VMs refuse the coupon balance without a
+payment method; only Serverless Containers run. coach-tune is still running.
+
 **Second batch (Sat 18:05 to 18:40), merged on main, suites green** (core 190,
 backend 375, frontend 359, lint, build):
 
