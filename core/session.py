@@ -12,6 +12,7 @@ import numpy as np
 from . import hand as H
 from .calibration import Calibrations
 from .coach import Coach, CoachLine
+from .priors.facts import from_scorer as prior_facts
 from .recorder import Lesson, Recorder, delete_lesson, list_lessons
 from .robot import SOURCES as ROBOT_SOURCES
 from .robot import Retargeter
@@ -446,6 +447,7 @@ class Session:
     def _attempt_failed(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None and self.step_index is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=False)
+        summary = prior_facts(summary, sc)  # PRIORS_ASL / PRIORS_PIANO, off by default
         self.log_attempt(summary)
         log.info("attempt failed: %s", summary)
         self.emit_coach(self.coach.on_summary(t_us, summary))
@@ -472,6 +474,7 @@ class Session:
     def _stuck(self, side: str, sc: StepScorer, t_us: int) -> None:
         assert self.lesson is not None
         summary = sc.summary(t_us, self.task, self.lesson.title, stuck=True)
+        summary = prior_facts(summary, sc)  # PRIORS_ASL / PRIORS_PIANO, off by default
         self.log_attempt(summary)
         log.info("stuck: %s", summary)
         self.emit_event(

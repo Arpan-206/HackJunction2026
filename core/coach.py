@@ -97,8 +97,14 @@ class RuleCoach:
             return CoachLine(
                 "tip", RULE_LINES[key], None, step, self.speak, "rule", hand=hand
             )
+        # Optional prior facts (core/priors/facts.py, PRIORS_ASL / PRIORS_PIANO,
+        # off by default): the first one leads the rule line.
+        facts = (summary.get("priors") or {}).get("facts") or []
+        lead = (facts[0][:1].upper() + facts[0][1:] + ". ") if facts else ""
         fingers = summary.get("fingers") or {}
         if not fingers:
+            if lead:
+                return CoachLine("tip", lead.strip(), None, step, self.speak, "rule", hand=hand)
             return None
         worst = min(fingers.items(), key=lambda kv: kv[1].get("score", 1.0))
         finger, info = worst
@@ -107,7 +113,7 @@ class RuleCoach:
             return None
         return CoachLine(
             "tip",
-            RULE_LINES[hint].format(finger=finger),
+            lead + RULE_LINES[hint].format(finger=finger),
             finger,
             step,
             self.speak,
