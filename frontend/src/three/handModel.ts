@@ -3,9 +3,11 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildLayout, CHAINS, palmFrame, WRIST, type HandLayout } from './handPose';
 
 /**
- * The skinned hand mesh: the WebXR Input Profiles generic-hand (MIT, see public/models/hands/LICENSE.md), loaded once
- * and turned into a template every <Hand> instance shares. Loading is the only browser-bound part; buildHandTemplate
- * is pure and runs in tests against the same file.
+ * The skinned hand mesh: the Godot XR Tools right hand (CC0, made with MakeHuman; see public/models/hands/LICENSE.md),
+ * its joints renamed to the WebXR hand joint names and its wrist cut flat. Loaded once and turned into a template every
+ * <Hand> instance shares: welded, its wrist capped and rounded off, subdivided once, knuckles raised, and given the
+ * attributes the materials read. Loading is the only browser-bound part; buildHandTemplate is pure and runs in tests
+ * against the same file.
  */
 
 export const HAND_MODEL_URL = '/models/hands/right.glb';
@@ -18,13 +20,16 @@ const KNUCKLE_Z = -1.0;
  * Where the wrist starts to close, past the wrist joint, and how long the closing dome is (scene units, 12 per metre):
  * the hand closes from just before the wrist joint and ends about 2 cm past it.
  */
-const WRIST_CREASE = -0.06;
-const WRIST_END = 0.32;
-/** One Loop subdivision pass: 2.3k triangles become 9.3k, enough for smooth close-up silhouettes. */
+const WRIST_CREASE = -0.2;
+const WRIST_END = 0.22;
+/** Concavity (offset to the neighbours along the normal per edge length) over which a crease fades into aCavity. */
+const CREASE_FROM = 0.04;
+const CREASE_TO = 0.2;
+/** One Loop subdivision pass: about 3k triangles become 12k, enough for smooth close-up silhouettes. */
 const SUBDIVIDE = true;
 
 export interface HandTemplate {
-  /** Welded, subdivided skinned geometry in hand space with position, normal, uv, skin, aFingerA, aFingerB, aForearm. */
+  /** Welded, subdivided skinned geometry in hand space: position, normal, uv, skin, aFingerA, aFingerB, aForearm, aCavity. */
   geometry: BufferGeometry;
   layout: HandLayout;
   /** A point on the back of the wrist (hand space), for leader lines. */
@@ -88,6 +93,9 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   for (let i = 0; i < si.count; i++) for (let c = 0; c < 4; c++) si.setComponent(i, c, Math.max(0, remap[si.getComponent(i, c)]));
 
   const wrist = layout.bones[0].worldPosition;
+  const capped = closeHoles(geo);
+  geo.dispose();
+  geo = capped;
   taperWrist(geo, wrist);
   if (SUBDIVIDE) {
     const sub = loopSubdivide(geo);
@@ -104,6 +112,69 @@ export function buildHandTemplate(scene: Object3D): HandTemplate {
   const bb = geo.boundingBox as NonNullable<BufferGeometry['boundingBox']>;
   const wristBack = new Vector3(wrist.x, bb.max.y * 0.8, wrist.z);
   return { geometry: geo, layout, wristBack };
+}
+
+/** Concentric rings laid across each hole when it is capped, so the wrist dome has rows to bend. */
+const CAP_RINGS = 4;
+
+/**
+ * Closes every hole in a welded triangle mesh (the model's wrist is cut open) with a cap of concentric rings
+ * shrinking to the hole's centroid, wound to match the surface. Cap vertices follow the wrist bone alone.
+ */
+export function closeHoles(geo: BufferGeometry): BufferGeometry {
+  const P = geo.attributes.position;
+  const SI = geo.attributes.skinIndex;
+  const SW = geo.attributes.skinWeight;
+  const idx = Array.from((geo.index as BufferAttribute).array);
+  const half = new Set<number>();
+  const n = P.count;
+  for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) half.add(idx[t + k] * n + idx[t + ((k + 1) % 3)]);
+  // Boundary half-edges a -> b have no twin b -> a; following them walks each hole's rim.
+  const next = new Map<number, number>();
+  half.forEach((e) => {
+    const a = Math.floor(e / n);
+    const b = e % n;
+    if (!half.has(b * n + a)) next.set(a, b);
+  });
+  const pos = Array.from(P.array as ArrayLike<number>);
+  const sIdx = Array.from(SI.array as ArrayLike<number>);
+  const sW = Array.from(SW.array as ArrayLike<number>);
+  const add = (x: number, y: number, z: number) => {
+    pos.push(x, y, z);
+    sIdx.push(0, 0, 0, 0);
+    sW.push(1, 0, 0, 0);
+    return pos.length / 3 - 1;
+  };
+  const seen = new Set<number>();
+  next.forEach((_, start) => {
+    if (seen.has(start)) return;
+    const loop: number[] = [];
+    for (let v: number | undefined = start; v !== undefined && !seen.has(v); v = next.get(v)) {
+      seen.add(v);
+      loop.push(v);
+    }
+    if (loop.length < 3) return;
+    const c = [0, 0, 0];
+    for (const v of loop) for (let k = 0; k < 3; k++) c[k] += pos[v * 3 + k] / loop.length;
+    let outer = loop;
+    for (let r = 1; r <= CAP_RINGS; r++) {
+      const t = r / (CAP_RINGS + 1);
+      const inner = loop.map((v) => add(...([0, 1, 2].map((k) => pos[v * 3 + k] + (c[k] - pos[v * 3 + k]) * t) as [number, number, number])));
+      for (let i = 0; i < loop.length; i++) {
+        const j = (i + 1) % loop.length;
+        idx.push(outer[j], outer[i], inner[i], outer[j], inner[i], inner[j]);
+      }
+      outer = inner;
+    }
+    const centre = add(c[0], c[1], c[2]);
+    for (let i = 0; i < loop.length; i++) idx.push(outer[(i + 1) % loop.length], outer[i], centre);
+  });
+  const out = new BufferGeometry();
+  out.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  out.setAttribute('skinIndex', new Uint16BufferAttribute(sIdx, 4));
+  out.setAttribute('skinWeight', new Float32BufferAttribute(sW, 4));
+  out.setIndex(idx);
+  return out;
 }
 
 /**
@@ -200,7 +271,11 @@ function smoothstep(a: number, b: number, x: number): number {
  * - aFingerA (thumb, index, middle, ring) and aFingerB (little): how much a vertex belongs to each finger, from its skin
  *   weights on that finger's phalanges (and the thumb metacarpal), sharpened so a tint stops at the knuckle crease.
  * - aForearm: 0 just before the wrist crease to 1 at the closed end, for the translucent styles' wrist fade.
- * - uv: the grain running along the fingers and wrapping down their sides, for the wood maps.
+ * - aCavity: 0..1, how far a vertex sits in a fold: the sides of the fingers that face a neighbouring finger, and the
+ *   concave creases (webbing, palm lines, the valleys between knuckles). The lit styles darken it a little, so fingers
+ *   pressed together in a fist or a grip still read as separate fingers.
+ * - uv: wood grain running along each bone (so it follows every finger, splayed or curled) and wrapping down the
+ *   finger sides, blended by the skin weights so it has no seams.
  */
 function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vector3): void {
   const n = geo.attributes.position.count;
@@ -208,7 +283,6 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
   const si = geo.attributes.skinIndex;
   const sw = geo.attributes.skinWeight;
   const nrm = geo.attributes.normal;
-  const boneY = layout.bones.map((d) => d.worldPosition.y);
   const fingerOf = new Int8Array(layout.bones.length).fill(-1);
   CHAINS.forEach((chain, f) =>
     chain.forEach((name, k) => {
@@ -216,13 +290,19 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
       fingerOf[layout.bones.findIndex((b) => b.name === name)] = f;
     }),
   );
+  const frames = boneFrames(layout);
+  const concave = concavity(geo);
   const a = new Float32Array(n * 4);
   const b = new Float32Array(n);
   const fore = new Float32Array(n);
+  const cav = new Float32Array(n);
   const uv = new Float32Array(n * 2);
   const w = [0, 0, 0, 0, 0];
   const zA = wrist.z + WRIST_CREASE - 0.08;
   const zB = wrist.z + WRIST_CREASE + WRIST_END;
+  const p = new Vector3();
+  const nv = new Vector3();
+  const rel = new Vector3();
   for (let i = 0; i < n; i++) {
     w.fill(0);
     for (let c = 0; c < 4; c++) {
@@ -233,18 +313,115 @@ function addHandAttributes(geo: BufferGeometry, layout: HandLayout, wrist: Vecto
     a.set([w[0], w[1], w[2], w[3]], i * 4);
     b[i] = w[4];
     fore[i] = Math.min(1, Math.max(0, (pos.getZ(i) - zA) / (zB - zA)));
-    // Grain along the fingers (v follows z). Across them, u is x on the back and the palm, and on the sides of a finger
-    // it keeps unrolling down the side (by the height below the bone's centre line, weighted by how sideways the
-    // surface faces), so the sides carry grain too instead of one colour smeared along the finger. No seams.
-    let yc = 0;
-    for (let c = 0; c < 4; c++) yc += sw.getComponent(i, c) * boneY[si.getComponent(i, c)];
-    uv[i * 2] = (pos.getX(i) + nrm.getX(i) * (yc - pos.getY(i))) * 0.55;
-    uv[i * 2 + 1] = pos.getZ(i) * 0.3;
+    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    nv.set(nrm.getX(i), nrm.getY(i), nrm.getZ(i));
+    // Grain: along the bone (v) and across it (u), unrolled down the finger sides by the height below the bone's centre
+    // line, weighted by how sideways the surface faces, so the sides carry grain instead of one smeared colour.
+    let u = 0;
+    let v = 0;
+    let side = 0;
+    for (let c = 0; c < 4; c++) {
+      const wt = sw.getComponent(i, c);
+      if (wt <= 0) continue;
+      const fr = frames[si.getComponent(i, c)];
+      rel.copy(p).sub(fr.origin);
+      const ns = nv.dot(fr.side);
+      u += wt * (p.dot(fr.side) - ns * rel.dot(fr.up));
+      v += wt * (fr.start + rel.dot(fr.along));
+      side += wt * ns;
+    }
+    uv[i * 2] = u * 0.55;
+    uv[i * 2 + 1] = -v * 0.3;
+    // Finger sides that face another finger: the ulnar side of the index, both sides of middle and ring, the radial
+    // side of the little finger.
+    const facing = smoothstep(0.35, 0.9, Math.abs(side));
+    const inner = w[2] + w[3] + w[1] * smoothstep(-0.2, 0.2, -side) + w[4] * smoothstep(-0.2, 0.2, side);
+    cav[i] = Math.min(1, facing * Math.min(1, inner) * 0.8 + concave[i]) * (1 - smoothstep(0, 0.25, fore[i]));
   }
   geo.setAttribute('aFingerA', new BufferAttribute(a, 4));
   geo.setAttribute('aFingerB', new BufferAttribute(b, 1));
   geo.setAttribute('aForearm', new BufferAttribute(fore, 1));
+  geo.setAttribute('aCavity', new BufferAttribute(cav, 1));
   geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+}
+
+interface BoneFrame {
+  origin: Vector3;
+  /** Unit direction from the bone to its child (the finger's long axis). */
+  along: Vector3;
+  /** Unit direction across the bone towards the thumb side, in the plane of the hand. */
+  side: Vector3;
+  /** Unit direction out of the back of the bone. */
+  up: Vector3;
+  /** Distance from the wrist along the chain to this bone, so the grain runs on from bone to bone. */
+  start: number;
+}
+
+/** A frame per bone from the bind pose: long axis, sideways and dorsal directions, and its distance along the chain. */
+function boneFrames(layout: HandLayout): BoneFrame[] {
+  const { bones, palm } = layout;
+  const child = new Map<number, number>();
+  bones.forEach((d, i) => {
+    if (d.parent >= 0 && !child.has(d.parent)) child.set(d.parent, i);
+  });
+  // The wrist's first child is the thumb's metacarpal; the palm runs along the middle finger's instead.
+  const middle = bones.findIndex((d) => d.name === CHAINS[2][0]);
+  if (middle >= 0) child.set(0, middle);
+  const frames: BoneFrame[] = [];
+  bones.forEach((d, i) => {
+    const c = child.get(i);
+    const along = c !== undefined ? bones[c].worldPosition.clone().sub(d.worldPosition) : d.parent >= 0 ? d.worldPosition.clone().sub(bones[d.parent].worldPosition) : palm.distal.clone();
+    if (along.lengthSq() < 1e-10) along.copy(palm.distal);
+    along.normalize();
+    const up = new Vector3().crossVectors(along, palm.radial).normalize();
+    if (up.dot(palm.palmar) > 0) up.negate();
+    const side = new Vector3().crossVectors(up, along).normalize();
+    if (side.dot(palm.radial) < 0) side.negate();
+    const start = d.parent >= 0 ? frames[d.parent].start + d.worldPosition.distanceTo(bones[d.parent].worldPosition) : 0;
+    frames.push({ origin: d.worldPosition.clone(), along, side, up, start });
+  });
+  return frames;
+}
+
+/**
+ * Per-vertex concavity, 0..1: how far a vertex sits below the mean of its neighbours along its normal, relative to the
+ * local edge length. Creases and the webbing between fingers score high, flat and convex skin zero.
+ */
+function concavity(geo: BufferGeometry): Float32Array {
+  const P = geo.attributes.position;
+  const N = geo.attributes.normal;
+  const idx = (geo.index as BufferAttribute).array;
+  const n = P.count;
+  const sum = new Float32Array(n * 3);
+  const len = new Float32Array(n);
+  const cnt = new Uint16Array(n);
+  for (let t = 0; t < idx.length; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const i = idx[t + k];
+      const j = idx[t + ((k + 1) % 3)];
+      const dx = P.getX(j) - P.getX(i);
+      const dy = P.getY(j) - P.getY(i);
+      const dz = P.getZ(j) - P.getZ(i);
+      const l = Math.hypot(dx, dy, dz);
+      sum[i * 3] += dx;
+      sum[i * 3 + 1] += dy;
+      sum[i * 3 + 2] += dz;
+      sum[j * 3] -= dx;
+      sum[j * 3 + 1] -= dy;
+      sum[j * 3 + 2] -= dz;
+      len[i] += l;
+      len[j] += l;
+      cnt[i] += 1;
+      cnt[j] += 1;
+    }
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!cnt[i]) continue;
+    // Mean offset to the neighbours along the normal, over the mean edge length: positive in a fold.
+    const d = (sum[i * 3] * N.getX(i) + sum[i * 3 + 1] * N.getY(i) + sum[i * 3 + 2] * N.getZ(i)) / len[i];
+    out[i] = smoothstep(CREASE_FROM, CREASE_TO, d);
+  }
+  return out;
 }
 
 /**
