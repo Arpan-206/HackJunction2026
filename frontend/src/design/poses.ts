@@ -41,9 +41,6 @@ export const SKILL_POSES = {
   tableTennis: synthFrame(SWING, 0.88),
   piano: synthFrame(SCALE, 0.22),
   shadow: pose([0.05, -0.05, 0.95, 0.95, -0.05], [-0.15, 0.5, -1.2]),
-  spelling: pose([0.55, 1, 1, 1, -0.1], [1.15, 0.2, 0]),
-  boxing: pose([0.8, 1, 1, 1, 1], [0, 0, -1.4]),
-  guitar: pose([0.2, 0.55, 0.7, 0.62, 0.4], [0.95, -0.4, 0.25]),
-  rps: pose([0.85, -0.05, -0.05, 1, 1], [-0.2, 0.1, -0.2]),
-  therapy: pose([0.3, 0.75, 0.78, 0.8, 0.82], [1.2, 0, 0]),
+  // Finnish fingerspelling: the letter Y, thumb and little finger out.
+  spelling: pose([0, 1, 1, 1, 0], [1.15, 0.2, 0]),
 } satisfies Record<string, HandFrame>;
