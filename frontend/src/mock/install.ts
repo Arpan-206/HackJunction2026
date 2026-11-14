@@ -15,6 +15,8 @@ const LATENCY_MS = 25;
 declare global {
   interface Window {
     __apprenticeMock?: boolean;
+    /** Set when mock mode was asked for (?mock=1 or VITE_MOCK=1), not just fallen back to: then nothing reaches a real engine. */
+    __apprenticeMockExplicit?: boolean;
   }
 }
 
@@ -208,6 +210,7 @@ export async function maybeInstallMock(): Promise<boolean> {
     return false;
   }
   if (mockRequestedExplicitly()) {
+    window.__apprenticeMockExplicit = true;
     installMock(import.meta.env.VITE_MOCK === '1' ? 'VITE_MOCK=1' : 'requested with ?mock=1');
     return true;
   }

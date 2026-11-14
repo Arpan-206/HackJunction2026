@@ -51,7 +51,8 @@ export function robotEndpoints(): string[] {
   if (env) out.push(env);
   if (typeof location !== 'undefined') {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    out.push(`ws://${location.hostname}:${CORE_PORT}/ws/robot`);
+    // Explicit mock mode stays offline: probing the core's port would only log a refused connection.
+    if (typeof window === 'undefined' || window.__apprenticeMockExplicit !== true) out.push(`ws://${location.hostname}:${CORE_PORT}/ws/robot`);
     out.push(`${proto}://${location.host}/ws/robot`);
   }
   return [...new Set(out)];
