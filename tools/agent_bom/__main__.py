@@ -6,6 +6,8 @@ Usage (repo root, Python 3.12, standard library only):
     python -m tools.agent_bom report [LANE ...]     # every lane against main, Markdown on stdout
     python -m tools.agent_bom gate LANE             # merge gate: exit 0 pass, 1 block, 2 no evidence
     python -m tools.agent_bom provenance DIGEST     # OCI manifest provenance for an image digest
+    python -m tools.agent_bom history               # git only: which lane first locked each package into main
+    python -m tools.agent_bom steps RUN_ID          # GitHub logs only: failed steps and npm audit per lane
 
 The token comes from CRACI_API_TOKEN in the environment or in the repo root .env. Raw API answers are cached under
 ~/.cache/agent_bom so a report can be re-rendered without new calls.
@@ -21,7 +23,14 @@ from pathlib import Path
 
 from .analyse import Build, LaneDiff, diff, gate, merge
 from .client import CraciClient, CraciError, load_token
-from .sources import JobRef, attribute, audit_jobs, introducing_commit, lockfile_history
+from .sources import (
+    JobRef,
+    attribute,
+    audit_jobs,
+    introducing_commit,
+    lockfile_history,
+    run_log_summary,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPO = "Arpan-206/HackJunction2026"
@@ -241,6 +250,21 @@ def cmd_history(args) -> int:
     return 0
 
 
+def cmd_steps(args) -> int:
+    """GitHub logs only: failed steps and npm audit lines per lane of one lane-audit run. Needs no CRACI token."""
+    rows = run_log_summary(args.repo, args.run_id)
+    print("| Lane | Failed steps | npm audit (frontend) |")
+    print("|---|---|---|")
+    for lane in sorted(rows):
+        row = rows[lane]
+        failed = ", ".join(f"`{s}`" for s in row["failed_steps"]) or "none"
+        audit = next(
+            (v for k, v in row["npm_audit"].items() if k.startswith("Frontend")), ""
+        )
+        print(f"| `{lane}` | {failed} | {audit} |")
+    return 0
+
+
 def cmd_check(_args) -> int:
     print(
         "CRACI_API_TOKEN: set"
@@ -265,6 +289,9 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("gate")
     g.add_argument("lane")
     g.set_defaults(func=cmd_gate)
+    steps = sub.add_parser("steps")
+    steps.add_argument("run_id")
+    steps.set_defaults(func=cmd_steps)
     hist = sub.add_parser("history")
     hist.add_argument("--json", help="also write one row per package here")
     hist.set_defaults(func=cmd_history)

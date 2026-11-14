@@ -319,6 +319,35 @@ def lockfile_history(ref: str = "origin/main") -> list[dict[str, str]]:
     return rows
 
 
+def run_log_summary(repo: str, run_id: str) -> dict[str, dict[str, object]]:
+    """Per lane job of one lane-audit run: failed steps and the npm audit line, read from the GitHub job logs.
+
+    Audit steps use continue-on-error, so a job is green even when a step fails. Only the log shows the failure.
+    """
+    import re
+
+    log = subprocess.run(
+        ["gh", "run", "view", run_id, "--repo", repo, "--log"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    out: dict[str, dict[str, object]] = {}
+    for line in log.splitlines():
+        job, _, rest = line.partition("\t")
+        step, _, text = rest.partition("\t")
+        if not job.startswith("lane "):
+            continue
+        lane = job.removeprefix("lane ").strip()
+        row = out.setdefault(lane, {"failed_steps": [], "npm_audit": {}})
+        if "##[error]" in text and step not in row["failed_steps"]:
+            row["failed_steps"].append(step)
+        m = re.search(r"(\d+ vulnerabilities \([^)]*\)|found 0 vulnerabilities)", text)
+        if m:
+            row["npm_audit"].setdefault(step, m.group(1))
+    return out
+
+
 def introducing_commit(
     lane: str, needle: str, base: str = "origin/main", remote: str = "origin"
 ) -> tuple[str, str]:

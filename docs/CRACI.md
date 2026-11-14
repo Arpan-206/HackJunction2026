@@ -62,6 +62,42 @@ A lane job is green even when a step inside it fails, because the audit steps us
 | `export/` install | 23 | 0 | 23 | `evdev` 2.0.0 source build: `Python.h: No such file or directory` |
 | `genui/` install | 29 | 29 | 0 | |
 
+### Per lane (run 43650860815)
+
+Made by `python3 -m tools.agent_bom steps 43650860815` from the GitHub job logs. It needs no CRACI token. A lane whose tree has no `export/` shows no `export/` failure.
+
+| Lane | Failed steps | npm audit (frontend) |
+|---|---|---|
+| `arkit-app` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `coach-tune` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `core-calibration` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `core-overnight` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `craci` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `demo-mode` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `expert-priors` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `fingerspelling-packs` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `frontend-updates` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `hand-root` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `hand-round-2` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `lidar` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `main` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `merge-main` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `models` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `replay-demo` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `robot-extras-wip` | `Frontend install, lint, tests and build` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `robot-view` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `rokoko-setup` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `shadows` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `slot-kit` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `submission` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `szymon-frontend` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `thumb-align` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `typing` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `verda` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `weights` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `worktree-decisions` | none | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+| `worktree-export` | `export/ install` | 15 vulnerabilities (12 moderate, 1 high, 2 critical) |
+
 ### Known vulnerabilities reported inside the CRACI builds (npm audit)
 
 `npm ci` prints an audit line. These counts come from that line in the CRACI job logs, not from the CRACI API.
@@ -194,7 +230,7 @@ The deploy uses the tag, not the digest. If the tag moves, the coach changes wit
 | `tools/agent_bom/client.py` | CRACI API client. Only endpoints from the OpenAPI spec. Reads the token from the environment or `.env`; never prints it |
 | `tools/agent_bom/sources.py` | GitHub job ids per lane (through `gh`), lockfile history and lane attribution (through git) |
 | `tools/agent_bom/analyse.py` | SBOM and trace parsing, diff against `main`, the gate rule. No network, no git |
-| `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `history`, `provenance` |
+| `tools/agent_bom/__main__.py` | Commands: `check`, `report`, `gate`, `provenance` (CRACI API); `history`, `steps` (git and GitHub only, no token) |
 | `tools/agent_bom/tests/test_agent_bom.py` | 6 tests: 5 on spec-shaped fixtures (hand-written, marked as fixtures; no result here comes from them), 1 on real merge subjects from `main` |
 
 The CRACI API looks a job up by its GitHub job id. Its job list only shows active jobs, so `agent_bom` finds finished jobs through the GitHub Actions API, by the job name `lane <branch>`.
