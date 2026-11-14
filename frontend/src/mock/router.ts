@@ -627,6 +627,19 @@ route('POST', '/gloves/drift_check', async (req) => {
   }
 });
 
+// Dev file reveal: sample data has no file on disk, so both answer a mock:// path and open nothing.
+const FILE_KINDS = ['recording', 'lesson', 'draft', 'export', 'calibration', 'media'];
+const MOCK_FILE_DIRS: Record<string, string> = { recording: 'recordings', lesson: 'lessons', draft: 'drafts', export: 'exports', calibration: 'calibrations', media: 'media' };
+const mockFile = (kind: unknown, id: unknown) => {
+  if (typeof kind !== 'string' || !FILE_KINDS.includes(kind)) invalid(`kind must be one of ${FILE_KINDS.join(', ')}`);
+  if (typeof id !== 'string' || !/^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,159}$/.test(id) || id.includes('..')) bad(`invalid id: ${String(id)}`);
+  return ok({ kind, id, path: `mock://${MOCK_FILE_DIRS[kind as string]}/${id as string}.json`, opened: false });
+};
+route('POST', '/dev/reveal', (req) => {
+  const b = body(req);
+  return mockFile(b.kind, b.id);
+});
+route('GET', '/dev/locate', (req) => mockFile(req.query.get('kind'), req.query.get('id')));
 route('GET', '/dev/state', () => ok(getStore().dev));
 route('POST', '/dev/state', (req) => {
   const b = body(req);

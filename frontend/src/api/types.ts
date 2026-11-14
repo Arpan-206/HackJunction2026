@@ -427,6 +427,17 @@ export interface DevState {
 
 export type DevStatePatch = Partial<Omit<DevState, 'smoothing'>> & { smoothing?: Partial<SmoothingState> };
 
+/** A stored file the dev reveal can find under the backend's data folder (POST /dev/reveal, GET /dev/locate). */
+export type FileKind = 'recording' | 'lesson' | 'draft' | 'export' | 'calibration' | 'media';
+
+/** Where a stored file is: its absolute path, and whether a file manager was opened on it. Mock mode answers `mock://...`. */
+export interface FileLocation {
+  kind: FileKind;
+  id: string;
+  path: string;
+  opened: boolean;
+}
+
 /* ---- Real gloves: status, calibration area, demo mode (docs/CONTRACT.md "Real gloves") ---- */
 
 export type GloveConnection = 'usb' | 'wifi' | 'emulated' | 'unknown';

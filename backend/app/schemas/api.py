@@ -309,3 +309,22 @@ class MotionFromTextResponse(BaseModel):
     motion: MotionSpec
     explanation: str
     provider: str
+
+
+FileKind = Literal["recording", "lesson", "draft", "export", "calibration", "media"]
+
+
+class RevealRequest(BaseModel):
+    """POST /dev/reveal: which stored file to show in the file manager."""
+
+    kind: FileKind
+    id: str = Field(min_length=1, max_length=160)
+
+
+class FileLocation(BaseModel):
+    """POST /dev/reveal and GET /dev/locate: the stored file's absolute path, and whether a file manager was opened."""
+
+    kind: FileKind
+    id: str
+    path: str
+    opened: bool = False

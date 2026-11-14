@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Calibration, type Side } from '../../api';
+import { calibrateCoreHeading } from '../../api/coreCommand';
 import { CALIBRATION_SECONDS } from '../master/lib';
 
 export type CalibrationPhase = 'idle' | 'countdown-flat' | 'capture-flat' | 'countdown-fist' | 'capture-fist';
@@ -51,6 +52,8 @@ export function useCalibration(side: Side): CalibrationHandle {
   const capture = useCallback(
     async (which: 'flat' | 'fist', next: CalibrationPhase) => {
       const mine = run.current;
+      // The flat hold is also the heading reference: the glove core zeroes the wrist yaw over this capture. Fire and forget.
+      if (which === 'flat') void calibrateCoreHeading();
       try {
         const c = await api.calibrate({ side, phase: which, duration_s: CALIBRATION_SECONDS });
         if (mine !== run.current) return;

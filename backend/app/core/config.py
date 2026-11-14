@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     glove_monitor: bool = True
     glove_driver_tap: bool = True
     glove_autostart: Literal["auto", "on", "off"] = "auto"
+    # Dev file reveal (POST /api/dev/reveal, GET /api/dev/locate): localhost only, and only while this is on.
+    dev_reveal: bool = c.DEV_REVEAL_ENABLED
 
 
 @lru_cache

@@ -408,3 +408,19 @@ BUNDLE_MEDIA_EMBED_MAX_BYTES = 2 * 1024 * 1024
 EXPORTS_DIR_NAME = "exports"
 EXPORT_BACKUPS_KEEP = 5
 EXPORT_SLUG_MAX_CHARS = 48
+
+# Dev file reveal (POST /api/dev/reveal, GET /api/dev/locate): finds a stored file under <data_dir> so a developer can
+# open its folder or copy its path, e.g. to send a take to someone. Answers only requests from this machine, and only
+# while the flag is on (env DEV_REVEAL=false turns it off). The kinds and the folder each one lives in under <data_dir>.
+DEV_REVEAL_ENABLED = True
+DEV_LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "::ffff:127.0.0.1")
+DEV_REVEAL_DIRS = {
+    "recording": "recordings",
+    "lesson": "lessons",
+    "draft": DRAFTS_DIR_NAME,
+    "export": EXPORTS_DIR_NAME,
+    "calibration": "calibrations",
+    "media": MEDIA_DIR_NAME,
+}
+# An export id is a file name in <data_dir>/exports (with or without .geppetto.json), or a lesson id for its newest backup.
+DEV_EXPORT_NAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,159}$"

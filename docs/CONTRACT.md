@@ -246,6 +246,8 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/ingest/frames` | one `GloveFrame`, one `HandFrame` (`wrist_quat` defaults to identity) or `{frames: GloveFrame[]}` (max 600); optional `?activate=1` switches the source to `external` first | `{accepted: number}`; 409 if the source is not `external` and `activate` is absent, 422 on an invalid frame |
 | GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[], llm_chain: string[], llm_answered_by: string \| null}` (`gemini_budget`, `llm_chain` and `llm_answered_by` are read-only, ignored on POST; `llm_provider` may also be `openai`) |
 | POST | `/dev/state` | partial of the above | new state |
+| GET | `/dev/locate?kind=&id=` | | `FileLocation` (see Dev file reveal) without opening anything; 403, 400, 404 and 422 as for `/dev/reveal` |
+| POST | `/dev/reveal` | `{kind: FileKind, id: string}` | `FileLocation`; opens the file manager on the backend machine with the file selected (see Dev file reveal) |
 | GET | `/gloves/status` | | `GloveRigStatus` (see Real gloves) |
 | POST | `/gloves/driver` | `{action: 'start' or 'stop'}` | `GloveRigStatus` after the action; 409 while Rokoko Studio is open, 503 when the SDK is not found |
 | POST | `/gloves/reinit` | | `{devices: number}`: gloves that accepted RCSP `ReinitAlgo` (0 without a driver) |
@@ -254,6 +256,20 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/gloves/calibrations/neutral` | `{wearer, duration_s?: number (default 3, max 10), reinit?: boolean}` | `WearerCalibration` (stored); 400 when no frames arrived |
 | POST | `/gloves/calibrations/{id}/finish` | `{range_calibration_ids?: {left?, right?}, verified?: boolean}` | `WearerCalibration`; 400 when a range id is for the other hand, 404 unknown ids |
 | POST | `/gloves/drift_check` | `{wearer, duration_s?: number (default 2)}` | `DriftCheckResult`; 404 when the wearer has no calibration |
+
+### Dev file reveal
+
+A developer aid behind the frontend's dev mode (`?dev=1`): "Open file location" and "Copy path" beside each take, lesson, step reference take and newest backup, so a stored file can be sent on.
+
+```ts
+type FileKind = 'recording' | 'lesson' | 'draft' | 'export' | 'calibration' | 'media';
+interface FileLocation { kind: FileKind; id: string; path: string; opened: boolean }  // path is absolute
+```
+
+- Where each kind lives under the data folder (`backend/data/` by default): `recordings/<id>.json`, `lessons/<id>.json`, `drafts/<id>.json`, `calibrations/<id>.json`, `media/<id>.<ext>` (the video file itself). `export` takes a file name in `exports/` (with or without `.geppetto.json`), or a lesson id for that lesson's newest backup (written after every publish).
+- `POST /dev/reveal` opens Windows Explorer with the file selected (`explorer /select,<path>`; `open -R` on macOS, `xdg-open` on the folder on Linux) and answers `opened: true`, or `opened: false` when no file manager could be started. `GET /dev/locate` only answers the path.
+- Safety: both answer only requests from this machine (client host `127.0.0.1`, `::1` or `localhost`) while `DEV_REVEAL` is on (setting `dev_reveal`, default `DEV_REVEAL_ENABLED = True` in `backend/app/constants.py`; `DEV_REVEAL=false` in `backend/.env` turns it off); otherwise 403. The Vite dev proxy calls from localhost, so a page served by Vite on another device would pass the host check: switch `DEV_REVEAL` off when the dev server is shared on a network. Ids must be safe ids (export names: letters, digits, `_`, `-` and `.`, no `..`), else 400; a path that resolves outside the data folder, or a file that does not exist, is 404; an unknown kind is 422.
+- Mock mode answers `mock://<folder>/<id>.json` with `opened: false` and opens nothing; the UI says "Sample data: no file on disk."
 
 ## WebSocket
 

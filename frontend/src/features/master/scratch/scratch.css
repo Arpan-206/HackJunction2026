@@ -244,6 +244,9 @@
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--line);
 }
+.scr-take__file {
+  grid-column: 1 / -1;
+}
 .scr-take__head {
   display: flex;
   align-items: baseline;

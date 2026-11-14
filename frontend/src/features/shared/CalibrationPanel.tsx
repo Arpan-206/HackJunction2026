@@ -18,7 +18,7 @@ interface CalibrationPanelProps {
 }
 
 const PROMPTS = {
-  flat: { caption: 'Hold your hand flat and open, palm down', capture: 'Keep your hand flat and still' },
+  flat: { caption: 'Hold your hand flat and open, palm down, fingers pointing at the screen', capture: 'Keep your hand flat and still, fingers at the screen' },
   fist: { caption: 'Now curl into a loose, relaxed fist', capture: 'Hold the loose fist' },
 } as const;
 

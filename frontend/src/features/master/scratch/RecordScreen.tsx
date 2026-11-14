@@ -12,6 +12,7 @@ import { SteadinessControl } from '../components/SteadinessControl';
 import { useRecorder } from '../hooks/useRecorder';
 import type { SteadinessHandle } from '../hooks/useSteadiness';
 import { formatDuration, primarySide, type MoveChoice } from '../lib';
+import { RevealFile } from '../files/RevealFile';
 import { FlowNav } from './FlowNav';
 import { GlovesControl } from './GlovesControl';
 import { HANDS_SHORT, handsOptions, readModel, TAKE_WORD_LABEL, TAKES_MAX, TAKES_TARGET, repStepId, type ModelReading } from './scratchDraft';
@@ -124,6 +125,7 @@ function TakeStrip({ takes, reading, busy, watching, onWatch, onRedo, onDelete }
                 </>
               )}
             </span>
+            <RevealFile kind="recording" id={t.id} what={`take ${i + 1}`} className="scr-take__file" />
           </li>
         );
       })}

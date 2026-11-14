@@ -153,6 +153,11 @@
   position: relative;
   display: flex;
 }
+/* Dev mode: the lesson's "Open file location" sits under its folio. */
+.shelf__list > li.skillpage__item--dev {
+  flex-direction: column;
+  gap: 0.4rem;
+}
 /* The second leaf of the folio, peeking out behind it. */
 .shelf__list > li::before {
   content: '';

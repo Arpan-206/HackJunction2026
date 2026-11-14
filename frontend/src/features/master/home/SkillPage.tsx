@@ -4,7 +4,9 @@ import { useLessons } from '../../../api';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { useAllAttempts } from '../../shared/practiceLog';
+import { RevealFile } from '../files/RevealFile';
 import { SaveToFile } from '../files/SaveToFile';
+import { isDev } from '../../apprentice/pipeline/flags';
 import { LessonFolio } from './Folios';
 import { groupBySkill, lessonsLabel, sharedTitles, type ShelfSkill, skillWhen, stepsLabel } from './shelf';
 import './home.css';
@@ -54,6 +56,7 @@ export function SkillPage() {
     );
   }
 
+  const dev = isDev();
   const when = skillWhen(skill.lastAdded, skill.practised);
   return (
     <div className="studio">
@@ -66,8 +69,9 @@ export function SkillPage() {
       <section className="shelf" aria-label={`Lessons of ${skill.name}`}>
         <ul className="shelf__list">
           {skill.lessons.map((l) => (
-            <li key={l.id}>
+            <li key={l.id} className={dev ? 'skillpage__item--dev' : undefined}>
               <LessonFolio lesson={l} practised={attempts[l.id]?.length ?? 0} withTime={twins.has(l.id)} />
+              <RevealFile kind="lesson" id={l.id} what={l.title} />
             </li>
           ))}
         </ul>
