@@ -18,6 +18,50 @@ demo walk and mock walk clean; nothing touched live gloves):
 | models | Gemini and Gemma on Verda back each other up (20 s cap on Verda, fallback logged), fixed offline sentence when neither answers, "AI Assistant" label under lessons and plans, `backend/scripts/llm_health.py` with a per-role table, no Ollama | `STATUS-models.md`, `docs/MODELS.md` |
 | submission | drafts in `docs/submission/` (project text, 2 minute video script, deck outline, Verda Discord summary), unverified claims marked | `docs/submission/STATUS-submission.md` |
 
+**For Szymon's Claude (Sun 00:40): the score screen should speak plain words;
+a new backend endpoint does it, the frontend part is yours.** Arpan's request:
+the numbers on the score screen (finger scores, degrees, "tolerance") mean
+little to a visitor, and the AI Assistant should write the feedback. I made
+no frontend change. Backend, done and tested: `POST /api/coach/review`
+(`backend/app/services/llm/review.py`, `docs/CONTRACT.md`). Send
+`{score, instruction, move_name, weights, attempt, previous_overall,
+last_feedback}`; only `score` is needed, and it is the `ScoreResult` from
+`POST /score` unchanged. The answer is `{feedback, provider}`: at most two
+short sentences, no number, no measuring word, what went well and then one
+thing to try. Real example from Gemini tonight: "Your index finger and middle
+finger held the position well. Next time, try to curl your thumb a bit more."
+`provider` is the model's name, or `algorithmic`, `fake`, `offline` or
+`fake (rate limited)` when the backend's own plain sentence is shown, so there
+is always text to show. It answers within the hint time cap (5 s). A finger
+weighted under 0.3 is never mentioned. Frontend to do, in priority order:
+
+1. `frontend/src/api/types.ts`, `api/client.ts`: add `CoachReviewRequest`,
+   `CoachReviewResponse` and `api.coachReview`. Add `/coach/review` to
+   `ASSISTANT_PATHS` in `features/shared/assistant.ts` (CLAUDE.md, the AI
+   Assistant switch) and a handler in `mock/router.ts` (hard rule 1).
+2. `features/apprentice/training/TrainingRoom.tsx` `finish()`: after the score
+   arrives, call `api.coachReview` without waiting for it. Show the score at
+   once with the present line, then swap in `feedback` when it comes. Pass
+   `step.weights`, `pipe.reps` and the last rep's `overall`.
+3. `training/ScoreCard.tsx`: show `feedback` as the main sentence, with
+   "Written by the AI Assistant." under it only when `provider` is a real
+   model (not `fake...`, `algorithmic` or `offline`).
+4. Same card, plainer words (Arpan saw these and disliked them): "Within the
+   tolerance." and "Outside the tolerance." (suggest "A clean rep." and
+   "Close. Not clean yet."); "Judged to within 27 degrees per finger and 375
+   ms of timing." (suggest: show it only when the learner chose a margin other
+   than the default); the raw scorer warning "some joints have too small a
+   calibrated range and were left uncalibrated" (suggest: fold it under a
+   "Technical notes" disclosure).
+5. The same call fits the play screen and the demo table after a rep.
+
+The live stack on Arpan's laptop now runs the backend with
+`LLM_PROVIDER=gemini` (it ran `fake` all Saturday, so no AI Assistant text
+was real until now). Also on main from tonight: the live meter shows the
+scorer's estimate (`deviation.liveScore`), table tennis steps carry finger
+weights, the learner starts on the relaxed margin, and the hand follows the
+phone's position only for skills with `handPosition` in the catalogue.
+
 **For Szymon's Claude (Sat 22:40): lidar follow-up and hand-root merged;
 live stack recipe with the phone.** Core: the depth step's arm gate (no false
 arms on the real clips), a safe yaw correction (rate cap, hold when the arm is

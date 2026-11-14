@@ -53,7 +53,7 @@ class GeminiLLM:
         else:
             limit = (
                 c.LLM_GEMINI_HINT_TIMEOUT_S
-                if request.task == "hint"
+                if request.task in ("hint", "review")
                 else c.LLM_GEMINI_TIMEOUT_S
             )
         try:

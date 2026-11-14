@@ -14,7 +14,7 @@ FALLBACKS = ("gemini", "openai")  # providers LLM_FALLBACK and LLM_ROUTES may na
 UNSET_OPENAI_URL = (
     "http://localhost:8000"  # the Settings default: this backend, not a model server
 )
-ROLES = ("hint", "plan", "lesson", "motion")  # LLMRequest.task values
+ROLES = ("hint", "plan", "lesson", "motion", "review")  # LLMRequest.task values
 
 
 class LLMState:

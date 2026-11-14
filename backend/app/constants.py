@@ -232,6 +232,14 @@ HINT_JOINT_SHARE = 0.6
 HINT_SEVERITY_MEDIUM = 1.0
 HINT_SEVERITY_HIGH = 2.0
 HINT_MAX_ATTEMPT = 1000
+# Feedback after a rep in plain words (POST /coach/review, services/llm/review.py): at most this many words, a little
+# slack for a model that runs over, and the score bands the prompt names in words instead of numbers.
+REVIEW_MAX_WORDS = 34
+REVIEW_WORD_SLACK = 8
+REVIEW_STRONG_FROM = 90.0
+REVIEW_GOOD_FROM = 80.0
+REVIEW_FAIR_FROM = 65.0
+REVIEW_CHANGE_POINTS = 5.0
 HINT_TEXT_MAX_CHARS = 200
 
 # Practice plan and text-to-motion.

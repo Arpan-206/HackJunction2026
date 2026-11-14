@@ -146,6 +146,34 @@ class HintDraft(BaseModel):
         return value
 
 
+class CoachReviewRequest(BaseModel):
+    """POST /coach/review: one scored rep to put into plain words. Only score is needed."""
+
+    score: ScoreResult
+    step_id: str | None = None
+    instruction: str = Field(default="", max_length=c.HINT_TEXT_MAX_CHARS)
+    move_name: str | None = Field(default=None, max_length=c.HINT_TEXT_MAX_CHARS)
+    weights: dict[Finger, float] | None = Field(
+        default=None,
+        description="The step's per-finger weights; a finger under FOCUS_MIN_WEIGHT is never mentioned.",
+    )
+    attempt: int = Field(default=1, ge=1, le=c.HINT_MAX_ATTEMPT)
+    previous_overall: float | None = Field(default=None, ge=0, le=100)
+    last_feedback: str | None = Field(default=None, max_length=2 * c.HINT_TEXT_MAX_CHARS)
+
+
+class CoachReviewDraft(BaseModel):
+    """The model's answer: at most two short sentences, no numbers."""
+
+    feedback: str = Field(min_length=1, max_length=2 * c.HINT_TEXT_MAX_CHARS)
+
+
+class CoachReviewResponse(CoachReviewDraft):
+    """Feedback for one rep; provider says who wrote it (fake, algorithmic, gemini, openai, offline or 'fake (rate limited)')."""
+
+    provider: str
+
+
 class CoachHintResponse(HintDraft):
     """A short live tip; provider says who wrote it (fake, algorithmic, gemini, openai or 'fake (rate limited)')."""
 

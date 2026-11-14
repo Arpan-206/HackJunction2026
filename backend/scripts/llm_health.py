@@ -46,6 +46,7 @@ ROLE_NAMES = {
     "plan": "plan",
     "lesson": "lesson generation",
     "motion": "motion from text",
+    "review": "feedback after a rep",
 }
 PROBE_TIMEOUT_S = 5.0
 ANSWER_TIMEOUT_S = 60.0

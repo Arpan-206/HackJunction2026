@@ -115,4 +115,5 @@ def test_roles_go_offline_when_nothing_answers(tmp_path: Path) -> None:
         "plan": "offline (template)",
         "lesson generation": "offline (template)",
         "motion from text": "offline (template)",
+        "feedback after a rep": "offline (template)",
     }

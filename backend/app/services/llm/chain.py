@@ -92,7 +92,7 @@ class ChainLLM:
         """The time cap for one call: short for hints, 20 s for Verda, none extra for video."""
         if request.video_path:
             return None
-        if request.task == "hint":
+        if request.task in ("hint", "review"):  # both answer a learner who is waiting
             return HINT_TIMEOUT_S
         return OPENAI_TIMEOUT_S if link.name == "openai" else CALL_TIMEOUT_S
 

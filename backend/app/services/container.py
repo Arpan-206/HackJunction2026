@@ -19,6 +19,7 @@ from app.services.files import FileLocator
 from app.services.gloves.manager import GloveManager
 from app.services.lessons import LessonService
 from app.services.llm.coach import CoachService
+from app.services.llm.review import ReviewService
 from app.services.llm.lesson_generator import LessonGenerator
 from app.services.llm.motion_text import MotionTextService
 from app.services.llm.plan import PlanService
@@ -46,6 +47,7 @@ class Services:
     llm: LLMState
     generator: LessonGenerator
     coach: CoachService
+    review: ReviewService
     planner: PlanService
     motion_text: MotionTextService
     gloves: GloveManager
@@ -122,6 +124,7 @@ def build_services(settings: Settings) -> Services:
         llm=llm,
         generator=LessonGenerator(llm, moves),
         coach=CoachService(llm),
+        review=ReviewService(llm),
         planner=PlanService(llm),
         motion_text=MotionTextService(llm),
         gloves=gloves,

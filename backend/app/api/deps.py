@@ -16,6 +16,7 @@ from app.services.llm.coach import CoachService
 from app.services.llm.lesson_generator import LessonGenerator
 from app.services.llm.motion_text import MotionTextService
 from app.services.llm.plan import PlanService
+from app.services.llm.review import ReviewService
 from app.services.llm.registry import LLMState
 from app.services.media import MediaService
 from app.services.moves import MoveCatalog
@@ -80,6 +81,11 @@ def _coach(s: ServicesDep) -> CoachService:
     return s.coach
 
 
+def _review(s: ServicesDep) -> ReviewService:
+    """Return the rep feedback service."""
+    return s.review
+
+
 def _planner(s: ServicesDep) -> PlanService:
     """Return the practice-plan service."""
     return s.planner
@@ -135,6 +141,7 @@ ScoringDep = Annotated[ScoringService, Depends(_scoring)]
 TakesDep = Annotated[TakesService, Depends(_takes)]
 CoachDep = Annotated[CoachService, Depends(_coach)]
 PlannerDep = Annotated[PlanService, Depends(_planner)]
+ReviewDep = Annotated[ReviewService, Depends(_review)]
 MotionTextDep = Annotated[MotionTextService, Depends(_motion_text)]
 VisionDep = Annotated[MediaPipeHands, Depends(_vision)]
 DevDep = Annotated[DevService, Depends(_dev)]
