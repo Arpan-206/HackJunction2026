@@ -14,13 +14,23 @@ const SHORT: Record<Finger, string> = { thumb: 'Thumb', index: 'Index', middle: 
 
 type Slot = { side: 'left' | 'right'; top: string };
 
-/** Label slots in the stage gutters, as a share of the stage height, so the notes never sit on the hand. */
+/**
+ * The hand lies thumb side to the camera with its fingers towards the left gutter (mirrored for a left hand), so every
+ * finger shows in profile instead of curling away under the back of the hand.
+ */
+const HAND_AT: [number, number, number] = [1.2, 0, 0.1];
+const HAND_TURN = Math.PI / 2;
+
+/**
+ * Label slots in the stage gutters, as a share of the stage height, so the notes never sit on the hand. They stack down
+ * the gutter the fingertips point to, in the order the tips do, so no leader line crosses another.
+ */
 const SLOTS: Record<Finger, Slot> = {
-  middle: { side: 'left', top: '8%' },
-  index: { side: 'left', top: '33%' },
-  thumb: { side: 'left', top: '58%' },
-  little: { side: 'right', top: '33%' },
-  ring: { side: 'right', top: '58%' },
+  little: { side: 'left', top: '3%' },
+  ring: { side: 'left', top: '17%' },
+  middle: { side: 'left', top: '38%' },
+  index: { side: 'left', top: '52%' },
+  thumb: { side: 'left', top: '68%' },
 };
 
 /**
@@ -96,7 +106,15 @@ export default function ScoreScene({ result, weakest, allGood, mastery, pose, si
   return (
     <div ref={box} className="ap-score3d__box">
       <SceneCanvas world="bench" {...CAM} board={board} orbit={false} bench={{ circle: 0, showShadow: true, props: false }} label="Your hand on the bench with the score plaque">
-        <Hand ref={hand} style="wood" side={side} position={[0, 0, 0.55]} frame={frame} smoothing={false} />
+        <Hand
+          ref={hand}
+          style="wood"
+          side={side}
+          position={side === 'left' ? [-HAND_AT[0], HAND_AT[1], HAND_AT[2]] : HAND_AT}
+          rotation={[0, side === 'left' ? -HAND_TURN : HAND_TURN, 0]}
+          frame={frame}
+          smoothing={false}
+        />
         {!compact && (
           <group position={[0, -0.55, -2.55]} scale={0.8}>
             <ScorePlaque position={[0, 0, 0]} score={String(Math.round(result.overall))} line={line} learned={mastery} />

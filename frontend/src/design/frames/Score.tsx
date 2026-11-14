@@ -18,25 +18,27 @@ function ScoreScene({ learned }: { learned: boolean }) {
     .set('middle', onHand(hand, 'middle'))
     .set('ring', onHand(hand, 'ring'))
     .set('little', onHand(hand, 'little'));
+  // The hand lies thumb side to the camera with its fingers to the left, so every finger shows in profile; the tags stack
+  // down the left in the order of the tips, so no leader crosses another or the hand.
   const notes: LeaderNote[] = learned
     ? [
-        { id: 'middle', side: 'left', top: 200, width: 190, tone: 'ok', title: 'Middle 95' },
-        { id: 'index', side: 'left', top: 370, width: 190, tone: 'ok', title: 'Index 92' },
-        { id: 'thumb', side: 'left', top: 520, width: 190, tone: 'ok', title: 'Thumb 94' },
-        { id: 'little', side: 'right', top: 410, width: 190, tone: 'ok', title: 'Little 91' },
-        { id: 'ring', side: 'right', top: 520, width: 190, tone: 'ok', title: 'Ring 90' },
+        { id: 'little', side: 'left', top: 150, width: 190, tone: 'ok', title: 'Little 91' },
+        { id: 'ring', side: 'left', top: 240, width: 190, tone: 'ok', title: 'Ring 90' },
+        { id: 'middle', side: 'left', top: 330, width: 190, tone: 'ok', title: 'Middle 95' },
+        { id: 'index', side: 'left', top: 420, width: 190, tone: 'ok', title: 'Index 92' },
+        { id: 'thumb', side: 'left', top: 540, width: 190, tone: 'ok', title: 'Thumb 94' },
       ]
     : [
-        { id: 'middle', side: 'left', top: 200, width: 190, tone: 'ok', title: 'Middle 90' },
-        { id: 'index', side: 'left', top: 370, width: 190, tone: 'ok', title: 'Index 88' },
-        { id: 'thumb', side: 'left', top: 520, width: 190, tone: 'ok', title: 'Thumb 92' },
-        { id: 'ring', side: 'right', top: 390, width: 230, tone: 'fix', title: 'Ring 71', body: 'Pressed late, 14 degrees short.' },
-        { id: 'little', side: 'right', top: 530, width: 190, tone: 'ok', title: 'Little 85' },
+        { id: 'little', side: 'left', top: 130, width: 190, tone: 'ok', title: 'Little 85' },
+        { id: 'ring', side: 'left', top: 210, width: 230, tone: 'fix', title: 'Ring 71', body: 'Pressed late, 14 degrees short.' },
+        { id: 'middle', side: 'left', top: 340, width: 190, tone: 'ok', title: 'Middle 90' },
+        { id: 'index', side: 'left', top: 420, width: 190, tone: 'ok', title: 'Index 88' },
+        { id: 'thumb', side: 'left', top: 540, width: 190, tone: 'ok', title: 'Thumb 92' },
       ];
   return (
     <section className="dz-stage" aria-label="Score">
       <SceneCanvas world="bench" {...CAM} board={board} bench={{ circle: 0, showShadow: true, props: false }} label={`The learner's wooden hand on the bench with a plaster score plaque, a wax rank seal${learned ? ' inlaid with gold leaf' : ''} and a lit streak candle`}>
-        <Hand ref={hand} style="wood" side="right" position={[0, 0, 0.55]} getFrame={learned ? play(SCALE, T) : offFinger(SCALE, T, 3, 0.35)} />
+        <Hand ref={hand} style="wood" side="right" position={[1.45, 0, 0.1]} rotation={[0, Math.PI / 2, 0]} getFrame={learned ? play(SCALE, T) : offFinger(SCALE, T, 3, 0.35)} />
         <group position={[0, -0.55, -2.55]} scale={0.8}>
           <ScorePlaque position={[0, 0, 0]} score={learned ? '93' : '86'} line={learned ? 'Step 2 learned' : 'Rep 3 of 5'} learned={learned} />
         </group>
