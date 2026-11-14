@@ -32,6 +32,36 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--replay-loop", action="store_true", help="loop the replay file")
     ap.add_argument(
+        "--replay-start",
+        type=float,
+        default=None,
+        metavar="S",
+        help="with --replay: start this many capture seconds in (tools/capture_inventory.py time base)",
+    )
+    ap.add_argument(
+        "--replay-seconds",
+        type=float,
+        default=None,
+        metavar="D",
+        help="with --replay: play only D seconds from --replay-start",
+    )
+    ap.add_argument(
+        "--replay-speed",
+        type=float,
+        default=1.0,
+        help="with --replay: playback speed (1.0 = real time)",
+    )
+    ap.add_argument(
+        "--replay-stream",
+        action="store_true",
+        help="with --replay and no window: read the capture from disk each pass (for a long file)",
+    )
+    ap.add_argument(
+        "--replay-continuous",
+        action="store_true",
+        help="with --replay-loop: shift timestamps each pass so the core sees one unbroken take",
+    )
+    ap.add_argument(
         "--capture",
         metavar="FILE",
         help="write the raw RGMP bytes received to this file (for --replay later)",
@@ -154,7 +184,15 @@ def main(argv: list[str] | None = None) -> int:
         from .rgmp import GloveSource
 
         core.replay_server = ReplayServer(
-            Path(args.replay), host="127.0.0.1", port=0, loop=args.replay_loop
+            Path(args.replay),
+            host="127.0.0.1",
+            port=0,
+            loop=args.replay_loop,
+            speed=args.replay_speed,
+            start_s=args.replay_start,
+            seconds=args.replay_seconds,
+            stream=args.replay_stream,
+            continuous=args.replay_continuous,
         )
         core.glove_source = GloveSource(
             cfg, core.clock, logs_dir=core.logs_dir, replay=core.replay_server
