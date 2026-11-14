@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './AppShell';
 import { RoleSelect } from './RoleSelect';
@@ -6,6 +6,7 @@ import { HandLab } from './HandLab';
 import { MasterHome } from '../features/master/MasterHome';
 import { MasterGenerate, MasterLesson, MasterScratch } from '../features/master/pages';
 import { ApprenticeHome, ApprenticeLesson, ApprenticeSkill, ApprenticeStep, ApprenticeTest } from '../features/apprentice/pages';
+import { isKiosk, KIOSK_HOME } from '../features/shared/kiosk';
 
 const Playground = lazy(() => import('../playground/Playground'));
 const DesignRoute = lazy(() => import('../design/DesignRoute'));
@@ -13,6 +14,7 @@ const GlovesScreen = lazy(() => import('../features/shared/gloves/GlovesScreen')
 const CalibrateScreen = lazy(() => import('../features/shared/gloves/CalibrateScreen'));
 const RobotScreen = lazy(() => import('../features/shared/robot/RobotScreen'));
 const TypingScreen = lazy(() => import('../features/typing/TypingScreen'));
+const DemoScreen = lazy(() => import('../features/apprentice/demo/DemoScreen'));
 
 /** Old /master/* links (bookmarks, earlier demos) land on the same /expert/* page, keeping the subpath, query and hash. */
 function MasterRedirect() {
@@ -22,9 +24,20 @@ function MasterRedirect() {
 
 /** Route table. Feature agents replace the page components, not the paths. */
 export function App() {
+  // Read once per load. The flag sticks for the tab; only ?kiosk=0 (the operator) turns it off, and a VITE_KIOSK build never.
+  const [kiosk] = useState(isKiosk);
+  if (kiosk) {
+    return (
+      <Routes>
+        <Route path={KIOSK_HOME} element={<Suspense fallback={null}><DemoScreen kiosk /></Suspense>} />
+        <Route path="*" element={<Navigate replace to={KIOSK_HOME} />} />
+      </Routes>
+    );
+  }
   return (
     <Routes>
       <Route path="/" element={<RoleSelect />} />
+      <Route path="/demo" element={<Suspense fallback={null}><DemoScreen /></Suspense>} />
       <Route path="/playground" element={<Suspense fallback={null}><Playground /></Suspense>} />
       <Route path="/design" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />
       <Route path="/design/:frame" element={<Suspense fallback={null}><DesignRoute /></Suspense>} />

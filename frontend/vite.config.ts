@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // A worktree may symlink node_modules from the main checkout: keep the link path so files stay inside the served root.
+  resolve: { preserveSymlinks: true },
   server: {
     port: 5173,
     strictPort: true,

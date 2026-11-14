@@ -3,6 +3,7 @@ import { useDevState, useGloveStream, type GloveSource, type LlmProvider, type M
 import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
 import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
 import { isDev } from '../features/apprentice/pipeline/flags';
+import { isKiosk } from '../features/shared/kiosk';
 import './devPanel.css';
 
 /** The old, sticky localStorage flag. It is cleared on sight so a dev panel switched on long ago never resurfaces. */
@@ -23,7 +24,8 @@ function shouldShow(): boolean {
   } catch {
     /* storage unavailable */
   }
-  return isDev();
+  // A kiosk never shows the dev panel, whatever the URL says: a visitor could type ?dev=1.
+  return isDev() && !isKiosk();
 }
 
 /**
