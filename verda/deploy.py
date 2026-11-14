@@ -45,8 +45,11 @@ DEFAULT_GPU = "H200"
 FALLBACK_GPUS = ("H200", "H100")
 PORT = 8000
 HEALTH_PATH = "/health"
-MAX_MODEL_LEN = 32768
-GPU_MEMORY_UTILIZATION = 0.90
+# Measured on the H100 80 GB: the bf16 weights take 58.99 GiB and leave 8.61 GiB for the KV cache at 0.90 utilisation.
+# A 32768 context needs 15.79 GiB and crash-loops; 12288 needs about 5.9 GiB. Our prompts stay under 9k tokens
+# (8 pictures at 560 tokens each, about 2.5k tokens of text, 2k of output). On an H200 the longer context fits.
+MAX_MODEL_LEN = 12288
+GPU_MEMORY_UTILIZATION = 0.92
 MAX_IMAGES_PER_PROMPT = 8
 POLL_S = 15
 WAIT_LIMIT_S = 45 * 60
@@ -140,25 +143,30 @@ def balance(client: VerdaClient) -> dict[str, Any]:
     return {"amount": getattr(b, "amount", None), "currency": getattr(b, "currency", None)}
 
 
+def raw_status(client: VerdaClient, name: str) -> str:
+    """The deployment status as the API spells it. The SDK's enum lacks some values ("terminating"), so read it raw."""
+    return str(client.containers.client.get(f"/container-deployments/{name}/status").json().get("status", "unknown"))
+
+
 def wait_healthy(client: VerdaClient, name: str, limit_s: float = WAIT_LIMIT_S) -> list[dict[str, Any]]:
-    """Poll the status until HEALTHY; print every change with a timestamp. Returns the status history."""
+    """Poll the status until healthy; print every change with a timestamp. Returns the status history."""
     started = time.monotonic()
     history: list[dict[str, Any]] = []
     last = None
     while True:
-        status = client.containers.get_deployment_status(name)
+        status = raw_status(client, name)
         if status != last:
-            history.append({"t": now_iso(), "after_s": round(time.monotonic() - started), "status": status.value})
-            print(f"  {history[-1]['after_s']:5d} s  {status.value}", flush=True)
-            if status == ContainerDeploymentStatus.UNHEALTHY:
-                print("  (unhealthy while vLLM downloads and loads the weights is normal; `uv run python logs.py` shows progress)", flush=True)
-            if status == ContainerDeploymentStatus.QUOTA_REACHED:
+            history.append({"t": now_iso(), "after_s": round(time.monotonic() - started), "status": status})
+            print(f"  {history[-1]['after_s']:5d} s  {status}", flush=True)
+            if status == ContainerDeploymentStatus.UNHEALTHY.value:
+                print("  (unhealthy while vLLM loads the weights is normal; `uv run python logs.py` shows progress and crashes)", flush=True)
+            if status == ContainerDeploymentStatus.QUOTA_REACHED.value:
                 print("  quota reached: no GPU of this type is free; tear down and try --gpu H100", file=sys.stderr)
             last = status
-        if status == ContainerDeploymentStatus.HEALTHY:
+        if status == ContainerDeploymentStatus.HEALTHY.value:
             return history
         if time.monotonic() - started > limit_s:
-            raise SystemExit(f"not healthy after {limit_s / 60:.0f} min (last status {status.value}); tear down or keep waiting")
+            raise SystemExit(f"not healthy after {limit_s / 60:.0f} min (last status {status}); tear down or keep waiting")
         time.sleep(POLL_S)
 
 

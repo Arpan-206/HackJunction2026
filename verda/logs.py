@@ -12,7 +12,7 @@ import sys
 from verda import VerdaClient
 
 import paths
-from deploy import DEFAULT_NAME, ENDPOINT_FILE
+from deploy import DEFAULT_NAME, ENDPOINT_FILE, raw_status
 
 DEPLOYMENTS = "/container-deployments"
 
@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     secrets = paths.load_secrets()
     paths.require(secrets, "VERDA_CLOUD_CLIENT_ID", "VERDA_CLOUD")
     client = VerdaClient(secrets["VERDA_CLOUD_CLIENT_ID"], secrets["VERDA_CLOUD"])
-    print("status:", client.containers.get_deployment_status(name).value)
+    print("status:", raw_status(client, name))
     for r in client.containers.get_deployment_replicas(name):
         print("replica:", r)
     http = client.containers.client

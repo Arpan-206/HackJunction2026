@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from verda import VerdaClient
 
 import paths
-from deploy import LOG_FILE, PRICE_USD_PER_H, balance, now_iso
+from deploy import LOG_FILE, PRICE_USD_PER_H, balance, now_iso, raw_status
 from teardown import hours_between
 
 
@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     spent = round(first["amount"] - live["amount"], 2) if first and live.get("amount") is not None else None
     up = []
     for d in client.containers.get_deployments():
-        status = client.containers.get_deployment_status(d.name).value
+        status = raw_status(client, d.name)
         hours = hours_between(d.created_at, now)
         price = PRICE_USD_PER_H.get(d.compute.name)
         up.append({

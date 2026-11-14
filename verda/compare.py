@@ -45,10 +45,11 @@ def text_for_backend(rec: R.Recording, text: str) -> str:
     return f"{text}\n\nRECORDED DEMONSTRATION (measured by the gloves):\n{R.trace_summary(rec)}"
 
 
-def run_backend(generator: LessonGenerator, text: str, skill: str | None) -> dict[str, Any]:
-    """One LessonGenerator.generate call, timed, as a plain record."""
+async def run_backend(generator: LessonGenerator, text: str, skill: str | None) -> dict[str, Any]:
+    """One LessonGenerator.generate call, timed, as a plain record. All calls share one event loop: the Gemini
+    client keeps its connections bound to the loop that made them."""
     t0 = time.monotonic()
-    response = asyncio.run(generator.generate(text, skill))
+    response = await generator.generate(text, skill)
     return {
         "lesson": response.lesson.model_dump(),
         "provider": response.provider,
@@ -95,6 +96,10 @@ def steps_text(records: list[dict[str, Any]]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    return asyncio.run(amain(argv))
+
+
+async def amain(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--recordings", nargs="*", default=None, help="lesson folders; default: every folder in out/recordings")
     ap.add_argument("--text", default=DEFAULT_TEXT)
@@ -134,9 +139,9 @@ def main(argv: list[str] | None = None) -> int:
                 runs.append(("gemma-pictures", {"lesson": result.lesson, **result.stats()}))
             except Exception as exc:  # noqa: BLE001 - the report must show failures too
                 runs.append(("gemma-pictures", {"lesson": {}, "provider": "failed", "model": gemma_endpoint.model, "attempts": 0, "latency_s": 0.0, "error": f"{type(exc).__name__}: {exc}"[:500]}))
-            runs.append(("gemma-text", {**run_backend(gemma_backend, text, a.skill), "model": gemma_endpoint.model}))
+            runs.append(("gemma-text", {**await run_backend(gemma_backend, text, a.skill), "model": gemma_endpoint.model}))
         if gemini_backend is not None:
-            runs.append(("gemini-text", {**run_backend(gemini_backend, text, a.skill), "model": gemini_model}))
+            runs.append(("gemini-text", {**await run_backend(gemini_backend, text, a.skill), "model": gemini_model}))
         for name, data in runs:
             record = {"recording": folder.name, "path": name, "t": datetime.now(UTC).replace(microsecond=0).isoformat(), "input_text": text, **data}
             record["digest"] = digest(record["lesson"])

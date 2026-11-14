@@ -15,6 +15,7 @@ import time
 from datetime import UTC, datetime
 
 from verda import VerdaClient
+from verda.exceptions import APIException
 
 import paths
 from deploy import ENDPOINT_FILE, HF_SECRET_NAME, PRICE_USD_PER_H, append_log, balance, now_iso
@@ -52,7 +53,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         dep = existing[name]
         started = dep.created_at or info.get("created_at")
-        client.containers.delete_deployment(name)
+        try:
+            client.containers.delete_deployment(name)
+        except APIException as exc:
+            # A replica that is mid-restart can take longer than the API's 60 s wait; the deletion still proceeds.
+            if "timeout" not in str(exc).lower():
+                raise
+            print(f"delete accepted, still finishing: {exc}", file=sys.stderr)
         t0 = time.monotonic()
         while name in {d.name for d in client.containers.get_deployments()}:
             if time.monotonic() - t0 > GONE_LIMIT_S:
