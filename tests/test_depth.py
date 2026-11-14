@@ -126,7 +126,7 @@ def test_corrector_locks_then_removes_drift():
 
 
 def test_corrector_skips_outliers_but_follows_a_real_jump():
-    c = YawCorrector(YawCorrectorConfig(lock_s=0.5, tau_s=0.5, outlier_deg=20, outlier_run=30))
+    c = YawCorrector(YawCorrectorConfig(lock_s=0.5, tau_s=0.5, outlier_deg=20, outlier_run=30, max_rate_deg_s=100.0))
     for k in range(30):
         c.update(k * 33_333, 0.0, 0.0)
     assert c.locked
@@ -135,6 +135,18 @@ def test_corrector_skips_outliers_but_follows_a_real_jump():
     for k in range(32, 200):                      # a real 40 deg jump, held
         c.update(k * 33_333, 0.0, 40.0)
     assert abs(c.offset_deg - 40.0) < 3.0
+
+
+def test_corrector_rate_cap():
+    c = YawCorrector(YawCorrectorConfig(lock_s=0.5, tau_s=0.1, outlier_deg=90, max_rate_deg_s=3.0))
+    for k in range(30):
+        c.update(k * 33_333, 0.0, 0.0)
+    assert c.locked
+    t0 = 30 * 33_333
+    for k in range(30, 60):                       # 1 s of a 40 deg disagreement
+        c.update(k * 33_333, 0.0, 40.0)
+    dt_s = (59 * 33_333 - t0) / 1e6
+    assert 0 < c.offset_deg <= 3.0 * dt_s + 0.2   # at most 3 deg/s, however big the disagreement
 
 
 # -- the live step -------------------------------------------------------------

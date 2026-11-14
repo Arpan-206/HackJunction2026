@@ -625,6 +625,7 @@ class YawCorrectorConfig:
     outlier_deg: float = 25.0         # a sample this far from the current correction is skipped,
     outlier_run: int = 45             # unless this many in a row agree it is real (about 1.5 s)
     max_correction_deg: float = 60.0
+    max_rate_deg_s: float = 3.0       # the offset never moves faster than this, whatever the depth says
     stale_ms: float = 300.0           # depth older than this does not update the correction
 
     @classmethod
@@ -689,7 +690,10 @@ class YawCorrector:
         dt = 0.0 if self.last_us is None else max(0.0, min(0.2, (t_us - self.last_us) / 1e6))
         self.last_us = t_us
         k = 1.0 - math.exp(-dt / max(1e-3, self.cfg.tau_s))
-        self.offset_deg = float(np.clip(self.offset_deg + k * err, -self.cfg.max_correction_deg,
+        step = k * err
+        cap = max(0.0, self.cfg.max_rate_deg_s) * dt
+        step = float(np.clip(step, -cap, cap))
+        self.offset_deg = float(np.clip(self.offset_deg + step, -self.cfg.max_correction_deg,
                                         self.cfg.max_correction_deg))
         self.updates += 1
         return True

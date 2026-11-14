@@ -354,5 +354,9 @@ tau_s = 1.5
 outlier_deg = 25.0
 outlier_run = 45
 max_correction_deg = 60.0
+# Rate cap: the correction never turns the glove yaw faster than this (degrees per second).
+# Corrections update only on a confirmed arm (the shape gate); with no arm the last good
+# correction is held, never snapped back to 0.
+max_rate_deg_s = 3.0
 stale_ms = 300.0
 
