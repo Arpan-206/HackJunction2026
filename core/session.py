@@ -270,7 +270,8 @@ class Session:
                     else:
                         if self.mode != "record":
                             self.handle_command("set_mode", {"mode": "record"})
-                        self.handle_command("record_start", {})
+                        # the glove whose button was pressed is the one recorded
+                        self.handle_command("record_start", {"hand": side})
                 elif press == "DoublePress" and self.recorder.active:
                     self.handle_command("record_stop", {"save": False})
             elif self.mode in ("learn", "mirror", "duel"):
@@ -339,12 +340,16 @@ class Session:
         rp = self.cfg.rest_pose[side]
         return np.asarray(rp.p, dtype=float), np.asarray(rp.q, dtype=float)
 
-    def _master_hand_for_recording(self) -> str:
+    def _master_hand_for_recording(self, wanted: str | None = None) -> str:
+        """A master glove first; else the hand asked for (the glove whose button was
+        pressed); else the first tracked hand."""
         masters = [
             s for s in self.sides_with_role("master") if self.hands.get(s) is not None
         ]
         if masters:
             return masters[0]
+        if wanted in SIDES and self.hands.get(wanted) is not None:
+            return wanted
         tracked = [
             s for s in SIDES if self.hands.get(s) is not None and self.hands[s].tracked
         ]
@@ -905,7 +910,7 @@ class Session:
             raise CommandError("bad_state", "mode must be record")
         if self.recorder.active:
             raise CommandError("busy", "already recording")
-        side = self._master_hand_for_recording()
+        side = self._master_hand_for_recording(args.get("hand"))
         title = str(args.get("title") or f"{self.task} lesson")
         source = self.sources.get(side, "glove")
         self.recorder.start(
