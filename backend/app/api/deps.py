@@ -16,6 +16,8 @@ from app.services.llm.plan import PlanService
 from app.services.llm.registry import LLMState
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder
+from app.services.rig.calibration import WearerCalibrationService
+from app.services.rig.service import GloveRigService
 from app.services.scoring import ScoringService
 from app.services.vision.mediapipe_hands import MediaPipeHands
 
@@ -88,6 +90,16 @@ def _gloves(s: ServicesDep) -> GloveManager:
     return s.gloves
 
 
+def _rig(s: ServicesDep) -> GloveRigService:
+    """Return the real-glove status service."""
+    return s.rig
+
+
+def _wearer_calibrations(s: ServicesDep) -> WearerCalibrationService:
+    """Return the per-wearer calibration service."""
+    return s.wearer_calibrations
+
+
 def _llm(s: ServicesDep) -> LLMState:
     """Return the LLM state."""
     return s.llm
@@ -106,3 +118,5 @@ VisionDep = Annotated[MediaPipeHands, Depends(_vision)]
 DevDep = Annotated[DevService, Depends(_dev)]
 GlovesDep = Annotated[GloveManager, Depends(_gloves)]
 LLMDep = Annotated[LLMState, Depends(_llm)]
+GloveRigDep = Annotated[GloveRigService, Depends(_rig)]
+WearerCalibrationsDep = Annotated[WearerCalibrationService, Depends(_wearer_calibrations)]

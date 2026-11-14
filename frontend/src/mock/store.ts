@@ -1,4 +1,4 @@
-import type { Calibration, DevState, Lesson, Recording } from '../api/types';
+import type { Calibration, DevState, Lesson, Recording, WearerCalibration } from '../api/types';
 import { SEED_LESSONS } from './seed';
 
 /**
@@ -79,6 +79,7 @@ function compact(rec: Recording): Recording {
 class MockStore {
   private lessons = new Map<string, Lesson>();
   private calibrations: Calibration[] = [];
+  private wearerCalibrations: WearerCalibration[] = [];
   private recordings = new Map<string, Recording>();
   dev: DevState = JSON.parse(JSON.stringify(DEFAULT_DEV_STATE)) as DevState;
 
@@ -86,6 +87,7 @@ class MockStore {
     for (const seed of SEED_LESSONS) this.lessons.set(seed.id, seed);
     for (const l of read<Lesson[]>('lessons', [])) this.lessons.set(l.id, l);
     this.calibrations = read<Calibration[]>('calibrations', []);
+    this.wearerCalibrations = read<WearerCalibration[]>('wearerCalibrations', []);
     for (const r of read<Recording[]>('recordings', [])) this.recordings.set(r.id, r);
     const dev = read<Partial<DevState>>('dev', {});
     this.dev = { ...this.dev, ...dev, smoothing: { ...this.dev.smoothing, ...dev.smoothing } };
@@ -112,6 +114,17 @@ class MockStore {
   saveCalibration(cal: Calibration): Calibration {
     this.calibrations.push(cal);
     write('calibrations', this.calibrations.slice(-40));
+    return cal;
+  }
+
+  /** Glove calibrations per wearer, oldest first. */
+  listWearerCalibrations(): WearerCalibration[] {
+    return this.wearerCalibrations;
+  }
+
+  saveWearerCalibration(cal: WearerCalibration): WearerCalibration {
+    this.wearerCalibrations = [...this.wearerCalibrations.filter((c) => c.id !== cal.id), cal];
+    write('wearerCalibrations', this.wearerCalibrations.slice(-40));
     return cal;
   }
 

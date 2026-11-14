@@ -218,3 +218,90 @@ VIDEO_DEFAULT_PROMPT = "Teach the hand skill shown in this video."
 VIDEO_PROCESSING_TIMEOUT_S = 60.0
 VIDEO_POLL_INTERVAL_S = 1.0
 VIDEO_FAKE_NOTE = "The AI Assistant could not watch the video, so this is a generic template based on your text and the file name."
+
+# Real gloves through the Rokoko Device SDK (status screen, calibration area, demo mode). The core (repo root `core/`)
+# owns the glove data path; the backend only watches it: process and port checks, the driver's RCSP device list and
+# events (read-only, except ReinitAlgo from the calibration area), and STATUS_FLAGS from a diagnostic RGMP tap.
+REPO_ROOT = BACKEND_ROOT.parent
+ROKOKO_SDK_DIRNAME = "Rokoko Device SDK"
+ROKOKO_SDK_BIN = "bin"
+ROKOKO_SOLVER_EXE = "rkk-hand-solver.exe"
+ROKOKO_DRIVER_EXE = "rokoko-sdk.exe"
+ROKOKO_STUDIO_PROCESS = "Rokoko Studio.exe"
+ROKOKO_DRIVER_HOST = "127.0.0.1"
+ROKOKO_DRIVER_RGMP_PORT = 12276
+ROKOKO_SOLVER_RGMP_PORT = 12277
+ROKOKO_RCSP_PORT = 45451
+# What the app starts when nothing serves 12276: the solver, which starts the driver itself (`--driver-arg` is passed
+# through). `--emit both --emit-openxr` gives the core joints_local and joints_openxr; `--listen` serves 12277.
+ROKOKO_SOLVER_ARGS = ("--emit", "both", "--emit-openxr", "--listen", "127.0.0.1:12277")
+# The command a person runs when the driver is already up (the fix step for a missing solver).
+ROKOKO_SOLVER_MANUAL = "rkk-hand-solver --no-driver --emit both --emit-openxr --listen 127.0.0.1:12277"
+ROKOKO_DRIVER_ARGS = ("--auto-stream-usb",)
+ROKOKO_SOLVER_LOG = "rkk-hand-solver.log"
+ROKOKO_STOP_TIMEOUT_S = 3.0
+ROKOKO_PORT_PROBE_TIMEOUT_S = 0.25
+ROKOKO_PROCESS_CACHE_S = 2.0
+ROKOKO_RCSP_TIMEOUT_S = 2.0
+ROKOKO_RCSP_RECONNECT_S = 2.0
+ROKOKO_DEVICE_REFRESH_S = 5.0
+ROKOKO_TAP_RECONNECT_S = 2.0
+ROKOKO_LOG_TAIL_BYTES = 16_000
+# RCSP ConnectionType values (sdk.rokoko.com/reference/rcsp) to what the status screen says.
+ROKOKO_CONNECTION_NAMES = {"serial": "usb", "usb": "usb", "udp": "wifi", "wifi": "wifi", "emulated": "emulated"}
+# RCSP DeviceEvents topics the monitor listens to, and the Logs topics it keeps for the fix steps.
+ROKOKO_EVENT_TOPICS = ("Connected", "Disconnected", "Calibrated", "EmfSaturated", "GyrSaturated", "AccSaturated")
+ROKOKO_LOG_TOPICS = ("Error", "Warning")
+ROKOKO_LOG_KEEP = 20
+# Driver output that means another program holds the USB devices (Rokoko Studio, usually), or that none were found.
+ROKOKO_BUSY_PATTERNS = ("access is denied", "device busy", "resource busy", "being used by another process")
+ROKOKO_NO_USB_PATTERNS = ("no serial devices", "no usb devices", "no devices found")
+# STATUS_FLAGS names (sdk.rokoko.com/reference/products/smartgloves). Bits are looked up by name in each stream's
+# bit_mapping, never by position.
+GLOVE_SATURATION_FLAGS = {
+    "is_magnetometer_saturated": "magnetometer",
+    "is_accelerometer_saturated": "accelerometer",
+    "is_gyroscope_saturated": "gyroscope",
+    "is_emf_saturated": "EMF sensor",
+}
+GLOVE_HEADING_FLAG = "is_heading_reliable"
+GLOVE_SENSOR_NAMES = ("thumb", "index", "middle", "ring", "little", "arm", "hub")
+# RCSP saturation events, by topic, to the same sensor words; an event marks its glove for a few seconds.
+GLOVE_SATURATION_EVENTS = {"EmfSaturated": "EMF sensor", "GyrSaturated": "gyroscope", "AccSaturated": "accelerometer"}
+GLOVE_SATURATION_EVENT_HOLD_S = 5.0
+GLOVE_BATTERY_KEYS = ("battery", "battery_pct", "batterylevel", "battery_level", "batterypercent", "batterypercentage")
+# Frame rates: the driver streams Smartgloves at 83.33 Hz; the app stream is about 60 Hz.
+GLOVE_RATE_WINDOW_S = 2.0
+# Measured 83.39 Hz per group on the real gloves; below 75 is worth a warning (core test agent, 14 Nov 2026).
+GLOVE_MIN_DRIVER_FPS = 75.0
+GLOVE_MIN_STREAM_FPS = 40.0
+# A hand counts as tracked with a frame within 250 ms, as in the core.
+GLOVE_STALE_FRAME_S = 0.25
+# The driver sends data only while an RCSP client holds SubscribeToData; a definition with no data for this long
+# means nobody subscribed (the core does it when it runs with --rcsp).
+ROKOKO_SUBSCRIBE_GRACE_S = 2.0
+# The hub heading flag flickers frame to frame (about 87 percent set while worn); judge it over about a second.
+GLOVE_HEADING_WINDOW_FRAMES = 84
+
+# Calibration area and demo mode.
+WEARER_MAX_CHARS = 40
+NEUTRAL_DEFAULT_DURATION_S = 3.0
+NEUTRAL_MAX_DURATION_S = 10.0
+NEUTRAL_MIN_FRAMES = 10
+REINIT_SETTLE_S = 2.0
+DRIFT_CHECK_DURATION_S = 2.0
+# Drift from the saved neutral pose that asks for a recalibration: mean joint flexion change per hand, and wrist yaw.
+DRIFT_MAX_FLEX_DEG = 8.0
+DRIFT_MAX_YAW_DEG = 15.0
+# Quality reading bands: noise at rest (joint flexion standard deviation), bias (neutral flexion away from flat) and
+# heading reliability (share of the capture with is_heading_reliable set).
+QUALITY_NOISE_GOOD_DEG = 1.0
+QUALITY_NOISE_FAIR_DEG = 3.0
+# A flat hand does not read as zero through the solver: the real worn capture gives a mean of 15 to 16 degrees per
+# joint (index about 37 summed, little 59 to 79), so the bias bands sit above that.
+QUALITY_BIAS_GOOD_DEG = 22.0
+QUALITY_BIAS_FAIR_DEG = 32.0
+QUALITY_HEADING_GOOD = 0.95
+QUALITY_HEADING_FAIR = 0.6
+# Verification step: how far each finger's total flexion must travel (open to closed) for the hand to count as following.
+VERIFY_MIN_TRAVEL_DEG = 60.0

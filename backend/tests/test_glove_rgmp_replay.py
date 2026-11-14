@@ -497,7 +497,186 @@ def test_solver_joints_move_in_the_phase_of_their_finger(worn_solver, dev, finge
 
 # ---------------------------------------------------------------- hooks for the backend glove status work
 
-# TODO(glove-status): when /api/gloves/status, the fix-step mapping and the drift check are on main, replay
-# worn_driver.rgmp.gz through them here: both hands connected, fist reads as fix-step "all fingers curled",
-# flat as "all straight", and a still capture reports drift below threshold. Left out because none of that
-# code exists in backend/ yet.
+# The glove status (/api/gloves/status), its fix steps and the drift check, fed the same real captures. The status
+# reads the driver's RGMP through app/services/rig/monitor.py (core.rgmp underneath); the drift check reads hand frames
+# the way the bridge delivers them, so the solver capture goes through the core's own GloveSource and compat mapping.
+
+import gzip  # noqa: E402
+import json  # noqa: E402
+import struct  # noqa: E402
+
+import numpy as np  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from tests.rgmp_reader import TYPE_DATA, TYPE_DEFINITION, iter_messages  # noqa: E402
+
+
+class _Clock:
+    """A clock the replay moves along the device timestamps."""
+
+    def __init__(self) -> None:
+        self.t = 100.0
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def _messages(name: str, only: int | None = None) -> list[tuple[int, bytes]]:
+    blob = gzip.decompress((FIX / name).read_bytes())
+    out = []
+    for typ, payload in iter_messages(blob):
+        if only is not None:
+            dev = json.loads(payload)["device_id"] if typ == TYPE_DEFINITION else struct.unpack_from("<I", payload, 0)[0]
+            if dev != only:
+                continue
+        out.append((typ, struct.pack("<II", typ, len(payload)) + payload))
+    return out
+
+
+def _replay_status(
+    client: TestClient, name: str, *, only: int | None = None, definitions_only: bool = False, wait_s: float = 0.0
+) -> dict:
+    """Feed a driver capture to the status's driver tap, paced by device time, and read /api/gloves/status."""
+    from app.services.rig.monitor import DriverTap
+
+    rig = client.app.state.services.rig  # type: ignore[attr-defined]
+    rig.port_open = lambda host, port: True
+    rig.process_names = lambda: {c.ROKOKO_DRIVER_EXE.lower(), c.ROKOKO_SOLVER_EXE.lower()}
+    rig._probe = None
+    clock = _Clock()
+    rig.tap = DriverTap(lambda h, p: False, clock=clock)
+    first: dict[int, int] = {}
+    last: dict[int, int] = {}
+    for typ, msg in _messages(name, only):
+        if typ == TYPE_DATA:
+            if definitions_only:
+                continue
+            dev, _g, ts = struct.unpack_from("<IIQ", msg, 8)
+            first.setdefault(dev, ts)
+            # Slices are cut out of a longer capture; close the gaps so the rate reads as the live stream would.
+            step = min(ts - last.get(dev, ts), 13_000)
+            clock.t += step / 1e6 if dev == min(first) else 0.0
+            last[dev] = ts
+        elif typ != TYPE_DEFINITION:
+            continue
+        rig.tap.feed(msg)
+    clock.t += wait_s
+    return client.get("/api/gloves/status").json()
+
+
+def test_status_replays_both_real_gloves_as_connected_and_streaming(client: TestClient) -> None:
+    body = _replay_status(client, "worn_driver.rgmp.gz")
+    left, right = body["gloves"]
+    for g, dev in ((left, LEFT_ID), (right, RIGHT_ID)):
+        assert g["connected"] and g["device_id"] == dev and g["streaming"] is True
+        assert 70 <= g["driver_fps"] <= 95, g["driver_fps"]
+        assert g["battery_pct"] is None  # driver 1.9.7 has no battery anywhere: the screen says "battery: unknown"
+        assert all(not s["saturated"] for s in g["sensors"])
+    # The app itself runs the simulator here, so the one step is to bring frames through the core and the bridge.
+    assert {i["code"] for i in body["issues"]} == {"no_frames"}
+
+
+def test_status_says_nobody_subscribed_when_only_definitions_arrive(client: TestClient) -> None:
+    body = _replay_status(client, "worn_driver.rgmp.gz", definitions_only=True, wait_s=c.ROKOKO_SUBSCRIBE_GRACE_S + 0.5)
+    assert [g["streaming"] for g in body["gloves"]] == [False, False]
+    assert [g["driver_fps"] for g in body["gloves"]] == [None, None]
+    codes = [i["code"] for i in body["issues"]]
+    assert codes == ["not_streaming"], codes
+    assert "not a glove fault" in body["issues"][0]["fix"] and "python -m core" in body["issues"][0]["fix"]
+
+
+def test_status_with_only_the_right_glove_names_the_missing_left(client: TestClient) -> None:
+    body = _replay_status(client, "worn_driver.rgmp.gz", only=RIGHT_ID)
+    left, right = body["gloves"]
+    assert not left["connected"] and right["connected"] and right["streaming"]
+    missing = next(i for i in body["issues"] if i["code"] == "glove_missing")
+    assert missing["side"] == "left" and not missing["blocking"] and "left glove" in missing["fix"]
+
+
+def test_shaken_slice_streams_without_false_saturation(client: TestClient) -> None:
+    """The trimmed shaken slice moves hard but carries no saturation bit (see the flag tests above), so the status
+    must not invent one; saturation by bit name is covered with a patched word in tests/test_rig.py."""
+    body = _replay_status(client, "shaken_driver.rgmp.gz")
+    assert all(g["streaming"] and g["driver_fps"] for g in body["gloves"])
+    assert not [i for i in body["issues"] if i["code"] in ("saturation", "low_frame_rate")], body["issues"]
+
+
+def test_a_glove_that_drops_and_comes_back_returns_without_a_restart(client: TestClient) -> None:
+    """Unplugging the left glove (the driver sends an RGMP disconnect) names it missing; plugging it back in (a fresh
+    definition, then data) brings both gloves back on the same running app."""
+    _replay_status(client, "worn_driver.rgmp.gz")
+    rig = client.app.state.services.rig  # type: ignore[attr-defined]
+    rig.tap.feed(struct.pack("<II", 3, 4) + struct.pack("<I", LEFT_ID))
+    gone = client.get("/api/gloves/status").json()
+    assert not gone["gloves"][0]["connected"] and gone["gloves"][1]["connected"]
+    assert any(i["code"] == "glove_missing" and i["side"] == "left" for i in gone["issues"])
+    for typ, msg in _messages("worn_driver.rgmp.gz", only=LEFT_ID):
+        if typ in (TYPE_DEFINITION, TYPE_DATA):
+            rig.tap.feed(msg)
+    back = client.get("/api/gloves/status").json()
+    assert [g["connected"] for g in back["gloves"]] == [True, True]
+    assert back["gloves"][0]["streaming"] is True
+    assert not any(i["code"] == "glove_missing" for i in back["issues"])
+
+
+def _solver_hand_frames() ->dict[tuple[str, str], tuple[np.ndarray, list[float]]]:
+    """(side, phase) -> (flexion (n, 15) radians, wrist yaws in degrees), as the bridge would deliver them."""
+    from app.services.rig import core_link
+    from app.services.rig.calibration import wrist_yaw_deg
+
+    core_link.rgmp()  # puts the repo root on sys.path
+    from core import compat
+    from core.clock import FakeClock
+    from core.config import load_config
+    from core.rgmp import GloveSource
+
+    clock = FakeClock()
+    src = GloveSource(load_config(), clock)
+    first: dict[int, int] = {}
+    last: dict[int, int] = {}
+    phase: dict[int, int] = {}
+    rows: dict[tuple[str, str], tuple[list, list]] = {}
+    for typ, msg in _messages("worn_solver.rgmp.gz"):
+        dev = None
+        if typ == TYPE_DATA:
+            dev, _g, ts = struct.unpack_from("<IIQ", msg, 8)
+            first.setdefault(dev, ts)
+            if dev in last and ts - last[dev] > SEGMENT_GAP_US:
+                phase[dev] = phase.get(dev, 0) + 1
+            last[dev] = ts
+            clock.set_us(1_700_000_000_000_000 + ts - first[dev])
+        src.feed(msg)
+        side = src.sides.get(dev) if dev is not None else None
+        if side is None:
+            continue
+        hand, _ = src.poll(clock.now_us())[side]
+        if hand is None:
+            continue
+        g = compat.hand_to_glove_hand(hand)
+        flex, yaws = rows.setdefault((side, PHASES[phase.get(dev, 0)]), ([], []))
+        flex.append([v for f in FINGERS for v in g["flexion"][f]])
+        yaws.append(wrist_yaw_deg(g["wrist_quat"]))
+    return {k: (np.array(f), y) for k, (f, y) in rows.items()}
+
+
+def test_drift_check_on_real_hands_passes_when_still_and_fails_on_a_fist() -> None:
+    from app.schemas.rig import WearerCalibration
+    from app.services.rig.calibration import compare_drift, quality_of, summarise_hand
+
+    hands = _solver_hand_frames()
+    neutral, still, fist = [], {}, {}
+    still_yaw, fist_yaw = {}, {}
+    for side in ("left", "right"):
+        flex, yaws = hands[(side, "flat")]
+        half = len(flex) // 2
+        neutral.append(summarise_hand(side, flex[:half], yaws[:half]))  # type: ignore[arg-type]
+        still[side], still_yaw[side] = flex[half:], yaws[half:]
+        fist[side], fist_yaw[side] = hands[(side, "fist")]
+    quality = quality_of(neutral, 1.0)
+    assert quality.noise_deg is not None and quality.noise_deg < c.QUALITY_NOISE_GOOD_DEG  # flat slice is still
+    assert quality.grade == "good", quality  # a real flat hand is not zero flexion; the bias bands allow for it
+    saved = WearerCalibration(id="replay", wearer="Replay", created_at="2026-11-14T00:00:00Z", neutral=neutral, quality=quality)
+    ok = compare_drift(saved, still, still_yaw)  # type: ignore[arg-type]
+    assert ok.ok, ok
+    curled = compare_drift(saved, fist, fist_yaw)  # type: ignore[arg-type]
+    assert not curled.ok and max(h.flex_drift_deg for h in curled.hands) > c.DRIFT_MAX_FLEX_DEG

@@ -13,7 +13,9 @@ import type {
   Skill,
   Step,
   Tolerance,
+  WearerCalibration,
 } from '../api/types';
+import { mockCaptureNeutral, mockDriftCheck, mockDriverAction, mockGloveScenario, mockGloveStatus } from './rig';
 import { getHub, isMotionSpec } from './glove';
 import { newId, nowIso } from './ids';
 import { MOCK_PROVIDER, templateLesson, templateLessonFromVideo, templateMotion, templatePlan, type LessonDraftBody } from './llm';
@@ -404,6 +406,80 @@ route('POST', '/ingest/frames', (req) => {
   const frames = ingestFrames(req.json);
   getHub().ingest(frames);
   return ok({ accepted: frames.length });
+});
+
+/* ---- real gloves (src/mock/rig.ts): simulated status, per-wearer calibration, drift check ---- */
+
+const WEARER_MAX = 40;
+
+function wearerName(v: unknown): string {
+  const name = typeof v === 'string' ? v.split(/\s+/).filter(Boolean).join(' ') : '';
+  if (!name || (typeof v === 'string' && v.length > WEARER_MAX)) invalid(`wearer must be 1 to ${WEARER_MAX} characters`);
+  return name;
+}
+
+function durationOf(v: unknown, fallback: number): number {
+  const d = v === undefined ? fallback : Number(v);
+  if (!(d > 0 && d <= 10)) invalid('duration_s must be greater than 0 and at most 10');
+  return d;
+}
+
+function wearerCalibrations(wearer?: string): WearerCalibration[] {
+  const all = getStore().listWearerCalibrations();
+  const mine = wearer === undefined ? all : all.filter((c) => c.wearer.toLowerCase() === wearer.toLowerCase());
+  return [...mine].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+function latestWearer(wearer: string): WearerCalibration {
+  return wearerCalibrations(wearer)[0] ?? notFound(`no glove calibration saved for ${wearer}`);
+}
+
+route('GET', '/gloves/status', () => ok(mockGloveStatus(getStore().dev.glove_source)));
+route('POST', '/gloves/driver', (req) => {
+  const action = body(req).action;
+  if (action !== 'start' && action !== 'stop') invalid("action must be 'start' or 'stop'");
+  if (action === 'start' && mockGloveScenario() === 'studio') throw new HttpError(409, 'Rokoko Studio is open and holds the gloves. Close Studio first.');
+  mockDriverAction(action as 'start' | 'stop');
+  return ok(mockGloveStatus(getStore().dev.glove_source));
+});
+route('POST', '/gloves/reinit', () => ok({ devices: mockGloveStatus(getStore().dev.glove_source).gloves.filter((g) => g.connected).length }));
+route('GET', '/gloves/calibrations', (req) => ok(wearerCalibrations(req.query.get('wearer') ?? undefined)));
+route('GET', '/gloves/calibrations/latest', (req) => ok(latestWearer(wearerName(req.query.get('wearer')))));
+route('POST', '/gloves/calibrations/neutral', async (req) => {
+  const b = body(req);
+  const wearer = wearerName(b.wearer);
+  try {
+    const cal = await mockCaptureNeutral(wearer, durationOf(b.duration_s, 3), b.reinit === true, newId(), nowIso());
+    return ok(getStore().saveWearerCalibration(cal));
+  } catch (e) {
+    return bad(e instanceof Error ? e.message : String(e));
+  }
+});
+route('POST', '/gloves/calibrations/([^/]+)/finish', (req, [id]) => {
+  const record = getStore().listWearerCalibrations().find((c) => c.id === id) ?? notFound(`glove calibration ${id} not found`);
+  const b = body(req);
+  const next: WearerCalibration = { ...record };
+  if (b.range_calibration_ids !== undefined && b.range_calibration_ids !== null) {
+    if (!isObj(b.range_calibration_ids)) invalid('range_calibration_ids must be an object');
+    const ids = b.range_calibration_ids as Partial<Record<Side, string>>;
+    for (const s of SIDES) {
+      const rid = ids[s];
+      if (rid === undefined) continue;
+      if (getCalibration(rid).side !== s) bad(`calibration ${rid} is not for the ${s} hand`);
+    }
+    next.range_calibration_ids = { ...record.range_calibration_ids, ...ids };
+  }
+  if (typeof b.verified === 'boolean') next.verified = b.verified;
+  return ok(getStore().saveWearerCalibration(next));
+});
+route('POST', '/gloves/drift_check', async (req) => {
+  const b = body(req);
+  const saved = latestWearer(wearerName(b.wearer));
+  try {
+    return ok(await mockDriftCheck(saved, durationOf(b.duration_s, 2)));
+  } catch (e) {
+    return bad(e instanceof Error ? e.message : String(e));
+  }
 });
 
 route('GET', '/dev/state', () => ok(getStore().dev));

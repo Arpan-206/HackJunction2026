@@ -34,6 +34,7 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
     """Yield a TestClient whose lifespan has started the simulator."""
     settings = Settings(
         data_dir=tmp_path, llm_provider="fake", gemini_api_key=None, glove_source="simulator", rokoko_udp_port=0,
+        glove_monitor=False, glove_autostart="off",
     )
     with TestClient(create_app(settings)) as test_client:
         yield test_client

@@ -28,9 +28,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         services = build_services(settings)
         app.state.services = services
         await services.gloves.start()
+        await services.rig.start()
         try:
             yield
         finally:
+            await services.rig.stop()
             await services.gloves.stop()
 
     app = FastAPI(title=c.APP_TITLE, lifespan=lifespan)

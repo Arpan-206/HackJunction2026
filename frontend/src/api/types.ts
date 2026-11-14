@@ -292,6 +292,153 @@ export interface DevState {
 
 export type DevStatePatch = Partial<Omit<DevState, 'smoothing'>> & { smoothing?: Partial<SmoothingState> };
 
+/* ---- Real gloves: status, calibration area, demo mode (docs/CONTRACT.md "Real gloves") ---- */
+
+export type GloveConnection = 'usb' | 'wifi' | 'emulated' | 'unknown';
+export type GloveIssueCode =
+  | 'studio_running'
+  | 'device_busy'
+  | 'driver_not_running'
+  | 'solver_not_running'
+  | 'no_usb_devices'
+  | 'glove_missing'
+  | 'not_streaming'
+  | 'no_frames'
+  | 'low_frame_rate'
+  | 'saturation'
+  | 'heading_unreliable';
+export type GloveSensorName = 'thumb' | 'index' | 'middle' | 'ring' | 'little' | 'arm' | 'hub';
+
+export interface GloveSensorStatus {
+  name: GloveSensorName;
+  /** Saturated parts in plain words, for example "gyroscope"; empty when the sensor reads normally. */
+  saturated: string[];
+}
+
+export interface GloveDeviceStatus {
+  side: Side;
+  connected: boolean;
+  device_id: number | null;
+  connection: GloveConnection | null;
+  /** Frames per second of this hand reaching the app; null on the simulator. */
+  fps: number | null;
+  /** The driver's rate for this glove (about 83 for Smartgloves). */
+  driver_fps: number | null;
+  /** False when the driver sent this glove's definition but no data: nobody subscribed, not a glove fault. */
+  streaming: boolean | null;
+  last_frame_age_ms: number | null;
+  /** Null when the driver reports no battery level: show "battery: unknown". */
+  battery_pct: number | null;
+  heading_reliable: boolean | null;
+  sensors: GloveSensorStatus[];
+}
+
+export interface GloveDriverState {
+  driver_running: boolean;
+  driver_port_open: boolean;
+  solver_running: boolean;
+  solver_port_open: boolean;
+  rcsp_connected: boolean;
+  studio_running: boolean;
+  /** This backend started the solver and stops it on shutdown. */
+  managed: boolean;
+  autostart: boolean;
+  sdk_found: boolean;
+  last_error: string | null;
+}
+
+export interface GloveIssue {
+  code: GloveIssueCode;
+  side: Side | null;
+  /** Blocking issues stop the gloves; the rest are warnings. */
+  blocking: boolean;
+  title: string;
+  /** The fix step, plain words; commands are in backticks. */
+  fix: string;
+}
+
+export interface GloveRigStatus {
+  checked_at: string;
+  source: GloveSource;
+  ready: boolean;
+  driver: GloveDriverState;
+  /** Always [left, right]. */
+  gloves: GloveDeviceStatus[];
+  /** Most important first. */
+  issues: GloveIssue[];
+}
+
+export interface DriverActionRequest {
+  action: 'start' | 'stop';
+}
+
+export interface ReinitResult {
+  devices: number;
+}
+
+export interface NeutralHand {
+  side: Side;
+  /** Mean joint flexion (radians) with the hands flat. */
+  offsets: Record<Finger, JointTriple>;
+  yaw_zero_deg: number;
+  noise_deg: number;
+  yaw_spread_deg: number;
+  frames: number;
+}
+
+export type QualityGrade = 'good' | 'fair' | 'poor';
+
+export interface CalibrationQuality {
+  noise_deg: number | null;
+  bias_deg: number | null;
+  /** Share 0..1 of the capture with a reliable heading; null when unknown. */
+  heading_reliable: number | null;
+  grade: QualityGrade;
+  notes: string[];
+}
+
+export interface WearerCalibration {
+  id: string;
+  wearer: string;
+  created_at: string;
+  neutral: NeutralHand[];
+  range_calibration_ids: Partial<Record<Side, string>>;
+  quality: CalibrationQuality;
+  reinit: boolean;
+  verified: boolean;
+}
+
+export interface NeutralCaptureRequest {
+  wearer: string;
+  duration_s?: number;
+  reinit?: boolean;
+}
+
+export interface CalibrationFinishRequest {
+  range_calibration_ids?: Partial<Record<Side, string>>;
+  verified?: boolean;
+}
+
+export interface DriftCheckRequest {
+  wearer: string;
+  duration_s?: number;
+}
+
+export interface DriftHand {
+  side: Side;
+  flex_drift_deg: number;
+  yaw_drift_deg: number;
+}
+
+export interface DriftCheckResult {
+  ok: boolean;
+  calibration_id: string;
+  hands: DriftHand[];
+  max_flex_deg: number;
+  max_yaw_deg: number;
+  message: string;
+}
+
 /** Client to server WebSocket message on /ws/gloves. */
 export interface SetMotionMessage {
   type: 'set_motion';

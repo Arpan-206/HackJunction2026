@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     rokoko_udp_port: int = c.ROKOKO_DEFAULT_PORT
     data_dir: Path = c.DEFAULT_DATA_DIR
     cors_origins: list[str] = Field(default_factory=lambda: list(c.DEFAULT_CORS_ORIGINS))
+    # Real gloves (Rokoko Device SDK). The monitor watches the driver over RCSP and taps its RGMP for status flags.
+    # Autostart runs rkk-hand-solver (which starts the driver) when nothing serves the driver port: "auto" does so only
+    # with GLOVE_SOURCE=external, the real-glove route, so simulator sessions never touch the hardware.
+    rokoko_sdk_dir: Path | None = None
+    glove_monitor: bool = True
+    glove_driver_tap: bool = True
+    glove_autostart: Literal["auto", "on", "off"] = "auto"
 
 
 @lru_cache

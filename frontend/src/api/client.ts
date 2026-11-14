@@ -1,6 +1,14 @@
 import type {
   CalibrationRequest,
   Calibration,
+  CalibrationFinishRequest,
+  DriftCheckRequest,
+  DriftCheckResult,
+  DriverActionRequest,
+  GloveRigStatus,
+  NeutralCaptureRequest,
+  ReinitResult,
+  WearerCalibration,
   CoachHintRequest,
   CoachHintResponse,
   CoachPlanRequest,
@@ -180,6 +188,18 @@ export const api = {
   coachPlan: (req: CoachPlanRequest) => request<CoachPlanResponse>('POST', '/coach/plan', req),
   motionFromText: (req: MotionFromTextRequest) => request<MotionFromTextResponse>('POST', '/motion/from_text', req),
   coachHint: (req: CoachHintRequest) => request<CoachHintResponse>('POST', '/coach/hint', req),
+
+  gloveStatus: (signal?: AbortSignal) => request<GloveRigStatus>('GET', '/gloves/status', undefined, signal),
+  gloveDriver: (req: DriverActionRequest) => request<GloveRigStatus>('POST', '/gloves/driver', req),
+  gloveReinit: () => request<ReinitResult>('POST', '/gloves/reinit'),
+  wearerCalibrations: (wearer?: string, signal?: AbortSignal) =>
+    request<WearerCalibration[]>('GET', `/gloves/calibrations${qs({ wearer })}`, undefined, signal),
+  latestWearerCalibration: (wearer: string, signal?: AbortSignal) =>
+    request<WearerCalibration>('GET', `/gloves/calibrations/latest${qs({ wearer })}`, undefined, signal),
+  captureNeutral: (req: NeutralCaptureRequest) => request<WearerCalibration>('POST', '/gloves/calibrations/neutral', req),
+  finishWearerCalibration: (id: string, req: CalibrationFinishRequest) =>
+    request<WearerCalibration>('POST', `/gloves/calibrations/${encodeURIComponent(id)}/finish`, req),
+  driftCheck: (req: DriftCheckRequest) => request<DriftCheckResult>('POST', '/gloves/drift_check', req),
 
   devState: (signal?: AbortSignal) => request<DevState>('GET', '/dev/state', undefined, signal),
   setDevState: (patch: DevStatePatch) => request<DevState>('POST', '/dev/state', patch),

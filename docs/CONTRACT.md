@@ -181,6 +181,14 @@ Routes are thin: validate input, call one service, return a schema. No business 
 | POST | `/ingest/frames` | one `GloveFrame`, one `HandFrame` (`wrist_quat` defaults to identity) or `{frames: GloveFrame[]}` (max 600); optional `?activate=1` switches the source to `external` first | `{accepted: number}`; 409 if the source is not `external` and `activate` is absent, 422 on an invalid frame |
 | GET | `/dev/state` | | `{glove_source, smoothing: {enabled, min_cutoff, beta}, llm_provider, simulator_motion, gemini_budget: {model, rpm_budget, rpm_remaining, rpd_budget, rpd_remaining, free_rpm, free_rpd}[]}` (`gemini_budget` is read-only, ignored on POST) |
 | POST | `/dev/state` | partial of the above | new state |
+| GET | `/gloves/status` | | `GloveRigStatus` (see Real gloves) |
+| POST | `/gloves/driver` | `{action: 'start' or 'stop'}` | `GloveRigStatus` after the action; 409 while Rokoko Studio is open, 503 when the SDK is not found |
+| POST | `/gloves/reinit` | | `{devices: number}`: gloves that accepted RCSP `ReinitAlgo` (0 without a driver) |
+| GET | `/gloves/calibrations?wearer=` | | `WearerCalibration[]`, newest first (`wearer` optional, case-insensitive) |
+| GET | `/gloves/calibrations/latest?wearer=` | | `WearerCalibration` or 404 |
+| POST | `/gloves/calibrations/neutral` | `{wearer, duration_s?: number (default 3, max 10), reinit?: boolean}` | `WearerCalibration` (stored); 400 when no frames arrived |
+| POST | `/gloves/calibrations/{id}/finish` | `{range_calibration_ids?: {left?, right?}, verified?: boolean}` | `WearerCalibration`; 400 when a range id is for the other hand, 404 unknown ids |
+| POST | `/gloves/drift_check` | `{wearer, duration_s?: number (default 2)}` | `DriftCheckResult`; 404 when the wearer has no calibration |
 
 ## WebSocket
 
@@ -214,3 +222,78 @@ The glove pipeline applies a One Euro filter (Casiez et al. 2012) per joint angl
 - `/vision/hands` `wrist_pos` and `landmarks` are MediaPipe normalised image coordinates (not metres).
 - `POST /calibrations` captures from the live stream for `duration_s`; the phase not yet captured is returned as zeros.
 - Errors are `{detail: string}` with 404 (missing), 501 (rokoko_sdk stub), 503 (optional dependency or LLM provider missing), 409 (UDP port busy, or ingest while the source is not `external`), 422 (invalid ingested frame).
+
+## Real gloves: status, calibration area, demo mode
+
+Added 14 Nov 2026 at the user's request (additive; nothing above changed). The core (`core/`, SPEC.md) stays the only glove data path: it reads the solver on 12277 and `tools/ingest_bridge.py` pushes its hands into `/ws/ingest`. These routes only watch it: process and port checks, the driver's RCSP device list and events (read-only; `ReinitAlgo` is the one command sent, from the calibration area), and STATUS_FLAGS read from the driver's RGMP (12276) by a diagnostic tap that never produces hands.
+
+```ts
+type Connection = 'usb' | 'wifi' | 'emulated' | 'unknown';  // RCSP Serial, UDP, Emulated, Unknown
+type GloveIssueCode = 'studio_running' | 'device_busy' | 'driver_not_running' | 'solver_not_running' | 'no_usb_devices'
+  | 'glove_missing' | 'not_streaming' | 'no_frames' | 'low_frame_rate' | 'saturation' | 'heading_unreliable';
+
+interface GloveRigStatus {
+  checked_at: string;        // ISO 8601
+  source: GloveSource;       // what feeds /ws/gloves now; 'simulator' frames never count as glove frames
+  ready: boolean;            // at least one glove connected and no blocking issue
+  driver: {
+    driver_running: boolean; driver_port_open: boolean;   // rokoko-sdk, RGMP 12276
+    solver_running: boolean; solver_port_open: boolean;   // rkk-hand-solver, RGMP 12277
+    rcsp_connected: boolean;                               // RCSP 45451
+    studio_running: boolean;                               // "Rokoko Studio.exe" holds the USB devices
+    managed: boolean;        // this backend started the solver and stops it on shutdown
+    autostart: boolean;      // GLOVE_AUTOSTART: 'auto' (only with GLOVE_SOURCE=external), 'on', 'off'
+    sdk_found: boolean;
+    last_error: string | null;
+  };
+  gloves: GloveDeviceStatus[];   // always [left, right]
+  issues: GloveIssue[];          // most important first
+}
+
+interface GloveDeviceStatus {
+  side: Side;
+  connected: boolean;
+  device_id: number | null;
+  connection: Connection | null;
+  fps: number | null;              // frames per second of this hand reaching the app (null on the simulator)
+  driver_fps: number | null;       // the driver's rate for this glove (about 83 for Smartgloves)
+  streaming: boolean | null;       // false: the driver sent the definition but no data (nobody subscribed), not a glove fault
+  last_frame_age_ms: number | null;
+  battery_pct: number | null;      // null: the driver reports no battery (true for driver 1.9.7), shown as "battery: unknown"
+  heading_reliable: boolean | null;  // hub is_heading_reliable over the last second; null when unknown
+  sensors: { name: 'thumb' | 'index' | 'middle' | 'ring' | 'little' | 'arm' | 'hub'; saturated: string[] }[];
+}
+
+interface GloveIssue {
+  code: GloveIssueCode;
+  side: Side | null;
+  blocking: boolean;         // blocking issues stop the gloves; the rest are warnings
+  title: string;
+  fix: string;               // the fix step to show, plain words, may name a command in backticks
+}
+
+interface WearerCalibration {
+  id: string;
+  wearer: string;            // trimmed, at most 40 characters
+  created_at: string;
+  neutral: { side: Side; offsets: Record<Finger, [number, number, number]>; yaw_zero_deg: number; noise_deg: number; yaw_spread_deg: number; frames: number }[];
+  range_calibration_ids: Partial<Record<Side, string>>;   // ids from POST /calibrations (flat and fist)
+  quality: { noise_deg: number | null; bias_deg: number | null; heading_reliable: number | null; grade: 'good' | 'fair' | 'poor'; notes: string[] };
+  reinit: boolean;           // RCSP ReinitAlgo was accepted before the capture
+  verified: boolean;         // the hand on screen followed open and close
+}
+
+interface DriftCheckResult {
+  ok: boolean;
+  calibration_id: string;
+  hands: { side: Side; flex_drift_deg: number; yaw_drift_deg: number }[];
+  max_flex_deg: number;      // DRIFT_MAX_FLEX_DEG
+  max_yaw_deg: number;       // DRIFT_MAX_YAW_DEG
+  message: string;
+}
+```
+
+- Saturation and heading flags are looked up by name in each STATUS_FLAGS stream's `bit_mapping` (`is_magnetometer_saturated`, `is_accelerometer_saturated`, `is_gyroscope_saturated`, `is_emf_saturated`, `is_heading_reliable`), never by bit position. Coil Pro streams are ignored. A flag counts for 5 s after it was last set, and RCSP `EmfSaturated`, `GyrSaturated` and `AccSaturated` events mark the hub. `driver_fps` counts only the first group (`default`); the driver also sends `emf_only` at the same rate.
+- The driver (1.9.7) sends a glove's RGMP definition to any client but data frames only while some RCSP client holds `SubscribeToData` for it (the core does this when it runs with `--rcsp`). A glove whose definition arrived but no data for `ROKOKO_SUBSCRIBE_GRACE_S` (2 s) has `streaming: false` and gives one `not_streaming` step that says so; it never shows as `no_frames` or `low_frame_rate`. The backend never subscribes itself.
+- Neutral pose: hands flat on the table, thumbs together, still. `offsets` are the mean joint flexion (radians, the `/ws/gloves` joints), `yaw_zero_deg` the circular mean wrist heading (rotation about +y of the fingers' -z), `noise_deg` the mean per-joint standard deviation in degrees. Quality bands are in `backend/app/constants.py` (`QUALITY_*`). Smartgloves have no calibrate command over RCSP; `reinit: true` sends the documented `ReinitAlgo` first and waits `REINIT_SETTLE_S`.
+- Drift check: mean absolute joint flexion change per hand against the saved offsets, and the wrist heading change; `ok` when every streaming hand is within both thresholds.

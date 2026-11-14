@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from app.core.config import Settings
 from app.schemas.lesson import Lesson
 from app.schemas.records import Calibration, Recording
+from app.schemas.rig import WearerCalibration
 from app.services.calibration import CalibrationService
 from app.services.dev import DevService
 from app.services.gloves.manager import GloveManager
@@ -16,6 +17,8 @@ from app.services.llm.plan import PlanService
 from app.services.llm.registry import LLMState
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder
+from app.services.rig.calibration import WearerCalibrationService
+from app.services.rig.service import GloveRigService
 from app.services.scoring import ScoringService
 from app.services.smoothing.one_euro import GloveSmoother
 from app.services.storage.json_store import JsonStore
@@ -41,6 +44,8 @@ class Services:
     scoring: ScoringService
     vision: MediaPipeHands
     dev: DevService
+    rig: GloveRigService
+    wearer_calibrations: WearerCalibrationService
 
 
 def build_services(settings: Settings) -> Services:
@@ -54,6 +59,7 @@ def build_services(settings: Settings) -> Services:
     recorder = Recorder(JsonStore(data / "recordings", Recording))
     gloves.add_sink(recorder.push)
     calibrations = CalibrationService(JsonStore(data / "calibrations", Calibration), gloves)
+    rig = GloveRigService(settings, gloves)
     return Services(
         settings=settings,
         moves=moves,
@@ -69,4 +75,6 @@ def build_services(settings: Settings) -> Services:
         scoring=ScoringService(recorder, calibrations),
         vision=MediaPipeHands(),
         dev=DevService(gloves, llm),
+        rig=rig,
+        wearer_calibrations=WearerCalibrationService(JsonStore(data / "glove_calibrations", WearerCalibration), gloves, rig, calibrations),
     )
