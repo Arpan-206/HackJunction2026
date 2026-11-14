@@ -200,15 +200,6 @@ export function weekMarks(practised: string[], today: string): WeekMark[] {
   });
 }
 
-/** Forgiving weekly summary: days practised this week against the goal, never a broken chain. */
-export function weekSummary(marks: WeekMark[], goal: number): { done: number; goal: number; met: boolean; line: string } {
-  const done = marks.filter((m) => m.practised).length;
-  const met = done >= goal;
-  const left = Math.max(0, goal - done);
-  const line = met ? `${done} days this week. The goal of ${goal} is met.` : `${done} of ${goal} days this week. ${left} more keeps the week whole; a rest day is free.`;
-  return { done, goal, met, line };
-}
-
 /** Builds a synthetic score for seeded history. */
 export function syntheticScore(overall: number, tolerant = true): ScoreResult {
   const v = Math.round(overall);

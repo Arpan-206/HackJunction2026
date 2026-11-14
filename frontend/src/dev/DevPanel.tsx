@@ -3,6 +3,7 @@ import { useDevState, useGloveStream, type GloveSource, type LlmProvider, type M
 import { THEMES, THEME_IDS, useTheme, type ThemeId } from '../theme';
 import { setSettings, useSettings, type GuidanceMode } from '../state/settings';
 import { isDev } from '../features/apprentice/pipeline/flags';
+import { clearPracticeHistory, resetDemoHistory } from '../features/apprentice/pipeline/demoHistory';
 import './devPanel.css';
 
 /** The old, sticky localStorage flag. It is cleared on sight so a dev panel switched on long ago never resurfaces. */
@@ -165,6 +166,16 @@ function Body() {
           ))}
         </select>
       </label>
+
+      <fieldset>
+        <legend>Practice history (this device)</legend>
+        <button type="button" onClick={resetDemoHistory} title="Clears attempts and tests; the learner dashboard seeds a 3-day streak ending today">
+          Fresh demo history
+        </button>
+        <button type="button" onClick={clearPracticeHistory} title="Clears attempts and tests and keeps them empty (no demo seeding)">
+          Empty history
+        </button>
+      </fieldset>
 
       <label>
         Apprentice guidance default

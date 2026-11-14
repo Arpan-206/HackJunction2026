@@ -1188,20 +1188,24 @@
 }
 
 .ap-today {
+  /* Above the skill cards (their live previews sit at z-index 3 and 4), so a day's detail can open over them. */
+  position: relative;
+  z-index: 5;
   margin-bottom: 1.5rem;
 }
 .ap-today__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 1fr);
-  gap: 1.5rem 2.5rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 2.5rem;
+  align-items: center;
 }
 .ap-today__lede {
-  margin: 0 0 0.6rem;
-  font: italic 400 var(--step-1) var(--font-note);
+  margin: 0 0 0.4rem;
+  font: italic 400 var(--step-0) var(--font-note);
 }
 .ap-today__due {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0;
   padding: 0;
@@ -1210,7 +1214,7 @@
 .ap-today__due a {
   display: grid;
   gap: 0.1rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.35rem 0.9rem;
   min-height: var(--target);
   border-left: 3px solid var(--line-strong);
   background: var(--surface-2);
@@ -1222,71 +1226,169 @@
   background: var(--accent-soft);
 }
 .ap-today__due strong {
-  font: 700 var(--step-0) var(--font-ui);
+  font: 700 max(1rem, var(--step--1)) var(--font-ui);
 }
 .ap-today__due span {
-  font: italic 400 var(--step--1) var(--font-note);
+  font: italic 400 max(1rem, var(--step--1)) var(--font-note);
   color: var(--text-2);
+}
+
+/* The quote of the day: italic hand, the credit after it in small upright type. */
+.ap-quote {
+  margin: 0;
+  max-width: 62rem;
+}
+.ap-quote__text {
+  display: inline;
+  margin: 0;
+}
+.ap-quote__text p {
+  display: inline;
+  margin: 0;
+  font: italic 400 var(--step-0) / 1.4 var(--font-note);
+  color: var(--text);
+}
+.ap-quote__credit {
+  display: inline;
+  margin-left: 0.6rem;
+  font: 600 max(1rem, var(--step--1)) / 1.4 var(--font-ui);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* The week: the streak in words, then seven days. Practised days are filled in ink; the current streak is joined by a rule. */
+.ap-today__week {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.ap-streak {
+  margin: 0;
+  font: 600 var(--step-0) / 1.2 var(--font-display);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.ap-streak.is-on {
+  color: var(--text);
 }
 .ap-weekmarks {
   display: flex;
-  gap: 0.6rem;
-  margin: 0 0 0.6rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .ap-weekmarks li {
+  position: relative;
+}
+/* The rule joining two days of the current streak, drawn behind the dots at their centre line. */
+.ap-weekmarks li.is-linked::before {
+  content: '';
+  position: absolute;
+  top: calc(0.3rem + 0.6rem - 1.5px);
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--text);
+}
+.ap-weekmarks__day {
+  position: relative;
   display: grid;
   justify-items: center;
-  gap: 0.25rem;
-  font: 600 var(--step--1) var(--font-ui);
+  align-content: start;
+  gap: 0.15rem;
+  min-width: var(--target);
+  min-height: var(--target);
+  padding: 0.3rem 0 0.1rem;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
   color: var(--text-2);
+  font: 600 max(1rem, var(--step--1)) / 1 var(--font-ui);
+}
+button.ap-weekmarks__day {
+  cursor: pointer;
+}
+button.ap-weekmarks__day:hover .ap-weekmarks__dot {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 14%, transparent);
+}
+button.ap-weekmarks__day[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--text) 9%, transparent);
 }
 .ap-weekmarks__dot {
-  width: 1.7rem;
-  height: 1.7rem;
+  position: relative;
+  width: 1.2rem;
+  height: 1.2rem;
   border-radius: 50%;
   border: 2px solid var(--line-strong);
+  background: var(--surface);
 }
-.ap-weekmarks li.is-on .ap-weekmarks__dot {
-  background: var(--ok);
-  border-color: var(--ok);
+.ap-weekmarks__day.is-on .ap-weekmarks__dot {
+  background: var(--text);
+  border-color: var(--text);
 }
-.ap-weekmarks li.is-today .ap-weekmarks__day {
+.ap-weekmarks__day.is-today .ap-weekmarks__letter {
   color: var(--text);
   text-decoration: underline;
   text-underline-offset: 0.25em;
 }
-.ap-weekmarks li.is-future .ap-weekmarks__dot {
+.ap-weekmarks__day.is-future .ap-weekmarks__dot {
   border-style: dashed;
   opacity: 0.5;
 }
-.ap-today__weekline {
-  margin: 0 0 0.6rem;
-  font: 400 var(--step-0) var(--font-note);
-}
-.ap-today__goal {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font: 600 var(--step--1) var(--font-ui);
-}
-.ap-today__goal button {
-  min-height: var(--target);
-  padding: 0 0.9rem;
-  font: 600 var(--step--1) var(--font-ui);
-  color: var(--text);
-  background: transparent;
+
+/* One day's account, opened over the page below the week so the dashboard never grows. */
+.ap-daypop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0.85rem 1.1rem;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-s);
-  cursor: pointer;
+  border-radius: var(--radius-m);
+  background-color: var(--surface);
+  box-shadow: var(--shadow), 0 18px 36px -18px rgba(0, 0, 0, 0.45);
 }
-.ap-today__goal button.is-on {
-  background: var(--accent);
-  color: var(--accent-text);
+.ap-daypop__title {
+  margin: 0 0 0.25rem;
+  font: 600 var(--step-0) / 1.2 var(--font-display);
+  color: var(--text);
 }
-.ap-today__dev {
-  margin-top: 1rem;
+.ap-daypop__sum,
+.ap-daypop__empty {
+  margin: 0;
+  font: 400 max(1rem, var(--step--1)) / 1.4 var(--font-ui);
+  color: var(--text-2);
+}
+.ap-daypop__list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.55rem 0 0;
+  padding: 0.55rem 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.ap-daypop__list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 1rem;
+  font: 400 max(1rem, var(--step--1)) / 1.35 var(--font-ui);
+  color: var(--text);
+}
+.ap-daypop__lesson strong {
+  font-weight: 700;
+}
+.ap-daypop__meta {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+/* Gold is for mastery only: the word "mastered" is the one gold mark here. */
+.ap-daypop__mastered {
+  color: var(--gold-text);
+  font-weight: 700;
 }
 
 .ap-seal {
@@ -1324,6 +1426,34 @@
   .ap-today__grid,
   .ap-seal {
     grid-template-columns: 1fr;
+  }
+}
+
+/* A phone: the streak line above the week, the seven days across the full width, the day's account as wide as the panel. */
+@media (max-width: 560px) {
+  .ap-today__week {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .ap-streak {
+    flex: 1 1 100%;
+  }
+  .ap-weekmarks {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .ap-weekmarks li {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+  }
+  .ap-weekmarks__day {
+    width: 100%;
+  }
+  .ap-daypop {
+    left: 0;
+    right: 0;
+    width: auto;
   }
 }
 
@@ -1513,4 +1643,427 @@
 .ty-note {
   margin: 0;
   font-size: var(--step-0);
+}
+
+/* ---- The three parts of a course: Tutorial, Practice, Play ---- */
+.ap-journey {
+  margin: 0.25rem 0 1.4rem;
+}
+.ap-lesson__actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+}
+
+/* Tutorial: the expert's video large, the chalk hand beside it on the video's clock; one bar of controls under both. */
+.ap-tut__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  height: clamp(300px, 56vh, 700px);
+}
+.ap-tut__pane {
+  position: relative;
+  margin: 0;
+  min-height: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.ap-tut__pane--video {
+  background: var(--ink-sea);
+}
+.ap-tut__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  cursor: pointer;
+}
+.ap-tut__canvas {
+  position: absolute;
+  inset: 0;
+}
+.ap-tut__cap {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font: italic 400 max(1rem, var(--step--1)) / 1.3 var(--font-note);
+  color: var(--text);
+  pointer-events: none;
+}
+.ap-tut__bigplay {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  translate: -50% -50%;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.ap-tut__bigplay:hover {
+  background: var(--accent-soft);
+}
+.ap-tut__notes {
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+.ap-tut__hint {
+  margin: 0;
+  font: italic 400 var(--step-1) / 1.35 var(--font-note);
+  color: var(--text-2);
+}
+.ap-tut__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin: 0.9rem 0 0.4rem;
+}
+.ap-tut__toggle {
+  padding-inline: 0.8em;
+}
+.ap-tut__scrub {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+  height: var(--target);
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.ap-tut__time {
+  min-width: 6.5rem;
+  font-size: var(--step-0);
+}
+.ap-tut__go {
+  margin-left: auto;
+}
+.ap-tut__instruction {
+  max-width: 72ch;
+  margin: 0.4rem 0 0;
+}
+@media (max-width: 760px) {
+  .ap-tut__grid,
+  .ap-tut__grid--video {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .ap-tut__pane {
+    aspect-ratio: 4 / 3;
+  }
+  .ap-tut__pane--video {
+    aspect-ratio: 16 / 10;
+  }
+  .ap-tut__notes {
+    padding: 0;
+  }
+  .ap-tut__go {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+}
+
+/* The expert's take video, small in the stage's top right corner, in time with the ghost. */
+.ap-pip {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 4;
+  width: clamp(180px, 24%, 340px);
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.ap-pip__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--ink-sea);
+}
+.ap-pip__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding-left: 0.6rem;
+}
+.ap-pip__cap {
+  font: italic 400 1rem / 1.2 var(--font-note);
+  color: var(--text);
+}
+.ap-pip__hide {
+  display: grid;
+  place-items: center;
+  width: var(--target);
+  height: var(--target);
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ap-pip__hide:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+@media (max-width: 760px) {
+  .ap-pip {
+    width: 42%;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* Play: the call on the left (name, key pose, live score), the live hand on the right. */
+.ap-play {
+  display: grid;
+  grid-template-columns: minmax(20rem, 27rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.ap-play__call {
+  display: grid;
+  align-content: start;
+  padding: 1.25rem;
+}
+.ap-play__stage {
+  position: relative;
+  height: clamp(440px, 68vh, 900px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.ap-play__intro,
+.ap-play__now,
+.ap-play__over {
+  display: grid;
+  gap: 0.9rem;
+}
+.ap-play__intro h2,
+.ap-play__over h2 {
+  font-size: var(--step-2);
+}
+.ap-play__lede {
+  margin: 0;
+  font-size: var(--step-1);
+  line-height: 1.4;
+}
+.ap-play__moves,
+.ap-play__best {
+  margin: 0;
+  font: italic 400 var(--step-0) / 1.4 var(--font-note);
+  color: var(--text-2);
+}
+.ap-play__count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  font: 600 var(--step-0) var(--font-ui);
+}
+.ap-play__marks {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+.ap-play__marks i {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+}
+.ap-play__marks i.is-clean {
+  border-color: var(--ok);
+  background: var(--ok);
+}
+.ap-play__marks i.is-done {
+  background: var(--line);
+}
+.ap-play__marks i.is-now {
+  border-width: 3px;
+  border-color: var(--text);
+}
+.ap-play__name {
+  margin: 0;
+  font: 700 var(--step-3) / 1.05 var(--font-display);
+  letter-spacing: 0.02em;
+}
+.ap-play__still {
+  max-width: 22rem;
+}
+.ap-play__meter {
+  display: grid;
+  gap: 0.45rem;
+}
+.ap-play__meterhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 600 var(--step-0) var(--font-ui);
+}
+.ap-play__val {
+  font-size: var(--step-3);
+  line-height: 1;
+}
+.ap-play__fill {
+  background: var(--accent);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ap-play__meter.is-clean .ap-play__fill {
+  background: var(--ok);
+}
+.ap-play__meter.is-clean .ap-play__line {
+  color: var(--ok);
+  font-weight: 500;
+}
+.ap-play__line {
+  min-height: 2.7em;
+  margin: 0;
+  font: italic 400 var(--step-1) / 1.35 var(--font-note);
+}
+.ap-play__streak {
+  margin: 0;
+  font: 600 var(--step-0) var(--font-ui);
+}
+.ap-play__result {
+  margin: 0;
+  font-size: var(--step-1);
+  line-height: 1.4;
+}
+.ap-play__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ap-play__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--step-0);
+}
+.ap-play__list li.is-clean .ap-num {
+  color: var(--ok);
+}
+.ap-play__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+.ap-play__idle {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  margin: 0;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font: italic 400 1rem / 1.3 var(--font-note);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-play__fill {
+    transition: none;
+  }
+}
+@media (max-width: 1100px) {
+  .ap-play {
+    grid-template-columns: 1fr;
+  }
+  .ap-play__stage {
+    height: clamp(320px, 52vh, 600px);
+  }
+}
+
+/* Practice: two panels, the expert on the left (a little narrower), you on the right. Stacked on a phone. */
+.ap-stage__canvas.ap-stage__canvas--practice {
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+.ap-practice {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  height: 100%;
+}
+.ap-practice__pane {
+  position: relative;
+  min-height: 0;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--stage-bg);
+  overflow: hidden;
+}
+.ap-practice__cap {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 2;
+  padding: 0.1rem 0.7rem;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font: 500 var(--step-1) var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--text);
+  pointer-events: none;
+}
+.ap-practice__away {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  padding: 3.5rem 2rem 2rem;
+  text-align: center;
+  font: italic 400 var(--step-1) / 1.4 var(--font-note);
+  color: var(--text-2);
+}
+/* The expert's video docks in the expert's panel, bottom right, clear of the caption and the crossbar. */
+.ap-practice__pane .ap-pip {
+  top: auto;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  width: clamp(150px, 40%, 300px);
+}
+@media (max-width: 760px) {
+  .ap-stage__canvas.ap-stage__canvas--practice {
+    height: auto;
+  }
+  .ap-practice {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .ap-practice__pane {
+    height: clamp(300px, 46vh, 520px);
+  }
+  .ap-practice__pane .ap-pip {
+    width: 42%;
+  }
 }
