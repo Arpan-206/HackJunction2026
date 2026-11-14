@@ -85,11 +85,32 @@ def overlay(frame, obs) -> np.ndarray:
     return img
 
 
-def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg: TrackerConfig | None = None) -> dict:
+def span_label(spans: list[dict], k: int) -> str:
+    for sp in spans:
+        if sp["from"] <= k <= sp["to"]:
+            return sp["label"]
+    return "unlabelled"
+
+
+def span_scores(spans: list[dict], indices: list[int], found: list[bool]) -> dict:
+    """Found rate per label; for "no_arm" that rate is the false-accept rate."""
+    out: dict = {}
+    for lab in sorted({sp["label"] for sp in spans} | {"unlabelled"}):
+        ks = [f for k, f in zip(indices, found) if span_label(spans, k) == lab]
+        if ks:
+            out[lab] = {"frames": len(ks), "found": int(sum(ks)), "rate": round(sum(ks) / len(ks), 3)}
+    na = [k for k, f in zip(indices, found) if f and span_label(spans, k) == "no_arm"]
+    out["false_accept_frames"] = na[:50]
+    return out
+
+
+def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg: TrackerConfig | None = None,
+          spans: list[dict] | None = None, colour=None) -> dict:
+    """colour: a core.camera.depth_colour.ColourHands, or None for depth only."""
     import cv2
     out.mkdir(parents=True, exist_ok=True)
     tr = DepthTracker(tracker_cfg)
-    rows, obs_all = [], []
+    rows, obs_all, idx_all, col_all = [], [], [], []
     arrivals, stream_ts, tracking = [], [], []
     packets = list(read_recording(path))
     picks = set(np.linspace(0, max(0, len(packets) - 1), min(n_images, len(packets))).astype(int).tolist()) if packets else set()
@@ -109,13 +130,23 @@ def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg:
         want_img = k in picks
         o = tr.process(f, want_masks=want_img)
         obs_all.append(o)
+        idx_all.append(k)
+        if colour is not None:
+            co = colour.confirm(colour.detect(f), f, o)
+            col_all.append(co)
+            ch = co.confirmed
+            if want_img and ch is not None and ch.mask is not None:
+                o.masks["arm"] = o.masks.get("arm", np.zeros_like(ch.mask)) | ch.mask
         rows.append({
             "index": k, "frame_id": f.frame_id, "arrival_us": arrival_us, "stream_t": round(f.stream_t, 4),
             "process_ms": round(o.process_ms, 2), "plane_from_app": int(f.plane is not None),
             "table": o.table.source if o.table else "", "camera_height_m": round(o.table.camera_height_m, 4) if o.table else "",
             "fit_height_m": round(o.table_fit.camera_height_m, 4) if o.table_fit else "",
             "agree_deg": o.agree_deg if o.agree_deg is not None else "", "agree_mm": o.agree_mm if o.agree_mm is not None else "",
-            "blob": int(o.blob_found), "arm": int(o.arm_found), "width_m": round(o.width_m, 3),
+            "blob": int(o.blob_found), "arm": int(o.arm_found),
+            "label": span_label(spans, k) if spans else "",
+            "shape_len_m": o.shape.get("length_m", ""), "shape_taper": o.shape.get("taper", ""),
+            "shape_wmax_m": o.shape.get("wmax_m", ""), "shape_h95_m": o.shape.get("h95_m", ""), "width_m": round(o.width_m, 3),
             "cyl_radius_m": round(o.cyl_radius_m, 4) if o.cyl_radius_m is not None else "",
             "cyl_rms_mm": round(o.cyl_rms_m * 1000, 2) if o.cyl_rms_m is not None else "",
             "axis_tilt_deg": round(o.axis_tilt_deg, 1) if o.axis_tilt_deg is not None else "",
@@ -211,6 +242,47 @@ def check(path: Path, out: Path, n_images: int = 8, every: int = 1, tracker_cfg:
                                               "p95": _q(skew_ms, [95])[0] if len(skew_ms) else None},
         },
     }
+    if colour is not None:
+        cf = [c.confirmed is not None for c in col_all]
+        prop = [len(c.hands) > 0 for c in col_all]
+        cms = np.array([c.ms for c in col_all])
+        cy = [c.confirmed.yaw_deg for c in col_all if c.confirmed is not None]
+        steps_c = []
+        for a, b in zip(col_all, col_all[1:]):
+            if a.confirmed is not None and b.confirmed is not None:
+                steps_c.append(abs(wrap_deg(b.confirmed.yaw_deg - a.confirmed.yaw_deg)))
+        reasons: dict = {}
+        for c in col_all:
+            for h in c.hands:
+                reasons[h.reason] = reasons.get(h.reason, 0) + 1
+        both = [o.forearm_yaw_deg for o, c in zip(obs_all, col_all)
+                if o.arm_found and c.confirmed is not None and o.forearm_yaw_deg is not None]
+        dis = [abs(wrap_deg(o.forearm_yaw_deg - c.confirmed.yaw_deg)) for o, c in zip(obs_all, col_all)
+               if o.arm_found and c.confirmed is not None and o.forearm_yaw_deg is not None]
+        summary["colour"] = {
+            "proposed_fraction": round(float(np.mean(prop)), 3) if prop else None,
+            "confirmed_fraction": round(float(np.mean(cf)), 3) if cf else None,
+            "reasons": reasons,
+            "ms": {"mean": round(float(cms.mean()), 1), "p95": _q(cms, [95])[0]} if len(cms) else None,
+            "hand_yaw_step_abs_deg": {"median": _q(np.array(steps_c), [50])[0] if steps_c else None,
+                                      "p95": _q(np.array(steps_c), [95])[0] if steps_c else None},
+            "hand_yaw_frames": len(cy),
+            "forearm_vs_hand_yaw_deg": {"frames": len(both), "median": _q(np.array(dis), [50])[0] if dis else None},
+        }
+        for c, r in zip(col_all, [r for r in rows if not r.get("bad")]):
+            r["colour"] = int(c.confirmed is not None)
+            r["colour_yaw_deg"] = c.confirmed.yaw_deg if c.confirmed is not None else ""
+        with open(out / "frames.csv", "w", newline="") as fh:
+            keys = sorted({k for r in rows for k in r})
+            w = csv.DictWriter(fh, fieldnames=keys)
+            w.writeheader()
+            w.writerows(rows)
+    if spans:
+        summary["spans"] = span_scores(spans, idx_all, [o.arm_found for o in obs_all])
+        if colour is not None:
+            cf = [c.confirmed is not None for c in col_all]
+            summary["spans_colour_and_depth"] = span_scores(spans, idx_all, cf)
+            summary["spans_either"] = span_scores(spans, idx_all, [a or b for a, b in zip(cf, [o.arm_found for o in obs_all])])
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     return summary
 
@@ -223,6 +295,10 @@ def main() -> int:
     ap.add_argument("--every", type=int, default=1, help="process every Nth packet")
     ap.add_argument("--config", default=None, help="config.toml with [camera.depth] (default: the repo's)")
     ap.add_argument("--camera-yaw", type=float, default=None, help="override [camera.depth] camera_yaw_deg")
+    ap.add_argument("--spans", type=Path, help="hand-marked spans (JSON, as tests/fixtures/depth/bench_stand_1_spans.json): "
+                    "adds the found rate per label and the false accepts on no_arm spans")
+    ap.add_argument("--gate", choices=["shape", "cylinder"], help="override [camera.depth] gate")
+    ap.add_argument("--colour", action="store_true", help="also run colour proposes, depth confirms (MediaPipe)")
     a = ap.parse_args()
     cfg = load_config(a.config)
     tcfg = TrackerConfig.from_section(cfg.camera.get("depth") if "depth" in cfg.camera else None)
@@ -230,7 +306,14 @@ def main() -> int:
         tcfg.camera_yaw_deg = a.camera_yaw
     name = a.recording.name.split(".")[0]
     out = a.out or (REPO_ROOT / "logs" / "depth" / f"{time.strftime('%Y%m%d-%H%M%S')}-{name}")
-    s = check(a.recording, out, a.images, a.every, tcfg)
+    if a.gate:
+        tcfg.gate = a.gate
+    spans = json.loads(a.spans.read_text())["spans"] if a.spans else None
+    colour = None
+    if a.colour:
+        from core.camera.depth_colour import ColourConfig, ColourHands
+        colour = ColourHands(ColourConfig.from_section(cfg.camera.get("depth") if "depth" in cfg.camera else None))
+    s = check(a.recording, out, a.images, a.every, tcfg, spans, colour)
     print(json.dumps(s, indent=2))
     return 0
 

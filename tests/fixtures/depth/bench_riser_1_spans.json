@@ -1,0 +1,10 @@
+{
+  "recording": "captures/bench-riser-1.gdrec.gz",
+  "how": "Marked by hand from colour contact sheets at every 10th frame (lane lidar, Sat 14 Nov 20:20). index is the packet index in the file (0 to 420); frame_id = index + 29359 on this clip. The person faces the phone wearing both Smartgloves in every frame, so there is no hand-free span and false accepts cannot be measured on this clip.",
+  "frame_id_offset": 29359,
+  "spans": [
+    {"label": "ambiguous", "from": 0, "to": 9, "note": "right glove starts to reach"},
+    {"label": "glove", "from": 10, "to": 95, "note": "gloved right hand reaching over the laptop keyboard, arm crossing the image edge on the laptop side"},
+    {"label": "glove_at_chest", "from": 96, "to": 420, "note": "both gloved hands held in front of the chest, high above the working surface, forearms hidden by the body"}
+  ]
+}

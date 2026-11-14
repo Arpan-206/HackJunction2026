@@ -239,3 +239,48 @@ class FakeDepthSource:
     def status(self) -> dict:
         return {"source": "fake-depth", "connected": True, "frames": self.frames,
                 "dark_hand": self.scene.dark_hand}
+
+
+class RecordingDepthSource:
+    """DepthSource that plays a .gdrec(.gz) in process at its recorded pace against a clock.
+
+    For tests and offline runs: no socket. start and stop pick a packet index range.
+    Holds the last frame at the end.
+    """
+
+    def __init__(self, path, clock, start: int = 0, stop: int | None = None) -> None:
+        from .gdrec import read_recording
+        self.packets = [x for i, x in enumerate(read_recording(path))
+                        if i >= start and (stop is None or i < stop)]
+        self.clock = clock
+        self._t0: int | None = None
+        self._i = -1
+        self._frame = None
+        self.frames = 0
+
+    def start(self) -> None:
+        pass
+
+    def stop(self) -> None:
+        pass
+
+    def read(self):
+        from .geppetto_depth import parse_packet
+        if not self.packets:
+            return None
+        now = int(self.clock.now_us())
+        if self._t0 is None:
+            self._t0 = now
+        a0 = self.packets[0][0]
+        i = self._i
+        while i + 1 < len(self.packets) and self.packets[i + 1][0] - a0 <= now - self._t0:
+            i += 1
+        i = max(i, 0)
+        if i != self._i:
+            self._i = i
+            self._frame = parse_packet(self.packets[i][1], now)
+            self.frames += 1
+        return self._frame
+
+    def status(self) -> dict:
+        return {"source": "recording", "connected": True, "frames": self.frames, "index": self._i}
