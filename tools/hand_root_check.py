@@ -26,6 +26,11 @@ from core.root_fuse import FuseConfig, RootFuser
 from core.config import REPO_ROOT, load_config
 
 
+# The work box in the core world (FuseConfig box defaults): 45 x 25 x 30 cm (x, y, z) around this centre.
+BOX_C = np.array([0.0, 0.175, -0.2])
+BOX_H = np.array([0.225, 0.125, 0.15])
+
+
 def still_jitter(t: np.ndarray, p: np.ndarray, raw: np.ndarray, win_s: float = 1.0) -> dict:
     out = []
     if len(t) < 10:
@@ -57,6 +62,8 @@ def main(argv=None) -> int:
     ap.add_argument("--gloves", default="both", choices=["both", "left", "right"],
                     help="glove hands the simulated session has (sets one-hand or two-hand matching)")
     ap.add_argument("--mode", default=None, help='"auto", "blobs" or "mediapipe"')
+    ap.add_argument("--fuse", action="append", default=[], metavar="KEY=VALUE",
+                    help="override a FuseConfig field, for example --fuse one_euro_beta=2")
     args = ap.parse_args(argv)
     import cv2
 
@@ -69,7 +76,11 @@ def main(argv=None) -> int:
     rc.clahe = rc.clahe or args.clahe
     if args.mode:
         rc.mode = args.mode
-    fuser = RootFuser(FuseConfig.from_config(cfg))
+    fc = FuseConfig.from_config(cfg)
+    for kv in args.fuse:
+        k, v = kv.split("=", 1)
+        setattr(fc, k, type(getattr(fc, k))(v))
+    fuser = RootFuser(fc)
     sides = ("left", "right") if args.gloves == "both" else (args.gloves,)
     key_side: dict = {}
     id_swaps = 0
@@ -147,7 +158,14 @@ def main(argv=None) -> int:
         tt = np.array([a for a, _, _ in fused[side]])
         pp = np.array([b for _, b, _ in fused[side]])
         live = np.array([c == "camera" for _, _, c in fused[side]])
+        moved = np.array([c != "rest" for _, _, c in fused[side]])
+        steps = np.linalg.norm(np.diff(pp, axis=0), axis=1) if len(pp) > 1 else np.zeros(0)
+        minutes = max(1e-6, (tt[-1] - tt[0]) / 60.0) if len(tt) > 1 else 1.0
+        lo, hi = BOX_C - BOX_H - 1e-6, BOX_C + BOX_H + 1e-6
+        inside = np.all((pp >= lo) & (pp <= hi), axis=1)
         summ[f"fused_{side}"] = {"live_rate": round(float(live.mean()), 3),
+                                "jumps_per_min": round(float((steps > 0.08).sum()) / minutes, 1),
+                                "in_box_rate": round(float(inside[moved].mean()), 3) if moved.any() else None,
                                 "jitter_still": still_jitter(tt[live], pp[live], pp[live]) if live.sum() > 10 else None}
     for side in ("left", "right"):
         r = [x for x in rows if x["side"] == side]

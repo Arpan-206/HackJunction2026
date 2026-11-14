@@ -22,7 +22,9 @@ glove beats skin); else the one nearest the last wrist; else hold, never switch.
 Both hands (left and right to the glove sides):
 - A ring LED with a marker colour names its hand (both seen: done; one seen: the other
   blob is the other hand).
-- Two fixes: the one with the smaller core x is the left hand. The camera's handedness
+- Two fixes, both hands already placed: each hand keeps the blob nearer its last good
+  position (so crossing or touching hands do not swap).
+- Two fixes, first time: the one with the smaller core x is the left hand. The camera's handedness
   label is ignored then, because a mirrored or swapped label is the usual MediaPipe error
   and the hands' order on the bench is not. A disagreement is counted as a swap.
 - One fix and one glove hand: the fix goes to that hand, whatever the label says.
@@ -40,6 +42,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from . import geom
+
 SIDES = ("left", "right")
 _BASE_P = "_root_glove_p"
 _BASE_ANCHOR = "_root_glove_anchor"
@@ -50,9 +54,18 @@ _TOUCHED = "_root_touched"
 class FuseConfig:
     min_confidence: float = 0.3      # WristFix.confidence: at least one landmark with depth
     stale_ms: float = 150.0          # a fix older than this is not live
-    max_speed_m_s: float = 1.5       # rate cap on the fused wrist
-    jump_m: float = 0.15             # a fix this far from the wrist needs jump_frames in a row
-    jump_frames: int = 3
+    max_speed_m_s: float = 1.5       # speed ceiling on the fused wrist (0 = off); stops the step on an accepted jump
+    jump_m: float = 0.08             # a fix this far from the last good one is a wrong blob ...
+    jump_frames: int = 5             # ... until this many such fixes in a row, each near the last
+    one_euro: bool = True            # One Euro filter on the fused wrist: steady when slow, no lag when fast
+    one_euro_min_cutoff: float = 1.0
+    one_euro_beta: float = 2.0
+    one_euro_d_cutoff: float = 1.0
+    # The work box (core world, metres): the wrist is clamped inside, so the hand never leaves the
+    # stage. 45 cm wide (x), 25 cm high (y), 30 cm deep (z). Half sizes; centre between the rest poses.
+    box: bool = True
+    box_centre: tuple = (0.0, 0.175, -0.2)
+    box_half: tuple = (0.225, 0.125, 0.15)
     hold_s: float = 2.0              # keep the last good position this long
     decay_s: float = 1.5             # then move back to the glove's wrist_p over this long
     near_m: float = 0.08             # one fix, two hands: nearer than this to the other hand wins
@@ -68,7 +81,9 @@ class FuseConfig:
             for k in c.__dataclass_fields__:
                 key = f"fuse_{k}"
                 if key in sec:
-                    setattr(c, k, type(getattr(c, k))(sec[key]))
+                    v = sec[key]
+                    setattr(c, k, tuple(float(x) for x in v) if isinstance(getattr(c, k), tuple)
+                            else type(getattr(c, k))(v))
         return c
 
 
@@ -80,6 +95,8 @@ class _SideState:
     last_t: int | None = None
     used_fid: int | None = None
     pending: int = 0
+    pend_p: np.ndarray | None = None     # the last rejected far fix, for the persistence count
+    filt: object = None
     accepted: int = 0
     rejected: int = 0
 
@@ -89,7 +106,9 @@ class RootFuser:
     cfg: FuseConfig = field(default_factory=FuseConfig)
 
     def __post_init__(self) -> None:
-        self.state = {s: _SideState() for s in SIDES}
+        c = self.cfg
+        self.state = {s: _SideState(filt=geom.OneEuroFilter(c.one_euro_min_cutoff, c.one_euro_beta,
+                                                            c.one_euro_d_cutoff)) for s in SIDES}
         self.swaps = 0
         self.held_ambiguous = 0
         self.last_assigned: dict = {}
@@ -116,6 +135,12 @@ class RootFuser:
                 rest = [f for f in live if f is not lf]
                 return {ls: lf, ("right" if ls == "left" else "left"): rest[0]}
             a, b = sorted(sorted(live, key=lambda f: -f.confidence)[:2], key=lambda f: float(f.p[0]))
+            tl, tr = self.state["left"].target, self.state["right"].target
+            if tl is not None and tr is not None:   # both known: keep each hand on its nearer blob
+                keep = np.linalg.norm(a.p - tl) + np.linalg.norm(b.p - tr)
+                swap = np.linalg.norm(b.p - tl) + np.linalg.norm(a.p - tr)
+                if swap < keep:
+                    a, b = b, a
             if (a.side in SIDES and a.side != "left") or (b.side in SIDES and b.side != "right"):
                 self.swaps += 1
             return {"left": a, "right": b}
@@ -194,14 +219,20 @@ class RootFuser:
             f = assigned.get(side)
             if f is not None and f.frame_id != st.used_fid:
                 st.used_fid = f.frame_id
-                ref = st.pos if st.pos is not None else st.target
-                if ref is not None and np.linalg.norm(f.p - ref) > c.jump_m:
-                    st.pending += 1
+                fp = np.asarray(f.p, dtype=float)
+                if st.target is not None and np.linalg.norm(fp - st.target) > c.jump_m:
+                    # a wrong blob until it persists: jump_frames fixes in a row, each near the last
+                    if st.pend_p is not None and np.linalg.norm(fp - st.pend_p) <= c.jump_m:
+                        st.pending += 1
+                    else:
+                        st.pending = 1
+                    st.pend_p = fp
                     accept = st.pending >= c.jump_frames
                 else:
                     accept = True
                 if accept:
                     st.pending = 0
+                    st.pend_p = None
                     st.target = np.asarray(f.p, dtype=float).copy()
                     st.good_t = int(f.t_us)
                     st.accepted += 1
@@ -222,23 +253,32 @@ class RootFuser:
                 goal = st.target * (1 - k) + base_p * k
                 anchor = "held"
             else:
-                st.target = st.pos = None
+                st.target = st.pos = st.pend_p = None
                 st.pending = 0
+                st.filt.reset()
                 self._restore(h)
                 self.applied[side] = "off"
                 continue
-            if st.pos is None:
-                st.pos = base_p.copy()
-            step = goal - st.pos
-            n = float(np.linalg.norm(step))
-            cap = c.max_speed_m_s * dt
-            if n > cap:
-                step = step * (cap / n)
-            st.pos = st.pos + step
-            h.wrist_p = st.pos.copy()
+            if c.max_speed_m_s > 0:      # optional rate cap (off by default: the One Euro filter does it)
+                if st.pos is None:
+                    st.pos = base_p.copy()
+                step = goal - st.pos
+                n = float(np.linalg.norm(step))
+                cap = c.max_speed_m_s * dt
+                if n > cap:
+                    step = step * (cap / n)
+                goal = st.pos + step
+            st.pos = st.filt(goal, t_us) if c.one_euro else np.asarray(goal, dtype=float).copy()
+            h.wrist_p = self.clamp(st.pos)
             h.anchor = anchor
             setattr(h, _TOUCHED, True)
             self.applied[side] = anchor
+
+    def clamp(self, p: np.ndarray) -> np.ndarray:
+        if not self.cfg.box:
+            return np.asarray(p, dtype=float).copy()
+        cc, hh = np.asarray(self.cfg.box_centre), np.asarray(self.cfg.box_half)
+        return np.clip(p, cc - hh, cc + hh)
 
     @staticmethod
     def _restore(h) -> None:

@@ -168,3 +168,31 @@ Changed (additive):
 Not touched: `core/camera/depth_track.py`, `depth_live.py`, `geppetto_depth.py`, `tools/depth_check.py`, `SPEC.md`, `docs/CONTRACT.md`.
 
 Checks run before the last commit: core suite 232 passed (20:55), frontend lint, 359 vitest tests and build passed.
+
+## Stabilisation pass (Sat 22:35 to 23:00)
+
+The live test at 22:21 showed a jumpy hand that left the view. This pass fixes that on the recorded clips. It is not yet tested live: the computer restarted before the live check.
+
+What changed:
+
+- Newest frame only: the live path already keeps one frame. It now logs the delay from phone capture to the frame message every 5 s (`delay_ms_p50`, `delay_ms_p95` in the status).
+- Work box: the fused wrist is clamped to 45 x 25 x 30 cm (x, y, z) in the core world (`fuse_box_centre`, `fuse_box_half`). `Hand.tsx` clamps the offset to the same half sizes.
+- Jump gate: a fix more than 8 cm from the last good one is held back until 5 fixes in a row agree (`fuse_jump_m`, `fuse_jump_frames`).
+- One Euro filter on the fused wrist (`fuse_one_euro_min_cutoff` 1.0, `fuse_one_euro_beta` 2.0). The tracker's own filter is off, so the position is filtered once. The 1.5 m/s ceiling stays: without it the one-hand clip has 9 to 12 jumps a minute, with it 3.
+- Two hands keep the blob nearer their last good position, so crossing hands do not swap.
+- Motion scale 0.6 about the lock anchor (`motion_scale`). Height comes from the table: core y = `floor_y_m` + 0.6 x height above the table.
+- Axis test `tests/test_root_axes.py`: a synthetic riser camera, landscape and portrait. Hand right, toward the camera and up move the 3D hand the same three ways.
+
+Results (`tools.hand_root_check`, a jump is a step over 8 cm between frames):
+
+| Clip | Hand | Jumps per minute before | Jumps per minute after | Inside the box before | Inside the box after | Live rate before | Live rate after |
+|---|---|---|---|---|---|---|---|
+| bench-gloves-1 | left | 28.5 | 0.0 | 86.4% | 100% | 63.0% | 67.2% |
+| bench-gloves-1 | right | 34.5 | 1.5 | 59.1% | 100% | 78.9% | 66.5% |
+| bench-onehand-1 | right | 52.5 | 3.0 | 78.6% | 100% | 96.3% | 93.0% |
+
+Not measured: the delay on the clips (the check tool has no render clock). The live log line reports it; the 22:21 run had a 700 ms old depth frame while the test suites starved the core.
+
+Checks after the pass: core suite 280 passed, 1 skipped (22:52); frontend 537 vitest tests passed (22:43).
+
+Verdict: clearly better on the clips. The flag stays off by default until a live check with both gloves and the phone confirms it.

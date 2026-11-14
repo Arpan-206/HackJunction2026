@@ -70,6 +70,10 @@ class RootConfig:
     still_s: float = 1.0             # still this long after a move: re-anchor the bench
     forget_s: float = 0.5            # a hand unseen this long restarts its filter
     camera_yaw_deg: float = 180.0    # from [camera.depth]: 180 when the phone faces the person
+    motion_scale: float = 0.6        # the 3D hand moves this much of the real hand's motion
+    height_from_table: bool = True   # core y = floor_y_m + motion_scale * height above the table
+    floor_y_m: float = 0.05          # core y of the table (the work box floor)
+    tracker_filter: bool = False     # the fuser's One Euro filter smooths; a second one only adds lag
     mode: str = "auto"               # "auto": depth blobs first (gloves), MediaPipe if none; "blobs"; "mediapipe"
     max_blobs: int = 2
     min_darkness: float = 0.0        # blobs lighter than this are ignored (0 keeps bare hands too)
@@ -271,6 +275,7 @@ class HandRootTracker:
         self._axes = DepthTracker(TrackerConfig(camera_yaw_deg=self.cfg.camera_yaw_deg))
         self.bench: Bench | None = None
         self.offset: np.ndarray | None = None     # bench to core world, set by the lock
+        self.anchor_b = np.zeros(3)               # the bench point the lock put on the rest pose
         self.filters: dict[str, geom.OneEuroFilter] = {}
         self.seen_us: dict[str, int] = {}
         self._moved_since: float | None = None    # stream time the phone was last seen moving
@@ -343,6 +348,7 @@ class HandRootTracker:
         if self.bench is not None:
             self.reanchors += 1
             self.offset = None
+            self.anchor_b = np.zeros(3)
             for f in self.filters.values():
                 f.reset()
         self.bench = b
@@ -411,7 +417,8 @@ class HandRootTracker:
                         self.offset = self.rest_p[side] - pb
                     else:
                         self.offset = np.asarray(self.cfg.bench_offset_m, dtype=float)
-                p = pb + self.offset
+                    self.anchor_b = pb.copy()
+                p = self.to_core(pb)
                 last = self.seen_us.get(side)
                 if side not in self.filters:
                     self.filters[side] = geom.OneEuroFilter(self.cfg.one_euro_min_cutoff, self.cfg.one_euro_beta,
@@ -419,7 +426,7 @@ class HandRootTracker:
                 if last is not None and frame.t_us - last > self.cfg.forget_s * 1e6:
                     self.filters[side].reset()
                 self.seen_us[side] = frame.t_us
-                ps = self.filters[side](p, frame.t_us)
+                ps = self.filters[side](p, frame.t_us) if self.cfg.tracker_filter else p
                 out.append(WristFix(side=side, score=det.score, p=ps, p_bench=pb, confidence=conf,
                                     px=(float(det.lm[0, 0]) * frame.bgr.shape[1], float(det.lm[0, 1]) * frame.bgr.shape[0]),
                                     t_us=int(frame.t_us), frame_id=int(frame.frame_id),
@@ -466,10 +473,12 @@ class HandRootTracker:
             if self.cfg.origin == "lock":
                 if len(pbs) >= 2:
                     self.offset = (self.rest_p["left"] + self.rest_p["right"]) / 2 - (pbs[0] + pbs[1]) / 2
+                    self.anchor_b = (pbs[0] + pbs[1]) / 2
                 else:
                     cam_x = (b.R @ (self.bench.cam - b.origin))[0]
                     side = "right" if pbs[0][0] > cam_x else "left"
                     self.offset = self.rest_p[side] - pbs[0]
+                    self.anchor_b = pbs[0].copy()
             else:
                 self.offset = np.asarray(self.cfg.bench_offset_m, dtype=float)
         out = []
@@ -494,7 +503,9 @@ class HandRootTracker:
             if key not in self.filters:
                 self.filters[key] = geom.OneEuroFilter(self.cfg.one_euro_min_cutoff, self.cfg.one_euro_beta,
                                                        self.cfg.one_euro_d_cutoff)
-            ps = self.filters[key](pb + self.offset, frame.t_us)
+            ps = self.to_core(pb)
+            if self.cfg.tracker_filter:
+                ps = self.filters[key](ps, frame.t_us)
             side = ring.side if ring is not None and ring.side else None
             out.append(WristFix(side=side or "", score=1.0, p=ps, p_bench=pb, confidence=1.0,
                                 px=(px[0] * frame.bgr.shape[1], px[1] * frame.bgr.shape[0]),
@@ -502,6 +513,16 @@ class HandRootTracker:
                                 led=ring is not None, source="blob", key=key))
             self.fixes += 1
         return out
+
+    def to_core(self, pb: np.ndarray) -> np.ndarray:
+        """Bench to core world: about the lock anchor, scaled by motion_scale; height from the table."""
+        if self.cfg.origin != "lock":
+            return pb * self.cfg.motion_scale + self.offset
+        k = self.cfg.motion_scale
+        q = self.anchor_b + self.offset + k * (pb - self.anchor_b)
+        if self.cfg.height_from_table:
+            q[1] = self.cfg.floor_y_m + k * pb[1]
+        return q
 
     def status(self) -> dict:
         return {"frames": self.frames, "detections": self.detections, "fixes": self.fixes,
@@ -536,6 +557,8 @@ class HandRootLive:
         self._last_fid: int | None = None
         self.errors = 0
         self.error: str | None = None
+        self._ages: list[float] = []
+        self._last_log = 0.0
 
     @classmethod
     def from_config(cls, cfg, source, owns_source: bool = False, threaded: bool = True) -> "HandRootLive":
@@ -599,7 +622,21 @@ class HandRootLive:
                 self.start()
         else:
             self.step()
-        self.fuser.apply(hands, self.latest(), t_us)
+        fixes = self.latest()
+        self.fuser.apply(hands, fixes, t_us)
+        # end-to-end delay: phone capture (arrival minus [camera] latency_us) to this frame message
+        for f in self.fuser.last_assigned.values():
+            self._ages.append((t_us - f.t_us) / 1000.0)
+        del self._ages[:-300]
+        now = time.monotonic()
+        if self._ages and now - self._last_log >= 5.0:
+            self._last_log = now
+            a = np.array(self._ages)
+            log.info("hand root: delay capture to frame p50 %.0f ms, p95 %.0f ms; tracker %.0f ms a frame; %s",
+                     np.percentile(a, 50), np.percentile(a, 95), self.tracker.process_ms, self.fuser.applied)
 
     def status(self) -> dict:
-        return {**self.tracker.status(), **self.fuser.status(), "errors": self.errors, "error": self.error}
+        a = np.array(self._ages) if self._ages else None
+        return {**self.tracker.status(), **self.fuser.status(), "errors": self.errors, "error": self.error,
+                "delay_ms_p50": None if a is None else round(float(np.percentile(a, 50)), 1),
+                "delay_ms_p95": None if a is None else round(float(np.percentile(a, 95)), 1)}
