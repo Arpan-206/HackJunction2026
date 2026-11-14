@@ -11,6 +11,7 @@ from app.schemas.api import GenerateLessonResponse
 from app.schemas.common import Skill
 from app.schemas.lesson import Lesson, LessonBase
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import answered_by
 from app.services.llm.fake import template_lesson
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -143,7 +144,7 @@ class LessonGenerator:
             else:
                 return GenerateLessonResponse(
                     lesson=self._finalise(draft),
-                    provider=client.name,
+                    provider=answered_by(client.name),
                     attempts=attempts,
                 )
         log.warning(

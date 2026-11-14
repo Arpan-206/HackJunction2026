@@ -8,6 +8,7 @@ from app import constants as c
 from app.core.errors import LLMTimeoutError, RateLimitedError
 from app.schemas.api import MotionDraft, MotionFromTextRequest, MotionFromTextResponse
 from app.services.llm.base import LLMRequest
+from app.services.llm.chain import answered_by
 from app.services.llm.fake import template_motion
 from app.services.llm.registry import LLMState
 from app.services.llm.schema import llm_schema
@@ -90,7 +91,7 @@ class MotionTextService:
                 log.warning("Motion LLM call failed on attempt %d: %s", attempt, exc)
             else:
                 return MotionFromTextResponse(
-                    **draft.model_dump(), provider=client.name
+                    **draft.model_dump(), provider=answered_by(client.name)
                 )
         log.warning("Falling back to keyword rules after failed attempts")
         return MotionFromTextResponse(
