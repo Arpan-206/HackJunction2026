@@ -1,5 +1,7 @@
 # Geppetto on Verda: usage summary for Verda's Discord (draft)
 
+**Superseded on Sun 15 Nov 2026.** This draft covers only the first job, the lesson endpoint, with 3.94 USD of the 24.21 USD total. The final summary of all five jobs is `docs/submission/VERDA-FINAL.md`. The facts below are still correct for the first job.
+
 Draft by the `submission` lane, Sat 14 Nov 2026. Every number comes from docs/VERDA.md and verda/STATUS-verda.md. Nothing is deployed now (verda/STATUS-verda.md). The Discord channel name and the format Verda asks for are unverified: check the pinned post first.
 
 ## Message to paste

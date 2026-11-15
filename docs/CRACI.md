@@ -4,6 +4,8 @@
 
 Status on Sun 15 Nov 2026, written by the `craci` lane. Every number names its source. All API results are real responses from `api.craci.com`. Unless a table says otherwise, it comes from the rebuild under the Monitored policy: lane audit run 43653716590 (23:32 to 23:49 UTC, Sat 14 Nov).
 
+**Update, Sun 15 Nov 2026, 08:00 Helsinki.** One dependency upgrade merged into `main` after the audit: the frontend upgrade of `vitest` and `vite` (commit `55968e9`, approved by Arpan). The `export/` half of the fix did not merge. `main` was rebuilt on CRACI after that merge (lane audit run 43683032712, job 132717637141, commit `b1f9772`). Its numbers are in section 5 ("`main`'s own high and critical entries") and section 8. Every other table still describes run 43653716590, before the merge.
+
 Words used here:
 
 - **CRACI**: a CI service. It runs GitHub Actions jobs on its own Linux machines and records what each job downloads and contacts.
@@ -192,6 +194,20 @@ The first pair are `GET /_dns` probes made next to the same probes to `github.co
 
 Source: CRACI SBOM of job 132627637904, `vulnerabilities[]` (source `osv`). "Brought in by": `python3 -m tools.agent_bom history`. Every gate verdict now prints this list as a note.
 
+**After the frontend upgrade (rebuild of `main`, 15 Nov, job 132717637141, commit `b1f9772`).** The table above is `main` before the merge. The API now returns:
+
+| Item | Before the merge (job 132627637904) | Now (job 132717637141) |
+|---|---|---|
+| SBOM components | 460 | 456 |
+| Vulnerability entries | 45 | 24 |
+| Critical | 3 | 0 |
+| High | 4 | 3 |
+| Medium | 17 | 7 |
+| Low | 3 | 2 |
+| Unknown | 18 | 12 |
+
+The three high entries that stay are `torch@2.7.1` (GHSA-63cw-57p8-fm3p) and `fsspec@2025.3.0` (GHSA-27vj-qcqg-25rc, PYSEC-2026-4217). Both come from `export/`, the half of the fix that we declined (section 8). `tinypool`, `vitest` and `vite` have no entry now. The 24 entries are in 7 packages: `torch` 11, `minimatch` 4, `datasets` 2, `debug` 2, `fsspec` 2, `react-router` 2, `ms` 1. In the same build the suites passed (core 281 passed and 9 skipped, backend 527 passed and 13 skipped, frontend 658 of 658 with lint and build), and `export/` failed to install with the same `evdev` 2.0.0 error as in the lead finding.
+
 ## 6. Which lane brought each package into main (git)
 
 `python3 -m tools.agent_bom history` walks the history of every lockfile on `main`. It finds the first commit that locked each package, then the first-parent merge that brought the commit into `main`. A cherry-picked commit is matched to its lane by its subject.
@@ -223,7 +239,7 @@ It gives "no evidence" when the token or a lane build is missing. "No evidence" 
 CRACI merge gate (run before every lane merge; owner: dispatcher)
 
 1. Make sure the lane and main have a CRACI build of their current tips:
-     gh workflow run lane-audit.yml --repo Arpan-206/HackJunction2026 --ref craci -f lanes="main <lane>"
+     gh workflow run lane-audit.yml --repo Arpan-206/HackJunction2026 --ref main -f lanes="main <lane>"
      gh run watch --repo Arpan-206/HackJunction2026 $(gh run list --repo Arpan-206/HackJunction2026 --workflow lane-audit.yml --limit 1 --json databaseId --jq '.[0].databaseId')
 2. From a checkout that has tools/agent_bom (the craci branch until it merges), at the repo root:
      python3 -m tools.agent_bom gate <lane>
@@ -238,27 +254,41 @@ CRACI merge gate (run before every lane merge; owner: dispatcher)
      2  NO EVIDENCE   the token (CRACI_API_TOKEN in .env) or a lane build is missing.
                       Not a pass. Fix the cause (step 1) and run the gate again.
 4. Paste the gate output into the merge commit message.
-5. Never merge a dependency upgrade into main before the demo, whatever the gate says.
-   The branch craci-fix never merges.
+5. A dependency upgrade merges into main only with Arpan's explicit yes, after a CRACI test of that change.
+   One did: the frontend vitest and vite upgrade (commit 55968e9). The branch craci-fix itself never merges.
 ```
 
-## 8. AI fix
+## 8. AI fix: run it, audit its cost, merge the cheap half, decline the costly half
 
-**The fix was applied on an unmerged branch, `craci-fix` (draft PR #14, "DO NOT MERGE before the demo"). It never merges, before or after the demo.** The full write-up is `docs/CRACI_FIX.md` on that branch, by a second agent. This section only summarises it.
+**What merged into `main`:** the frontend half of the fix. `vitest` 2.1.9 to 4.1.12 and `vite` 5.4.21 to 6.4.6, commit `55968e9` (Sun 15 Nov 2026, 04:24 Helsinki), approved by Arpan. The commit changes `frontend/package.json` and `frontend/package-lock.json` and nothing else.
 
-The CRACI API has no fix endpoint: the OpenAPI spec (version `2026-09-11`, 9 operations) has no fix, remediation or vulnerability operation. The AI fix in CRACI is a prompt that the web app generates for the user to hand to a coding agent. Arpan copied that prompt from the web app for the `lane main` build. It listed 6 critical and high advisories. No agent read the web app's Vulnerabilities tab.
+**What did not merge:** the `export/` half. That is the uv overrides `fsspec` 2026.9.0 and `torch` 2.15.0, and the 18 NVIDIA packages that the `torch` override pulls. They stay on the branch `craci-fix` (draft PR #14, still open). The branch itself never merges.
 
-| Item | Before (`lane main`, job 132627637904) | After (`lane craci-fix`, job 132629338604) |
+The full write-up of the branch is `docs/CRACI_FIX.md`, by a second agent. This section gives the four steps and the numbers.
+
+| Step | What we did | Evidence |
 |---|---|---|
-| CRACI SBOM components | 460 | 460 |
-| Vulnerability entries | 45 | 11 |
-| Critical | 3 | 0 |
-| High | 4 | 0 |
-| npm audit line in the job log | 15 (2 critical, 1 high, 12 moderate) | 9 moderate |
+| 1. Run the fix | The CRACI API has no fix endpoint: the OpenAPI spec (version `2026-09-11`, 9 operations) has no fix, remediation or vulnerability operation. The AI fix in CRACI is a prompt that the web app generates for the user to hand to a coding agent. Arpan copied that prompt from the web app for the `lane main` build. It listed 6 critical and high advisories. A second agent applied it on its own branch, `craci-fix`. No agent read the web app's Vulnerabilities tab | Branch `craci-fix`, PR #14 |
+| 2. Audit its cost | `agent_bom` compared the build of `craci-fix` with the build of `main`. The fix removes every high and critical entry. It also brings 22 new dependencies and 21 changed versions. 18 of the new ones are NVIDIA CUDA 13 wheels and CUDA bindings, pulled by the `torch` 2.15.0 override (commit `ba42a58`). 4 are small npm packages from vitest 4 (commit `1990da6`) | Jobs 132627637904 and 132629338604; the `craci-fix` table in the appendix |
+| 3. Merge the cheap half | The frontend half costs 4 small npm packages and clears 3 critical entries and 1 high entry. Before the merge it was tested again on CRACI against that day's `main` (branch `deps-vitest4-vite6`): the core, backend and frontend suites passed, the build passed, and a temporary job started the dev server on vite 6.4.6 and fetched ten of the app's modules, all with HTTP 200 | Commit `55968e9`; `docs/CRACI_FIX.md`, the update at its top |
+| 4. Decline the costly half | The `export/` half costs 18 NVIDIA packages. `torch` 2.15.0 is outside the range that `lerobot` declares, and it was not proven at run time. `export/` also does not install on Linux at all (the lead finding), so the override cannot be tested there. The 3 high entries of `torch` and `fsspec` stay on `main`, and we say so | Branch `craci-fix`; the rebuild of `main` |
 
-What the fix changed (from `docs/CRACI_FIX.md`): `vitest` 2.1.9 to 4.1.12 and `vite` 5.4.21 to 6.4.6 in `frontend/` (`tinypool` drops out with vitest 4); in `export/`, uv overrides `fsspec` to 2026.9.0 and `torch` to 2.15.0. `npm audit fix` cleared none, because every npm fix needs a major version. Suites on CRACI (ci run 43654229444): core 275 passed and 7 skipped, backend 503 passed and 13 skipped, frontend 616 of 616 with lint and build.
+| Item | `main` before (job 132627637904) | Whole fix, branch `craci-fix` (job 132629338604) | `main` now, the cheap half only (job 132717637141) |
+|---|---|---|---|
+| CRACI SBOM components | 460 | 460 | 456 |
+| Vulnerability entries | 45 | 11 | 24 |
+| Critical | 3 | 0 | 0 |
+| High | 4 | 0 | 3 |
+| Medium | 17 | 5 | 7 |
+| Low | 3 | 0 | 2 |
+| Unknown | 18 | 6 | 12 |
+| npm audit line in the job log | 15 (2 critical, 1 high, 12 moderate) | 9 moderate | not read |
 
-What `agent_bom` adds about the fix itself (report above, lane `craci-fix`): it brings **22 new dependencies** and 21 changed versions. 18 of the new ones are NVIDIA CUDA 13 wheels and CUDA bindings, pulled by the `torch` 2.15.0 override (commit `ba42a58`). 4 are small npm packages from vitest 4 (commit `1990da6`). The fix removes every high and critical entry, and it also grows the export project's download. That is the kind of trade a person should see before any merge.
+What the whole fix changed on the branch (from `docs/CRACI_FIX.md`): `vitest` 2.1.9 to 4.1.12 and `vite` 5.4.21 to 6.4.6 in `frontend/` (`tinypool` drops out with vitest 4); in `export/`, uv overrides `fsspec` to 2026.9.0 and `torch` to 2.15.0. `npm audit fix` cleared none, because every npm fix needs a major version. Suites on CRACI for the branch (ci run 43654229444): core 275 passed and 7 skipped, backend 503 passed and 13 skipped, frontend 616 of 616 with lint and build.
+
+One limit of the merged half: the demo laptops were not reinstalled after the merge. The Mac still has vite 5.4.21 and vitest 2.1.9 in `node_modules` (last install 14 Nov). CRACI tested the app's dev server on vite 6.4.6; nobody has used the app by hand on it.
+
+The audit is the point of this section. A fix that removes every high and critical entry looks free in a vulnerability count. The dependency diff shows that half of it is not free. That is the kind of trade a person should see before any merge, and here a person saw it and split the fix.
 
 ## 9. Model server image provenance
 
@@ -274,7 +304,55 @@ What `agent_bom` adds about the fix itself (report above, lane `craci-fix`): it 
 
 So CRACI records that our job read the image (the SBOM names all three digests), but it has no provenance for it: vLLM's image was not built or pushed by a CRACI job. The model server is the one part of the coach with no build record we control. The deploy also uses the tag, not the digest. Pinning the digest in `verda/deploy.py` is for the `verda` lane owner, after the demo.
 
-## 10. How tools/agent_bom works
+## 10. The public tour publishes its own SBOM
+
+The public tour is a static site. It lets anyone see Geppetto with no gloves, no login and no backend. It lives on
+the branch `public-tour`, which is built on CRACI and never merges into `main`.
+
+The build job records every package that it downloads. After the build job ends, a second job gets the SBOM of the
+build job from the CRACI API. An SBOM is a list of packages in the CycloneDX format. The second job puts the SBOM and a
+short summary into the site. A link on every stop, "What's in this site", opens a plain page. The page shows the
+commit, the CRACI job link, the number of packages and the known vulnerabilities by severity. It also gives the SBOM
+file for download. The list includes the build tools and the test tools. It is not the list of code inside the page.
+If the SBOM is empty, incomplete or not available, the page says so and gives the reason.
+
+The first build that we published, and the build that is live now (15 Nov 2026):
+
+| Item | First published build | Live build at 08:00 |
+|---|---|---|
+| Commit on `public-tour` | `5fb1337` | `dff4ff7` (it contains `main` with the frontend upgrade, commit `55968e9`) |
+| Run and build job | run 43664418557, job 132660526152 | run 43677524592, job 132700812365 |
+| CRACI job page | `https://platform.craci.com/projects/hackjunction2026/jobs/132660526152` | `https://platform.craci.com/projects/hackjunction2026/jobs/132700812365` |
+| Packages in the SBOM file | 339: 287 npm, 48 Ubuntu (deb), 4 GitHub | 335 |
+| Vulnerability entries | 133: critical 5, high 43, medium 60, low 7, unknown 18 | 112: critical 2, high 42, medium 50, low 6, unknown 12 |
+
+Where the critical and high entries are:
+
+| Package | First build: critical, high | Live build: critical, high | Why the build has it |
+|---|---|---|---|
+| `xvfb` and `xserver-common` (Ubuntu) | 2, 42 | 2, 42 | The browser check needs a display on a runner that has no screen |
+| `tinypool` and `vitest` (npm) | 3, 0 | 0, 0 | The frontend test tools. The upgrade to vitest 4.1.12 removed these entries, and `tinypool` is no longer installed |
+| `vite` (npm) | 0, 1 | 0, 0 | The build tool. The upgrade to vite 6.4.6 removed this entry |
+
+None of these packages is inside the page that a visitor loads. We show the numbers as they are. The three npm
+entries left the tour when the frontend upgrade merged into `main` (section 8) and `main` merged into `public-tour`.
+The Ubuntu entries stay: they belong to the display tool of the runner image, which we do not control.
+
+Two limits, stated plainly:
+
+- In the workflow, the second job got HTTP 403 from the CRACI API with the token from the repository secret. We
+  checked three things. The secret is the right token: its SHA-256 fingerprint and length equal those of the token
+  that works on a laptop. The network policy did not block the call: the job's own network trace shows the connection
+  to `api.craci.com` on port 443 as allowed, with bytes in both directions. The authentication guide names no scope,
+  no address list and no runner limit. So the API itself refused a request that came from inside a CRACI runner,
+  while the same request from a laptop works. This is a question for CRACI. For the published build the SBOM was
+  fetched on a laptop after the run and added to the site, and the leak check ran again on the final folder.
+  Later builds, the live one included, get the SBOM in a workflow job on a GitHub-hosted runner, where the same call
+  works. The final site is still assembled and checked on CRACI. See question 2 in section 13.
+- The first summary in the site said 338 packages while the SBOM file holds 339. The one left out was the checked-out
+  repository itself. The page now counts every component in the file, and a check compares the page with the file.
+
+## 11. How tools/agent_bom works
 
 | File | Role |
 |---|---|
@@ -288,7 +366,7 @@ So CRACI records that our job read the image (the SBOM names all three digests),
 
 | Assumption before the token | Real response | Change to the tool |
 |---|---|---|
-| The SBOM may carry a `vulnerabilities` list | It does: 45 entries on `main`, all `source.name` = `osv`, one rating each. 18 have severity `unknown` | Kept; `unknown` never blocks |
+| The SBOM may carry a `vulnerabilities` list | It does: 45 entries on `main` before the frontend upgrade (24 after it), all `source.name` = `osv`, one rating each. 18 have severity `unknown` | Kept; `unknown` never blocks |
 | `affects[].ref` points at a component `bom-ref` | It is a full purl with version and qualifiers | The tool strips qualifiers and keeps the version |
 | DNS `record` is "name and type" (spec) | Only the name, with a trailing dot: `pypi.org.` | First word, trailing dot removed |
 | One version per package | `main` holds two versions of 16 packages, for example `minimatch` and `opencv-python-headless` | Versions are a set per package |
@@ -298,7 +376,7 @@ So CRACI records that our job read the image (the SBOM names all three digests),
 
 Other API calls: `GET /v1preview1/jobs?status=active` returned 0 active jobs. `GET /v1preview1/usage` returned 503 "billing usage is temporarily unavailable".
 
-## 11. Unverified
+## 12. Unverified
 
 | Item | Why |
 |---|---|
@@ -307,6 +385,18 @@ Other API calls: `GET /v1preview1/jobs?status=active` returned 0 active jobs. `G
 | The `export/` failure on GitHub's own Ubuntu image | Seen only on CRACI's default image, which has no Python headers |
 | Lane attribution of cherry-picked commits | Matched by commit subject |
 | The demo uses the Vite dev server | Only CLAUDE.md says it runs `npm run dev` |
+| Why the web app showed 40 vulnerability entries for the `main` build and the API 45 | Not explained. The API list of job 132627637904 has 45 entries and 44 different advisory ids (GHSA-82fw-gwwq-j7x9 is listed twice). By source prefix: 25 GHSA, 12 CLSA, 8 PYSEC. By severity: 3 critical, 4 high, 17 medium, 3 low, 18 unknown. No subset that we tried gives 40: without `unknown` 27, without CLSA 33, without PYSEC 37, different ids 44. We did not read the web app from an agent, so we cannot say which job or filter the 40 belongs to |
+
+## 13. Questions for CRACI
+
+Two results that we cannot explain. Each one may be our configuration and not a fault in CRACI.
+
+| # | What we saw | Evidence | What we do not know |
+|---|---|---|---|
+| 1 | `default: deny` did not block an unmatched host. The workflow `policy-check.yml` sets `network: default: deny` through `cracicorp/setup@v1` and then requests `https://example.com/`, which no preset covers. The request got HTTP 200 | Run 43655101763, job 132631785839. The network trace of that job shows the access with `policyDenied: false`. The runner's own `GET /_dns` probes were also allowed without a match | If an organization or runner template overrides the policy from the action. If the policy needs a setting in the web app as well. If one test job is enough to say anything. We ran it once |
+| 2 | The CRACI API answered HTTP 403 to a request from inside a CRACI runner. The same request with the same token works from a laptop and from a GitHub-hosted runner | Tour runs 43664418557 to 43667497387. The secret has the same SHA-256 fingerprint and length as the working token. The job's own network trace shows the connection to `api.craci.com` on port 443 as allowed, with bytes in both directions | If the API refuses calls from CRACI runner addresses on purpose. If a token scope or an address list applies that the authentication guide does not name. If the runner adds or changes a header |
+
+What we did in the meantime: the SBOMs are complete, because every package download matched a preset (section 3). The tour gets its SBOM in a job on a GitHub-hosted runner (section 10).
 
 ## Appendix: `agent_bom report` output, one table per lane (run 43653716590)
 

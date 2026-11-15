@@ -63,7 +63,7 @@ Alone on one clip, the tracker takes about 13 to 18 ms a frame (60 fps or more),
 
 "Still jitter" is the median standard deviation of the fused wrist over 1 s windows where the hand moved less than 1 cm per frame. The lidar lane measured 4.6 mm p50 on its own blob finder.
 
-The one-hand clip check: 12 of 12 sampled frames by eye show the right-glove fix on the glove, never on the bare arm (`docs/hand_root/onehand_frames.jpg`). The fuser held 10 times for ambiguity instead of switching.
+The one-hand clip check: 12 of 12 sampled frames by eye show the right-glove fix on the glove, never on the bare arm (the frame sheet is not in the repository: it showed people at the venue). The fuser held 10 times for ambiguity instead of switching.
 
 MediaPipe alone (before the depth-first change) found far less:
 
@@ -229,3 +229,25 @@ If the first stage is still large with the phone: shrink the packet in the app (
 Viewer on another machine: `tick_to_received` then includes the clock difference of the two machines. The probe marks this with `viewer_on_core_machine: false`.
 
 Checks: core suite 281 passed, 1 skipped on the final values (23:45); frontend lint, 537 tests, build.
+
+## Live measurements with both gloves and the phone (Sat 14 Nov 23:23, Sun 15 Nov 06:24)
+
+Measured on the live stack: both Rokoko gloves over USB, the iPhone on the riser over the cable, the core started with
+`--root --depth-host 127.0.0.1:7700`, wrist filter preset "steady". Source: `GET /debug/delay` on the core and the
+core's own log line `hand root stages (ms)`. The rebuilt phone app (with the listener fix) was installed at 23:22.
+
+| Stage | Median, 14 Nov 23:23 (ms) | Worst (ms) | Median, 15 Nov 06:24 (ms) | Worst (ms) |
+|---|---|---|---|---|
+| Phone capture to arrival on the Mac, above the fastest frame | 19 | 24 | 17 | 24 |
+| Arrival to processing done | 17 | 46 | 18 | 36 |
+| Processing done to the core tick | 13 | 37 | 14 | 30 |
+| Core tick to the socket write | 5 | 7 | 4 | 14 |
+| Sum of the measured stages | 54 | 114 | 53 | 104 |
+
+The first stage was 681 to 860 ms on the evening recordings (section "Delay per stage"). The difference is the reader
+that keeps only the newest packet, and a machine with no test suite running beside the core.
+
+Other live facts: phone depth 30 frames a second, table plane found, camera 0.43 to 0.45 m above it; gloves 83.3 frames
+a second from the driver, 30 a second at the core and at the backend; the wrist position reaches the backend's glove
+stream in 97 to 100 % of frames while the phone sees the hand. Not measured: the two browser stages on a real session,
+and the first stage in absolute terms (the phone and the Mac have different clocks).
