@@ -121,7 +121,7 @@ class TrackerConfig:
     )
 
     @classmethod
-    def from_section(cls, sec) -> "TrackerConfig":
+    def from_section(cls, sec) -> TrackerConfig:
         c = cls()
         if sec is None:
             return c
@@ -585,7 +585,7 @@ class DepthTracker:
         else:
             sel = np.ones(len(xz), bool)
         pts = xz[sel]
-        obs.forearm_points = int(len(pts))
+        obs.forearm_points = len(pts)
         if len(pts) < 5:
             return
         c = pts.mean(axis=0)
@@ -857,7 +857,7 @@ class YawCorrectorConfig:
     stale_ms: float = 300.0  # depth older than this does not update the correction
 
     @classmethod
-    def from_section(cls, sec) -> "YawCorrectorConfig":
+    def from_section(cls, sec) -> YawCorrectorConfig:
         c = cls()
         if sec is None:
             return c
@@ -962,7 +962,7 @@ class HandBlobConfig:
     hand_open_px: int = 3
 
     @classmethod
-    def from_section(cls, sec) -> "HandBlobConfig":
+    def from_section(cls, sec) -> HandBlobConfig:
         c = cls()
         if sec is None:
             return c

@@ -20,11 +20,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import compat as compat_mod
-from .delay import STATS
 from . import fake as fake_mod
 from .clock import Clock
 from .coach import Coach
 from .config import REPO_ROOT, Section, load_config
+from .delay import STATS
 from .recorder import list_lessons
 from .schema import SchemaRegistry
 from .session import SIDES, CommandError, Session
@@ -40,7 +40,9 @@ class ClientState:
     last_frame_us: int = 0
     queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=64))
     dropped: int = 0
-    enq_us: int = 0  # /ws/gloves only: the tick time of the newest frame queued (core/delay.py)
+    enq_us: int = (
+        0  # /ws/gloves only: the tick time of the newest frame queued (core/delay.py)
+    )
 
 
 class Core:
@@ -374,7 +376,11 @@ class Core:
         """/ws/gloves: the teammate frontend's GloveFrame stream (core/compat.py)."""
         await ws.accept()
         # two frames at most: a slow viewer gets the newest hand, never a backlog
-        c = ClientState(ws=ws, rate_hz=float(self.cfg.server.frame_rate_hz), queue=asyncio.Queue(maxsize=2))
+        c = ClientState(
+            ws=ws,
+            rate_hz=float(self.cfg.server.frame_rate_hz),
+            queue=asyncio.Queue(maxsize=2),
+        )
         key = id(ws)
         self.compat_clients[key] = c
         sender = asyncio.create_task(self._sender(c))
@@ -405,7 +411,10 @@ class Core:
                 await c.ws.send_text(text)
                 if c.enq_us:  # tick to socket write; frames still queued behind this one count as a tick each
                     waiting = c.queue.qsize() * 1e6 / max(1.0, c.rate_hz)
-                    STATS.add("tick_to_sent", (self.clock.now_us() - c.enq_us + waiting) / 1000.0)
+                    STATS.add(
+                        "tick_to_sent",
+                        (self.clock.now_us() - c.enq_us + waiting) / 1000.0,
+                    )
         except asyncio.CancelledError:
             return
         except Exception:
@@ -647,9 +656,12 @@ def create_app(core: Core) -> FastAPI:
         t0 = getattr(core, "compat_t0_us", None)
         t0_wall = None if t0 is None else time.time() - (core.clock.now_us() - t0) / 1e6
         root = core.session.root
-        return {"stages_ms": STATS.snapshot(), "t0_wall_s": t0_wall,
-                "assumed_capture_latency_ms": float(core.cfg.camera.latency_us) / 1000.0,
-                "root": None if root is None else root.status()}
+        return {
+            "stages_ms": STATS.snapshot(),
+            "t0_wall_s": t0_wall,
+            "assumed_capture_latency_ms": float(core.cfg.camera.latency_us) / 1000.0,
+            "root": None if root is None else root.status(),
+        }
 
     @app.get("/debug")
     def debug_view():

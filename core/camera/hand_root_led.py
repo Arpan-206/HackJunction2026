@@ -16,6 +16,7 @@ Measured on captures/bench-gloves-1.gdrec.gz (LEDs as they were, both pink like 
 venue light): see STATUS-hand-root.md. The rings show only when the back of the hand
 faces the phone.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,7 +28,7 @@ from dataclasses import dataclass
 import numpy as np
 
 # Marker colours: far from the venue's purple and pink and from each other.
-MARKER_RGB = {"left": (0, 255, 0), "right": (255, 140, 0)}   # green, amber
+MARKER_RGB = {"left": (0, 255, 0), "right": (255, 140, 0)}  # green, amber
 
 
 def hue_cv(rgb: tuple[int, int, int]) -> float:
@@ -38,11 +39,11 @@ def hue_cv(rgb: tuple[int, int, int]) -> float:
 
 @dataclass
 class Ring:
-    uv: tuple[float, float]      # normalised, colour frame as streamed
+    uv: tuple[float, float]  # normalised, colour frame as streamed
     area_px: int
-    hue: float                   # OpenCV hue 0..180
-    side: str | None             # by marker hue, None without marker hues
-    hole: bool                   # a dark centre was found (ring shape)
+    hue: float  # OpenCV hue 0..180
+    side: str | None  # by marker hue, None without marker hues
+    hole: bool  # a dark centre was found (ring shape)
 
 
 @dataclass
@@ -52,18 +53,27 @@ class LedConfig:
     min_px: int = 6
     max_px: int = 900
     hue_tol: float = 14.0
-    marker_hues: dict | None = None     # side -> OpenCV hue; None until the colours are set
+    marker_hues: dict | None = (
+        None  # side -> OpenCV hue; None until the colours are set
+    )
     require_hole: bool = True
 
 
-def find_rings(bgr: np.ndarray, near: np.ndarray | None = None, cfg: LedConfig | None = None) -> list[Ring]:
+def find_rings(
+    bgr: np.ndarray, near: np.ndarray | None = None, cfg: LedConfig | None = None
+) -> list[Ring]:
     """Rings in the colour frame. near: bool mask at any resolution; rings outside it are ignored."""
     import cv2
+
     cfg = cfg or LedConfig()
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     bright = ((hsv[..., 2] >= cfg.min_v) & (hsv[..., 1] >= cfg.min_s)).astype(np.uint8)
     if near is not None:
-        m = cv2.resize(near.astype(np.uint8), (bgr.shape[1], bgr.shape[0]), interpolation=cv2.INTER_NEAREST)
+        m = cv2.resize(
+            near.astype(np.uint8),
+            (bgr.shape[1], bgr.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
+        )
         m = cv2.dilate(m, np.ones((15, 15), np.uint8))
         bright &= m
     contours, hier = cv2.findContours(bright, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
@@ -72,7 +82,7 @@ def find_rings(bgr: np.ndarray, near: np.ndarray | None = None, cfg: LedConfig |
         return out
     H, W = bgr.shape[:2]
     for i, c in enumerate(contours):
-        if hier[0][i][3] != -1:          # a hole, not an outer contour
+        if hier[0][i][3] != -1:  # a hole, not an outer contour
             continue
         area = int(cv2.contourArea(c))
         if area < cfg.min_px or area > cfg.max_px:
@@ -81,23 +91,35 @@ def find_rings(bgr: np.ndarray, near: np.ndarray | None = None, cfg: LedConfig |
         if cfg.require_hole and not hole:
             continue
         x, y, w, h = cv2.boundingRect(c)
-        if max(w, h) > 3 * max(1, min(w, h)):   # a streak or an edge, not a ring
+        if max(w, h) > 3 * max(1, min(w, h)):  # a streak or an edge, not a ring
             continue
         mask = np.zeros((H, W), np.uint8)
         cv2.drawContours(mask, [c], -1, 1, -1)
         hue = float(np.median(hsv[..., 0][mask.astype(bool) & bright.astype(bool)]))
         side = None
         if cfg.marker_hues:
-            d = {s: min(abs(hue - h0), 180 - abs(hue - h0)) for s, h0 in cfg.marker_hues.items()}
+            d = {
+                s: min(abs(hue - h0), 180 - abs(hue - h0))
+                for s, h0 in cfg.marker_hues.items()
+            }
             s = min(d, key=d.get)
             side = s if d[s] <= cfg.hue_tol else None
-        out.append(Ring(uv=((x + w / 2) / W, (y + h / 2) / H), area_px=area, hue=hue, side=side, hole=hole))
+        out.append(
+            Ring(
+                uv=((x + w / 2) / W, (y + h / 2) / H),
+                area_px=area,
+                hue=hue,
+                side=side,
+                hole=hole,
+            )
+        )
     return out
 
 
 async def set_marker_colours(host: str, port: int, colours: dict | None = None) -> dict:
     """Paint each glove's ring its side's marker colour through RCSP. {device_id: side}."""
     from ..rcsp import RcspClient
+
     colours = colours or MARKER_RGB
     client = RcspClient(host, port)
     await client.start()
@@ -121,7 +143,9 @@ async def set_marker_colours(host: str, port: int, colours: dict | None = None) 
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Set the glove ring LEDs to the hand root marker colours")
+    ap = argparse.ArgumentParser(
+        description="Set the glove ring LEDs to the hand root marker colours"
+    )
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=45451)
     a = ap.parse_args(argv)

@@ -593,7 +593,7 @@ class Session:
             self.depth.apply(self.hands, t)
         if self.root is not None:
             self.root.apply(self.hands, t)
-        dec =int(self.cfg.hand.joint_decimals)
+        dec = int(self.cfg.hand.joint_decimals)
         for side in SIDES:
             h = self.hands.get(side)
             frame["hands"][side] = (

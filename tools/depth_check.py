@@ -40,7 +40,7 @@ from core.camera.depth_track import (
     wrap_deg,
 )
 from core.camera.gdrec import read_note, read_recording
-from core.camera.geppetto_depth import colour_depth, parse_header, parse_packet, PREFIX
+from core.camera.geppetto_depth import PREFIX, colour_depth, parse_header, parse_packet
 from core.config import REPO_ROOT, load_config
 
 

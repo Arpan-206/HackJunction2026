@@ -36,6 +36,7 @@ Camera hands (source "camera") already carry a position and are left alone.
 The original glove values are kept on the HandState object, so a tick that runs twice on
 the same object (the glove sends at its own rate) applies the fusion once, not twice.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -54,12 +55,14 @@ _TOUCHED = "_root_touched"
 
 @dataclass
 class FuseConfig:
-    min_confidence: float = 0.3      # WristFix.confidence: at least one landmark with depth
-    stale_ms: float = 150.0          # a fix older than this is not live
-    max_speed_m_s: float = 1.5       # speed ceiling on the fused wrist (0 = off); stops the step on an accepted jump
-    jump_m: float = 0.08             # a fix this far from the last good one is a wrong blob ...
-    jump_frames: int = 5             # ... until this many such fixes in a row, each near the last
-    one_euro: bool = True            # One Euro filter on the fused wrist: steady when slow, no lag when fast
+    min_confidence: float = 0.3  # WristFix.confidence: at least one landmark with depth
+    stale_ms: float = 150.0  # a fix older than this is not live
+    max_speed_m_s: float = 1.5  # speed ceiling on the fused wrist (0 = off); stops the step on an accepted jump
+    jump_m: float = 0.08  # a fix this far from the last good one is a wrong blob ...
+    jump_frames: int = 5  # ... until this many such fixes in a row, each near the last
+    one_euro: bool = (
+        True  # One Euro filter on the fused wrist: steady when slow, no lag when fast
+    )
     # The wrist filter has two presets (FILTER_PRESETS): "steady" is the stabilisation-pass value, "fast"
     # lags a 12 cm reach by 35 ms less and jumps a little more. one_euro_beta and one_euro_d_cutoff
     # override the preset when they are set.
@@ -69,23 +72,29 @@ class FuseConfig:
     one_euro_d_cutoff: float | None = None
     # Prediction: the fix is as old as the phone's capture delay, so the wrist is moved ahead along
     # its filtered velocity by the age of the fix (at most lead_max_ms, at most lead_max_m). 0 = off.
-    lead_max_ms: float = 0.0         # off: on a 12 cm reach it cuts lag by 55 ms but overshoots the stop by 3 to 5 cm
+    lead_max_ms: float = 0.0  # off: on a 12 cm reach it cuts lag by 55 ms but overshoots the stop by 3 to 5 cm
     lead_max_m: float = 0.06
-    lead_min_speed_m_s: float = 0.2   # slower than this: no prediction, so a still hand stays still
+    lead_min_speed_m_s: float = (
+        0.2  # slower than this: no prediction, so a still hand stays still
+    )
     # The work box (core world, metres): the wrist is clamped inside, so the hand never leaves the
     # stage. 45 cm wide (x), 25 cm high (y), 30 cm deep (z). Half sizes; centre between the rest poses.
     box: bool = True
     box_centre: tuple = (0.0, 0.175, -0.2)
     box_half: tuple = (0.225, 0.125, 0.15)
-    hold_s: float = 2.0              # keep the last good position this long
-    decay_s: float = 1.5             # then move back to the glove's wrist_p over this long
-    near_m: float = 0.08             # one fix, two hands: nearer than this to the other hand wins
-    dark_margin: float = 0.12        # one glove: blobs this much lighter than the darkest are not the glove
-    reacquire_m: float = 0.25        # one glove: a blob further than this from the last wrist is not taken
-    glove_min_darkness: float = 0.55 # one glove: a lone blob this dark is the glove (glove blobs: 5th percentile 0.63 to 0.71)
+    hold_s: float = 2.0  # keep the last good position this long
+    decay_s: float = 1.5  # then move back to the glove's wrist_p over this long
+    near_m: float = 0.08  # one fix, two hands: nearer than this to the other hand wins
+    dark_margin: float = (
+        0.12  # one glove: blobs this much lighter than the darkest are not the glove
+    )
+    reacquire_m: float = (
+        0.25  # one glove: a blob further than this from the last wrist is not taken
+    )
+    glove_min_darkness: float = 0.55  # one glove: a lone blob this dark is the glove (glove blobs: 5th percentile 0.63 to 0.71)
 
     @classmethod
-    def from_config(cls, cfg) -> "FuseConfig":
+    def from_config(cls, cfg) -> FuseConfig:
         c = cls()
         sec = cfg.camera.get("root") if "root" in cfg.camera else None
         if sec is not None:
@@ -94,28 +103,43 @@ class FuseConfig:
                 if key in sec:
                     v = sec[key]
                     cur = getattr(c, k)
-                    setattr(c, k, tuple(float(x) for x in v) if isinstance(cur, tuple)
-                            else float(v) if cur is None else type(cur)(v))
+                    setattr(
+                        c,
+                        k,
+                        tuple(float(x) for x in v)
+                        if isinstance(cur, tuple)
+                        else float(v)
+                        if cur is None
+                        else type(cur)(v),
+                    )
         return c
 
     def filter_params(self) -> tuple[float, float]:
         """(beta, d_cutoff): the preset's values unless the explicit fields are set."""
         if self.preset not in FILTER_PRESETS:
-            raise ValueError(f"fuse_preset must be one of {sorted(FILTER_PRESETS)}, not {self.preset!r}")
+            raise ValueError(
+                f"fuse_preset must be one of {sorted(FILTER_PRESETS)}, not {self.preset!r}"
+            )
         beta, d_cutoff = FILTER_PRESETS[self.preset]
-        return (beta if self.one_euro_beta is None else float(self.one_euro_beta),
-                d_cutoff if self.one_euro_d_cutoff is None else float(self.one_euro_d_cutoff))
+        return (
+            beta if self.one_euro_beta is None else float(self.one_euro_beta),
+            d_cutoff
+            if self.one_euro_d_cutoff is None
+            else float(self.one_euro_d_cutoff),
+        )
 
 
 @dataclass
 class _SideState:
-    target: np.ndarray | None = None     # last accepted tracked position (core world)
-    pos: np.ndarray | None = None        # the fused wrist shown, rate capped toward the goal
-    good_t: int = 0                      # core time of the last accepted fix
+    target: np.ndarray | None = None  # last accepted tracked position (core world)
+    pos: np.ndarray | None = None  # the fused wrist shown, rate capped toward the goal
+    good_t: int = 0  # core time of the last accepted fix
     last_t: int | None = None
     used_fid: int | None = None
     pending: int = 0
-    pend_p: np.ndarray | None = None     # the last rejected far fix, for the persistence count
+    pend_p: np.ndarray | None = (
+        None  # the last rejected far fix, for the persistence count
+    )
     filt: object = None
     accepted: int = 0
     rejected: int = 0
@@ -128,7 +152,12 @@ class RootFuser:
     def __post_init__(self) -> None:
         c = self.cfg
         beta, d_cutoff = c.filter_params()
-        self.state = {s: _SideState(filt=geom.OneEuroFilter(c.one_euro_min_cutoff, beta, d_cutoff)) for s in SIDES}
+        self.state = {
+            s: _SideState(
+                filt=geom.OneEuroFilter(c.one_euro_min_cutoff, beta, d_cutoff)
+            )
+            for s in SIDES
+        }
         self.swaps = 0
         self.held_ambiguous = 0
         self.last_assigned: dict = {}
@@ -137,43 +166,70 @@ class RootFuser:
     # -- matching --------------------------------------------------------------
     def assign(self, fixes: list, hands: dict, t_us: int) -> dict:
         c = self.cfg
-        live = [f for f in fixes if f.confidence >= c.min_confidence and abs(t_us - f.t_us) <= c.stale_ms * 1000]
+        live = [
+            f
+            for f in fixes
+            if f.confidence >= c.min_confidence
+            and abs(t_us - f.t_us) <= c.stale_ms * 1000
+        ]
         if not live:
             return {}
-        gloves = [s for s in SIDES if hands.get(s) is not None and hands[s].source == "glove"]
+        gloves = [
+            s for s in SIDES if hands.get(s) is not None and hands[s].source == "glove"
+        ]
         if len(gloves) == 1:
             return self._one_glove(gloves[0], live)
         led = {f.side: f for f in live if getattr(f, "led", False) and f.side in SIDES}
         if len(led) == 2:
             return dict(led)
-        live = [f for f in live if f.side in SIDES or getattr(f, "source", "") == "blob"]
+        live = [
+            f for f in live if f.side in SIDES or getattr(f, "source", "") == "blob"
+        ]
         if not live:
             return {}
         if len(live) >= 2:
-            if len(led) == 1:          # one ring seen: it names its hand, the other blob is the other hand
-                (ls, lf), = led.items()
+            if (
+                len(led) == 1
+            ):  # one ring seen: it names its hand, the other blob is the other hand
+                ((ls, lf),) = led.items()
                 rest = [f for f in live if f is not lf]
                 return {ls: lf, ("right" if ls == "left" else "left"): rest[0]}
-            a, b = sorted(sorted(live, key=lambda f: -f.confidence)[:2], key=lambda f: float(f.p[0]))
+            a, b = sorted(
+                sorted(live, key=lambda f: -f.confidence)[:2],
+                key=lambda f: float(f.p[0]),
+            )
             tl, tr = self.state["left"].target, self.state["right"].target
-            if tl is not None and tr is not None:   # both known: keep each hand on its nearer blob
+            if (
+                tl is not None and tr is not None
+            ):  # both known: keep each hand on its nearer blob
                 keep = np.linalg.norm(a.p - tl) + np.linalg.norm(b.p - tr)
                 swap = np.linalg.norm(b.p - tl) + np.linalg.norm(a.p - tr)
                 if swap < keep:
                     a, b = b, a
-            if (a.side in SIDES and a.side != "left") or (b.side in SIDES and b.side != "right"):
+            if (a.side in SIDES and a.side != "left") or (
+                b.side in SIDES and b.side != "right"
+            ):
                 self.swaps += 1
             return {"left": a, "right": b}
         f = live[0]
         side = f.side
-        if side not in SIDES:          # a blob without a ring: the nearer hand's current wrist, else x
-            ds = {s: np.linalg.norm(f.p - self.state[s].pos) for s in SIDES if self.state[s].pos is not None}
+        if (
+            side not in SIDES
+        ):  # a blob without a ring: the nearer hand's current wrist, else x
+            ds = {
+                s: np.linalg.norm(f.p - self.state[s].pos)
+                for s in SIDES
+                if self.state[s].pos is not None
+            }
             side = min(ds, key=ds.get) if ds else ("right" if f.p[0] >= 0 else "left")
             return {side: f}
         other = "right" if side == "left" else "left"
         po, ps = self.state[other].pos, self.state[side].pos
-        if po is not None and np.linalg.norm(f.p - po) < c.near_m and (
-                ps is None or np.linalg.norm(f.p - ps) > np.linalg.norm(f.p - po)):
+        if (
+            po is not None
+            and np.linalg.norm(f.p - po) < c.near_m
+            and (ps is None or np.linalg.norm(f.p - ps) > np.linalg.norm(f.p - po))
+        ):
             self.swaps += 1
             side = other
         return {side: f}
@@ -192,18 +248,36 @@ class RootFuser:
         mine = [f for f in live if getattr(f, "led", False) and f.side == side]
         if mine:
             return {side: mine[0]}
-        cands = [f for f in live if not (getattr(f, "led", False) and f.side in SIDES and f.side != side)]
+        cands = [
+            f
+            for f in live
+            if not (getattr(f, "led", False) and f.side in SIDES and f.side != side)
+        ]
         if not cands:
             return {}
         dk = [getattr(f, "darkness", None) for f in cands]
         if any(d is not None for d in dk):
             top = max(d for d in dk if d is not None)
-            cands = [f for f, d in zip(cands, dk) if d is not None and d >= top - c.dark_margin]
+            cands = [
+                f
+                for f, d in zip(cands, dk)
+                if d is not None and d >= top - c.dark_margin
+            ]
         if len(cands) == 1:
             dk1 = getattr(cands[0], "darkness", None)
-            if self.state[side].pos is None or dk1 is None or dk1 >= c.glove_min_darkness:
-                return {side: cands[0]}   # a lone glove-dark blob: the jump gate in apply still guards it
-        ref = self.state[side].pos if self.state[side].pos is not None else self.state[side].target
+            if (
+                self.state[side].pos is None
+                or dk1 is None
+                or dk1 >= c.glove_min_darkness
+            ):
+                return {
+                    side: cands[0]
+                }  # a lone glove-dark blob: the jump gate in apply still guards it
+        ref = (
+            self.state[side].pos
+            if self.state[side].pos is not None
+            else self.state[side].target
+        )
         if ref is not None:
             d = [float(np.linalg.norm(f.p - ref)) for f in cands]
             i = int(np.argmin(d))
@@ -233,7 +307,11 @@ class RootFuser:
                 setattr(h, _BASE_P, np.asarray(h.wrist_p, dtype=float).copy())
                 setattr(h, _BASE_ANCHOR, h.anchor)
             base_p = getattr(h, _BASE_P)
-            dt = 1.0 / 30.0 if st.last_t is None else min(0.2, max(0.0, (t_us - st.last_t) / 1e6))
+            dt = (
+                1.0 / 30.0
+                if st.last_t is None
+                else min(0.2, max(0.0, (t_us - st.last_t) / 1e6))
+            )
             st.last_t = t_us
 
             f = assigned.get(side)
@@ -242,7 +320,10 @@ class RootFuser:
                 fp = np.asarray(f.p, dtype=float)
                 if st.target is not None and np.linalg.norm(fp - st.target) > c.jump_m:
                     # a wrong blob until it persists: jump_frames fixes in a row, each near the last
-                    if st.pend_p is not None and np.linalg.norm(fp - st.pend_p) <= c.jump_m:
+                    if (
+                        st.pend_p is not None
+                        and np.linalg.norm(fp - st.pend_p) <= c.jump_m
+                    ):
                         st.pending += 1
                     else:
                         st.pending = 1
@@ -279,7 +360,9 @@ class RootFuser:
                 self._restore(h)
                 self.applied[side] = "off"
                 continue
-            if c.max_speed_m_s > 0:      # optional rate cap (off by default: the One Euro filter does it)
+            if (
+                c.max_speed_m_s > 0
+            ):  # optional rate cap (off by default: the One Euro filter does it)
                 if st.pos is None:
                     st.pos = base_p.copy()
                 step = goal - st.pos
@@ -288,7 +371,11 @@ class RootFuser:
                 if n > cap:
                     step = step * (cap / n)
                 goal = st.pos + step
-            st.pos = st.filt(goal, t_us) if c.one_euro else np.asarray(goal, dtype=float).copy()
+            st.pos = (
+                st.filt(goal, t_us)
+                if c.one_euro
+                else np.asarray(goal, dtype=float).copy()
+            )
             h.wrist_p = self.clamp(st.pos + self._lead(st, age, anchor))
             h.anchor = anchor
             setattr(h, _TOUCHED, True)
@@ -323,7 +410,11 @@ class RootFuser:
             setattr(h, _TOUCHED, False)
 
     def status(self) -> dict:
-        return {"applied": dict(self.applied), "swaps": self.swaps, "held_ambiguous": self.held_ambiguous,
-                "filter_preset": self.cfg.preset,
-                "accepted": {s: self.state[s].accepted for s in SIDES},
-                "rejected": {s: self.state[s].rejected for s in SIDES}}
+        return {
+            "applied": dict(self.applied),
+            "swaps": self.swaps,
+            "held_ambiguous": self.held_ambiguous,
+            "filter_preset": self.cfg.preset,
+            "accepted": {s: self.state[s].accepted for s in SIDES},
+            "rejected": {s: self.state[s].rejected for s in SIDES},
+        }

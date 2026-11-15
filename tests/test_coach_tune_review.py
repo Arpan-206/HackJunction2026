@@ -23,17 +23,36 @@ def test_hint_job_is_unchanged_without_the_variable(monkeypatch):
     p = load(monkeypatch, None)
     assert p.TASK == "hint" and p.OUT_ROOT == LANE / "out" and p.MAX_TOKENS == 48
     assert p.check("Curl your thumb more.", "thumb", "too_flat", "en")["ok"]
-    ex = {"task": "t", "step_index": 0, "step_name": "s", "kind": "hold", "hand": "right", "score": 50, "errors": [], "lang": "en"}
+    ex = {
+        "task": "t",
+        "step_index": 0,
+        "step_name": "s",
+        "kind": "hold",
+        "hand": "right",
+        "score": 50,
+        "errors": [],
+        "lang": "en",
+    }
     assert p.messages(ex)[0]["content"] == p.SYSTEM
 
 
 def test_review_job_has_its_own_folder_and_filter(monkeypatch):
     p = load(monkeypatch, "review")
     assert p.OUT_ROOT == LANE / "out" / "review" and p.MAX_TOKENS == 96
-    ok = p.check("Your other fingers held the shape well. Curl your thumb a little more.", "thumb", "too_flat", "en")
+    ok = p.check(
+        "Your other fingers held the shape well. Curl your thumb a little more.",
+        "thumb",
+        "too_flat",
+        "en",
+    )
     assert ok["ok"] and ok["finger_ok"] and ok["direction_ok"] and ok["style_ok"]
     # praise may say other fingers are curled; only the last sentence carries the fix
-    assert p.check("Your fingers are nicely curled around the handle. Straighten your index finger a little.", "index", "too_curled", "en")["ok"]
+    assert p.check(
+        "Your fingers are nicely curled around the handle. Straighten your index finger a little.",
+        "index",
+        "too_curled",
+        "en",
+    )["ok"]
     bad = [
         ("Curl your thumb a little more.", "one sentence"),
         ("Good hand. Nice shape. Curl your thumb more.", "three sentences"),
@@ -46,8 +65,18 @@ def test_review_job_has_its_own_folder_and_filter(monkeypatch):
     ]
     for text, why in bad:
         assert not p.check(text, "thumb", "too_flat", "en")["ok"], why
-    assert p.check("Die Hand war ruhig und sicher. Beuge den Daumen etwas mehr.", "thumb", "too_flat", "de")["ok"]
-    assert p.check("Muut sormet pysyivät hyvin paikallaan. Koukista peukaloa hieman enemmän.", "thumb", "too_flat", "fi")["ok"]
+    assert p.check(
+        "Die Hand war ruhig und sicher. Beuge den Daumen etwas mehr.",
+        "thumb",
+        "too_flat",
+        "de",
+    )["ok"]
+    assert p.check(
+        "Muut sormet pysyivät hyvin paikallaan. Koukista peukaloa hieman enemmän.",
+        "thumb",
+        "too_flat",
+        "fi",
+    )["ok"]
 
 
 def test_unknown_task_is_refused(monkeypatch):

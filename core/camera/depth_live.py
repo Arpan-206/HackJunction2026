@@ -31,7 +31,6 @@ from .depth_track import (
     TrackerConfig,
     YawCorrector,
     YawCorrectorConfig,
-    wrap_deg,
 )
 
 log = logging.getLogger("geppetto.camera.depth")
@@ -74,7 +73,7 @@ class DepthTracking:
         self.last_t_us = 0
 
     @classmethod
-    def from_config(cls, cfg, clock, source=None) -> "DepthTracking":
+    def from_config(cls, cfg, clock, source=None) -> DepthTracking:
         sec = cfg.camera.get("depth") if "depth" in cfg.camera else None
         if source is None:
             from .geppetto_depth import GeppettoDepthCamera
@@ -210,7 +209,7 @@ class DepthTracking:
             "t": int(t_us),
             "frame_id": int(obs.frame_id),
             "frame": "bench" if tab is not None else "camera",
-            "n": int(len(c["labels"])),
+            "n": len(c["labels"]),
             "points": [round(float(x), 4) for x in np.asarray(c["points"]).reshape(-1)],
             "labels": [int(x) for x in c["labels"]],
             "rgb": [int(x) for x in np.asarray(c["rgb"]).reshape(-1)],

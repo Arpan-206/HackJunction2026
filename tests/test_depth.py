@@ -228,7 +228,7 @@ def test_live_step_corrects_drift_on_fake_glove():
     )
     t0 = clock.now_us()
     last = None
-    for k in range(int(12 * 15)):  # 12 s, one tick per depth frame
+    for k in range(12 * 15):  # 12 s, one tick per depth frame
         clock.set_us(t0 + int(k * 1e6 / 15))
         t = k / 15
         drift = 0.0 if t < 1.5 else (t - 1.5) * 2.0  # 2 deg/s, 21 deg by the end

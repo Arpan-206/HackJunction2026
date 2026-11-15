@@ -137,15 +137,17 @@ The rings are visible only when the back of the hand faces the phone. Both glow 
 `core/rcsp.py` (glove owner): keep the marker colours while the hand root is on. In `GloveControl._set`, before `LED_COLOURS[state]`:
 
 ```python
-    async def _set(self, side: str, state: str) -> None:
-        markers = getattr(self.session, "led_markers", None)   # set by __main__ with --root and markers on
-        for did, sd in self.side_of.items():
-            if sd == side:
-                rgb = markers[side] if markers and state == "idle" else LED_COLOURS[state]
-                try:
-                    await self.client.set_color_led(did, rgb)
-                except RcspError as e:
-                    log.debug("SetColorLed failed: %s", e)
+async def _set(self, side: str, state: str) -> None:
+    markers = getattr(
+        self.session, "led_markers", None
+    )  # set by __main__ with --root and markers on
+    for did, sd in self.side_of.items():
+        if sd == side:
+            rgb = markers[side] if markers and state == "idle" else LED_COLOURS[state]
+            try:
+                await self.client.set_color_led(did, rgb)
+            except RcspError as e:
+                log.debug("SetColorLed failed: %s", e)
 ```
 
 and in `core/__main__.py`, after the hand root is attached: `core.session.led_markers = MARKER_RGB` (from `core.camera.hand_root_led`). Status flashes (passed, recording) still show; the ring returns to its marker colour when idle.

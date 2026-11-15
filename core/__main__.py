@@ -233,7 +233,12 @@ def main(argv: list[str] | None = None) -> int:
             log.error("camera source unavailable: %s", e)
 
     want_root = args.root or bool(cfg.camera.get("root_tracking", False))
-    if args.depth or args.depth_fake or want_root or bool(cfg.camera.get("depth_enabled", False)):
+    if (
+        args.depth
+        or args.depth_fake
+        or want_root
+        or bool(cfg.camera.get("depth_enabled", False))
+    ):
         try:
             from .camera.depth_live import DepthTracking, FakeDepthSource
 
@@ -259,7 +264,9 @@ def main(argv: list[str] | None = None) -> int:
 
             # shares the depth step's source: the phone serves one client at a time
             core.session.root = HandRootLive.from_config(cfg, core.session.depth.source)
-            log.info("hand root on: the glove wrist follows the phone's colour plus depth")
+            log.info(
+                "hand root on: the glove wrist follows the phone's colour plus depth"
+            )
         except Exception as e:  # the hand root must never stop the server
             log.error("hand root unavailable: %s", e)
 

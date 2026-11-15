@@ -51,9 +51,13 @@ def main() -> int:
             try:
                 r = c.post(a.url.rstrip("/") + "/v1/chat/completions", json=body)
                 if r.status_code == 200:
-                    text = (r.json()["choices"][0]["message"].get("content") or "").strip()
+                    text = (
+                        r.json()["choices"][0]["message"].get("content") or ""
+                    ).strip()
                     if text:
-                        print(f"{a.model} answered in {time.monotonic() - t0:.2f} s (try {n}): {text[:40]}")
+                        print(
+                            f"{a.model} answered in {time.monotonic() - t0:.2f} s (try {n}): {text[:40]}"
+                        )
                         return 0
                     last = "empty answer"
                 else:
@@ -62,7 +66,10 @@ def main() -> int:
                 last = type(e).__name__
             if n < a.tries:
                 time.sleep(a.gap)
-    print(f"{a.model} did not answer at {a.url} after {a.tries} tries (last: {last})", file=sys.stderr)
+    print(
+        f"{a.model} did not answer at {a.url} after {a.tries} tries (last: {last})",
+        file=sys.stderr,
+    )
     return 1
 
 

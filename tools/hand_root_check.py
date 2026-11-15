@@ -9,6 +9,7 @@ Jitter when still: the standard deviation of the smoothed position over every 1 
 in which the raw wrist moves less than 1 cm per frame on average, reported as the median
 over such windows.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,19 +20,20 @@ from pathlib import Path
 
 import numpy as np
 
-from core.camera.gdrec import frames
 from core import hand as H
+from core.camera.gdrec import frames
 from core.camera.hand_root import HandRootTracker, RootConfig, rotate_image
-from core.root_fuse import FuseConfig, RootFuser
 from core.config import REPO_ROOT, load_config
-
+from core.root_fuse import FuseConfig, RootFuser
 
 # The work box in the core world (FuseConfig box defaults): 45 x 25 x 30 cm (x, y, z) around this centre.
 BOX_C = np.array([0.0, 0.175, -0.2])
 BOX_H = np.array([0.225, 0.125, 0.15])
 
 
-def still_jitter(t: np.ndarray, p: np.ndarray, raw: np.ndarray, win_s: float = 1.0) -> dict:
+def still_jitter(
+    t: np.ndarray, p: np.ndarray, raw: np.ndarray, win_s: float = 1.0
+) -> dict:
     out = []
     if len(t) < 10:
         return {"windows": 0}
@@ -46,24 +48,49 @@ def still_jitter(t: np.ndarray, p: np.ndarray, raw: np.ndarray, win_s: float = 1
     if not out:
         return {"windows": 0}
     a = np.array(out) * 1000
-    return {"windows": len(out), "median_std_mm": [round(float(x), 2) for x in np.median(a, axis=0)],
-            "median_std_norm_mm": round(float(np.median(np.linalg.norm(a, axis=1))), 2)}
+    return {
+        "windows": len(out),
+        "median_std_mm": [round(float(x), 2) for x in np.median(a, axis=0)],
+        "median_std_norm_mm": round(float(np.median(np.linalg.norm(a, axis=1))), 2),
+    }
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("recording")
     ap.add_argument("--out", default="logs/hand_root/check")
-    ap.add_argument("--every", type=int, default=60, help="save every n-th frame as an image (0: none)")
+    ap.add_argument(
+        "--every",
+        type=int,
+        default=60,
+        help="save every n-th frame as an image (0: none)",
+    )
     ap.add_argument("--max-frames", type=int, default=0)
-    ap.add_argument("--no-swap", action="store_true", help="keep MediaPipe's handedness label as it is")
-    ap.add_argument("--rotate", default=None, help='"auto" or quarter turns clockwise 0..3')
-    ap.add_argument("--clahe", action="store_true", help="grey plus local contrast before detection")
-    ap.add_argument("--gloves", default="both", choices=["both", "left", "right"],
-                    help="glove hands the simulated session has (sets one-hand or two-hand matching)")
+    ap.add_argument(
+        "--no-swap",
+        action="store_true",
+        help="keep MediaPipe's handedness label as it is",
+    )
+    ap.add_argument(
+        "--rotate", default=None, help='"auto" or quarter turns clockwise 0..3'
+    )
+    ap.add_argument(
+        "--clahe", action="store_true", help="grey plus local contrast before detection"
+    )
+    ap.add_argument(
+        "--gloves",
+        default="both",
+        choices=["both", "left", "right"],
+        help="glove hands the simulated session has (sets one-hand or two-hand matching)",
+    )
     ap.add_argument("--mode", default=None, help='"auto", "blobs" or "mediapipe"')
-    ap.add_argument("--fuse", action="append", default=[], metavar="KEY=VALUE",
-                    help="override a FuseConfig field, for example --fuse preset=fast")
+    ap.add_argument(
+        "--fuse",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="override a FuseConfig field, for example --fuse preset=fast",
+    )
     args = ap.parse_args(argv)
     import cv2
 
@@ -104,7 +131,12 @@ def main(argv=None) -> int:
         n += 1
         hands = {s: None for s in ("left", "right")}
         for s in sides:
-            h = H.synth_hand(side=s, curl={k: 0.3 for k in H.FINGERS}, t_us=f.t_us, device_id=1 if s == "left" else 2)
+            h = H.synth_hand(
+                side=s,
+                curl={k: 0.3 for k in H.FINGERS},
+                t_us=f.t_us,
+                device_id=1 if s == "left" else 2,
+            )
             h.wrist_p = np.asarray(rest[s], dtype=float)
             hands[s] = h
         fuser.apply(hands, fixes, f.t_us)
@@ -119,25 +151,55 @@ def main(argv=None) -> int:
             if x.key:
                 key_side[x.key] = s
         for s in sides:
-            fused[s].append(((f.t_us - t0) / 1e6, hands[s].wrist_p.copy(), hands[s].anchor))
+            fused[s].append(
+                ((f.t_us - t0) / 1e6, hands[s].wrist_p.copy(), hands[s].anchor)
+            )
         for s, x in got.items():
-            rows.append({"t_s": round((f.t_us - t0) / 1e6, 3), "frame_id": f.frame_id, "side": s,
-                         "src": x.source, "key": x.key, "led": int(x.led),
-                         "dark": None if x.darkness is None else round(x.darkness, 3),
-                         "score": round(x.score, 3), "conf": round(x.confidence, 3),
-                         "x": round(float(x.p[0]), 4), "y": round(float(x.p[1]), 4), "z": round(float(x.p[2]), 4),
-                         "bx": round(float(x.p_bench[0]), 4), "by": round(float(x.p_bench[1]), 4),
-                         "bz": round(float(x.p_bench[2]), 4), "u": round(x.px[0], 1), "v": round(x.px[1], 1)})
+            rows.append(
+                {
+                    "t_s": round((f.t_us - t0) / 1e6, 3),
+                    "frame_id": f.frame_id,
+                    "side": s,
+                    "src": x.source,
+                    "key": x.key,
+                    "led": int(x.led),
+                    "dark": None if x.darkness is None else round(x.darkness, 3),
+                    "score": round(x.score, 3),
+                    "conf": round(x.confidence, 3),
+                    "x": round(float(x.p[0]), 4),
+                    "y": round(float(x.p[1]), 4),
+                    "z": round(float(x.p[2]), 4),
+                    "bx": round(float(x.p_bench[0]), 4),
+                    "by": round(float(x.p_bench[1]), 4),
+                    "bz": round(float(x.p_bench[2]), 4),
+                    "u": round(x.px[0], 1),
+                    "v": round(x.px[1], 1),
+                }
+            )
         if args.every and n % args.every == 1:
             img = f.bgr.copy()
             for x in fixes:
                 cv2.circle(img, (int(x.px[0]), int(x.px[1])), 9, (0, 255, 0), 2)
             for s, x in got.items():
-                cv2.putText(img, f"{s} h={x.p_bench[1]*100:.0f}cm{' LED' if x.led else ''}",
-                            (int(x.px[0]) + 12, int(x.px[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                cv2.putText(
+                    img,
+                    f"{s} h={x.p_bench[1] * 100:.0f}cm{' LED' if x.led else ''}",
+                    (int(x.px[0]) + 12, int(x.px[1])),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    2,
+                )
             img = rotate_image(img, tr.rot)
-            cv2.putText(img, f"t={(f.t_us - t0) / 1e6:5.1f}s fixes={len(fixes)}", (10, 25),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(
+                img,
+                f"t={(f.t_us - t0) / 1e6:5.1f}s fixes={len(fixes)}",
+                (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
             cv2.imwrite(str(out / "frames" / f"{n:05d}.jpg"), img)
         if args.max_frames and n >= args.max_frames:
             break
@@ -146,28 +208,47 @@ def main(argv=None) -> int:
             w = csv.DictWriter(fh, fieldnames=list(rows[0]))
             w.writeheader()
             w.writerows(rows)
-    summ: dict = {"recording": args.recording, "frames": n, "frames_with_fix": with_hand,
-                  "fix_rate": round(with_hand / max(1, n), 3), "tracker": tr.status(), "gloves": args.gloves,
-                  "all_gloves_found_rate": round(both_found / max(1, n), 3), "identity_swaps": id_swaps,
-                  "fuser": fuser.status(),
-                  "fps_capture": round((n - 1) / max(1e-6, (f.t_us - t0) / 1e6), 1) if n > 1 else None,
-                  "fps_tracker_max": None,
-                  "process_ms_median": round(float(np.median(ms)), 1) if ms else None,
-                  "process_ms_p95": round(float(np.percentile(ms, 95)), 1) if ms else None}
-    summ["fps_tracker_max"] = round(1000.0 / max(1e-6, summ["process_ms_median"] or 1e9), 1)
+    summ: dict = {
+        "recording": args.recording,
+        "frames": n,
+        "frames_with_fix": with_hand,
+        "fix_rate": round(with_hand / max(1, n), 3),
+        "tracker": tr.status(),
+        "gloves": args.gloves,
+        "all_gloves_found_rate": round(both_found / max(1, n), 3),
+        "identity_swaps": id_swaps,
+        "fuser": fuser.status(),
+        "fps_capture": round((n - 1) / max(1e-6, (f.t_us - t0) / 1e6), 1)
+        if n > 1
+        else None,
+        "fps_tracker_max": None,
+        "process_ms_median": round(float(np.median(ms)), 1) if ms else None,
+        "process_ms_p95": round(float(np.percentile(ms, 95)), 1) if ms else None,
+    }
+    summ["fps_tracker_max"] = round(
+        1000.0 / max(1e-6, summ["process_ms_median"] or 1e9), 1
+    )
     for side in sides:
         tt = np.array([a for a, _, _ in fused[side]])
         pp = np.array([b for _, b, _ in fused[side]])
         live = np.array([c == "camera" for _, _, c in fused[side]])
         moved = np.array([c != "rest" for _, _, c in fused[side]])
-        steps = np.linalg.norm(np.diff(pp, axis=0), axis=1) if len(pp) > 1 else np.zeros(0)
+        steps = (
+            np.linalg.norm(np.diff(pp, axis=0), axis=1) if len(pp) > 1 else np.zeros(0)
+        )
         minutes = max(1e-6, (tt[-1] - tt[0]) / 60.0) if len(tt) > 1 else 1.0
         lo, hi = BOX_C - BOX_H - 1e-6, BOX_C + BOX_H + 1e-6
         inside = np.all((pp >= lo) & (pp <= hi), axis=1)
-        summ[f"fused_{side}"] = {"live_rate": round(float(live.mean()), 3),
-                                "jumps_per_min": round(float((steps > 0.08).sum()) / minutes, 1),
-                                "in_box_rate": round(float(inside[moved].mean()), 3) if moved.any() else None,
-                                "jitter_still": still_jitter(tt[live], pp[live], pp[live]) if live.sum() > 10 else None}
+        summ[f"fused_{side}"] = {
+            "live_rate": round(float(live.mean()), 3),
+            "jumps_per_min": round(float((steps > 0.08).sum()) / minutes, 1),
+            "in_box_rate": round(float(inside[moved].mean()), 3)
+            if moved.any()
+            else None,
+            "jitter_still": still_jitter(tt[live], pp[live], pp[live])
+            if live.sum() > 10
+            else None,
+        }
     for side in ("left", "right"):
         r = [x for x in rows if x["side"] == side]
         if not r:
@@ -175,16 +256,27 @@ def main(argv=None) -> int:
         t = np.array([x["t_s"] for x in r])
         p = np.array([[x["x"], x["y"], x["z"]] for x in r])
         raw = np.array([[x["bx"], x["by"], x["bz"]] for x in r])
-        summ[side] = {"fixes": len(r), "t_first_s": float(t[0]), "t_last_s": float(t[-1]),
-                      "range_m": {k: [round(float(p[:, i].min()), 3), round(float(p[:, i].max()), 3)]
-                                  for i, k in enumerate("xyz")},
-                      "height_above_table_m": [round(float(raw[:, 1].min()), 3), round(float(raw[:, 1].max()), 3)],
-                      "jitter_still": still_jitter(t, p, raw)}
+        summ[side] = {
+            "fixes": len(r),
+            "t_first_s": float(t[0]),
+            "t_last_s": float(t[-1]),
+            "range_m": {
+                k: [round(float(p[:, i].min()), 3), round(float(p[:, i].max()), 3)]
+                for i, k in enumerate("xyz")
+            },
+            "height_above_table_m": [
+                round(float(raw[:, 1].min()), 3),
+                round(float(raw[:, 1].max()), 3),
+            ],
+            "jitter_still": still_jitter(t, p, raw),
+        }
     (out / "summary.json").write_text(json.dumps(summ, indent=2))
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         fig, ax = plt.subplots(3, 1, figsize=(10, 7), sharex=True)
         for side, colour in (("left", "#2f6db5"), ("right", "#b5452f")):
             r = [x for x in rows if x["side"] == side]
@@ -198,7 +290,9 @@ def main(argv=None) -> int:
             ax[i].grid(alpha=0.3)
         ax[0].legend(loc="upper right")
         ax[2].set_xlabel("time (s)")
-        fig.suptitle(f"Wrist track: {Path(args.recording).name}, fix rate {summ['fix_rate']:.0%}")
+        fig.suptitle(
+            f"Wrist track: {Path(args.recording).name}, fix rate {summ['fix_rate']:.0%}"
+        )
         fig.tight_layout()
         fig.savefig(out / "track.png", dpi=110)
     except ImportError:

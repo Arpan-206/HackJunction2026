@@ -14,6 +14,7 @@ point under the camera, along the camera's viewing direction):
 The image is turned upright first (the phone streams its sensor image); "lowest row" is
 in the upright image.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,7 +23,14 @@ from pathlib import Path
 
 import numpy as np
 
-from core.camera.depth_track import ARKIT_TO_OPENCV, DepthTracker, TrackerConfig, app_table, backproject, fit_table
+from core.camera.depth_track import (
+    ARKIT_TO_OPENCV,
+    DepthTracker,
+    TrackerConfig,
+    app_table,
+    backproject,
+    fit_table,
+)
 from core.camera.gdrec import frames
 from core.camera.hand_root import unrotate_points, upright_rotation
 
@@ -55,7 +63,9 @@ def main(argv=None) -> int:
         h = tab.height(p).reshape(H, W)
         along = ((p - foot) @ f2).reshape(H, W)
         ok = valid.reshape(H, W) & (f.confidence >= 1)
-        h_r, a_r, ok_r = (np.rot90(x, -rot) for x in (h, along, ok))   # upright: rot quarter turns clockwise
+        h_r, a_r, ok_r = (
+            np.rot90(x, -rot) for x in (h, along, ok)
+        )  # upright: rot quarter turns clockwise
         Hr, Wr = h_r.shape
         mid = slice(Wr // 3, 2 * Wr // 3)
         low = ok_r[:, mid] & (h_r[:, mid] < 0.03) & (h_r[:, mid] > -0.03)
@@ -64,24 +74,42 @@ def main(argv=None) -> int:
         K = f.depth_intrinsics()
         rows = []
         for u in np.linspace(1 / 3, 2 / 3, 16):
-            su, sv = unrotate_points(np.array([[u, 0.999]]), rot)[0]     # upright bottom row, sensor pixel
-            d = np.array([(su * W - K[0, 2]) / K[0, 0], (sv * H - K[1, 2]) / K[1, 1], 1.0])
+            su, sv = unrotate_points(np.array([[u, 0.999]]), rot)[
+                0
+            ]  # upright bottom row, sensor pixel
+            d = np.array(
+                [(su * W - K[0, 2]) / K[0, 0], (sv * H - K[1, 2]) / K[1, 1], 1.0]
+            )
             dw = Tcv[:3, :3] @ d
             den = dw @ nrm
             if den >= -1e-6:
                 continue
             s = -((cam - tab.point) @ nrm) / den
-            rows.append(((cam + s * dw - foot) @ f2))
+            rows.append((cam + s * dw - foot) @ f2)
         fov = float(np.median(rows)) if rows else None
         scr = ok & (h > 0.10) & (h < 0.35) & (np.abs(along) < 0.30)
-        out.append({"frame": n, "camera_height_m": round(tab.camera_height_m, 3), "table": tab.source,
-                    "fov_m": None if fov is None else round(fov, 3),
-                    "surface_m": None if surface is None else round(surface, 3),
-                    "screen_fraction": round(float(scr.mean()), 3)})
+        out.append(
+            {
+                "frame": n,
+                "camera_height_m": round(tab.camera_height_m, 3),
+                "table": tab.source,
+                "fov_m": None if fov is None else round(fov, 3),
+                "surface_m": None if surface is None else round(surface, 3),
+                "screen_fraction": round(float(scr.mean()), 3),
+            }
+        )
     keys = ("camera_height_m", "fov_m", "surface_m", "screen_fraction")
-    med = {k: round(float(np.median([o[k] for o in out if o[k] is not None])), 3) for k in keys}
+    med = {
+        k: round(float(np.median([o[k] for o in out if o[k] is not None])), 3)
+        for k in keys
+    }
     med["hidden_m"] = round(med["surface_m"] - med["fov_m"], 3)
-    print(json.dumps({"recording": str(path), "frames_sampled": len(out), "median": med}, indent=2))
+    print(
+        json.dumps(
+            {"recording": str(path), "frames_sampled": len(out), "median": med},
+            indent=2,
+        )
+    )
     return 0
 
 

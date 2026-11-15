@@ -19,6 +19,7 @@ Steps, per frame (depth resolution, 256x192):
 6. darkness: 1 minus the mean colour brightness inside the mask (black gloves near 1,
    skin lower), so a glove beats a bare hand.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -31,12 +32,12 @@ from .depth_track import Table, backproject, camera_pose
 
 @dataclass
 class HandBlob:
-    centre_world: np.ndarray            # (3,) ARKit world, the wrist estimate (see step 5)
-    centre_uv: tuple[float, float]      # normalised, colour frame as streamed
-    axis_world: np.ndarray | None       # (3,) unit, toward the fingers
+    centre_world: np.ndarray  # (3,) ARKit world, the wrist estimate (see step 5)
+    centre_uv: tuple[float, float]  # normalised, colour frame as streamed
+    axis_world: np.ndarray | None  # (3,) unit, toward the fingers
     height_m: float
     area_px: int
-    mask: np.ndarray                    # bool, depth resolution
+    mask: np.ndarray  # bool, depth resolution
     darkness: float
     side_hint: str | None = None
     tip_world: np.ndarray | None = None
@@ -56,9 +57,14 @@ class BlobConfig:
     wrist_back_m: tuple = (0.14, 0.20)
 
 
-def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
-               cfg: BlobConfig | None = None) -> list[HandBlob]:
+def hand_blobs(
+    frame: DepthFrame,
+    table: Table | None = None,
+    max_n: int = 2,
+    cfg: BlobConfig | None = None,
+) -> list[HandBlob]:
     import cv2
+
     cfg = cfg or BlobConfig()
     if frame.depth is None or table is None:
         return []
@@ -67,19 +73,33 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
     if not in_world:
         return []
     cam, _ = camera_pose(frame, True)
-    conf = frame.confidence.reshape(-1) if frame.confidence is not None else np.full(H * W, 2, np.uint8)
+    conf = (
+        frame.confidence.reshape(-1)
+        if frame.confidence is not None
+        else np.full(H * W, 2, np.uint8)
+    )
     ok = valid & (conf >= cfg.min_confidence)
     dist = np.linalg.norm(p - cam, axis=1)
     h = table.height(p)
     body_px = ok & (h >= cfg.body_band_min_m) & (h <= cfg.band_max_m) & (dist <= 2.0)
     body = float(np.median(dist[body_px])) if body_px.sum() > 200 else cfg.max_range_m
-    cand = ok & (h >= cfg.band_min_m) & (h <= cfg.band_max_m) & (dist >= cfg.min_range_m) \
+    cand = (
+        ok
+        & (h >= cfg.band_min_m)
+        & (h <= cfg.band_max_m)
+        & (dist >= cfg.min_range_m)
         & (dist <= min(cfg.max_range_m, body - cfg.body_margin_m))
-    img = cv2.morphologyEx(cand.reshape(H, W).astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    )
+    img = cv2.morphologyEx(
+        cand.reshape(H, W).astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)
+    )
     n, lab, stats, _ = cv2.connectedComponentsWithStats(img, connectivity=8)
     order = sorted(range(1, n), key=lambda k: -stats[k, cv2.CC_STAT_AREA])
     grey = cv2.cvtColor(frame.bgr, cv2.COLOR_BGR2GRAY)
-    small = cv2.resize(grey, (W, H), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+    small = (
+        cv2.resize(grey, (W, H), interpolation=cv2.INTER_AREA).astype(np.float32)
+        / 255.0
+    )
     out: list[HandBlob] = []
     up = table.normal
     for k in order:
@@ -89,7 +109,7 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
         m = lab == k
         idx = np.flatnonzero(m.reshape(-1))
         q = p[idx]
-        flat = q - np.outer((q - table.point) @ up, up)          # on the table plane
+        flat = q - np.outer((q - table.point) @ up, up)  # on the table plane
         c = flat.mean(axis=0)
         axis = None
         wrist = np.median(q, axis=0)
@@ -114,18 +134,31 @@ def hand_blobs(frame: DepthFrame, table: Table | None = None, max_n: int = 2,
         # the pixel nearest the wrist point, for the colour frame position
         j = int(np.argmin(np.linalg.norm(q - wrist, axis=1)))
         uv = ((xs[j] + 0.5) / W, (ys[j] + 0.5) / H)
-        out.append(HandBlob(centre_world=wrist, centre_uv=uv, axis_world=axis,
-                            height_m=float(table.height(wrist[None])[0]), area_px=area, mask=m,
-                            darkness=float(1.0 - small[m].mean()), tip_world=tip))
+        out.append(
+            HandBlob(
+                centre_world=wrist,
+                centre_uv=uv,
+                axis_world=axis,
+                height_m=float(table.height(wrist[None])[0]),
+                area_px=area,
+                mask=m,
+                darkness=float(1.0 - small[m].mean()),
+                tip_world=tip,
+            )
+        )
         if len(out) >= max_n:
             break
     return out
 
 
-def find_blobs(frame: DepthFrame, table: Table | None, max_n: int = 2) -> tuple[list, str]:
+def find_blobs(
+    frame: DepthFrame, table: Table | None, max_n: int = 2
+) -> tuple[list, str]:
     """The lidar lane's hand_blobs when it exists, else the interim one here. (blobs, which)."""
     try:
-        from .depth_track import hand_blobs as lidar_hand_blobs   # type: ignore[attr-defined]
+        from .depth_track import (
+            hand_blobs as lidar_hand_blobs,  # type: ignore[attr-defined]
+        )
     except ImportError:
         return hand_blobs(frame, table, max_n), "interim"
     return lidar_hand_blobs(frame, table, max_n), "lidar"

@@ -19,7 +19,12 @@ from collections import deque
 
 import numpy as np
 
-STAGES = ("capture_to_arrival_over_fastest", "arrival_to_done", "done_to_tick", "tick_to_sent")
+STAGES = (
+    "capture_to_arrival_over_fastest",
+    "arrival_to_done",
+    "done_to_tick",
+    "tick_to_sent",
+)
 
 
 class DelayStats:
@@ -39,12 +44,21 @@ class DelayStats:
     def snapshot(self) -> dict:
         with self._lock:
             items = {k: np.array(v) for k, v in self._d.items() if len(v)}
-        return {k: {"p50": round(float(np.percentile(a, 50)), 1), "p95": round(float(np.percentile(a, 95)), 1),
-                    "max": round(float(a.max()), 1), "n": int(len(a))} for k, a in items.items()}
+        return {
+            k: {
+                "p50": round(float(np.percentile(a, 50)), 1),
+                "p95": round(float(np.percentile(a, 95)), 1),
+                "max": round(float(a.max()), 1),
+                "n": len(a),
+            }
+            for k, a in items.items()
+        }
 
     def line(self) -> str:
         s = self.snapshot()
-        return "; ".join(f"{k} p50 {s[k]['p50']:.0f} max {s[k]['max']:.0f}" for k in STAGES if k in s)
+        return "; ".join(
+            f"{k} p50 {s[k]['p50']:.0f} max {s[k]['max']:.0f}" for k in STAGES if k in s
+        )
 
 
 STATS = DelayStats()

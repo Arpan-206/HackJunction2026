@@ -316,7 +316,7 @@ class GeppettoDepthCamera:
             on_packet  # called with (arrival_us, packet bytes); the recorder uses it
         )
         self._latest: DepthFrame | None = None
-        self._raw: tuple[int, bytes] | None = None   # newest packet not yet decoded
+        self._raw: tuple[int, bytes] | None = None  # newest packet not yet decoded
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -397,7 +397,11 @@ class GeppettoDepthCamera:
             self.on_packet(now, pkt)
         # The reader thread only keeps the newest raw packet: decoding (JPEG, depth) waits for read(), so
         # the socket is drained as fast as the link delivers and no frame is decoded that nobody reads.
-        h = parse_header(memoryview(pkt)[PREFIX.size:]) if len(pkt) >= PREFIX.size + HEADER_SIZE else None
+        h = (
+            parse_header(memoryview(pkt)[PREFIX.size :])
+            if len(pkt) >= PREFIX.size + HEADER_SIZE
+            else None
+        )
         if h is None:
             self.bad += 1
             return

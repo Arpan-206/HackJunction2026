@@ -21,7 +21,11 @@ def constants(path: Path, *names: str) -> dict:
     tree = ast.parse(path.read_text())
     out = {}
     for node in tree.body:
-        if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name) and node.targets[0].id in names:
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in names
+        ):
             out[node.targets[0].id] = ast.literal_eval(node.value)
     return out
 
@@ -47,7 +51,10 @@ def test_training_never_reads_a_held_out_take():
     assert "C.variation(takes[k], rt, rng) for k in sources" in train
     assert "real_reference" not in train
     evaluate = src[src.index("def evaluate(") :]
-    assert "for ti, tid in enumerate(C.HELD_OUT)" in evaluate and "C.real_reference(takes[tid], rt)" in evaluate
+    assert (
+        "for ti, tid in enumerate(C.HELD_OUT)" in evaluate
+        and "C.real_reference(takes[tid], rt)" in evaluate
+    )
     assert "variation(" not in evaluate
 
 
@@ -55,8 +62,12 @@ def test_standalone_no_import_from_the_live_app():
     """Only prepare.py may read the core (to export the retarget); nothing imports backend or frontend code."""
     for f in LANE.glob("*.py"):
         text = f.read_text()
-        imports = re.findall(r"^\s*(?:from|import)\s+([\w.]+)", text, flags=re.MULTILINE)
-        assert not any(m.split(".")[0] in ("backend", "app", "frontend") for m in imports), f.name
+        imports = re.findall(
+            r"^\s*(?:from|import)\s+([\w.]+)", text, flags=re.MULTILINE
+        )
+        assert not any(
+            m.split(".")[0] in ("backend", "app", "frontend") for m in imports
+        ), f.name
         if f.name != "prepare.py":
             assert not any(m.split(".")[0] == "core" for m in imports), f.name
 
@@ -74,7 +85,12 @@ def test_retarget_export_matches_the_core():
     rng = np.random.default_rng(0)
     for _ in range(50):
         a = rng.uniform(-30, 120, size=18)
-        mine = np.clip(np.asarray(m["sign"]) * np.radians(np.asarray(m["offset_deg"]) + np.asarray(m["W"]) @ a), m["lower"], m["upper"])
+        mine = np.clip(
+            np.asarray(m["sign"])
+            * np.radians(np.asarray(m["offset_deg"]) + np.asarray(m["W"]) @ a),
+            m["lower"],
+            m["upper"],
+        )
         core = rt.targets(a, "right").q
         assert np.allclose(mine, [core[n] for n in m["joints"]], atol=1e-9)
 

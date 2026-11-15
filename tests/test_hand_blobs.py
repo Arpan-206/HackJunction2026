@@ -6,24 +6,33 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from core.camera.depth_track import HandBlobSides, hand_blobs, rotate_upright, upright_turns
+from core.camera.depth_track import (
+    HandBlobSides,
+    hand_blobs,
+    rotate_upright,
+    upright_turns,
+)
 from core.camera.fake_depth import FakeDepthScene
 from core.camera.gdrec import frames
 from core.camera.geppetto_depth import parse_packet
 
-CANDIDATES = [Path(__file__).parent.parent / "captures" / "bench-gloves-1.gdrec.gz",
-              Path("/Users/arpanpandey/Code/Junction/repo/captures/bench-gloves-1.gdrec.gz")]
+CANDIDATES = [
+    Path(__file__).parent.parent / "captures" / "bench-gloves-1.gdrec.gz",
+    Path("/Users/arpanpandey/Code/Junction/repo/captures/bench-gloves-1.gdrec.gz"),
+]
 CLIP = next((p for p in CANDIDATES if p.exists()), None)
 
 
 def test_upright_turns_on_the_fake_landscape_phone():
     f = parse_packet(FakeDepthScene().packet(0), 0)
-    assert upright_turns(f) == 0                      # landscape, world up is image up
+    assert upright_turns(f) == 0  # landscape, world up is image up
     img = np.zeros((2, 3, 3), np.uint8)
     assert rotate_upright(img, 1).shape == (3, 2, 3)
 
 
-@pytest.mark.skipif(CLIP is None, reason="captures/bench-gloves-1.gdrec.gz not on this machine")
+@pytest.mark.skipif(
+    CLIP is None, reason="captures/bench-gloves-1.gdrec.gz not on this machine"
+)
 def test_hand_blobs_on_bench_gloves_1():
     sides = HandBlobSides()
     counts = [0, 0, 0]
@@ -42,5 +51,7 @@ def test_hand_blobs_on_bench_gloves_1():
         if len(b) == 2:
             assert {b[0].side_hint, b[1].side_hint} == {"left", "right"}
     n = sum(counts)
-    assert turns == {1}                               # the upright phone streams turned by 90 degrees
-    assert counts[2] / n > 0.3 and (counts[1] + counts[2]) / n > 0.7, counts   # 0.41 and 0.78 on Sat 14 Nov
+    assert turns == {1}  # the upright phone streams turned by 90 degrees
+    assert counts[2] / n > 0.3 and (counts[1] + counts[2]) / n > 0.7, (
+        counts
+    )  # 0.41 and 0.78 on Sat 14 Nov
