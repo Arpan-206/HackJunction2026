@@ -7,9 +7,7 @@ name: policy-check
 # The CRACI network trace of this job should then show a denied observation.
 
 on:
-  push:
-    branches: [craci]
-    paths: [.github/workflows/policy-check.yml]
+  # Manual trigger only (Arpan, 15 Nov): a push to main runs just the ci workflow.
   workflow_dispatch:
 
 jobs:

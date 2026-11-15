@@ -8,9 +8,7 @@ name: model-image
 # Docker Hub pulls), unmatched traffic blocked.
 
 on:
-  push:
-    branches: [craci]
-    paths: [.github/workflows/model-image.yml]
+  # Manual trigger only (Arpan, 15 Nov): a push to main runs just the ci workflow.
   workflow_dispatch:
 
 jobs:

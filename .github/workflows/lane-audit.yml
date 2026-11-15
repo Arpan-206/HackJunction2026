@@ -10,9 +10,7 @@ name: lane-audit
 # Unmatched traffic is blocked, so CRACI observes every download.
 
 on:
-  push:
-    branches: [craci]
-    paths: [.github/workflows/lane-audit.yml]
+  # Manual trigger only (Arpan, 15 Nov): a push to main runs just the ci workflow.
   workflow_dispatch:
     inputs:
       lanes:

@@ -4,8 +4,7 @@ name: craci-hello
 # Network policy: every built-in preset, unmatched traffic blocked.
 
 on:
-  push:
-    branches: [craci]
+  # Manual trigger only (Arpan, 15 Nov): a push to main runs just the ci workflow.
   workflow_dispatch:
 
 jobs:
