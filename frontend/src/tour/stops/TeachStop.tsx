@@ -61,7 +61,7 @@ function TeachRun({ take, track, onRestart }: { take: TourTake; track: Reference
   return (
     <>
       <StageFrame text={`The expert's chalk hand plays the scale beside ${ROBOT_NAME}, a steel robot hand that copies it.`}>
-        <HandCanvas preset="pair" stage={{ decor: false }} label={`The expert's hand beside ${ROBOT_NAME}, the robot hand you teach`}>
+        <HandCanvas preset="pair" stage={{ decor: false, cameraPosition: [2.2, 2.3, 6.4] }} label={`The expert's hand beside ${ROBOT_NAME}, the robot hand you teach`}>
           <Hand side={take.side} style="chalk" getFrame={session.expertFrame} position={[-1.3, 0.15, 0]} />
           <Hand side={take.side} style="robot" getFrame={session.robotFrame} fingerTint={tint} smoothing={0.09} position={[1.3, 0.15, 0]} />
         </HandCanvas>

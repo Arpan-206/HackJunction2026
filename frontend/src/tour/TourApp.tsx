@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react';
 import { loadTake } from './data';
+import ExpertStop from './stops/ExpertStop';
 
 interface StopDef {
   title: string;
@@ -13,7 +14,7 @@ export const STOPS: StopDef[] = [
   {
     title: 'An expert records a step',
     live: 'An expert wears the Rokoko gloves and records the step once. The take is saved as a lesson step in a few seconds.',
-    load: () => import('./stops/ExpertStop'),
+    load: () => Promise.resolve({ default: ExpertStop }),
   },
   {
     title: 'The training room',
@@ -37,7 +38,8 @@ export const STOPS: StopDef[] = [
   },
 ];
 
-const PAGES = STOPS.map((s) => lazy(s.load));
+// The first stop is part of the shell's own chunk (its text and poster need no other code); its 3D stage loads behind it.
+const PAGES: ComponentType[] = STOPS.map((s, i) => (i === 0 ? ExpertStop : lazy(s.load)));
 
 // The first stop's code and take start loading with the shell, in parallel, instead of one after the other.
 if (typeof window !== 'undefined') {
