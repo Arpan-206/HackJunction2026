@@ -27,10 +27,10 @@ from pathlib import Path
 LANE = Path(__file__).resolve().parent
 REPO = LANE.parent
 sys.path.insert(0, str(REPO / "coach_tune"))
-import oai  # noqa: E402  (only its inference key reader and gateway header)
-import teacher_up  # noqa: E402
-import trainer_up  # noqa: E402
-import vm  # noqa: E402
+import oai
+import teacher_up
+import trainer_up
+import vm
 
 deploy = teacher_up.deploy
 NAME = "robot-policy"
@@ -60,22 +60,44 @@ def up(gpu: str) -> int:
     bal = vm.balance(c)
     price = deploy.PRICE_USD_PER_H.get(gpu, 8.0)
     if bal["amount"] is None or bal["amount"] - price * MAX_HOURS < vm.BALANCE_FLOOR:
-        raise SystemExit(f"refused: {MAX_HOURS} hours on {gpu} would break the 50 floor")
+        raise SystemExit(
+            f"refused: {MAX_HOURS} hours on {gpu} would break the 50 floor"
+        )
     if NAME not in {d.name for d in c.containers.get_deployments()}:
-        free = {r.name for r in c.containers.get_compute_resources() if r.size == 1 and r.is_available}
+        free = {
+            r.name
+            for r in c.containers.get_compute_resources()
+            if r.size == 1 and r.is_available
+        }
         if gpu not in free:
             raise SystemExit(f"{gpu} not free on serverless; free: {sorted(free)}")
         trainer_up.START_BASE = "0"
-        env = [EnvVar(name="CTL_START_BASE", value_or_reference_to_secret="0", type=EnvVarType.PLAIN)] + [
-            EnvVar(name=f"CTL_B64_{i:02d}", value_or_reference_to_secret=part, type=EnvVarType.PLAIN)
+        env = [
+            EnvVar(
+                name="CTL_START_BASE",
+                value_or_reference_to_secret="0",
+                type=EnvVarType.PLAIN,
+            )
+        ] + [
+            EnvVar(
+                name=f"CTL_B64_{i:02d}",
+                value_or_reference_to_secret=part,
+                type=EnvVarType.PLAIN,
+            )
             for i, part in enumerate(trainer_up.chunks())
         ]
         dep = deploy.build_deployment(NAME, "unused", gpu, env=env)
         dep.containers[0].entrypoint_overrides.entrypoint = ["bash"]
         dep.containers[0].entrypoint_overrides.cmd = trainer_up.command()
         c.containers.create_deployment(dep)
-        info = {"name": NAME, "gpu": gpu, "price_usd_per_h": price, "created_at": vm.now_iso(), "base_url": URL,
-                "image": deploy.DEFAULT_IMAGE}
+        info = {
+            "name": NAME,
+            "gpu": gpu,
+            "price_usd_per_h": price,
+            "created_at": vm.now_iso(),
+            "base_url": URL,
+            "image": deploy.DEFAULT_IMAGE,
+        }
         OUT.mkdir(parents=True, exist_ok=True)
         INFO.write_text(json.dumps(info, indent=2) + "\n")
         log_cost("up", **info, balance=bal)
@@ -100,13 +122,28 @@ def down() -> int:
     info = json.loads(INFO.read_text()) if INFO.exists() else {}
     minutes = None
     if info.get("created_at") and not info.get("down_at"):
-        minutes = round((datetime.now(UTC) - datetime.fromisoformat(info["created_at"])).total_seconds() / 60, 1)
+        minutes = round(
+            (
+                datetime.now(UTC) - datetime.fromisoformat(info["created_at"])
+            ).total_seconds()
+            / 60,
+            1,
+        )
         cost = round((info.get("price_usd_per_h") or 0) * minutes / 60, 2)
         info.update(down_at=vm.now_iso(), minutes=minutes, cost_usd=cost)
         INFO.write_text(json.dumps(info, indent=2) + "\n")
-        log_cost("down", name=NAME, minutes=minutes, cost_usd=cost, gone=gone, balance=vm.balance(c))
+        log_cost(
+            "down",
+            name=NAME,
+            minutes=minutes,
+            cost_usd=cost,
+            gone=gone,
+            balance=vm.balance(c),
+        )
         print(f"{NAME} ran {minutes} min, about {cost} USD")
-    print(f"{NAME} gone: {gone}; deployments now: {sorted(d.name for d in c.containers.get_deployments())}")
+    print(
+        f"{NAME} gone: {gone}; deployments now: {sorted(d.name for d in c.containers.get_deployments())}"
+    )
     return 0 if gone else 1
 
 
@@ -119,13 +156,19 @@ def upload() -> int:
         t.add(REPO / urdf, arcname=urdf)
         for f in ("takes.npz", "retarget.json"):
             t.add(OUT / "data" / f, arcname=f"rp/out/data/{f}")
-        for f in ("policy.pt", "policy_laptop.pt"):  # for the jobs that only evaluate (mj.sh, eval_laptop.sh)
+        for f in (
+            "policy.pt",
+            "policy_laptop.pt",
+        ):  # for the jobs that only evaluate (mj.sh, eval_laptop.sh)
             if (OUT / f).is_file():
                 t.add(OUT / f, arcname=f"rp/out/{f}")
         for f in sorted((LANE / "remote").glob("*.sh")):
             t.add(f, arcname=f.name)
     with http() as c:
-        print(f"{len(buf.getvalue()) / 1e6:.2f} MB", c.post("/ctl/upload", content=buf.getvalue()).json())
+        print(
+            f"{len(buf.getvalue()) / 1e6:.2f} MB",
+            c.post("/ctl/upload", content=buf.getvalue()).json(),
+        )
     return 0
 
 

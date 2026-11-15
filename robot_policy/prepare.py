@@ -26,9 +26,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from core import hand as H  # noqa: E402
-from core.config import load_config  # noqa: E402
-from core.robot import Retargeter  # noqa: E402
+from core import hand as H
+from core.config import load_config
+from core.robot import Retargeter
 
 TAKES = ROOT / "logs" / "archive-fresh-2318" / "core_lessons" / "takes"
 OUT = Path(__file__).resolve().parent / "out" / "data"
@@ -53,12 +53,23 @@ def retarget_matrix(rt: Retargeter, side: str) -> dict:
         offset.append(e.offset_deg)
         lower.append(j.lower)
         upper.append(j.upper)
-    return {"side": side, "joints": names, "angle_names": list(H.ANGLE_NAMES), "W": W.tolist(), "offset_deg": offset,
-            "sign": sign, "lower": lower, "upper": upper, "fingers": [e.finger for e in rt.entries]}
+    return {
+        "side": side,
+        "joints": names,
+        "angle_names": list(H.ANGLE_NAMES),
+        "W": W.tolist(),
+        "offset_deg": offset,
+        "sign": sign,
+        "lower": lower,
+        "upper": upper,
+        "fingers": [e.finger for e in rt.entries],
+    }
 
 
 def apply(m: dict, angles: np.ndarray) -> np.ndarray:
-    raw = np.asarray(m["sign"]) * np.radians(np.asarray(m["offset_deg"]) + angles @ np.asarray(m["W"]).T)
+    raw = np.asarray(m["sign"]) * np.radians(
+        np.asarray(m["offset_deg"]) + angles @ np.asarray(m["W"]).T
+    )
     return np.clip(raw, m["lower"], m["upper"])
 
 
@@ -74,7 +85,12 @@ def main() -> int:
         L = json.loads((d / "lesson.json").read_text())
         if (L.get("master") or {}).get("hand") != SIDE or L.get("source") != "glove":
             continue
-        created = datetime.fromisoformat(L["created"]).astimezone(UTC).replace(tzinfo=None).isoformat()
+        created = (
+            datetime.fromisoformat(L["created"])
+            .astimezone(UTC)
+            .replace(tzinfo=None)
+            .isoformat()
+        )
         if created < FIRST_GLOVE_SESSION_UTC:
             skipped.append(d.name)
             continue
@@ -84,23 +100,62 @@ def main() -> int:
         q = apply(m, a)
         ref = np.array([[rt.targets(row, SIDE).q[n] for n in m["joints"]] for row in a])
         worst = max(worst, float(np.abs(q - ref).max()))
-        arrays[f"{d.name}/t"], arrays[f"{d.name}/angles"], arrays[f"{d.name}/step"] = t, a.astype(np.float32), z["step"]
-        meta.append({"id": d.name, "title": L.get("title"), "created": L.get("created"), "rate_hz": L.get("rate_hz"),
-                     "duration_s": round(float(t[-1]), 2), "frames": int(len(t)),
-                     "steps": [{"name": s.get("name"), "kind": s.get("kind"), "t0_s": s.get("t0_us", 0) / 1e6, "t1_s": s.get("t1_us", 0) / 1e6} for s in L["steps"]],
-                     "joint_range_deg": np.degrees(q.max(0) - q.min(0)).round(1).tolist(),
-                     "clipped_share": round(float(np.mean((q <= np.asarray(m["lower"]) + 1e-9) | (q >= np.asarray(m["upper"]) - 1e-9))), 3)})
+        arrays[f"{d.name}/t"], arrays[f"{d.name}/angles"], arrays[f"{d.name}/step"] = (
+            t,
+            a.astype(np.float32),
+            z["step"],
+        )
+        meta.append(
+            {
+                "id": d.name,
+                "title": L.get("title"),
+                "created": L.get("created"),
+                "rate_hz": L.get("rate_hz"),
+                "duration_s": round(float(t[-1]), 2),
+                "frames": len(t),
+                "steps": [
+                    {
+                        "name": s.get("name"),
+                        "kind": s.get("kind"),
+                        "t0_s": s.get("t0_us", 0) / 1e6,
+                        "t1_s": s.get("t1_us", 0) / 1e6,
+                    }
+                    for s in L["steps"]
+                ],
+                "joint_range_deg": np.degrees(q.max(0) - q.min(0)).round(1).tolist(),
+                "clipped_share": round(
+                    float(
+                        np.mean(
+                            (q <= np.asarray(m["lower"]) + 1e-9)
+                            | (q >= np.asarray(m["upper"]) - 1e-9)
+                        )
+                    ),
+                    3,
+                ),
+            }
+        )
     if worst > 1e-9:
-        raise SystemExit(f"the matrix retarget differs from core.robot.Retargeter by {worst} rad")
+        raise SystemExit(
+            f"the matrix retarget differs from core.robot.Retargeter by {worst} rad"
+        )
     np.savez_compressed(OUT / "takes.npz", **arrays)
     (OUT / "retarget.json").write_text(json.dumps(m, indent=1) + "\n")
     (OUT / "takes.json").write_text(json.dumps(meta, indent=1) + "\n")
-    print(f"{len(meta)} real {SIDE}-hand glove takes, {sum(x['frames'] for x in meta)} frames, "
-          f"{sum(x['duration_s'] for x in meta):.0f} s; matrix retarget equals core.robot (max diff {worst:.1e} rad); "
-          f"left out, made before the first glove session: {skipped}")
+    print(
+        f"{len(meta)} real {SIDE}-hand glove takes, {sum(x['frames'] for x in meta)} frames, "
+        f"{sum(x['duration_s'] for x in meta):.0f} s; matrix retarget equals core.robot (max diff {worst:.1e} rad); "
+        f"left out, made before the first glove session: {skipped}"
+    )
     for x in meta:
-        print(x["id"], x["created"][11:19] if x.get("created") else "", x["duration_s"], [s["kind"] for s in x["steps"]],
-              x["joint_range_deg"], x["clipped_share"], (x["title"] or "")[:36])
+        print(
+            x["id"],
+            x["created"][11:19] if x.get("created") else "",
+            x["duration_s"],
+            [s["kind"] for s in x["steps"]],
+            x["joint_range_deg"],
+            x["clipped_share"],
+            (x["title"] or "")[:36],
+        )
     return 0
 
 
