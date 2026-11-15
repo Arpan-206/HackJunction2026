@@ -360,3 +360,14 @@ export function scratchLesson(d: Pick<ScratchDraft, 'skill' | 'skillLocked' | 's
     test: null,
   };
 }
+
+/**
+ * The hand the wooden hand shows on the Replay screen. A real glove being worn (anything but the simulator or a replayed
+ * stream) is followed live, as the apprentice's will be. Otherwise the live stream is a free-running stand-in with no
+ * relation to the take, so the wooden hand takes the take's own frame at the player's clock and the two hands stay
+ * frame for frame together.
+ */
+export function replayWornHand<T>(live: { source: string; hands: (T & { side: string })[] } | null, side: string, played: T | null): T | null {
+  if (live && live.source !== 'simulator' && live.source !== 'replay') return live.hands.find((h) => h.side === side) ?? played;
+  return played;
+}
