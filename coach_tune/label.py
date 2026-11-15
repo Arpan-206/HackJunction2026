@@ -23,7 +23,7 @@ import oai
 import prompt
 
 DATA = Path(__file__).resolve().parent / "out" / "dataset"
-OUT = Path(__file__).resolve().parent / "out" / "labels"
+OUT = prompt.OUT_ROOT / "labels"
 
 
 def load(split: str) -> list[dict]:
@@ -57,7 +57,7 @@ async def label(
         attempts = []
         for k in range(tries):
             line, dt = await oai.complete(
-                client, model, prompt.messages(ex), temperature=0.7
+                client, model, prompt.messages(ex), temperature=0.7, max_tokens=prompt.MAX_TOKENS
             )
             v = prompt.check(line, ex["top_finger"], ex["top_hint"], ex["lang"])
             attempts.append(

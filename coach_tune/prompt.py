@@ -7,7 +7,9 @@ The hints are the core scorer's: too_flat, too_curled, too_spread, too_closed (c
 
 from __future__ import annotations
 
+import os
 import re
+from pathlib import Path
 
 FINGERS = ("thumb", "index", "middle", "ring", "little")
 HINTS = ("too_flat", "too_curled", "too_spread", "too_closed")
@@ -30,6 +32,30 @@ SYSTEM = (
 )
 
 
+# -- the second job: feedback after a rep (COACH_TUNE_TASK=review) ----------------------------------------------------
+# Same inputs, same splits, same teacher and the same rules as the hint job. The output is the plain feedback the score
+# screen shows (backend POST /coach/review): two short sentences, first what went well, then the one fix.
+TASK = os.environ.get("COACH_TUNE_TASK", "hint")
+if TASK not in ("hint", "review"):
+    raise SystemExit(f"COACH_TUNE_TASK must be hint or review, not {TASK!r}")
+REVIEW_MAX_WORDS = 30
+REVIEW_SYSTEM = (
+    "You are a hand-skills teacher. You see the scorer's result for one learner attempt. "
+    "Write feedback in the requested language: exactly two short sentences, at most 30 words in total. "
+    "Sentence one: say what went well, about the hand or the fingers that are not listed as errors. "
+    "Sentence two: name the single most important finger and say the fix as a physical cue. "
+    "Never use numbers, degrees or the words score, points or percent. Be warm and plain. "
+    "Reply with the two sentences only, on one line."
+)
+MAX_TOKENS = 96 if TASK == "review" else 48
+# Each job keeps its own labels, training files, evaluation and adapter; the dataset is shared.
+OUT_ROOT = Path(__file__).resolve().parent / "out" / ("review" if TASK == "review" else "")
+JARGON_RE = re.compile(
+    r"\b(score[ds]?|points?|percent|tolerance|punkt\w*|prozent|toleranz|piste\w*|prosent\w*|toleranss\w*)\b|%",
+    re.IGNORECASE,
+)
+
+
 def describe_error(e: dict) -> str:
     return f"{e['finger']} {e['hint'].replace('_', ' ')} by {round(float(e['err_deg']))} degrees (fix: {FIX[e['hint']]})"
 
@@ -46,7 +72,7 @@ def user_prompt(ex: dict) -> str:
 def messages(ex: dict) -> list[dict]:
     """Chat messages for any OpenAI-compatible server. Gemma's template folds the system turn into the first user turn."""
     return [
-        {"role": "system", "content": SYSTEM},
+        {"role": "system", "content": REVIEW_SYSTEM if TASK == "review" else SYSTEM},
         {"role": "user", "content": user_prompt(ex)},
     ]
 
@@ -229,8 +255,43 @@ def right_direction(line: str, hint: str, lang: str) -> bool:
     )
 
 
+def split_sentences(text: str) -> list[str]:
+    return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
+
+
+def check_review(text: str, finger: str, hint: str, lang: str) -> dict:
+    """The review job's filter: the right finger, the right fix in the last sentence, and the style rules.
+
+    Style: exactly two sentences, at most REVIEW_MAX_WORDS words, no digits, no degree or scoring words, and the
+    finger is named in the fix sentence (the last one). The fix words are read from the last sentence only, because the
+    first sentence praises other fingers and may rightly say they are "nicely curled".
+    """
+    text = " ".join((text or "").strip().strip('"').strip("“”„").split())
+    parts = split_sentences(text)
+    last = parts[-1] if parts else ""
+    finger_ok = names_finger(text, finger, lang)
+    direction_ok = right_direction(last, hint, lang)
+    style_ok = (
+        len(parts) == 2
+        and words(text) <= REVIEW_MAX_WORDS
+        and not NUMBER_RE.search(text)
+        and not JARGON_RE.search(text)
+        and names_finger(last, finger, lang)
+    )
+    return {
+        "line": text,
+        "finger_ok": finger_ok,
+        "direction_ok": direction_ok,
+        "style_ok": style_ok,
+        "single_finger": not names_other_finger(last, finger, lang),
+        "ok": finger_ok and direction_ok and style_ok,
+    }
+
+
 def check(line: str, finger: str, hint: str, lang: str) -> dict:
     """Per-rule verdicts for one line, plus `ok` when all pass. Shared by the label filter and the evaluation."""
+    if TASK == "review":
+        return check_review(line, finger, hint, lang)
     line = clean(line)
     finger_ok = names_finger(line, finger, lang)
     direction_ok = right_direction(line, hint, lang)

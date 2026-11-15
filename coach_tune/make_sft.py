@@ -14,8 +14,8 @@ import oai
 import prompt
 
 LANE = Path(__file__).resolve().parent
-SRC = LANE / "out" / "labels"
-DST = LANE / "out" / "sft"
+SRC = prompt.OUT_ROOT / "labels"
+DST = prompt.OUT_ROOT / "sft"
 
 
 class BadTrainingRow(SystemExit):

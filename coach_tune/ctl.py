@@ -23,6 +23,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import oai
+import prompt
 import vm
 
 URL = "https://containers.datacrunch.io/coach-tune-trainer"
@@ -57,7 +58,7 @@ def main() -> int:
             buf = io.BytesIO()
             with tarfile.open(fileobj=buf, mode="w:gz") as t:
                 t.add(vm.LANE / "train_lora.py", arcname="train_lora.py")
-                t.add(vm.OUT / "sft", arcname="sft")
+                t.add(prompt.OUT_ROOT / "sft", arcname="sft")
             print(c.post("/ctl/upload", content=buf.getvalue()).json())
         elif a.cmd == "upload-adapter":
             # The saved adapter plus the merge scripts: then `exec merge.sh` and `serve tuned`.
@@ -68,7 +69,7 @@ def main() -> int:
                     vm.LANE / "remote" / "merge_adapter.py", arcname="merge_adapter.py"
                 )
                 t.add(vm.LANE / "remote" / "merge.sh", arcname="merge.sh")
-                src = vm.OUT / (a.what or "adapter")
+                src = prompt.OUT_ROOT / (a.what or "adapter")
                 for f in sorted(src.iterdir()):
                     if f.name.startswith("adapter_") or f.name in (
                         "config.json",
@@ -90,7 +91,7 @@ def main() -> int:
         elif a.cmd == "fetch":
             r = c.get("/ctl/fetch", params={"dir": a.what or "adapter"})
             r.raise_for_status()
-            dest = vm.OUT
+            dest = prompt.OUT_ROOT
             with tarfile.open(fileobj=io.BytesIO(r.content), mode="r:gz") as t:
                 t.extractall(dest, filter="data")
             print(f"{len(r.content) / 1e6:.1f} MB into {dest / (a.what or 'adapter')}")
