@@ -274,7 +274,48 @@ What `agent_bom` adds about the fix itself (report above, lane `craci-fix`): it 
 
 So CRACI records that our job read the image (the SBOM names all three digests), but it has no provenance for it: vLLM's image was not built or pushed by a CRACI job. The model server is the one part of the coach with no build record we control. The deploy also uses the tag, not the digest. Pinning the digest in `verda/deploy.py` is for the `verda` lane owner, after the demo.
 
-## 10. How tools/agent_bom works
+## 10. The public tour publishes its own SBOM
+
+The public tour is a static site. It lets anyone see Geppetto with no gloves, no login and no backend. It lives on
+the branch `public-tour`, which is built on CRACI and never merges into `main`.
+
+The build job records every package that it downloads. After the build job ends, a second job gets the SBOM of the
+build job from the CRACI API. An SBOM is a list of packages in the CycloneDX format. The second job puts the SBOM and a
+short summary into the site. A link on every stop, "What's in this site", opens a plain page. The page shows the
+commit, the CRACI job link, the number of packages and the known vulnerabilities by severity. It also gives the SBOM
+file for download. The list includes the build tools and the test tools. It is not the list of code inside the page.
+If the SBOM is empty, incomplete or not available, the page says so and gives the reason.
+
+The build that we published on 15 Nov 2026:
+
+| Item | Value |
+|---|---|
+| Commit | `5fb1337` on `public-tour` |
+| Run and build job | run 43664418557, job 132660526152 |
+| CRACI job page | `https://platform.craci.com/projects/hackjunction2026/jobs/132660526152` |
+| Packages in the SBOM file | 339: 287 npm, 48 Ubuntu (deb), 4 GitHub |
+| Vulnerability entries | 133: critical 5, high 43, medium 60, low 7, unknown 18 |
+
+Where the critical and high entries are:
+
+| Package | Critical | High | Why the build has it |
+|---|---|---|---|
+| `xvfb` and `xserver-common` (Ubuntu) | 2 | 42 | The browser check needs a display on a runner that has no screen |
+| `tinypool` and `vitest` (npm) | 3 | 0 | The frontend test tools; the same entries as on `main` |
+| `vite` (npm) | 0 | 1 | The build tool; the same entry as on `main` |
+
+None of these packages is inside the page that a visitor loads. We show the numbers as they are, and we upgrade
+nothing: the fix for the three npm packages is on the unmerged branch `craci-fix` (section 8).
+
+Two limits, stated plainly:
+
+- In the first workflow run, the second job got HTTP 403 from the CRACI API with the token from the repository
+  secret. The same token works from a laptop. So for this build the SBOM was fetched on a laptop after the run and
+  added to the site, and the leak check ran again on the final folder. The cause of the 403 is not known yet.
+- The summary in the site says 338 packages and the SBOM file holds 339. The file is the source. The summary is
+  being corrected.
+
+## 11. How tools/agent_bom works
 
 | File | Role |
 |---|---|
@@ -298,7 +339,7 @@ So CRACI records that our job read the image (the SBOM names all three digests),
 
 Other API calls: `GET /v1preview1/jobs?status=active` returned 0 active jobs. `GET /v1preview1/usage` returned 503 "billing usage is temporarily unavailable".
 
-## 11. Unverified
+## 12. Unverified
 
 | Item | Why |
 |---|---|
