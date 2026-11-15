@@ -89,6 +89,8 @@ jobs:
         run: TOUR_BASE=/HackJunction2026/ TOUR_BUDGET=off node e2e/tour-check.mjs dist-tour tour-check-subpath
       - name: Explore mode check (the whole app, phone and desktop, no calls out, honest AI Assistant copy)
         run: node e2e/explore-check.mjs dist-tour explore-check
+      - name: Stats page check (fits a phone, every table names its source, no script, linked from the tour)
+        run: node e2e/stats-check.mjs dist-tour stats-check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -97,6 +99,7 @@ jobs:
             frontend/tour-check
             frontend/explore-check
             frontend/tour-check-subpath
+            frontend/stats-check
             frontend/tour-size.md
 
   sbom:

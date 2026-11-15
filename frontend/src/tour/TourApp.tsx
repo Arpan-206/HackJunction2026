@@ -137,6 +137,8 @@ export function TourApp() {
           <a href="./sbom.html">What's in this site</a>
           {' · '}
           <a href="./explore.html">Explore the whole app, no gloves needed</a>
+          {' · '}
+          <a href="./stats.html">Boring stats for nerds</a>
         </p>
       </main>
 

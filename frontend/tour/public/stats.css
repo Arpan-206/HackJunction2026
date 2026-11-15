@@ -1,0 +1,28 @@
+/* "Boring stats for nerds": additions to sbom.css. Tables stay inside a 390 px phone; text stays at 16 px or more. */
+nav {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 1rem 0;
+}
+table {
+  margin: 0.8rem 0 1.2rem;
+  table-layout: fixed;
+}
+th,
+td {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+tbody th {
+  font-weight: 400;
+  width: 45%;
+}
+thead th {
+  font-weight: 700;
+}
+td {
+  font-weight: 700;
+}
+li {
+  margin-bottom: 0.4rem;
+}

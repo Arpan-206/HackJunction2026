@@ -38,6 +38,12 @@ describe('leak-check scanner', () => {
     expect(found).toEqual(expect.arrayContaining(['secret variable name', 'local path', 'forbidden host']));
   });
 
+  it('allows the word Verda in copy, and still forbids a Verda or DataCrunch host', () => {
+    expect(kinds(scanText('Trained and served on Verda GPUs.'))).toEqual([]);
+    const hosts = [['https://containers', 'datacrunch', 'io/x'].join('.'), ['https://api', 'verda', 'com/v1'].join('.')];
+    for (const h of hosts) expect(kinds(scanText(h))).toEqual(['forbidden host']);
+  });
+
   it('fails a built folder with a planted key and passes it once removed', () => {
     dir = mkdtempSync(join(tmpdir(), 'leak-'));
     writeFileSync(join(dir, 'index.html'), '<html></html>');

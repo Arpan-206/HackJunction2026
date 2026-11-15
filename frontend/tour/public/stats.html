@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'self'; form-action 'none'" />
+    <title>Boring stats for nerds: Geppetto tour</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./sbom.css" />
+    <link rel="stylesheet" href="./stats.css" />
+  </head>
+  <body>
+    <main>
+      <p><a href="./">Back to the tour</a></p>
+      <h1>Boring stats for nerds</h1>
+      <p>
+        This page is optional. It holds the numbers behind the tour. Each table names the project document that holds its numbers. Where we did not measure
+        something, the page says so.
+      </p>
+      <nav aria-label="Sections">
+        <a href="#hands">Hands</a> · <a href="#depth">Depth</a> · <a href="#scoring">Scoring</a> · <a href="#models">Models on Verda</a> ·
+        <a href="#robot">Robot</a> · <a href="#build">Build</a> · <a href="#site">This site</a>
+      </nav>
+
+      <h2 id="hands">1. Hands in</h2>
+      <p>The expert and the learner wear Rokoko Smartgloves II. Our own engine reads the glove data directly.</p>
+      <table>
+        <caption>The glove stream. Sources: SPEC.md, STATUS-hand-root.md</caption>
+        <tbody>
+          <tr><th scope="row">Hand model</th><td>26 joints, 18 angles for each hand</td></tr>
+          <tr><th scope="row">Glove driver rate</th><td>83.3 frames a second</td></tr>
+          <tr><th scope="row">Engine and viewer rate</th><td>30 frames a second</td></tr>
+          <tr><th scope="row">One hand model everywhere</th><td>The viewer, the recorder, the scorer and the robot read the same object</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="depth">2. Depth perception</h2>
+      <p>
+        The gloves give the finger angles. They do not know where the hand is in the room. A phone with a depth sensor looks down at the table and finds each wrist.
+        The engine joins the two.
+      </p>
+      <table>
+        <caption>Where the hand is. Sources: STATUS-lidar.md, STATUS-hand-root.md</caption>
+        <tbody>
+          <tr><th scope="row">Depth rate from the phone</th><td>30 frames a second</td></tr>
+          <tr><th scope="row">Table surface fit error</th><td>1.2 to 2 mm (root mean square)</td></tr>
+          <tr><th scope="row">Position jitter of the hand finder</th><td>4.6 mm median, 27 mm at the 95th percentile</td></tr>
+          <tr><th scope="row">Hand finder time for each frame</th><td>14 to 17 ms</td></tr>
+          <tr><th scope="row">Work box</th><td>45 x 25 x 30 cm. The wrist cannot leave it</td></tr>
+          <tr><th scope="row">Jump gate</th><td>A jump over 8 cm waits until 5 frames agree</td></tr>
+          <tr><th scope="row">Smoothing</th><td>One Euro filter, applied once, with two presets: steady and fast</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <caption>Delay of the wrist position, live, with both gloves and the phone (15 Nov, 06:24). Source: STATUS-hand-root.md</caption>
+        <thead>
+          <tr><th scope="col">Stage</th><th scope="col">Median</th><th scope="col">Worst</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Phone capture to arrival on the laptop</th><td>17 ms</td><td>24 ms</td></tr>
+          <tr><th scope="row">Arrival to processing done</th><td>18 ms</td><td>36 ms</td></tr>
+          <tr><th scope="row">Processing done to the engine tick</th><td>14 ms</td><td>30 ms</td></tr>
+          <tr><th scope="row">Engine tick to the socket write</th><td>4 ms</td><td>14 ms</td></tr>
+          <tr><th scope="row">Sum of the measured stages</th><td>53 ms</td><td>104 ms</td></tr>
+        </tbody>
+      </table>
+      <p>
+        The first stage was 681 to 860 ms in our first recordings. The engine now reads only the newest packet. Not measured: the two stages inside the browser.
+        The first stage is relative to the fastest frame, because the phone and the laptop have different clocks.
+      </p>
+
+      <h2 id="scoring">3. Scoring</h2>
+      <p>
+        The score is an algorithm, not the AI Assistant. It uses dynamic time warping for each finger. Dynamic time warping compares two motions that run at
+        different speeds.
+      </p>
+      <table>
+        <caption>How a repetition is judged. Sources: docs/CONTRACT.md, docs/LESSON_SYNC.md</caption>
+        <tbody>
+          <tr><th scope="row">Compared</th><td>Each of the five fingers against the expert's take, then the timing</td></tr>
+          <tr><th scope="row">Calibration</th><td>Each wearer records a flat hand and a fist. The scorer reads angles relative to those</td></tr>
+          <tr><th scope="row">Live number and final score</th><td>Both read the same calibrated angles</td></tr>
+          <tr><th scope="row">Finger weights</th><td>Set for each step. A table tennis grip weighs the thumb and index most</td></tr>
+          <tr><th scope="row">Same score on two machines</th><td>19 score cases after sharing lessons: worst difference 0.000000</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="models">4. The AI Assistant, trained and served on Verda</h2>
+      <p>
+        We used Verda GPU containers for five jobs. A large open model, Gemma 4 31B, is the teacher. A small open model, Gemma 4 E2B, is the one we tuned. The
+        tuning method is LoRA: a small set of added weights trained on top of a frozen model.
+      </p>
+      <table>
+        <caption>The five jobs. Source: docs/VERDA.md</caption>
+        <thead>
+          <tr><th scope="col">Job</th><th scope="col">GPU hours</th><th scope="col">Main result</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">A glove recording becomes a lesson (31B, one H200)</th><td>0.65</td><td>6 of 6 valid lessons on the first try, 10 to 19 s each</td></tr>
+          <tr><th scope="row">Hint model: labels, tuning, serving (one H100)</th><td>0.99</td><td>89.0% tuned, 55.5% before tuning, 85.7% teacher</td></tr>
+          <tr><th scope="row">Feedback model, then the load test (one H100)</th><td>0.99</td><td>94.8% tuned, 54.8% before tuning, 85.2% teacher</td></tr>
+          <tr><th scope="row">Robot policy: training and a large evaluation (one H100)</th><td>1.53</td><td>Error 2.13 degrees against 6.12 for plain replay</td></tr>
+          <tr><th scope="row">Total, 8 container starts</th><td>4.16</td><td>24.21 USD at list price</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <caption>The tuned model. Sources: docs/COACH_MODEL.md, docs/VERDA.md</caption>
+        <tbody>
+          <tr><th scope="row">Training labels</th><td>3,231 lines, written by the 31B teacher in 35 s</td></tr>
+          <tr><th scope="row">Added weights</th><td>24.2 million, rank 16. The adapter file is 95 MB</td></tr>
+          <tr><th scope="row">Training</th><td>3 epochs, 555 steps, 167 s on one H100</td></tr>
+          <tr><th scope="row">Held-out test</th><td>1,150 examples from 9 units never seen in training</td></tr>
+          <tr><th scope="row">Real capture frames in that test</th><td>333. Feedback 82.6%. Hints 62.2%, teacher 66.7%</td></tr>
+          <tr><th scope="row">Time for one hint</th><td>0.108 s median, measured from Helsinki</td></tr>
+          <tr><th scope="row">Load on one H100</th><td>0.10 to 0.14 s for each answer, up to 50 requests in flight</td></tr>
+          <tr><th scope="row">Learners for each GPU</th><td>About 340 to 1,740 across runs, at the app's real rate of one hint in 5 s</td></tr>
+        </tbody>
+      </table>
+      <p>What we say plainly:</p>
+      <ul>
+        <li>The tuned model matches its 31B teacher on our held-out test. Training labels were filtered for correctness, so we do not say it is better.</li>
+        <li>Real glove recordings are test data only. On real frames the tuned hint model is below its teacher.</li>
+        <li>No Gemini model was distilled, and no Gemini output was used as training data.</li>
+        <li>The load runs varied and one run stalled. We give the range, and we do not know the cause of the stall.</li>
+      </ul>
+
+      <h2 id="robot">5. The robot hand</h2>
+      <p>A small policy performs expert takes on a simulated Unitree Dex3-1 hand. A policy is a network that picks the next joint targets.</p>
+      <table>
+        <caption>The robot policy, simulation only. Source: docs/ROBOT_POLICY.md</caption>
+        <tbody>
+          <tr><th scope="row">Network</th><td>3 hidden layers of 128, 45,703 weights</td></tr>
+          <tr><th scope="row">Error on held-out takes</th><td>2.13 degrees</td></tr>
+          <tr><th scope="row">Plain replay of the take</th><td>6.12 degrees</td></tr>
+          <tr><th scope="row">Replay sent early, the stronger baseline</th><td>2.44 degrees</td></tr>
+          <tr><th scope="row">With pushes</th><td>3.78 degrees against 7.25 for plain replay</td></tr>
+          <tr><th scope="row">Evaluation on the GPU</th><td>1.44 million rollouts</td></tr>
+          <tr><th scope="row">Training time on a laptop</th><td>44 s</td></tr>
+        </tbody>
+      </table>
+      <p>The GPU did not improve the policy. It made the evaluation 40 times larger. There is no real hand and no contact in these numbers.</p>
+
+      <h2 id="build">6. The build</h2>
+      <p>
+        About 28 AI coding agents built Geppetto in parallel, each on its own branch. All tests run on CRACI, a build service that records what each build
+        downloads and contacts.
+      </p>
+      <table>
+        <caption>What the build record showed. Source: docs/CRACI.md</caption>
+        <tbody>
+          <tr><th scope="row">Builds audited</th><td>30, one for each branch, each with its package list and network record</td></tr>
+          <tr><th scope="row">Main finding</th><td>One added line locked 98 extra packages and broke the install in 23 of 23 builds</td></tr>
+          <tr><th scope="row">This site</th><td>It publishes the package list of its own build: <a href="./sbom.html">What's in this site</a></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="site">7. This site</h2>
+      <table>
+        <caption>The tour, measured on the build machine, which has no GPU. Source: docs/PUBLIC_TOUR.md</caption>
+        <tbody>
+          <tr><th scope="row">First stop readable, phone size, 10 Mbit/s</th><td>0.69 s</td></tr>
+          <tr><th scope="row">3D stage live, same run</th><td>5.99 s, drawn in software</td></tr>
+          <tr><th scope="row">First load</th><td>About 1.6 MB</td></tr>
+          <tr><th scope="row">Whole site</th><td>6.9 MB</td></tr>
+          <tr><th scope="row">Calls to a server</th><td>None. Every motion, score and line is a recording</td></tr>
+        </tbody>
+      </table>
+      <p><a href="./">Back to the tour</a></p>
+    </main>
+  </body>
+</html>

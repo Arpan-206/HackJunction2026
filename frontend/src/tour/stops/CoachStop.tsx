@@ -63,6 +63,9 @@ export default function CoachStop() {
       <p className="tour-small">
         Labels written in 35 s and 48 s; training in under 4 minutes on one GPU; a hint answers in 0.108 s (median).
       </p>
+      <p className="tour-small">
+        Trained and served on Verda GPUs. All our GPU work took under 5 GPU hours. <a href="./stats.html">Boring stats for nerds</a>
+      </p>
 
       <h3 className="tour-h3">Recorded feedback</h3>
       <p className="tour-small">Real lines the AI Assistant wrote after a repetition during our test, with the attempt each one was given. Nothing here is generated now.</p>

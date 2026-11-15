@@ -101,7 +101,7 @@ The browser check names both hosts and fails if either is requested.
 | (b) | Key shapes: Google API keys, `sk-` keys, bearer tokens, long secrets next to key, token, secret, authorization or password, private key blocks |
 | (c) | The names `GEMINI_API_KEY`, `VERDA_`, `CRACI_API_TOKEN`, `HF_TOKEN` |
 | (d) | Local paths: `/Users/`, `/home/<user>/`, `C:\Users\` |
-| (e) | Hosts the tour never calls: `localhost:8000`, `:8765`, `generativelanguage.googleapis.com`, `containers.datacrunch.io`, `verda` |
+| (e) | Hosts the tour never calls: `localhost:8000`, `:8765`, `generativelanguage.googleapis.com`, any `datacrunch.io` host, any `verda.com`, `.io`, `.ai` or `.cloud` host. The word "Verda" is allowed in copy since 15 Nov, because the stats page names where the models ran |
 
 `tests/leak-check.test.ts` plants a made-up key (built by concatenation, so the repo holds no key-shaped literal) and checks that the scan fails, then passes once it is removed.
 
@@ -128,6 +128,16 @@ Every stop has a link "What's in this site". It opens `sbom.html`, a plain page 
 Runs 43664418557 to 43667497387 fetched the SBOM from the publish job on CRACI and got HTTP 403 Forbidden. The evidence: the secret's SHA-256 prefix and length equal those of the working local token; the job's network trace shows the request to `api.craci.com` allowed by the policy and answered by the API; CRACI's authentication docs name no scope, IP or runner limit. So the fetch moved to the `sbom` job on a GitHub-hosted runner.
 
 The `sbom` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the job exists but has not finished" until the job record is final. Without the `CRACI_API_TOKEN` secret the summary says "no API token in this build".
+
+## Boring stats for nerds
+
+The footer of every stop has a third link, "Boring stats for nerds". Stop 3 has one line that says the models ran on Verda GPUs, with the same link. The link opens `stats.html`, a plain static page with no script and no 3D. It is optional: the tour still has five stops, and the first load is unchanged.
+
+The page has seven sections: hands, depth perception, scoring, the models on Verda, the robot hand, the build and this site. Each table names the document that holds its numbers (`docs/VERDA.md`, `docs/COACH_MODEL.md`, `docs/ROBOT_POLICY.md`, `docs/CRACI.md`, `docs/LESSON_SYNC.md`, `STATUS-hand-root.md`, `STATUS-lidar.md`, `SPEC.md`, this file). Change a number there first, then here.
+
+This page names the two open models (Gemma 4 31B and Gemma 4 E2B). The tour stops and the app do not: they say "the AI Assistant" (CLAUDE.md rule 6). The page is a technical appendix, like the dev panel.
+
+`e2e/stats-check.mjs` runs in the build job on CRACI. It fails if the page overflows a 390 px phone, has text below 16 px, has a table with no source, runs a script, asks anything outside its origin, or is not linked from the footer and from stop 3.
 
 ## Explore mode (the whole app, after the tour)
 

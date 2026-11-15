@@ -6,7 +6,7 @@
  *   (b) well-known key shapes (Google API keys, sk- keys, bearer tokens, long secrets next to key, token, secret...);
  *   (c) secret variable names (GEMINI_API_KEY, VERDA_, CRACI_API_TOKEN, HF_TOKEN);
  *   (d) absolute local paths (/Users/, /home/<user>/, C:\Users\);
- *   (e) hosts the tour must never call (localhost:8000, :8765, generativelanguage.googleapis.com, containers.datacrunch.io, verda).
+ *   (e) hosts the tour must never call (localhost:8000, :8765, generativelanguage.googleapis.com, any datacrunch.io host, any verda.com, .io, .ai or .cloud host).
  * Binary files (images, video, the hand mesh) are scanned for (a), (b) and (d) as raw bytes.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -43,7 +43,8 @@ const SHAPES = [
 ];
 const NAMES = [/GEMINI_API_KEY/, /VERDA_[A-Z]/, /CRACI_API_TOKEN/, /HF_TOKEN/];
 const PATHS = [/\/Users\/[A-Za-z]/, /\/home\/(?!runner\b)[a-z][a-z0-9_-]*\//, /[A-Za-z]:\\Users\\/];
-const HOSTS = [/localhost:8000/, /:8765\b/, /generativelanguage\.googleapis\.com/, /containers\.datacrunch\.io/, /verda/i];
+// The word "Verda" may appear in copy (stats.html names where the models ran); a Verda or DataCrunch host may not.
+const HOSTS = [/localhost:8000/, /:8765\b/, /generativelanguage\.googleapis\.com/, /datacrunch\.io/i, /verda\.(?:com|io|ai|cloud)\b/i];
 
 /** Secret-looking env values: name not allowlisted and value long enough to be specific. */
 export function envSecrets(env) {
