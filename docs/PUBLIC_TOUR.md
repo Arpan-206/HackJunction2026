@@ -115,7 +115,25 @@ The site has a relative base and hash routing (`#/1` to `#/5`), so one build wor
 
 Every stop has a link "What's in this site". It opens `sbom.html`, a plain page with no 3D and no tour code. It reads `sbom-summary.json` from the site and shows the commit, the CRACI job link, the number of packages, the vulnerability entries by severity and a link to the CycloneDX file. It says plainly when the SBOM is empty, incomplete or unavailable, and why. It never shows a zero where there is no data. The list is every package the build downloaded, the build and test tools included; it is not the code inside the page.
 
+In run 43664418557 the CRACI API answered HTTP 403 Forbidden to the `CRACI_API_TOKEN` secret, so that run's site says "unavailable" with that reason. The token in the main checkout's `.env` works, so the secret value needs checking. The zip handed over for that run got its SBOM from a local step after the run, and the key-leak check ran again on the final folder.
+
 The `publish` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the job exists but has not finished" until the job record is final. Without the `CRACI_API_TOKEN` secret the summary says "no API token in this build".
+
+## Load time
+
+The browser check measures two numbers. "First stop readable" is the stop's text and a poster still of its stage on screen. "3D stage live" is the first frames of the live hand. The 5 s budget is a failing check on the first number. The second number is recorded.
+
+Run 43664418557 (commit 5fb1337), CRACI runner, site root:
+
+| Viewport | Network | First stop readable | 3D stage live |
+| --- | --- | --- | --- |
+| Phone 390 x 844, touch emulation | 10 Mbit/s, 40 ms | 0.69 s | 5.99 s |
+| Phone 390 x 844, no touch emulation | 10 Mbit/s, 40 ms | 0.66 s | 5.13 s |
+| Desktop 1280 x 900 | not throttled | 0.50 s | 0.90 s |
+
+Every file stop 1 needs has arrived by about 1.4 s on the phone runs (modulepreload of the stage code, preload of the hand mesh and the poster). The rest of the 3D time is script start-up on the runner, which has no GPU and draws WebGL in software.
+
+Sizes (from the CRACI size report): first load about 1.6 MB as served without compression; the largest file is the 3D code at 1.1 MB raw, 0.3 MB gzip. The whole site is 6.9 MB raw. Most of the rest loads only on its stop: the wood texture (3.2 MB) on stop 2 and the robot clip (1.3 MB) on stop 4 when played.
 
 ## Limits
 
@@ -126,5 +144,5 @@ The `publish` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "t
 | Stop 4 clip | Simulation only. No real robot hand and no contact. |
 | Stop 5 | Tap and typed words only. No voice, no glove. |
 | Decor | The stage has no workshop props or image light, so it loads fast on a phone. |
-| Load time | Measured by the browser check on CRACI and reported in `metrics.json`. Over 5 s is a warning, not a failure. |
+| Load time | See "Load time" above. CRACI's runner has no GPU, so WebGL runs in software there. A real phone can be faster or slower in ways the runner cannot show. No real-phone number is measured yet. |
 | Webcam try-it (Tier 2) | Left out. It could not be tested with a real hand: no browser runs on the demo laptop, and CI has no camera. |
