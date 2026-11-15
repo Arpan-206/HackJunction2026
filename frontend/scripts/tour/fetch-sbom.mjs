@@ -64,6 +64,10 @@ async function getSbom(token, repo, jobId) {
   } catch {
     detail = res.statusText;
   }
+  // Safe to log: status, the problem title and detail, and a few response headers. Never the request or its token.
+  const safe = ['content-type', 'server', 'date', 'cf-ray', 'x-request-id', 'www-authenticate', 'via'];
+  const headers = Object.fromEntries(safe.map((h) => [h, res.headers.get(h)]).filter(([, v]) => v));
+  console.log(`sbom: HTTP ${res.status} ${res.statusText}; body: ${text.slice(0, 300).replace(/\s+/g, ' ')}; headers: ${JSON.stringify(headers)}`);
   return { ok: false, status: res.status, detail };
 }
 

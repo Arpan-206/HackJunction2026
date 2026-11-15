@@ -107,12 +107,13 @@ The browser check names both hosts and fails if either is requested.
 
 ## Deploy
 
-The workflow has four jobs.
+The workflow has five jobs.
 
 | Job | What it does | Runs when |
 | --- | --- | --- |
 | `build` | Tour data, lint, the whole test suite, the normal app build, the tour build, a placeholder SBOM summary, the key-leak check, the size report, upload of `tour-dist`, the browser checks at the site root and under `/HackJunction2026/` | Every push to `public-tour`, and by hand |
-| `publish` | Finds the `build` job's id, fetches that job's SBOM from the CRACI API (`api.craci.com`, allowed in its network policy), writes `sbom.cdx.json` and `sbom-summary.json` into the site, runs the key-leak check again on the final site, checks the "What's in this site" page against the SBOM file, uploads `tour-site` and `geppetto-tour-zip` | After `build` |
+| `sbom` | On a GitHub-hosted runner (`ubuntu-latest`), the one job not on CRACI: finds the `build` job's id and fetches that job's SBOM from the CRACI API, then hands `sbom.cdx.json` and `sbom-summary.json` on. Why: the CRACI API answered HTTP 403 to a CRACI runner (the network policy allowed the request and the token fingerprint matched), and the same token works from outside. | After `build` |
+| `publish` | On CRACI: puts the SBOM files into the site, runs the key-leak check again on the final site, checks the "What's in this site" page against the SBOM file, uploads `tour-site` and `geppetto-tour-zip` | After `build` and `sbom` |
 | `netlify` | Deploys `tour-site` to Netlify with `netlify-cli@27.19.0` (`netlify deploy --prod --dir=dist-tour --no-build`) | Only when the repository secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` exist; otherwise its steps skip and the job passes |
 | `pages` | Deploys to GitHub Pages | Only when started by hand with `pages: true` |
 
@@ -124,9 +125,9 @@ The site has a relative base and hash routing (`#/1` to `#/5`), so one build wor
 
 Every stop has a link "What's in this site". It opens `sbom.html`, a plain page with no 3D and no tour code. It reads `sbom-summary.json` from the site and shows the commit, the CRACI job link, the number of packages (every component in the SBOM file, the checked-out repository included), the vulnerability entries by severity and a link to the CycloneDX file. It says plainly when the SBOM is empty, incomplete or unavailable, and why. It never shows a zero where there is no data. The list is every package the build downloaded, the build and test tools included; it is not the code inside the page.
 
-In run 43664418557 the CRACI API answered HTTP 403 Forbidden to the `CRACI_API_TOKEN` secret, so that run's site says "unavailable" with that reason. The token in the main checkout's `.env` works, so the secret value needs checking. The zip handed over for that run got its SBOM from a local step after the run, and the key-leak check ran again on the final folder.
+Runs 43664418557 to 43667497387 fetched the SBOM from the publish job on CRACI and got HTTP 403 Forbidden. The evidence: the secret's SHA-256 prefix and length equal those of the working local token; the job's network trace shows the request to `api.craci.com` allowed by the policy and answered by the API; CRACI's authentication docs name no scope, IP or runner limit. So the fetch moved to the `sbom` job on a GitHub-hosted runner.
 
-The `publish` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the job exists but has not finished" until the job record is final. Without the `CRACI_API_TOKEN` secret the summary says "no API token in this build".
+The `sbom` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the job exists but has not finished" until the job record is final. Without the `CRACI_API_TOKEN` secret the summary says "no API token in this build".
 
 ## Load time
 
