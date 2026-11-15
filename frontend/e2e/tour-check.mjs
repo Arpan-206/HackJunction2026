@@ -88,6 +88,15 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
   const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1 });
   const page = await context.newPage();
+  // Long main-thread tasks during the load, to tell script work from network time.
+  await page.addInitScript(() => {
+    window.__long = [];
+    try {
+      new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__long.push([Math.round(e.startTime), Math.round(e.duration)]))).observe({ type: 'longtask', buffered: true });
+    } catch {
+      /* no longtask support */
+    }
+  });
   const seen = watch(page, tag);
   const m = { stops: [] };
   if (throttle) {
@@ -109,7 +118,8 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
   const resources = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((e) => ({ name: e.name.replace(location.origin, ''), start: Math.round(e.startTime), end: Math.round(e.responseEnd), bytes: e.encodedBodySize })),
   );
-  m.load = { domContentLoadedMs: tDom, firstTextMs: tText, firstStageMs: tStage, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n, resources };
+  const longTasks = await page.evaluate(() => window.__long);
+  m.load = { domContentLoadedMs: tDom, firstTextMs: tText, firstStageMs: tStage, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n, longTasks, resources };
   metrics.runs[tag] = m;
   writeFileSync(join(out, 'metrics.json'), JSON.stringify(metrics, null, 2));
   await page.screenshot({ path: join(out, `${tag}-first-load.png`), fullPage: true });
@@ -178,8 +188,9 @@ async function noWebGL() {
 }
 
 try {
-  await run('phone', { width: 390, height: 844 }, { throttle: true, mobile: true });
+  // Desktop first: the first page a freshly started headless browser opens pays the browser's own start-up work.
   await run('desktop', { width: 1280, height: 900 });
+  await run('phone', { width: 390, height: 844 }, { throttle: true, mobile: true });
   await noWebGL();
 } catch (e) {
   problems.push(`check crashed: ${e instanceof Error ? e.stack : String(e)}`);
