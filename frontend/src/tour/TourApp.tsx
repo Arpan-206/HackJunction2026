@@ -135,6 +135,8 @@ export function TourApp() {
         </aside>
         <p className="tour-site">
           <a href="./sbom.html">What's in this site</a>
+          {' · '}
+          <a href="./explore.html">Explore the whole app, no gloves needed</a>
         </p>
       </main>
 
@@ -145,9 +147,15 @@ export function TourApp() {
         <span className="tour-nav__where" aria-live="polite">
           {stop + 1} / {STOPS.length}
         </span>
-        <button type="button" className="btn btn--primary tour-nav__btn" onClick={() => go(stop + 1)} disabled={stop === STOPS.length - 1}>
-          Next
-        </button>
+        {stop === STOPS.length - 1 ? (
+          <a className="btn btn--primary tour-nav__btn" href="./explore.html">
+            Explore the whole app
+          </a>
+        ) : (
+          <button type="button" className="btn btn--primary tour-nav__btn" onClick={() => go(stop + 1)}>
+            Next
+          </button>
+        )}
       </footer>
     </div>
   );

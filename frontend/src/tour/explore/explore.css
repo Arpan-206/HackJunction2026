@@ -1,0 +1,38 @@
+/* Explore mode's permanent badge and the plain notice for screens that need hardware. Text at least 16 px. */
+.ex-badge {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.35rem 1rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+.ex-badge p {
+  flex: 1 1 20rem;
+  font-family: var(--font-note);
+  font-style: italic;
+}
+.ex-badge a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.ex-blocked {
+  max-width: 40rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+  display: grid;
+  gap: 1rem;
+}
+.ex-blocked a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

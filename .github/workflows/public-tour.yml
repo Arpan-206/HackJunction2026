@@ -7,7 +7,8 @@ name: public-tour
 
 on:
   push:
-    branches: [public-tour]
+    # public-tour deploys; public-tour-explore only builds and checks (explore mode before it joins the tour).
+    branches: [public-tour, public-tour-explore]
   workflow_dispatch:
     inputs:
       pages:
@@ -19,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: public-tour
+  group: public-tour-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -86,12 +87,15 @@ jobs:
         run: node e2e/tour-check.mjs dist-tour tour-check
       - name: Browser check under a sub-path, as GitHub Pages serves it
         run: TOUR_BASE=/HackJunction2026/ TOUR_BUDGET=off node e2e/tour-check.mjs dist-tour tour-check-subpath
+      - name: Explore mode check (the whole app, phone and desktop, no calls out, honest AI Assistant copy)
+        run: node e2e/explore-check.mjs dist-tour explore-check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: tour-check
           path: |
             frontend/tour-check
+            frontend/explore-check
             frontend/tour-check-subpath
             frontend/tour-size.md
 
@@ -185,6 +189,7 @@ jobs:
     # Deploys the final, checked site to Netlify. It needs the repository secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID;
     # without them every step after the first skips and the job passes.
     needs: publish
+    if: github.ref == 'refs/heads/public-tour'
     runs-on: craci
     env:
       HAS_NETLIFY: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}

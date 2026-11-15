@@ -18,6 +18,8 @@ const OUT = resolve(here, 'dist-tour');
 
 /** The app's public files the tour draws with: the hand mesh, the Dex3-1 URDFs and the wood texture of the learner's hand. */
 const APP_ASSETS = ['models/hands', 'models/robots', 'textures/wood'];
+/** Explore mode (explore.html) runs the whole app, which draws with every file in public/. They load only on its screens. */
+const EXPLORE_ASSETS = ['models', 'textures', 'stills'];
 /** The push-recovery clip (robot_policy/, on main). */
 const VIDEO = resolve(here, '../robot_policy/out/policy_demo.mp4');
 
@@ -26,7 +28,7 @@ function tourFiles(): Plugin {
     name: 'geppetto-tour-files',
     apply: 'build',
     writeBundle() {
-      for (const dir of APP_ASSETS) cpSync(resolve(here, 'public', dir), resolve(OUT, dir), { recursive: true });
+      for (const dir of [...APP_ASSETS, ...EXPLORE_ASSETS]) if (existsSync(resolve(here, 'public', dir))) cpSync(resolve(here, 'public', dir), resolve(OUT, dir), { recursive: true });
       if (existsSync(VIDEO)) {
         mkdirSync(resolve(OUT, 'media'), { recursive: true });
         cpSync(VIDEO, resolve(OUT, 'media/policy_demo.mp4'));
@@ -49,6 +51,7 @@ function firstStopPreloads(): Plugin {
     transformIndexHtml: {
       order: 'post',
       handler(_html, ctx) {
+        if (!ctx.filename.endsWith('tour.html')) return [];
         const bundle = ctx.bundle;
         if (!bundle) return [];
         const wanted = ['src/tour/stops/ExpertStop.tsx', 'src/tour/stops/ExpertStage3D.tsx', 'tour/data/expert.json'];
@@ -71,11 +74,40 @@ function firstStopPreloads(): Plugin {
   };
 }
 
+/**
+ * Explore mode honesty, for the public build only (the app's own build is untouched):
+ * - the mock backend's canned AI Assistant text is labelled as a template ("fake ..."), so every screen says the AI
+ *   Assistant was not used (score card, plan card, lesson generator, text-to-motion, model label);
+ * - the developer-only model names (shown with ?dev=1) become neutral words, so no model or host name ships.
+ * Each replacement must match, or the build fails: a silent miss would ship the old text.
+ */
+function exploreHonesty(): Plugin {
+  const edits: { file: string; from: string; to: string }[] = [
+    { file: 'src/mock/llm.ts', from: "export const MOCK_PROVIDER = 'mock';", to: "export const MOCK_PROVIDER = 'fake (example text)';" },
+    { file: 'src/features/shared/providerLabel.ts', from: "gemini: 'Gemini',", to: "gemini: 'a hosted model'," },
+    { file: 'src/features/shared/providerLabel.ts', from: "openai: 'Gemma on Verda',", to: "openai: 'a self-hosted model'," },
+  ];
+  return {
+    name: 'geppetto-explore-honesty',
+    enforce: 'pre',
+    transform(code, id) {
+      const path = id.replace(/\\/g, '/').split('?')[0];
+      let out = code;
+      for (const e of edits) {
+        if (!path.endsWith(e.file)) continue;
+        if (!out.includes(e.from)) throw new Error(`explore honesty: "${e.from}" not found in ${e.file}`);
+        out = out.replace(e.from, e.to);
+      }
+      return out === code ? null : out;
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
   envPrefix: 'GEPPETTO_TOUR_NO_ENV_',
   publicDir: resolve(here, 'tour/public'),
-  plugins: [react(), tourFiles(), firstStopPreloads()],
+  plugins: [exploreHonesty(), react(), tourFiles(), firstStopPreloads()],
   resolve: {
     preserveSymlinks: true,
     // The live hand's delay probe can call the core on :8765; the tour has no core, so it gets a stub that does nothing.
@@ -92,6 +124,6 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: false,
     chunkSizeWarningLimit: 1500,
-    rollupOptions: { input: resolve(here, 'tour.html') },
+    rollupOptions: { input: { tour: resolve(here, 'tour.html'), explore: resolve(here, 'explore.html') } },
   },
 });
