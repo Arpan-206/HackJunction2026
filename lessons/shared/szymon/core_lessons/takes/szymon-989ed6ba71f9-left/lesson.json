@@ -1,0 +1,232 @@
+{
+  "schema": "geppetto.lesson/1",
+  "id": "szymon-989ed6ba71f9-left",
+  "title": "Shadow puppets: five animals by candlelight: Lesson 4: The flapping bird",
+  "task": "general",
+  "task_config": {
+    "geppetto": {
+      "recording_id": "szymon-989ed6ba71f9",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-bird"
+    }
+  },
+  "created": "2026-11-15T00:46:03.189626+00:00",
+  "master": {
+    "name": "Demo expert",
+    "hand": "left"
+  },
+  "source": "glove",
+  "rate_hz": 29.98,
+  "duration_us": 10875000,
+  "steps": [
+    {
+      "index": 0,
+      "name": "Lesson 4: The flapping bird",
+      "note": "Cross your wrists, hook the thumbs together and keep the fingers flat as wings. Flap from the wrists. The score checks the finger shape; the flap shows on the wall.",
+      "kind": "move",
+      "t0_us": 0,
+      "t1_us": 10875000,
+      "key_t_us": 10562000,
+      "key_angles": [
+        0.0,
+        4.64,
+        0.0,
+        0.0,
+        0.0,
+        0.03,
+        0.0,
+        0.0,
+        21.56,
+        0.0,
+        0.0,
+        27.51,
+        0.0,
+        0.0,
+        16.78,
+        6.83,
+        18.38,
+        31.12
+      ],
+      "key_joints": [
+        [
+          0.0086,
+          0.0,
+          -0.0445
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.018,
+          -0.008,
+          -0.015
+        ],
+        [
+          0.0503,
+          -0.0172,
+          -0.045
+        ],
+        [
+          0.0754,
+          -0.0244,
+          -0.0683
+        ],
+        [
+          0.0942,
+          -0.0319,
+          -0.0876
+        ],
+        [
+          0.025,
+          0.0,
+          -0.012
+        ],
+        [
+          0.0318,
+          -0.0,
+          -0.0766
+        ],
+        [
+          0.036,
+          -0.0,
+          -0.1164
+        ],
+        [
+          0.0386,
+          0.0,
+          -0.1413
+        ],
+        [
+          0.0407,
+          -0.0,
+          -0.1612
+        ],
+        [
+          0.008,
+          -0.0,
+          -0.012
+        ],
+        [
+          0.0091,
+          -0.0,
+          -0.077
+        ],
+        [
+          0.0099,
+          -0.0,
+          -0.122
+        ],
+        [
+          0.0104,
+          -0.0,
+          -0.15
+        ],
+        [
+          0.0108,
+          0.0,
+          -0.17
+        ],
+        [
+          -0.01,
+          -0.0,
+          -0.012
+        ],
+        [
+          -0.0142,
+          -0.0,
+          -0.0719
+        ],
+        [
+          -0.0168,
+          -0.0147,
+          -0.109
+        ],
+        [
+          -0.0185,
+          -0.0243,
+          -0.1331
+        ],
+        [
+          -0.0198,
+          -0.0317,
+          -0.1516
+        ],
+        [
+          -0.028,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0376,
+          0.0,
+          -0.0662
+        ],
+        [
+          -0.0425,
+          -0.0148,
+          -0.0941
+        ],
+        [
+          -0.0456,
+          -0.0241,
+          -0.1116
+        ],
+        [
+          -0.0483,
+          -0.0324,
+          -0.1273
+        ]
+      ],
+      "key_wrist_q": [
+        -0.0991,
+        -0.0929,
+        0.1802,
+        0.9742
+      ],
+      "weights": {
+        "thumb": 0.5,
+        "index": 1.0,
+        "middle": 1.0,
+        "ring": 1.0,
+        "little": 1.0
+      },
+      "hold_ms": 500,
+      "frame": "frames/step_00.jpg",
+      "named_by": "manual",
+      "weights_from": {
+        "static": {
+          "thumb": 0.5,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        },
+        "consistency": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        },
+        "takes": 1,
+        "take_spread_deg": {
+          "thumb": 0.0,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.0,
+          "little": 0.0
+        },
+        "chart": null,
+        "calibration": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      }
+    }
+  ]
+}

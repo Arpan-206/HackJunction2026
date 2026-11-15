@@ -1,0 +1,1776 @@
+{
+  "format": "geppetto.lesson-sync/1",
+  "recorder": "szymon",
+  "exported_at": "2026-11-15T01:09:19+00:00",
+  "items": {
+    "take": [
+      "szymon-0053cfa41fbc",
+      "szymon-014e399298a1",
+      "szymon-0183807bbd52",
+      "szymon-01fa7128f9d7",
+      "szymon-0f74384620ce",
+      "szymon-2a21347a9ba8",
+      "szymon-2feb7ae0ba05",
+      "szymon-34300ebd954f",
+      "szymon-35ea4fca137e",
+      "szymon-46ee04f5bc0a",
+      "szymon-4986ea2809a7",
+      "szymon-4b2ec9363e7b",
+      "szymon-4ca8e37c97eb",
+      "szymon-5992b3c9201c",
+      "szymon-64f2c0437179",
+      "szymon-6b8b367c4015",
+      "szymon-6e863aef77a2",
+      "szymon-78977e77365e",
+      "szymon-79da67b23cdb",
+      "szymon-7dfc54e4fc0b",
+      "szymon-8463fc05d240",
+      "szymon-853270a64f20",
+      "szymon-877473e7c4d9",
+      "szymon-8b5847c71fdf",
+      "szymon-8f8dcd081055",
+      "szymon-94bbf264e87a",
+      "szymon-977906efe597",
+      "szymon-989ed6ba71f9",
+      "szymon-9f34d9d8fafe",
+      "szymon-a03faa350c0e",
+      "szymon-a4df4ef89dd7",
+      "szymon-a98d510040fe",
+      "szymon-abbc0d95aae4",
+      "szymon-af1028500d87",
+      "szymon-b5afa741f126",
+      "szymon-b6c1083312f6",
+      "szymon-ba5c16fc19f6",
+      "szymon-bea9dee6aad3",
+      "szymon-c154d83fb700",
+      "szymon-c411bc3d3466",
+      "szymon-cefd38f5c4da",
+      "szymon-cfc33b22012e",
+      "szymon-d0c555996dd0",
+      "szymon-d4ba1ee09d70",
+      "szymon-d69602c00512",
+      "szymon-dba522c9f8a3",
+      "szymon-e20b944a8690",
+      "szymon-edb00738feec",
+      "szymon-f03dbc46eff5",
+      "szymon-f662ec3ad4b0",
+      "szymon-fa5fa6665745"
+    ],
+    "calibration": [
+      "szymon-f4a3ced3f489",
+      "szymon-f6b9f8e0c3de"
+    ]
+  },
+  "files": [
+    {
+      "path": "backend/calibrations/szymon-f4a3ced3f489.json",
+      "size": 432,
+      "sha256": "fb76b3d970834761620c541951c5da6233024e6d5a12477eb7fb6cde4debc2cb"
+    },
+    {
+      "path": "backend/calibrations/szymon-f6b9f8e0c3de.json",
+      "size": 416,
+      "sha256": "e73084f0f52f405a51ec07dfe628edf0662e17b47dbd099ceee81f0522293653"
+    },
+    {
+      "path": "backend/recordings/szymon-0053cfa41fbc.json",
+      "size": 120999,
+      "sha256": "de0e5d38790499e3975724e0b925efb31bf821523a941d891af87e6e7168bb50"
+    },
+    {
+      "path": "backend/recordings/szymon-014e399298a1.json",
+      "size": 89041,
+      "sha256": "7b2c48d1f61b4ad06bf16e978c291dc0d73974d107d4fbf4b92b2e61b352dd8c"
+    },
+    {
+      "path": "backend/recordings/szymon-0183807bbd52.json",
+      "size": 214091,
+      "sha256": "e847ca51a0fa5bbbbf8fa8ceb2aaa5b8d4ccb534cd4f00c066ade33bb81a4265"
+    },
+    {
+      "path": "backend/recordings/szymon-01fa7128f9d7.json",
+      "size": 184052,
+      "sha256": "7f8275ed2cd3d664c7bcac5ca57fb2e3357d51e81d1baa2ab4fdc5f4002200da"
+    },
+    {
+      "path": "backend/recordings/szymon-0f74384620ce.json",
+      "size": 158421,
+      "sha256": "2120e67add542bbbee490371bcf38414b16156ff3de9529a99c72a41b45717e8"
+    },
+    {
+      "path": "backend/recordings/szymon-2a21347a9ba8.json",
+      "size": 150003,
+      "sha256": "ae8a82858bd486bfd05bd4dec0810ba7957e704292797684a94311435813d2fe"
+    },
+    {
+      "path": "backend/recordings/szymon-2feb7ae0ba05.json",
+      "size": 110379,
+      "sha256": "b9e7403e63ef5f30c086782b0f33a5ac69124171a0ccc145f5a752c3bf404186"
+    },
+    {
+      "path": "backend/recordings/szymon-34300ebd954f.json",
+      "size": 74636,
+      "sha256": "81579e6cf228bb9e47b1c3fe642b2905eb5e70648f5a0baa33395172761d4ef5"
+    },
+    {
+      "path": "backend/recordings/szymon-35ea4fca137e.json",
+      "size": 76398,
+      "sha256": "66d4966d8c9c5f34cd0264598d02ab018d72b95bce381e91befd2c4305b80222"
+    },
+    {
+      "path": "backend/recordings/szymon-46ee04f5bc0a.json",
+      "size": 75736,
+      "sha256": "7507dcb0659a517cf4c47e929b1fb3df82c404dfea83ffc4dcfbbaf695dd3250"
+    },
+    {
+      "path": "backend/recordings/szymon-4986ea2809a7.json",
+      "size": 128419,
+      "sha256": "0bb629970e137b8f1cd6b157f439ba9dd8503b39ec5c541b2f3685ebbabbcdab"
+    },
+    {
+      "path": "backend/recordings/szymon-4b2ec9363e7b.json",
+      "size": 63036,
+      "sha256": "1c7c618e0e09269b18c6493e3bc9b4325d1ac0face60c89863be64a3f11efc2f"
+    },
+    {
+      "path": "backend/recordings/szymon-4ca8e37c97eb.json",
+      "size": 115632,
+      "sha256": "851ec13c81fe7ffd7c5f70301a40798bc4430bf03d52e4ba667055cbe9b69f41"
+    },
+    {
+      "path": "backend/recordings/szymon-5992b3c9201c.json",
+      "size": 77518,
+      "sha256": "de79c6ab0d484d1f72de9e58fbb53cb1f3f3a84ff8ef15f7c0bc5932a3b85784"
+    },
+    {
+      "path": "backend/recordings/szymon-64f2c0437179.json",
+      "size": 200678,
+      "sha256": "7aadce9bd4a3f422fb603fd08c798b1d8db9bae9c6bc6b9d18aac95b13fc2769"
+    },
+    {
+      "path": "backend/recordings/szymon-6b8b367c4015.json",
+      "size": 67466,
+      "sha256": "da97049259c19a49adf3614d071ef0c5fabe30bcfa6f21d37d798bd9b14a7a0d"
+    },
+    {
+      "path": "backend/recordings/szymon-6e863aef77a2.json",
+      "size": 104569,
+      "sha256": "d975100469587f07ff4eeb8b8368f774a2d678540432c218fd267cfc6df7ce24"
+    },
+    {
+      "path": "backend/recordings/szymon-78977e77365e.json",
+      "size": 63732,
+      "sha256": "09a609a73c5abaa6f7a51fb24d84d0605534ac95e7032c1e0f8876320f434164"
+    },
+    {
+      "path": "backend/recordings/szymon-79da67b23cdb.json",
+      "size": 154613,
+      "sha256": "a9841e1413c5fa7d371c330b4407deb5ef03f2caf0f62b18517fd41c100a3bb7"
+    },
+    {
+      "path": "backend/recordings/szymon-7dfc54e4fc0b.json",
+      "size": 71975,
+      "sha256": "359d026e724881320563aeb0de533158d19adf9470c714246b6d708d5aad295b"
+    },
+    {
+      "path": "backend/recordings/szymon-8463fc05d240.json",
+      "size": 67248,
+      "sha256": "e493a2eb013f7d6b71d46440a4298bdfef715b487c1e55556551018420b82db3"
+    },
+    {
+      "path": "backend/recordings/szymon-853270a64f20.json",
+      "size": 78275,
+      "sha256": "fe7169fd08e1a28d13bc96a0184d0c9c01de2d4d6308ffb6dec47f6bb893d3f2"
+    },
+    {
+      "path": "backend/recordings/szymon-877473e7c4d9.json",
+      "size": 62292,
+      "sha256": "452370c762183f30b5907c672263ee7cb87ee37577fffca5e16552b51fa83125"
+    },
+    {
+      "path": "backend/recordings/szymon-8b5847c71fdf.json",
+      "size": 74574,
+      "sha256": "957349f01e724f469fb98072538e47e03dd16ebe46f507a8ace80511f2d3059f"
+    },
+    {
+      "path": "backend/recordings/szymon-8f8dcd081055.json",
+      "size": 122277,
+      "sha256": "91f14611c1ee4c82276ec68b7668a18a65b21fe29b31e67772e0ca43ae7c5f0a"
+    },
+    {
+      "path": "backend/recordings/szymon-94bbf264e87a.json",
+      "size": 106332,
+      "sha256": "997166d810e225f5890c4dbbb29fbf4ca98d68ad47f91a07000005e0a3796924"
+    },
+    {
+      "path": "backend/recordings/szymon-977906efe597.json",
+      "size": 76445,
+      "sha256": "b32ec6e565625e7b57a0cc91220ca3bc97ddc61683923449359f0f86a28d48d6"
+    },
+    {
+      "path": "backend/recordings/szymon-989ed6ba71f9.json",
+      "size": 227338,
+      "sha256": "8a5ef89c4a298bd21ad6fc43959250fb7ccc7b846ac5e1e1a1e07d5d621e94c0"
+    },
+    {
+      "path": "backend/recordings/szymon-9f34d9d8fafe.json",
+      "size": 59980,
+      "sha256": "9e4a5bfa86074d4e320cd0254f17d854c025ab502eecb3659222bedbd57fbb66"
+    },
+    {
+      "path": "backend/recordings/szymon-a03faa350c0e.json",
+      "size": 74877,
+      "sha256": "ba80f96dc475e4ab9005889cb96691a44282a0a973b5dc783d2c0ac2f54db262"
+    },
+    {
+      "path": "backend/recordings/szymon-a4df4ef89dd7.json",
+      "size": 130920,
+      "sha256": "a5b5f5d29fe1342ed6676076f726b241cad25ddaa20dd740260417eac8f94382"
+    },
+    {
+      "path": "backend/recordings/szymon-a98d510040fe.json",
+      "size": 93962,
+      "sha256": "22250db01122b91c0ab9cf636d6e537a5641f8f83f204750f6043aa1d50c286a"
+    },
+    {
+      "path": "backend/recordings/szymon-abbc0d95aae4.json",
+      "size": 182312,
+      "sha256": "9165e6457df06ac2883c67dcc426f1410c77e218afcaf71c2019ae2fe5b3973a"
+    },
+    {
+      "path": "backend/recordings/szymon-af1028500d87.json",
+      "size": 101836,
+      "sha256": "dc22d548d24e0f553c631c2a12bbc2f393e930ac8c00a882f781f71c74d4c398"
+    },
+    {
+      "path": "backend/recordings/szymon-b5afa741f126.json",
+      "size": 65493,
+      "sha256": "600d63f3359291492b354d9b1317417e5238ab486f25338633e23b2e0c624343"
+    },
+    {
+      "path": "backend/recordings/szymon-b6c1083312f6.json",
+      "size": 60943,
+      "sha256": "cba265e87b79a0f85e0ce7a09b17243c535c3cfcd77a638f40f98393a2711732"
+    },
+    {
+      "path": "backend/recordings/szymon-ba5c16fc19f6.json",
+      "size": 113034,
+      "sha256": "7bbfa0bfc3c96c131f363ed28a68c3f8c685ef5c63d0105033ed8b1c6cc38abc"
+    },
+    {
+      "path": "backend/recordings/szymon-bea9dee6aad3.json",
+      "size": 179506,
+      "sha256": "99577948a192eb58827a8915e15053ab1ac1d6b1511ef870ef856a2f3b51df99"
+    },
+    {
+      "path": "backend/recordings/szymon-c154d83fb700.json",
+      "size": 123373,
+      "sha256": "fb59dd7dd432a9db7f474e75c54f79a34e319310366a1ec9284e4d247b8d6bae"
+    },
+    {
+      "path": "backend/recordings/szymon-c411bc3d3466.json",
+      "size": 67151,
+      "sha256": "8d5dd04f51c694f3a522f1f5fb86e403ed4cb0362adf2652492b7518bc241d2b"
+    },
+    {
+      "path": "backend/recordings/szymon-cefd38f5c4da.json",
+      "size": 95868,
+      "sha256": "e79e6f9e53caf1abde122a174407cf7497bfcace6371b0ce500f3835122381e0"
+    },
+    {
+      "path": "backend/recordings/szymon-cfc33b22012e.json",
+      "size": 97253,
+      "sha256": "97e36b9a9a93f1dee5e030964e335167b7f1d46c1c7034496d23eb48f4f51ff4"
+    },
+    {
+      "path": "backend/recordings/szymon-d0c555996dd0.json",
+      "size": 80924,
+      "sha256": "7ef1c7357027d44d85da090d31169a81bbf7a1217b25d9dc1957d05c42fe6737"
+    },
+    {
+      "path": "backend/recordings/szymon-d4ba1ee09d70.json",
+      "size": 71883,
+      "sha256": "467b3030ab1f1d786ea95a8bd61fd323152ada4b8bb1a710d1c120175e1beacb"
+    },
+    {
+      "path": "backend/recordings/szymon-d69602c00512.json",
+      "size": 223083,
+      "sha256": "777cc2cf96be6d06fcd8b92a48b11ed12c0b5252618cea4ac9096578e9c03fe0"
+    },
+    {
+      "path": "backend/recordings/szymon-dba522c9f8a3.json",
+      "size": 60248,
+      "sha256": "ffc32e77d8822f3d808303241c59bd7ff310b4ab3401c72da491518079f19485"
+    },
+    {
+      "path": "backend/recordings/szymon-e20b944a8690.json",
+      "size": 67642,
+      "sha256": "0c54c7d0b5387cc9e7e6aa5924e8b756fa27f69dce2b3330811d1264c545758f"
+    },
+    {
+      "path": "backend/recordings/szymon-edb00738feec.json",
+      "size": 63875,
+      "sha256": "73a22af9f11a85a8a5d976b48605a6ed81fa96fa7215e2f8b9265fd95640d2a3"
+    },
+    {
+      "path": "backend/recordings/szymon-f03dbc46eff5.json",
+      "size": 137559,
+      "sha256": "4bf6534f9b2fc9710041568c4be538e78d5101fdf6b901b0c6f834e6f31a8f58"
+    },
+    {
+      "path": "backend/recordings/szymon-f662ec3ad4b0.json",
+      "size": 116270,
+      "sha256": "bd285080327a0c46a9cc69d79b1cd5c8d1adc486fd3390aa1a0a5db45c63731d"
+    },
+    {
+      "path": "backend/recordings/szymon-fa5fa6665745.json",
+      "size": 145999,
+      "sha256": "f07b13654060582e01b3b101ed64103e0f18194f0ac5372b3d241fa766a735c0"
+    },
+    {
+      "path": "core_lessons/manifest.json",
+      "size": 61766,
+      "sha256": "6ae284a10c14d38027ef0322c0c5f31465c0412f7ec867d510271280c037798a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-left/frames/step_00.jpg",
+      "size": 10580,
+      "sha256": "1f6b912454437cf00d854cfa9f00cd0f2f38342fcd127c77cb87d9f284a6dfa7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-left/lesson.json",
+      "size": 3896,
+      "sha256": "fa608549465027dfee3e5a3eeb9b098e54e6c591660504ee73538ffd7a2842c0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-left/trace.npz",
+      "size": 13177,
+      "sha256": "642296a84edb65012598d5d2f9a611bea888eee04dde4dd690f74e0db8a3091d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-right/frames/step_00.jpg",
+      "size": 10905,
+      "sha256": "f4dfac8c424253a7f878b00530a8a4d0628683b7291f531b7c417860032532ba"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-right/lesson.json",
+      "size": 3903,
+      "sha256": "512cd7de8c9ba1ae7f5da1bb3940e3550e06a3604a05d9698df03033a666e25b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0053cfa41fbc-right/trace.npz",
+      "size": 13149,
+      "sha256": "b30f21db259daee634062d03023736f4c7fb7af6a340a22c010f52c240498e08"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/frames/step_00.jpg",
+      "size": 10102,
+      "sha256": "3cde1e819e61623123ebab724de244dae66b72c046399ab0f2938a7658f6ceaf"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/frames/step_01.jpg",
+      "size": 10030,
+      "sha256": "c9e5a5e2807db016225daec412273cfb7339dac5fc4cb282e8dde323a8f7dfb0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/frames/step_02.jpg",
+      "size": 10066,
+      "sha256": "15df465668343604f2b965bc5b6f16c50af7ba7fbb098d669acfae534f9a3c63"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/frames/step_03.jpg",
+      "size": 10026,
+      "sha256": "d8e68155f6d54e48e02ad150ef816ebb53a9b1fbcd51dd1451b91f5ecd59fb58"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/frames/step_04.jpg",
+      "size": 10045,
+      "sha256": "87f61b79cc218efc6097dbe5c458ad8e047c3a8986e3239186ff30a575dbc325"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/lesson.json",
+      "size": 17679,
+      "sha256": "ca5be4dab6d2cb848b83271dad4502b5a506f5a0b372ddf966b50d54c609c75b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-014e399298a1-right/trace.npz",
+      "size": 78352,
+      "sha256": "79c80b28885a70c1c6b122c67ee8b11280b40cff0f672a67076d14f70238a16e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-left/frames/step_00.jpg",
+      "size": 11755,
+      "sha256": "d131a65bb94bb644281d7522e0acc245f53252dcbf8a4edee455abec258f15aa"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-left/lesson.json",
+      "size": 4127,
+      "sha256": "80584a1165471cd10422a4acaf8188065b48fafd8f58528a1663780d9b67e15c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-left/trace.npz",
+      "size": 101336,
+      "sha256": "3626a155edc02a651cd417cedd79d4b6654889e89129f7d609a6435cbd0a3da4"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-right/frames/step_00.jpg",
+      "size": 11884,
+      "sha256": "6ef0a3ec5211cddafcb3430c236e4b23dc95a99f487d2edbdb2e765671f6fe6e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-right/lesson.json",
+      "size": 4123,
+      "sha256": "6d7d2285258802510e91f330f1309acd510778f044950700a1ba89c059dc37d9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0183807bbd52-right/trace.npz",
+      "size": 99546,
+      "sha256": "af56b73aec88d08b0aa82c9d1aacc69afa5441b5022fbcbf259c0ee77b1744d6"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-left/frames/step_00.jpg",
+      "size": 9580,
+      "sha256": "85c2d96fa5e5b4f82d9807a170b0088d8e4127c6d3bad91303c24985c3e1aa56"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-left/frames/step_01.jpg",
+      "size": 9518,
+      "sha256": "8f98417560d29e932e0b83c8ec4ee85bbd7cd50aeef201b93f5fae45c557a991"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-left/lesson.json",
+      "size": 7379,
+      "sha256": "a9b541d2dd0f56609ff13621a9a52b39da71022df4b9762b9f22bfa4a2842b15"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-left/trace.npz",
+      "size": 82500,
+      "sha256": "223b2bf8eaa747bc6978801057231301e1de7ef0f5140c4063490b10a628e4b9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-right/frames/step_00.jpg",
+      "size": 11172,
+      "sha256": "15a199580facbfdb1d42e84ec64669824efdb91be0c052a5b8f64593c6e2c35a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-right/lesson.json",
+      "size": 4082,
+      "sha256": "73b549777196cb3f9ed8bd95e5183d7c30853f3182de4ac152f8ab7382948745"
+    },
+    {
+      "path": "core_lessons/takes/szymon-01fa7128f9d7-right/trace.npz",
+      "size": 68878,
+      "sha256": "57483e4f9f435817a23905ffb217e0fcc7cac347557556d74a2f7f78f16943ec"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0f74384620ce-right/frames/step_00.jpg",
+      "size": 12213,
+      "sha256": "201af9a82158b128067a13cdc3fb31d1fa825446f15846b0be2d921a5fa43070"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0f74384620ce-right/lesson.json",
+      "size": 4049,
+      "sha256": "89aef07ca0fd8c90e84276ccf35a892d008659a160670a5d009243fd63ec24e2"
+    },
+    {
+      "path": "core_lessons/takes/szymon-0f74384620ce-right/trace.npz",
+      "size": 28791,
+      "sha256": "335c1378680e9cf7a3766be179ed165558085da1cd5ad98817e0978898a9e99b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/frames/step_00.jpg",
+      "size": 10455,
+      "sha256": "1db2639603606aaef0847340d3582e2ddbec9feaa69b0c5e5b9ee1d10bfef814"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/frames/step_01.jpg",
+      "size": 10581,
+      "sha256": "211ec1b61702d040998568eb5a4848e6798aafa94b509daa51c2cba8dc6045fb"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/frames/step_02.jpg",
+      "size": 10593,
+      "sha256": "8828b94a756eea21f37200d7fbde7d5bfb46e50e1e241cabc33a6e6d1887c169"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/frames/step_03.jpg",
+      "size": 10678,
+      "sha256": "031b1e62eb50478ab5d35b5b440ece20713fb0011f3303797c89cdfe0ec5c3be"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/frames/step_04.jpg",
+      "size": 10401,
+      "sha256": "1a5938e44e18d511f8866ca68b1c14d916da81da22cd4ca5a99c50a45785303e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/lesson.json",
+      "size": 17637,
+      "sha256": "991c9da13cf0541ae9bf4c8986bb1ae2f2f97b00e9c4b545cbb0ba54d2fffeae"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2a21347a9ba8-right/trace.npz",
+      "size": 132570,
+      "sha256": "3383b261b65a0b0da061c0fb8231306c58362979967c348f103c49a17ec58ad0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/frames/step_00.jpg",
+      "size": 10267,
+      "sha256": "a943a591739d3b3c0a6437074b94c1087601d124bb2e0c3f48e8c17293eb1ffd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/frames/step_01.jpg",
+      "size": 10325,
+      "sha256": "51cd9b6cfd5abbbdc4a52d6474cb0f2510361275f253d9b795dfdc31c2e0c88f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/frames/step_02.jpg",
+      "size": 10277,
+      "sha256": "2c266da456e2c23c469c24fce05e637b1dc636e5eb43a4325fa641a6a3f5b50e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/frames/step_03.jpg",
+      "size": 10351,
+      "sha256": "c3ae81a68ec3f1997984fe39d1e2b49f1add6135a1e755e56e31967671b8214f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/lesson.json",
+      "size": 14244,
+      "sha256": "d8d03536a1592c9261cdcc1fc952086fc200d4e64231ac04c6965b2168190017"
+    },
+    {
+      "path": "core_lessons/takes/szymon-2feb7ae0ba05-right/trace.npz",
+      "size": 98621,
+      "sha256": "8c2f41de56c540c7b193a34a5d2fd9d3718432f6b65616d8aac473e63378622b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/frames/step_00.jpg",
+      "size": 10048,
+      "sha256": "f4e27a5f38788165c96790e2552da43b1ff74d627ac231f45b967dba7fab796f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/frames/step_01.jpg",
+      "size": 10108,
+      "sha256": "c71d21163c85deaf9bb0e769486faf16fbfa99648d083a55d1ceee3d2712a5b1"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/frames/step_02.jpg",
+      "size": 10075,
+      "sha256": "fddb9c4bd742d7e8c4d38cf1309b0f7f1a4e598576e669d4c804afb394d46f79"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/frames/step_03.jpg",
+      "size": 10054,
+      "sha256": "80b465d81e46786ce8f82f18651e1e0c1084d8d7c856648c08ecd42d9d30f748"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/lesson.json",
+      "size": 14253,
+      "sha256": "ee4ce185535a5c68eb2b9403fecc16f34ea755c24388165b16a5aa98c8759030"
+    },
+    {
+      "path": "core_lessons/takes/szymon-34300ebd954f-right/trace.npz",
+      "size": 66845,
+      "sha256": "6013009e9504305742b8b05118b10c3cb10676a310ccde8058d651845fa7f5ec"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/frames/step_00.jpg",
+      "size": 10534,
+      "sha256": "8d83932a840a12cb424c8900f09f24509f6d952cf4d7150fa315d3450165a673"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/frames/step_01.jpg",
+      "size": 10680,
+      "sha256": "601ba021a94c5f99eca75cc7a04df104bc4a56b0d1d933862b698ccac5b0adb7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/frames/step_02.jpg",
+      "size": 10706,
+      "sha256": "615397a790b198eab867ac24d8f7f87420f278e296213ce3925486723bfb4126"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/frames/step_03.jpg",
+      "size": 10760,
+      "sha256": "d27b0c33940c7fbae9740269d518cd99d1fd15fc0230fc8cce17c176a51ffed0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/lesson.json",
+      "size": 14182,
+      "sha256": "840810267980c9c4e642f8c23a9eeb73811c1ec76e3b0fabbfd429f2b8cee587"
+    },
+    {
+      "path": "core_lessons/takes/szymon-35ea4fca137e-right/trace.npz",
+      "size": 66148,
+      "sha256": "6d0c2db75abcc9b40b85ff00c6dfe851a2cdc1b19117bf090485186b31bcb047"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/frames/step_00.jpg",
+      "size": 10651,
+      "sha256": "2b5e9df7ddda01c7ccb8f51d373948f4046bb7da892e05fda4eeb030c7d4a5e8"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/frames/step_01.jpg",
+      "size": 10678,
+      "sha256": "3cda1c6bc9a62bb88cf32b6106120c48f6fa67f4749d2db799419f9927105502"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/frames/step_02.jpg",
+      "size": 10711,
+      "sha256": "a3f7fabb2531bc45c7a283168f84a408e44ddd625ce528dfbd10cc331e172554"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/frames/step_03.jpg",
+      "size": 10661,
+      "sha256": "e48cb80dee56d6933379c59950b67af621f66c8208b7331de52c7081c0d96fd0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/frames/step_04.jpg",
+      "size": 10709,
+      "sha256": "ebb52564ff00cb2b1ae3ea5818e9d5fbb15483e82ddbe8a98f85e0368a812439"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/lesson.json",
+      "size": 17594,
+      "sha256": "c3f168980f254f0afc561eb0e0b38df0e6af846f8de1c16779cff4cab611208b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-46ee04f5bc0a-right/trace.npz",
+      "size": 65179,
+      "sha256": "97325eb56ac5495a7a78b1117108ba973effdc55e1dbe04e446e322b2faf17bd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_00.jpg",
+      "size": 10571,
+      "sha256": "90b4e323d1ebb6d5e4371f3c84e19230ae767c9b7fa04b93032fc29fce434d30"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_01.jpg",
+      "size": 10578,
+      "sha256": "80d8305789f4cf6923a5015b29f4c33a2767790b3d94b392bc1fff79bce060e7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_02.jpg",
+      "size": 10517,
+      "sha256": "73cca6368d049e291ecb3fff261179e2e6d3832648fccaf3883b2048ece52114"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_03.jpg",
+      "size": 10485,
+      "sha256": "2bc055e993b7b407aea5490a45fcae6f43a96b1accbe5f20acf3725ccabb1d66"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_04.jpg",
+      "size": 10583,
+      "sha256": "ba8ac4f65307bb901e404e5e1668d811e1e96542edcaf594ace58697e9bb02dd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/frames/step_05.jpg",
+      "size": 10454,
+      "sha256": "d68d0843769aa7c129b96279ab949630042227d5286a917f1a062a36fbac4e90"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/lesson.json",
+      "size": 21058,
+      "sha256": "008914199f53533868a3564565f9c52ecef4e65a5f76e047e0a932e65997b60b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4986ea2809a7-right/trace.npz",
+      "size": 104458,
+      "sha256": "0520dd53517fac4e471d028cb5356daa175d19ed7dd5ee89f606ad80b61be279"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4b2ec9363e7b-right/frames/step_00.jpg",
+      "size": 11831,
+      "sha256": "40a986b2615aa1c6cef21b2fa6d137c1760e3e5dd1f8c7811e2609a84cd9b345"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4b2ec9363e7b-right/lesson.json",
+      "size": 4061,
+      "sha256": "a9357f6f3e644f33eac3f1a75438bb93bc5101bfc2766c7e61247cb021a2f606"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4b2ec9363e7b-right/trace.npz",
+      "size": 40138,
+      "sha256": "b3c51a864d3d227195d4a1ac42847141db491fde513b84b81c16469026c07859"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/frames/step_00.jpg",
+      "size": 10501,
+      "sha256": "94611655b532b90b18afd4f30c87ed2e9a9997d9d690bba04760ab2cc77fe26e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/frames/step_01.jpg",
+      "size": 10325,
+      "sha256": "6bc9eec617e0d8fcadb236fe6da3b6eabb4f3f4dc1c59da6da02786f45f49a41"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/frames/step_02.jpg",
+      "size": 10436,
+      "sha256": "3ee766bf08874a0c01b7778467cf034fc78cf2bed65dd4eb2bd850a4b6e1271d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/frames/step_03.jpg",
+      "size": 10626,
+      "sha256": "4eebe88c2f79a136632e1f04f9a7c1ffa199c86f57c59c65845a3a699c03d4d9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/frames/step_04.jpg",
+      "size": 10183,
+      "sha256": "d51a72aeab4dcbfb0f5fbfae7e74e3f67179a06ef69c117c064505d0691439d1"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/lesson.json",
+      "size": 17675,
+      "sha256": "320d94d57c3df0a8a37d5129bae95b7328ff429f9497623b31de25cc44282f98"
+    },
+    {
+      "path": "core_lessons/takes/szymon-4ca8e37c97eb-right/trace.npz",
+      "size": 102878,
+      "sha256": "bc705d0a90edda2d683ccb281dc58c8eba8b529510cb99f9eae2a100099db34f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/frames/step_00.jpg",
+      "size": 10222,
+      "sha256": "c2d8f16389559fe60bf262ce95d7fcd27f16bd3ad34796673656099411679a19"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/frames/step_01.jpg",
+      "size": 10269,
+      "sha256": "8aa40163066024eebd9fdc7013b75342b258ce927bd4175481db8cdaa27c30c3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/frames/step_02.jpg",
+      "size": 10237,
+      "sha256": "92127f3c45663b92087559994bfcf2848d3e4e9afecbddcbed1392105f014dbf"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/frames/step_03.jpg",
+      "size": 10279,
+      "sha256": "99791812a52a33c675714797c50be831c289e6ca0b3d55f87c6e0703ae513289"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/frames/step_04.jpg",
+      "size": 10229,
+      "sha256": "c4093daeecaeb7f954b06140abb07ecbec0b6e7d89ec2e4d123bd5d11b8f33cb"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/lesson.json",
+      "size": 17577,
+      "sha256": "fa2a26bc11f7622bf6cac2f6e7a892a6d039ce58c782051c3b24577996fe5177"
+    },
+    {
+      "path": "core_lessons/takes/szymon-5992b3c9201c-right/trace.npz",
+      "size": 65833,
+      "sha256": "3352cd375b1c1eff1838d5d04bd3ab42ba0d2036ab162504876dd371440d710b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-64f2c0437179-right/frames/step_00.jpg",
+      "size": 12201,
+      "sha256": "7272a696ab8c456003547a1093e367a247390e0aee3f042da2e0bb3034417ec9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-64f2c0437179-right/lesson.json",
+      "size": 4047,
+      "sha256": "84edc4954ac3e3168ffd3f487d9e7ec79a1989cb0e95a60a0e2351b59ae49d42"
+    },
+    {
+      "path": "core_lessons/takes/szymon-64f2c0437179-right/trace.npz",
+      "size": 36595,
+      "sha256": "f828268100fac81fb2cc363f984c3828778ea911ec1d89cac164801661c0e79b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/frames/step_00.jpg",
+      "size": 10232,
+      "sha256": "65d5759c20e2e07d1445c009ae5b39ef72285b992fb910af31cb149139b623e8"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/frames/step_01.jpg",
+      "size": 10313,
+      "sha256": "0a3127b5d2330b13094e99593310c4fff488b4c355c024923d895c6805ca8f76"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/frames/step_02.jpg",
+      "size": 10347,
+      "sha256": "9d970ab18aea43f76836b56418010da801dfee34735749a47b866df91a765ec4"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/frames/step_03.jpg",
+      "size": 10246,
+      "sha256": "9b5aef46f022a1885351496b0651bc2a461538f31d5209fbd806bbf8b5a64a4b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/lesson.json",
+      "size": 14171,
+      "sha256": "723f6b25181c9565a7a4619c42743f43e10dfe487a676fd12223b8a62e3fcca9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6b8b367c4015-right/trace.npz",
+      "size": 58105,
+      "sha256": "d10674e24edf557cedae4a3b49655c4774825166f61bd23cbe30fae7c4be9f8e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/frames/step_00.jpg",
+      "size": 10579,
+      "sha256": "650166c8a3344c6574f00bb15ac9b4459cc887177fa65b1ab2272efcf646ff1d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/frames/step_01.jpg",
+      "size": 10488,
+      "sha256": "e0f3df053e684347e466dcc4928ea20f9c10cb236d3e7955691b94e37e742e1d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/frames/step_02.jpg",
+      "size": 10465,
+      "sha256": "1c1f6b482b598a7cb4a86fea16a54f50875cb7690fcb75d7813dd1435a75ca54"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/frames/step_03.jpg",
+      "size": 10516,
+      "sha256": "ec8fa8a12e29c12e79b91a5a10cc793801731446365ad0a859d1971db543663a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/frames/step_04.jpg",
+      "size": 10347,
+      "sha256": "74048ba9c8970591292733c06ccd05db5f4f886e7614df0b100407cd6e02811b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/lesson.json",
+      "size": 17665,
+      "sha256": "dfc980de86ffa223ff3196e64422b20b278c91bee2cba3464581b97940043067"
+    },
+    {
+      "path": "core_lessons/takes/szymon-6e863aef77a2-right/trace.npz",
+      "size": 94233,
+      "sha256": "05c2a5564ecbde7c1e24c873c1c0d0a5bc59e34f675d5aa8e964ce4450a8d33a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-78977e77365e-right/frames/step_00.jpg",
+      "size": 10654,
+      "sha256": "db05f2906405456bfbda0d1069e4f2600a5b30c5f82cadb0f8af4f1a9ee50a02"
+    },
+    {
+      "path": "core_lessons/takes/szymon-78977e77365e-right/lesson.json",
+      "size": 4025,
+      "sha256": "35d5af1e044f1191d97affd022ab838d9c7bea6f141ba3e58d99a044552c23bb"
+    },
+    {
+      "path": "core_lessons/takes/szymon-78977e77365e-right/trace.npz",
+      "size": 52843,
+      "sha256": "0e9f5c5900f82fa1b30f5d59eff2f34dc9ddd2af956beda6ac6a9bba299e14b9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_00.jpg",
+      "size": 10422,
+      "sha256": "afb1972e90bed9b5af317a7896d77390bcbba2960d8f35f118ba994841879c00"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_01.jpg",
+      "size": 10554,
+      "sha256": "88becc5360ce5f25906859779f6a52f178fa68866b8c193f163b8410c2a2e64c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_02.jpg",
+      "size": 10580,
+      "sha256": "26d1238761b3776a72721d96931a3929e130c4a621e7bc62986416849c48a771"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_03.jpg",
+      "size": 10522,
+      "sha256": "412999d74e6a5885a69fd429d99e3e5f73216f982f47f144a1bd76d76a3e2dbd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_04.jpg",
+      "size": 10609,
+      "sha256": "84fce4f41268a46b4a4d72c497351861fb11f75e7cba7968b8012d2980623e33"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_05.jpg",
+      "size": 10577,
+      "sha256": "d9fc8b55ec2861e5f4e823616be42bc49e3a6df65d3f73c01369b3fb716e4709"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_06.jpg",
+      "size": 10526,
+      "sha256": "9b39954aa7d6f719edb01184c0db61f9ab084fd365b4a11a7b120e8558e34a60"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_07.jpg",
+      "size": 10617,
+      "sha256": "d50511c55baace5edcbc5acace8e1f922267f75291ab85e30899524de30531a3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_08.jpg",
+      "size": 10486,
+      "sha256": "6283420b09b26794677505c11ffe79e0209c44f7bf1a9c05cfaa12b36337125d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/frames/step_09.jpg",
+      "size": 10694,
+      "sha256": "0e8cc9932185aa2e00391370dee908c0e8759c8d2821604dc26de7edfc9e9a7c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/lesson.json",
+      "size": 34737,
+      "sha256": "d428a427fd7442b11c83de869893185c8ba5e6177887765931b94211b1a4dd28"
+    },
+    {
+      "path": "core_lessons/takes/szymon-79da67b23cdb-right/trace.npz",
+      "size": 124006,
+      "sha256": "a96947596f8a9ea5b7a2d827dcc7b0d2150fce064b5e2ce532eb9009ae9b7a6e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-7dfc54e4fc0b-right/frames/step_00.jpg",
+      "size": 11656,
+      "sha256": "e4df35750a06cbf03276234413eb1e58ae0e1f36998cc213312bbff63caf28d3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-7dfc54e4fc0b-right/lesson.json",
+      "size": 4115,
+      "sha256": "0459509275b5194c19d60efa991b75a50c4cad1d683028f3b27d11a17573e01c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-7dfc54e4fc0b-right/trace.npz",
+      "size": 57363,
+      "sha256": "753142546942d4f7518db4e56c8e3ba7f0fdb17d13c7e40d6c58e44a5f95196f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8463fc05d240-right/frames/step_00.jpg",
+      "size": 11646,
+      "sha256": "235f3bf2245b3c3dca8626845cd4846ae07389a2937f5a030d964e54c505fd93"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8463fc05d240-right/lesson.json",
+      "size": 4108,
+      "sha256": "9ad1ad11dd874d32f083e6556094ec7d842c695f1ca8ab456ea5009b320a6afd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8463fc05d240-right/trace.npz",
+      "size": 53917,
+      "sha256": "da5cba8bf9f0afb6c759de67032382dfc96df6fd493f33ac81c9c9c698994fa5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-853270a64f20-right/frames/step_00.jpg",
+      "size": 10603,
+      "sha256": "2471a0fd1c7ccbdd31605bf23ea91886704b028c60e3430c10b0b4c81dd71372"
+    },
+    {
+      "path": "core_lessons/takes/szymon-853270a64f20-right/frames/step_01.jpg",
+      "size": 10701,
+      "sha256": "0dd85213140d10107651471b3f81cfe435856365e7448026dfa3b00f6db3dbd5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-853270a64f20-right/frames/step_02.jpg",
+      "size": 10723,
+      "sha256": "fba0f9f3b615987543dde08e49a7fe848a1893e2025d842675b191a466dd5c48"
+    },
+    {
+      "path": "core_lessons/takes/szymon-853270a64f20-right/lesson.json",
+      "size": 10777,
+      "sha256": "f105a4ab49da691172f71b9dfdaa7a896c4187c9ed3ac71d61abce401c0b7f5e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-853270a64f20-right/trace.npz",
+      "size": 67418,
+      "sha256": "011dd2ea9ab2b538d826422dec6540628fc84c4bf1382214b5f958e58612c10c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-877473e7c4d9-right/frames/step_00.jpg",
+      "size": 11505,
+      "sha256": "1fa057ba53d027a85b21ec72745079a0951215d8c65183a3f16df1450fc41bbe"
+    },
+    {
+      "path": "core_lessons/takes/szymon-877473e7c4d9-right/lesson.json",
+      "size": 4069,
+      "sha256": "53aaacdd3158b6209370dbfd4185d091d245b9603d913b300bd12962a9502645"
+    },
+    {
+      "path": "core_lessons/takes/szymon-877473e7c4d9-right/trace.npz",
+      "size": 49516,
+      "sha256": "ea9ddb9ebaa3b78f09c90a417c57905423ccc9af23be257e3e19ac9f9b4e148e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8b5847c71fdf-right/frames/step_00.jpg",
+      "size": 10562,
+      "sha256": "ab654f11ae17afc12102febcd781579383827065a7c636723e915d3c6b340bc3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8b5847c71fdf-right/frames/step_01.jpg",
+      "size": 10708,
+      "sha256": "f79ad6fbfc024f2c873288c02c8c650772941b7573cbf47f32918e8a7d6e64fc"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8b5847c71fdf-right/frames/step_02.jpg",
+      "size": 10732,
+      "sha256": "e6ff1b0ebb0656b5fef9eb8628b36d59ba0dfe586984440ff32653d119799081"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8b5847c71fdf-right/lesson.json",
+      "size": 10741,
+      "sha256": "4415108a9838efeaf78f82e466fa14b3965cedb6fa9b724faef042f87502b880"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8b5847c71fdf-right/trace.npz",
+      "size": 63490,
+      "sha256": "0ed1205daab903b173decff263bc132fb51ebbcf5766dc6d4b2470821a827642"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/frames/step_00.jpg",
+      "size": 10142,
+      "sha256": "de12b57bd529e96efbb9b179298520becb65a3038450680d78a3862be7bc5a13"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/frames/step_01.jpg",
+      "size": 10208,
+      "sha256": "a5c411afda3e0b442c4ceaeb5976d169acc49b726bcd748e4c90cd15eacb81a8"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/frames/step_02.jpg",
+      "size": 10229,
+      "sha256": "4b796adf8df4242fb4c43d53f8e3871460ebb517b4d228f01170745b19e1671c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/frames/step_03.jpg",
+      "size": 10249,
+      "sha256": "41dfde7c7987c6c1e889f42d9a7bf05de44b30e222f0f27640bd075a89667a7c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/frames/step_04.jpg",
+      "size": 10355,
+      "sha256": "d2cce83f7f61e7b603551e89ebab25e3444045ab42e425eae3013bf40b79be72"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/lesson.json",
+      "size": 17656,
+      "sha256": "de22be3fe6485e45de6809de7d7150dcfc774068f4ad302641eac0a489f93276"
+    },
+    {
+      "path": "core_lessons/takes/szymon-8f8dcd081055-right/trace.npz",
+      "size": 107908,
+      "sha256": "ef4dac1ab454b8724d8c805727f710b11fb635dac931814c0dda03b8d2151327"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-left/frames/step_00.jpg",
+      "size": 10628,
+      "sha256": "35a11ccf0662073e3b9477de3bbe957cc7123d0d8c24aaa16fc038de6df8e500"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-left/lesson.json",
+      "size": 3894,
+      "sha256": "03991ca4beb57eb6fb08ff967969702a201e2d9b8ce920637eb895ee3540179d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-left/trace.npz",
+      "size": 11187,
+      "sha256": "123fe23e6e6c329c8d5c2ac92bffa33206b5dc8edd1ecb6cbaa9d97dc5c25550"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-right/frames/step_00.jpg",
+      "size": 10882,
+      "sha256": "5437159404c294dd19ca708e2a68a1846e464dee9d1ba28ebafc1cf3eb189ddc"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-right/lesson.json",
+      "size": 3901,
+      "sha256": "f90cba0106e0d1b71af4765f6960da9c1100ddfdd9f4e9cb622f992f43b49bae"
+    },
+    {
+      "path": "core_lessons/takes/szymon-94bbf264e87a-right/trace.npz",
+      "size": 11183,
+      "sha256": "fa29ac3da4a6187d7547577282e4813294a1b457e5e40d888ef619f770c1c93c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_00.jpg",
+      "size": 10050,
+      "sha256": "0c8fcb1786d5b42c6fdddbe4c62da0806ff8fb171d82cf3f3b2e6499426cb88f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_01.jpg",
+      "size": 10099,
+      "sha256": "038f4ccccca35d73fa0d3ab0d376f1615f60abe6fa4365aa4bf8ee4726643722"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_02.jpg",
+      "size": 10143,
+      "sha256": "9db20322dc17c7d8b2b36fff08f8555582dd1bec395e8aab15bc561367f94f6b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_03.jpg",
+      "size": 10112,
+      "sha256": "78f5455dcdc1bc2e61a771544097f9ee6c602444f79f12a8b953b4f0ced8835f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_04.jpg",
+      "size": 10135,
+      "sha256": "9ed413760edaab902e16011d0318ff14bcb5ccb6674f0ac538eaf020a51c489e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/frames/step_05.jpg",
+      "size": 10126,
+      "sha256": "9997631332b51e79ad385dcd509316e1369db5fef259ed0c134e182121598c50"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/lesson.json",
+      "size": 21073,
+      "sha256": "450aa6532870b1b5b76c492cc3c823a2bb95bb87dc41f4ce3f38f767ee6afb4b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-977906efe597-right/trace.npz",
+      "size": 67650,
+      "sha256": "10723a62b7a2770efade6fca0dcf243d754b1f69b3a0c9a2a6cd8ebe5d0819e2"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-left/frames/step_00.jpg",
+      "size": 11851,
+      "sha256": "87352f23710579040234af704ece51159b322f059dfc3f348a9d6c9a2f426223"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-left/lesson.json",
+      "size": 4126,
+      "sha256": "997ae81672d52ab7620394132a181226da7adf6ab6bda342caa3f9b07258529f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-left/trace.npz",
+      "size": 108509,
+      "sha256": "17eebee8556cd3f32bdbd5302ccb278c0a65ceef1febf93c70af2e9e73ace808"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-right/frames/step_00.jpg",
+      "size": 11791,
+      "sha256": "6ba4f221da931d565dae1f2e59eee6755b576c797cdf830b97efbcec55f18b91"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-right/lesson.json",
+      "size": 4118,
+      "sha256": "fed0b43c6fc50c91037037742adb16e032f8cf73ec665bfceb4b5d6d3e8de897"
+    },
+    {
+      "path": "core_lessons/takes/szymon-989ed6ba71f9-right/trace.npz",
+      "size": 105097,
+      "sha256": "72641c3bdbfb5f81bc54a005bee580b6688bc6730386baed0b3694e755bafab3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-9f34d9d8fafe-right/frames/step_00.jpg",
+      "size": 11495,
+      "sha256": "cad7f3e81ef2860b4cb86e2ce185eee829502a6f7beabe59f193cb61a42466de"
+    },
+    {
+      "path": "core_lessons/takes/szymon-9f34d9d8fafe-right/lesson.json",
+      "size": 4080,
+      "sha256": "cfecfe45a36e82ba5440e7e9784fbe5f7c9f63f2cf114a140623ba31b0155d7a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-9f34d9d8fafe-right/trace.npz",
+      "size": 45897,
+      "sha256": "52c27aeb33710b67b7ed9024994247401a69a04d421316c5b01e75cb891af07b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/frames/step_00.jpg",
+      "size": 10203,
+      "sha256": "43fc75333e8474334b40855402b24b08ee6b1e62f6b9ae39e5d592a187604f27"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/frames/step_01.jpg",
+      "size": 10330,
+      "sha256": "4f07e9ad90585359f04886eb30264226c1bd5537c70d17a6e1cdf0f781556715"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/frames/step_02.jpg",
+      "size": 10362,
+      "sha256": "248e188eb47dd74b0c141ec1495dcf6cd46acba040fc369574c4f06187d342ad"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/frames/step_03.jpg",
+      "size": 10269,
+      "sha256": "b35450d2567e8d9c4244e02b852c288f5fba8d748433bb7fb75b02dee7c8c24f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/frames/step_04.jpg",
+      "size": 10271,
+      "sha256": "d2b5b286aa5285daeb8aa5f517fa36f5de282385d8f584c06981220eb257c4fc"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/lesson.json",
+      "size": 17568,
+      "sha256": "2ca1aeceb7868ef5b375b7d3a4d0f211e66852337e8be390ca7995c750ab8cf1"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a03faa350c0e-right/trace.npz",
+      "size": 63914,
+      "sha256": "244767832608bae4b105e836a9609b5021190630ba91252539a4713745cda25d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_00.jpg",
+      "size": 10632,
+      "sha256": "4a2d84953c9959dbdf3de0535e536d9dbbea1b335d42c8d0063a046bd1338805"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_01.jpg",
+      "size": 10634,
+      "sha256": "902398f8dd2599d9885acaf0c36abdafac1bb185ebe0481c903fd24940c07656"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_02.jpg",
+      "size": 10544,
+      "sha256": "a564bf050419ebe72bc94723434a91af54b51ae0693fc25be7a9bf4240f92bd6"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_03.jpg",
+      "size": 10592,
+      "sha256": "2224e0c2663f08a54f0bcd27d400d23739b0c1c91a5a64bc8e1f45c96cff2843"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_04.jpg",
+      "size": 10573,
+      "sha256": "23139c88b9ad62312d7130c26eca551e8465673ed5df2fe7997cbd2cb739a942"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/frames/step_05.jpg",
+      "size": 10484,
+      "sha256": "afed7f649e8add811c18bedc1b2c17d9582ce327087cad3aa9be7dac914e9065"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/lesson.json",
+      "size": 21069,
+      "sha256": "a22b7f2b3fa73a4402019564b2284cceb91e9b899bd6fa3b6ea9be6f47055bce"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a4df4ef89dd7-right/trace.npz",
+      "size": 102052,
+      "sha256": "40d171ca7ce65b6477f6dfca12e27448977cc2cb9b5eda4c0b5dae7d34e3d3ba"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/frames/step_00.jpg",
+      "size": 10048,
+      "sha256": "598ae5b815ec841fa6183dc56b5fef40d990e28d3eda336bb164915a622f825e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/frames/step_01.jpg",
+      "size": 10087,
+      "sha256": "a14aacde659470742d93c76b9d26da2afe1b82ca16bde8d4651f31101c2e8d8d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/frames/step_02.jpg",
+      "size": 10228,
+      "sha256": "19342bfac2177d1dd897d61b0b1195c4926e4dc0eaec95db19c83338751504ff"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/frames/step_03.jpg",
+      "size": 10201,
+      "sha256": "0a83d28ed9d74b71ac286dd7ada4da2b221ca58e6a89814561568f4277a36ea2"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/lesson.json",
+      "size": 14243,
+      "sha256": "b2d430ef9f811fa3c143fee083642d2cf4361a0f04d327b85d7d69816c281063"
+    },
+    {
+      "path": "core_lessons/takes/szymon-a98d510040fe-right/trace.npz",
+      "size": 84072,
+      "sha256": "a67f225086cc4734d3162a90c9bdd2ac960f0c75a24e792ab414ab4ef51c3ec5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-left/frames/step_00.jpg",
+      "size": 10285,
+      "sha256": "b8ef98d44d99ec8e356ea6f10d0f075d814640e91bc3f2f74d58822e6c547155"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-left/lesson.json",
+      "size": 4110,
+      "sha256": "d88aadeb63b8f05a5244e69418b9f701ee37f9775f07e2d70311a9850ca54e8e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-left/trace.npz",
+      "size": 54888,
+      "sha256": "8207e9eff1639e70b901d612773e4b22fbdb36061a828f45c0cfcbc8f104748e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-right/frames/step_00.jpg",
+      "size": 11201,
+      "sha256": "68f19d56572df74df503d221aa0cc903bf426718ceaa62d47e52157b7c8db7b3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-right/lesson.json",
+      "size": 4079,
+      "sha256": "17dbdeb4eaf33fd29c52ef86bb5094eb688aa1e5ca491a06c73b8ec6ca268cff"
+    },
+    {
+      "path": "core_lessons/takes/szymon-abbc0d95aae4-right/trace.npz",
+      "size": 55677,
+      "sha256": "ac26b115f1ba1602a0a7f6b1c87b833dd50eb78f8c12afe4f3c9b431963d103b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_00.jpg",
+      "size": 10082,
+      "sha256": "6b9298d91138931c9d83e8d28547cabbd4def381574966d02427f83e4fc6fc55"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_01.jpg",
+      "size": 10149,
+      "sha256": "1bc0edd0dc4ce368e772cadb78a04c1ff1c6d22c1fc5bf47104873c58665e21c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_02.jpg",
+      "size": 10152,
+      "sha256": "bd80cb02194853dee33e2ce97cbb482bba0810f29cb14165207f2ecbefc4e02b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_03.jpg",
+      "size": 10174,
+      "sha256": "0942b325ea312f750aa1e07f78414ab4c519307c064a9bc8c2ab12b2da333757"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_04.jpg",
+      "size": 10196,
+      "sha256": "da3959fe3dedf3382443f78eb3e52def509e90a125a955de49b6e17119d4d2bf"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_05.jpg",
+      "size": 10197,
+      "sha256": "5f55c64af0889d401ede14a973ee2f7eae96c26051d4fd45cc5444b26e7b5e31"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_06.jpg",
+      "size": 10199,
+      "sha256": "191b5ebb70a954d4e7832676477ec5233f9b4cdef4efc3d4f08d382fb66c4977"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/frames/step_07.jpg",
+      "size": 10267,
+      "sha256": "29963e9f174a08b366563f822644c2de143e8163277a97917e2bc3a59ba639e5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/lesson.json",
+      "size": 27961,
+      "sha256": "38415ceaee52423a4b03b6acce1a6a5b5a03f7dd6c46d90dced4d8b232d21a45"
+    },
+    {
+      "path": "core_lessons/takes/szymon-af1028500d87-right/trace.npz",
+      "size": 90269,
+      "sha256": "b54ca827a7d1431e340b466414e3cc2fd2e92515dc7c883ceb41050ae06544be"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b5afa741f126-right/frames/step_00.jpg",
+      "size": 11786,
+      "sha256": "846475363680f6d34ac9c77a46f0fd4bdd6516e977f3e4a15b76cb7d910897e7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b5afa741f126-right/lesson.json",
+      "size": 4062,
+      "sha256": "dba74b0e0fd9bb6c0208f92546f12be1bf0ef84eb7cf786a455cd0b5fd211557"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b5afa741f126-right/trace.npz",
+      "size": 43988,
+      "sha256": "ff9026f421927834683aede0ed5c5a6e4a09a906dd2193d32fcd36c3181537e9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b6c1083312f6-right/frames/step_00.jpg",
+      "size": 10674,
+      "sha256": "acdb6070639ea288326d620acdac051a0474258caafd07670ad14029d926b1bb"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b6c1083312f6-right/lesson.json",
+      "size": 4035,
+      "sha256": "61c778a2eba344c65357e72a7cf95453d237bea0cd92d3b1ee039dda8f8aa8b4"
+    },
+    {
+      "path": "core_lessons/takes/szymon-b6c1083312f6-right/trace.npz",
+      "size": 50421,
+      "sha256": "880b41a1311d233d0d65a236fae87649e6908bd7fc2b6fc9317d421679b0594f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/frames/step_00.jpg",
+      "size": 9997,
+      "sha256": "846b3ce4aeb5cc75c7e6a3cb9d129f9529cc6298aa33a686a87a0890c293f0a7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/frames/step_01.jpg",
+      "size": 10061,
+      "sha256": "dace181606798ad1be9350758fba8723c574ae9a73f098453e6e229be4128d97"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/frames/step_02.jpg",
+      "size": 10154,
+      "sha256": "5544bbb5bd93f08da7c1eb06a5b44ce303e607d14eec8451ae0e344254cae78b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/frames/step_03.jpg",
+      "size": 10146,
+      "sha256": "deb3a72c7df8dd3a1c0aa8ac1c45fc5071f53dcc0976caaad0a3bbc0bfcdca2b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/lesson.json",
+      "size": 14226,
+      "sha256": "d65da4e2676bf4e11ccb058d3bd3f84ce3781fcd20ec0975ab94a72be7f7b76e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-ba5c16fc19f6-right/trace.npz",
+      "size": 99312,
+      "sha256": "ec5b796f6a315354025372a1325d6ca79897bc21396c35c262fe15e1516c8f9d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-left/frames/step_00.jpg",
+      "size": 10285,
+      "sha256": "fb548cecac3fbe0e9e62b101df5e67458a4c855032cc457da736567cea85f055"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-left/lesson.json",
+      "size": 4109,
+      "sha256": "2d87134ed1a71842ef088638edf9e5b8780a7a23d8e21992589fcc237580160a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-left/trace.npz",
+      "size": 52409,
+      "sha256": "5361e6587b13784aa2ad5922264a84e6ef80eff6111aadb17389e96eded41e07"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-right/frames/step_00.jpg",
+      "size": 11178,
+      "sha256": "94e301a115ba1c927c186bf30b7c70c37a65e0f3140fff7373b8eb2bbc1c1651"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-right/lesson.json",
+      "size": 4072,
+      "sha256": "8cc8a9bdb55a781ad610a72da53431305a12f9b4b7b37f681c3b9baa257e8482"
+    },
+    {
+      "path": "core_lessons/takes/szymon-bea9dee6aad3-right/trace.npz",
+      "size": 51757,
+      "sha256": "3d0728e2c60d880944bf75f94d63d995b55050bc679803f0b8b69e116e0aa5d0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/frames/step_00.jpg",
+      "size": 10378,
+      "sha256": "da02eaa91a01c3070f79dff014eace03fd79f722b2f71be7288a10f2d06d73af"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/frames/step_01.jpg",
+      "size": 10582,
+      "sha256": "701700cdb4ba79a54e70f6cc806af3409a1d1e9807838d8ea039a21f4e24ea5a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/frames/step_02.jpg",
+      "size": 10617,
+      "sha256": "06df2aada3a4e3e0d429cf1015b3b2ec4aba11d13d97f5f07d0d83c5220cfbd2"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/frames/step_03.jpg",
+      "size": 10321,
+      "sha256": "ba95c9352d71ee4c5224f7006f60cd1cd08223d398dce4e63462dc14858500fa"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/lesson.json",
+      "size": 14256,
+      "sha256": "0ad77b4034b9614b72c87c5d103faafe671ad4bffcb77385a072a55ab2b90be9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c154d83fb700-right/trace.npz",
+      "size": 110496,
+      "sha256": "2fb5c32ee816bfec1503ac0306f944546aeb674ffcd136199636462ad77a1ddc"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c411bc3d3466-right/frames/step_00.jpg",
+      "size": 11442,
+      "sha256": "7395143403c070cdc9ed42f0e3f1485bf6e58528fef49dd8f612b45d3b2ba7d3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c411bc3d3466-right/lesson.json",
+      "size": 4065,
+      "sha256": "24f1b759d3adae84842bf2908bbdb8b1897d445363949a62774958be2cac71be"
+    },
+    {
+      "path": "core_lessons/takes/szymon-c411bc3d3466-right/trace.npz",
+      "size": 55110,
+      "sha256": "6d9185bc507801f8793b3de1b7867a288d504404f6ae674b4575b2cc7ef9ed63"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_00.jpg",
+      "size": 10141,
+      "sha256": "4cc30d5048f514c34d54aa4e911452b0044d55539938022e4ce3b0c4af10a2e9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_01.jpg",
+      "size": 10174,
+      "sha256": "bbdba30d539624715d66e7c198f6eadc59b2d8906776fcd49dd608fe7f6cf429"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_02.jpg",
+      "size": 10227,
+      "sha256": "eac8e2be7d7737270adca4aae753df18fe33d096a52626692c6e5cefe0714cc1"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_03.jpg",
+      "size": 10247,
+      "sha256": "f6a7ed5e2e1065c9f1cd83d84f3de4fe4dc12aafa88478bcecead307295a2c17"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_04.jpg",
+      "size": 10200,
+      "sha256": "89b4713bd538c53393aa5103a6e34d53ae8d27d750dae14588427c37f113d4c5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/frames/step_05.jpg",
+      "size": 10121,
+      "sha256": "288a6a95367ff63cc4ffcaf85b0936707cd208e4e95a93c31ba8c4f0a1851063"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/lesson.json",
+      "size": 21103,
+      "sha256": "f3237991a5e173294a1dce4a29e1b241384a0cc3c0144e5e7053c0e962effb5b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cefd38f5c4da-right/trace.npz",
+      "size": 85618,
+      "sha256": "2f4853acca0bac3567bdaf3f5670ddb80cbad36f859d7ba5a9d33f201c198d9a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/frames/step_00.jpg",
+      "size": 10103,
+      "sha256": "85b995c779b243f1d4ed8ac72106dde999ea95a2e0a071f89d4be231f9f6fe6e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/frames/step_01.jpg",
+      "size": 10208,
+      "sha256": "57365feb17a655585de8f419eac862b144fedc93987c8919e3eee502adae25a2"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/frames/step_02.jpg",
+      "size": 10280,
+      "sha256": "0ec58b7d61138a701d778d120a53c3a86d0e516da5cf65e7941e601184fbe135"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/frames/step_03.jpg",
+      "size": 10257,
+      "sha256": "6860d5f64346e24c7e6ad8f9570babe1cd28dca9822daf86a7c193bc4539ea0a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/lesson.json",
+      "size": 14252,
+      "sha256": "02f7d5bf8a4846830c0136aae2b77ba5d1c655334c78370fcf4faa9dfab612fe"
+    },
+    {
+      "path": "core_lessons/takes/szymon-cfc33b22012e-right/trace.npz",
+      "size": 86920,
+      "sha256": "d2b405e81659d8e46fc80bb0e90e2cedcbcc8f6dd94b9d2eb374d6d8b3b2a587"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-left/frames/step_00.jpg",
+      "size": 10602,
+      "sha256": "eafd818cc9304d6f9ff083d0aa183d06dcaa75f89aafb7194511e2121f538e2d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-left/lesson.json",
+      "size": 3903,
+      "sha256": "6adb7e5c74cc8bb796c315733c09c2072e76265b3d418ddcbb0eddcf637839ba"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-left/trace.npz",
+      "size": 9108,
+      "sha256": "53532f6fb4c56b59d758a51c9b18dc85b7e9bbff5f3486c7e4831b85d5aeac1d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-right/frames/step_00.jpg",
+      "size": 10873,
+      "sha256": "6b00f09ce2c6aad1a31a6e2eeab0f67c02d2969a26e9ea17e9daac6cb36ba7a0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-right/lesson.json",
+      "size": 3910,
+      "sha256": "0b6e7d64e0198f94154411665369284516f5e8ffc40da39d3171179bb791413b"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d0c555996dd0-right/trace.npz",
+      "size": 9112,
+      "sha256": "8c35ce3a024452cacd6121d2a3aa298e4b0fd5f0c0e3f2f3d3f2278956718fc7"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d4ba1ee09d70-right/frames/step_00.jpg",
+      "size": 11641,
+      "sha256": "70aaf18dc8d259728775c9fdd76533328796895a250ebb662033e375d4de29ad"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d4ba1ee09d70-right/lesson.json",
+      "size": 4111,
+      "sha256": "b4d3cef48939d1a54b5c9ad13218ed4483607553b2c206939980df179164127e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d4ba1ee09d70-right/trace.npz",
+      "size": 56805,
+      "sha256": "ded2d37ad303b70092464635ee8727cc2279d43fcdabbaf29988308c36bb1c36"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-left/frames/step_00.jpg",
+      "size": 11932,
+      "sha256": "ba00e87b4a828677d5d3a1b70f803ae62c92b60c7d7bfa6ec1d309114e39f33d"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-left/lesson.json",
+      "size": 4133,
+      "sha256": "885b4d597368a2a919a03eaca71b2ae182999c385893b79e2697da53a2a0bd01"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-left/trace.npz",
+      "size": 105407,
+      "sha256": "253e197ac1f9fdcf89d0816b657eb739a914053d90ea5ac9adb0d988caec37b8"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-right/frames/step_00.jpg",
+      "size": 11873,
+      "sha256": "2e4ccc03b0be4bc60b36f6f6b58c798a7727b190c54e2b1bccc135d02201c1a5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-right/lesson.json",
+      "size": 4119,
+      "sha256": "72e127386d96816139d1257e90caa96aad354ce5e94c5ad24573f68dd3801409"
+    },
+    {
+      "path": "core_lessons/takes/szymon-d69602c00512-right/trace.npz",
+      "size": 102985,
+      "sha256": "3fef4d8fcb44c28284e7e1566e0b353b3519768a6bc4e289c59a8216d0ce973f"
+    },
+    {
+      "path": "core_lessons/takes/szymon-dba522c9f8a3-right/frames/step_00.jpg",
+      "size": 10654,
+      "sha256": "db05f2906405456bfbda0d1069e4f2600a5b30c5f82cadb0f8af4f1a9ee50a02"
+    },
+    {
+      "path": "core_lessons/takes/szymon-dba522c9f8a3-right/lesson.json",
+      "size": 4031,
+      "sha256": "a729ffde5dd690ad77509bce640876695b2e0ecb34a471b322b46737c4b5a5ad"
+    },
+    {
+      "path": "core_lessons/takes/szymon-dba522c9f8a3-right/trace.npz",
+      "size": 49947,
+      "sha256": "94aa79680166093f385cb78066b44639b1ff9931991fde1f728da1defb389a88"
+    },
+    {
+      "path": "core_lessons/takes/szymon-e20b944a8690-right/frames/step_00.jpg",
+      "size": 11724,
+      "sha256": "46722f2a13b688d93707515d58254895ba7e25986f16844b1e0e72c90623874c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-e20b944a8690-right/lesson.json",
+      "size": 4066,
+      "sha256": "c2f91e927604e91bfc909064530316c789c93c09bddc8f2e87538588b4a88d3e"
+    },
+    {
+      "path": "core_lessons/takes/szymon-e20b944a8690-right/trace.npz",
+      "size": 38943,
+      "sha256": "16c507da9841d25a3a777bca79a3a6eafa73e5ee2a007bd3a572f2a64eca883c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-edb00738feec-right/frames/step_00.jpg",
+      "size": 10632,
+      "sha256": "811e4fe9c9de459f1b79b056c1f479a99bd93bd76de8bff1c8060c7fd22e88ad"
+    },
+    {
+      "path": "core_lessons/takes/szymon-edb00738feec-right/lesson.json",
+      "size": 4027,
+      "sha256": "b5d39fa796e05697689099877cebe20cc0e70abe04d13f0cbef5c208e099a3f9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-edb00738feec-right/trace.npz",
+      "size": 51046,
+      "sha256": "f6990c650dacaf2821ba7dac304b7354abebb5bab0a9dfaf2d03241781e4a3d3"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/frames/step_00.jpg",
+      "size": 10420,
+      "sha256": "1297eb1078d7cb5b6d791b0ebd18c9b4704bb8952e31b5ca28b4dce29fdb78c9"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/frames/step_01.jpg",
+      "size": 10449,
+      "sha256": "7bda734601df818c86194ac962ee32e8362e2a0c34fc91d5d8456c79943869ec"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/frames/step_02.jpg",
+      "size": 10674,
+      "sha256": "ce62909ff3b55f00131befa67abb1464f51672829e8d338fe1842e8351371a9c"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/frames/step_03.jpg",
+      "size": 10278,
+      "sha256": "b771e93df90106c44c3e3039cc15d23a9c463b504b919c0bf557b03ac7ebb79a"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/lesson.json",
+      "size": 14232,
+      "sha256": "e8429bb5e3eda2573cc1524d501592ab61d959824ef18adbe980ed932e6a78f4"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f03dbc46eff5-right/trace.npz",
+      "size": 122821,
+      "sha256": "dbdd2d2063a2b3752c1210073b624a3e345279f71f8d4aaa5e1f5ad468230400"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_00.jpg",
+      "size": 10120,
+      "sha256": "4e3a2b0770a463d156be93e947bad94511e8b9dbccf335b5090132b139581726"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_01.jpg",
+      "size": 10133,
+      "sha256": "2580a9be8c85aaffdacf5d29aebd66f5df48c6c1f0b33d3b2d81f54c8bc6bf07"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_02.jpg",
+      "size": 10166,
+      "sha256": "3540dd4a53e149ec7bd23a27e9c74630de6c8bfc3955a1568af37862350a8eaf"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_03.jpg",
+      "size": 10130,
+      "sha256": "1ff27353c5715b592789a3c403cb1ac615e8e1b3767e7496a6efbe35da789ca5"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_04.jpg",
+      "size": 10176,
+      "sha256": "fe9843fd43761cbfa2c2d6fbfe69e8d269a788e8a7c3a0062593ac470b24ac56"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/frames/step_05.jpg",
+      "size": 10170,
+      "sha256": "aefd9bbcce31a504701ead603d2b34a0e798a067e97a602a9f1e17600538c343"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/lesson.json",
+      "size": 21067,
+      "sha256": "2580aef15349384319125887f017da0e5a4e5adc2594909034ff10dbe5a280c0"
+    },
+    {
+      "path": "core_lessons/takes/szymon-f662ec3ad4b0-right/trace.npz",
+      "size": 101684,
+      "sha256": "19235bd114d66fd8e47ed917cfb9fc19160e7dd4ddc64ac92e54faa9c0c540fd"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-left/frames/step_00.jpg",
+      "size": 11918,
+      "sha256": "f4ee24454591039765af74e37cf28fdb6e3eb65cfc42c4b6ec1d4eb752640cb1"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-left/lesson.json",
+      "size": 4131,
+      "sha256": "e400a7cc99c6892f50b35c52aa6ea12f52dcdd2740fe5323d7b6174f7dcf7909"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-left/trace.npz",
+      "size": 69444,
+      "sha256": "2f22fb7349b2ba95fd3250c12b21fe259bd569882484be7db184ad44e869e471"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-right/frames/step_00.jpg",
+      "size": 12081,
+      "sha256": "d4cb3e7a0a15b4697adf439ad44ba2554bd6f07ddf5b3db0cc96e23fe9798a95"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-right/lesson.json",
+      "size": 4131,
+      "sha256": "6dd244f673d145964607c2a53ace4514d5b7b0ebee1a135b6dba59f372f31798"
+    },
+    {
+      "path": "core_lessons/takes/szymon-fa5fa6665745-right/trace.npz",
+      "size": 68384,
+      "sha256": "75ff3088eb676f92c6493a1aa3c2502d9414e1ffdc379228df8c65970e3dbc72"
+    }
+  ]
+}

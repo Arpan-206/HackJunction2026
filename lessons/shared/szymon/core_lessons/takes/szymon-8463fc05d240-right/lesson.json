@@ -1,0 +1,232 @@
+{
+  "schema": "geppetto.lesson/1",
+  "id": "szymon-8463fc05d240-right",
+  "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+  "task": "general",
+  "task_config": {
+    "geppetto": {
+      "recording_id": "szymon-8463fc05d240",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c412d52d3d77"
+    }
+  },
+  "created": "2026-11-15T00:36:02.884845+00:00",
+  "master": {
+    "name": "Demo master",
+    "hand": "right"
+  },
+  "source": "glove",
+  "rate_hz": 30.01,
+  "duration_us": 6031000,
+  "steps": [
+    {
+      "index": 0,
+      "name": "Lesson 1: The shakehand grip",
+      "note": "Hold the racket like a handshake. Thumb and index finger rest on the rubber, the other three fingers wrap round the handle.",
+      "kind": "hold",
+      "t0_us": 0,
+      "t1_us": 6031000,
+      "key_t_us": 6031000,
+      "key_angles": [
+        18.82,
+        0.0,
+        7.32,
+        0.0,
+        0.0,
+        82.35,
+        56.85,
+        53.69,
+        88.05,
+        56.03,
+        53.46,
+        90.0,
+        60.13,
+        44.92,
+        45.53,
+        41.44,
+        5.07,
+        9.35
+      ],
+      "key_joints": [
+        [
+          -0.0086,
+          0.0,
+          -0.0445
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.018,
+          -0.008,
+          -0.015
+        ],
+        [
+          -0.0503,
+          -0.0172,
+          -0.045
+        ],
+        [
+          -0.0682,
+          -0.033,
+          -0.0706
+        ],
+        [
+          -0.0825,
+          -0.0455,
+          -0.0911
+        ],
+        [
+          -0.025,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0318,
+          0.0,
+          -0.0766
+        ],
+        [
+          -0.0359,
+          -0.0051,
+          -0.1161
+        ],
+        [
+          -0.0385,
+          -0.0083,
+          -0.1408
+        ],
+        [
+          -0.0406,
+          -0.0108,
+          -0.1605
+        ],
+        [
+          -0.008,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0091,
+          0.0,
+          -0.077
+        ],
+        [
+          -0.0092,
+          -0.0446,
+          -0.083
+        ],
+        [
+          -0.0089,
+          -0.0629,
+          -0.0618
+        ],
+        [
+          -0.0085,
+          -0.0584,
+          -0.0423
+        ],
+        [
+          0.01,
+          0.0,
+          -0.012
+        ],
+        [
+          0.0142,
+          0.0,
+          -0.0719
+        ],
+        [
+          0.0143,
+          -0.04,
+          -0.0732
+        ],
+        [
+          0.0128,
+          -0.0552,
+          -0.0522
+        ],
+        [
+          0.0115,
+          -0.0492,
+          -0.0332
+        ],
+        [
+          0.028,
+          -0.0,
+          -0.012
+        ],
+        [
+          0.0376,
+          0.0,
+          -0.0662
+        ],
+        [
+          0.0376,
+          -0.032,
+          -0.0662
+        ],
+        [
+          0.0345,
+          -0.042,
+          -0.0491
+        ],
+        [
+          0.0315,
+          -0.0373,
+          -0.032
+        ]
+      ],
+      "key_wrist_q": [
+        -0.017,
+        -0.0175,
+        0.1496,
+        -0.9884
+      ],
+      "weights": {
+        "thumb": 0.5,
+        "index": 0.5,
+        "middle": 0.5,
+        "ring": 0.5,
+        "little": 0.5
+      },
+      "hold_ms": 500,
+      "frame": "frames/step_00.jpg",
+      "named_by": "manual",
+      "weights_from": {
+        "static": {
+          "thumb": 0.5,
+          "index": 0.5,
+          "middle": 0.5,
+          "ring": 0.5,
+          "little": 0.5
+        },
+        "consistency": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        },
+        "takes": 1,
+        "take_spread_deg": {
+          "thumb": 0.0,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.0,
+          "little": 0.0
+        },
+        "chart": null,
+        "calibration": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "schema": "geppetto.lesson/1",
+  "id": "szymon-9f34d9d8fafe-right",
+  "title": "Shadow puppets: five animals by candlelight: Lesson 3: The swan",
+  "task": "general",
+  "task_config": {
+    "geppetto": {
+      "recording_id": "szymon-9f34d9d8fafe",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-swan"
+    }
+  },
+  "created": "2026-11-15T00:47:46.429730+00:00",
+  "master": {
+    "name": "Demo expert",
+    "hand": "right"
+  },
+  "source": "glove",
+  "rate_hz": 29.97,
+  "duration_us": 5406000,
+  "steps": [
+    {
+      "index": 0,
+      "name": "Lesson 3: The swan",
+      "note": "Curl every finger halfway, as if round a ball, and point the thumb straight out as the beak. Hold the head still.",
+      "kind": "hold",
+      "t0_us": 0,
+      "t1_us": 5406000,
+      "key_t_us": 5063000,
+      "key_angles": [
+        0.0,
+        0.0,
+        1.25,
+        0.0,
+        0.0,
+        16.03,
+        0.0,
+        0.0,
+        31.03,
+        0.0,
+        0.0,
+        49.12,
+        0.0,
+        0.0,
+        9.62,
+        5.3,
+        8.04,
+        11.22
+      ],
+      "key_joints": [
+        [
+          -0.0086,
+          0.0,
+          -0.0445
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.018,
+          -0.008,
+          -0.015
+        ],
+        [
+          -0.0503,
+          -0.0172,
+          -0.045
+        ],
+        [
+          -0.0754,
+          -0.0244,
+          -0.0683
+        ],
+        [
+          -0.0955,
+          -0.0301,
+          -0.0869
+        ],
+        [
+          -0.025,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0318,
+          0.0,
+          -0.0766
+        ],
+        [
+          -0.036,
+          -0.0009,
+          -0.1164
+        ],
+        [
+          -0.0386,
+          -0.0014,
+          -0.1413
+        ],
+        [
+          -0.0407,
+          -0.0019,
+          -0.1612
+        ],
+        [
+          -0.008,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0091,
+          0.0,
+          -0.077
+        ],
+        [
+          -0.0099,
+          -0.0124,
+          -0.1202
+        ],
+        [
+          -0.0104,
+          -0.0202,
+          -0.1471
+        ],
+        [
+          -0.0107,
+          -0.0257,
+          -0.1664
+        ],
+        [
+          0.01,
+          -0.0,
+          -0.012
+        ],
+        [
+          0.0142,
+          0.0,
+          -0.0719
+        ],
+        [
+          0.0166,
+          -0.0206,
+          -0.106
+        ],
+        [
+          0.0181,
+          -0.034,
+          -0.1283
+        ],
+        [
+          0.0193,
+          -0.0443,
+          -0.1454
+        ],
+        [
+          0.028,
+          -0.0,
+          -0.012
+        ],
+        [
+          0.0376,
+          -0.0,
+          -0.0662
+        ],
+        [
+          0.0412,
+          -0.0242,
+          -0.0868
+        ],
+        [
+          0.0435,
+          -0.0393,
+          -0.0997
+        ],
+        [
+          0.0455,
+          -0.0529,
+          -0.1113
+        ]
+      ],
+      "key_wrist_q": [
+        0.3716,
+        0.5532,
+        -0.5359,
+        0.5183
+      ],
+      "weights": {
+        "thumb": 0.5,
+        "index": 0.5,
+        "middle": 0.5,
+        "ring": 0.5,
+        "little": 0.5
+      },
+      "hold_ms": 500,
+      "frame": "frames/step_00.jpg",
+      "named_by": "manual",
+      "weights_from": {
+        "static": {
+          "thumb": 0.5,
+          "index": 0.5,
+          "middle": 0.5,
+          "ring": 0.5,
+          "little": 0.5
+        },
+        "consistency": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        },
+        "takes": 1,
+        "take_spread_deg": {
+          "thumb": 0.0,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.0,
+          "little": 0.0
+        },
+        "chart": null,
+        "calibration": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      }
+    }
+  ]
+}
