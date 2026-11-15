@@ -44,8 +44,8 @@ export default function RobotStop() {
         <source src={VIDEO} type="video/mp4" />
       </video>
       <p className="tour-small">
-        Error from a push to 0.5 s after it: 7.11 degrees for the policy, 10.05 for plain replay. Over whole held-out takes from a normal start: 2.13 against 6.12
-        degrees. Limits: simulation only, no real robot hand, and no contact with objects.
+        Error over whole held-out takes: 2.13 degrees for the policy against 6.12 for plain replay. With pushes: 3.78 against 7.25. Measured over 1.44 million
+        evaluation rollouts. Limits: simulation only, no real robot hand, and no contact with objects.
       </p>
     </section>
   );

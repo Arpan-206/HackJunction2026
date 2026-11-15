@@ -83,3 +83,18 @@ export interface RecordedHint {
 export function loadHints(): Promise<RecordedHint[]> {
   return import('../../tour/hints.json').then((m) => (m.default as { hints: RecordedHint[] }).hints);
 }
+
+export interface RecordedReview {
+  /** 'capture' (a real glove capture frame) or 'synthetic' (a test row with one finger pushed off). */
+  source: string;
+  task: string;
+  step: string;
+  finger: Finger;
+  error: string;
+  score: number;
+  line: string;
+}
+
+export function loadReviews(): Promise<RecordedReview[]> {
+  return import('../../tour/reviews.json').then((m) => (m.default as { reviews: RecordedReview[] }).reviews);
+}

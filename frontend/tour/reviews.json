@@ -1,0 +1,49 @@
+{
+ "reviews": [
+  {
+   "source": "capture",
+   "task": "Fake demo: four hand shapes",
+   "step": "Open hand",
+   "finger": "middle",
+   "error": "too_curled",
+   "score": 91.7,
+   "line": "Your thumb and index finger look great. Straighten your middle finger to open the hand fully."
+  },
+  {
+   "source": "capture",
+   "task": "Fake demo: four hand shapes",
+   "step": "Fist",
+   "finger": "index",
+   "error": "too_flat",
+   "score": 0,
+   "line": "Your thumb and pinky look great. Curl your index, middle, and ring fingers more."
+  },
+  {
+   "source": "synthetic",
+   "task": "Fake demo: four hand shapes",
+   "step": "Fist",
+   "finger": "thumb",
+   "error": "too_curled",
+   "score": 87.1,
+   "line": "Your fingers are curled perfectly. Straighten your thumb to finish the hold."
+  },
+  {
+   "source": "synthetic",
+   "task": "Fake demo: four hand shapes",
+   "step": "Pinch",
+   "finger": "thumb",
+   "error": "too_flat",
+   "score": 81,
+   "line": "Your fingers are holding the shape beautifully. Curl your thumb more to finish the pinch."
+  },
+  {
+   "source": "synthetic",
+   "task": "Fingerspelling: spell GEPPETTO",
+   "step": "Letter E",
+   "finger": "little",
+   "error": "too_closed",
+   "score": 89.9,
+   "line": "Your hand position looks great. Spread your pinky away from the ring finger."
+  }
+ ]
+}
