@@ -1,0 +1,19 @@
+name: craci-hello
+
+# First run on CRACI: a tiny job so the CRACI onboarding page registers a run.
+# Network policy: every built-in preset, unmatched traffic blocked.
+
+on:
+  # Manual trigger only (Arpan, 15 Nov): a push to main runs just the ci workflow.
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: craci
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+      - uses: actions/checkout@v4
+      - run: uname -a && cat /etc/os-release && nproc && echo "Geppetto on CRACI"
