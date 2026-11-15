@@ -1,0 +1,114 @@
+name: public-tour
+
+# The public tour (docs/PUBLIC_TOUR.md): build it from the lesson-sync bundle, run the key-leak check and the browser
+# check, upload the site, and deploy it to GitHub Pages once Pages is turned on for this repository. Only the
+# public-tour branch runs this; nothing here touches the live app. No secret is used or needed.
+
+on:
+  push:
+    branches: [public-tour]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-tour
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: craci
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          # Built-in presets stay on (npm, ubuntu, github). Extra hosts: Playwright's browser download, and GitHub's
+          # artifact storage for the screenshots and the site.
+          network: |
+            default: deny
+            connections:
+              - tls:
+                  serverNamePatterns: [cdn.playwright.dev, playwright.download.prss.microsoft.com, playwright.azureedge.net, "*.azureedge.net"]
+                  ports: [443]
+              - tls:
+                  serverNamePatterns: [api.github.com, "*.actions.githubusercontent.com", "*.githubusercontent.com", "*.blob.core.windows.net"]
+                  ports: [443]
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - name: Tour data from lessons/shared (frontend/tour/takes.json picks the takes)
+        run: node scripts/tour/build-data.mjs
+      - name: Bundled data matches the committed data
+        run: git diff --stat --exit-code -- tour/data || echo "::warning::tour/data differs from the commit; the build uses the fresh files"
+      - run: npm run lint
+      - name: Unit tests (the whole suite, the normal app included)
+        run: npm test
+      - name: Normal app build is unchanged and still builds
+        run: npm run build
+      - name: Tour build (no env values reach it)
+        run: npx vite build --config vite.tour.config.ts
+      - name: Key-leak check
+        run: node scripts/leak-check.mjs dist-tour
+      - name: Size report
+        run: |
+          {
+            echo "| File | Raw bytes | Gzip bytes |"
+            echo "| --- | --- | --- |"
+            find dist-tour -type f | sort | while read -r f; do
+              echo "| ${f#dist-tour/} | $(wc -c < "$f") | $(gzip -9 -c "$f" | wc -c) |"
+            done
+            echo
+            echo "Total raw: $(find dist-tour -type f -exec cat {} + | wc -c) bytes"
+            echo "Total gzip (per file): $(find dist-tour -type f -exec sh -c 'gzip -9 -c "$1" | wc -c' _ {} \; | paste -sd+ | bc) bytes"
+          } | tee tour-size.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Install Playwright chromium
+        run: |
+          npm i --no-save playwright@1.65
+          npx playwright install --with-deps chromium
+      - name: Browser check (phone and desktop, screenshots, no calls out, load time)
+        run: node e2e/tour-check.mjs dist-tour tour-check
+      - name: Load metrics
+        if: always()
+        run: test -f tour-check/metrics.json && cat tour-check/metrics.json >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tour-check
+          path: |
+            frontend/tour-check
+            frontend/tour-size.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tour-dist
+          path: frontend/dist-tour
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist-tour
+
+  deploy:
+    needs: build
+    # Runs only once GitHub Pages is turned on for the repository (Settings, Pages, Source: GitHub Actions).
+    if: github.event.repository.has_pages == true
+    runs-on: craci
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          network: |
+            default: deny
+            connections:
+              - tls:
+                  serverNamePatterns: [api.github.com, "*.actions.githubusercontent.com", "*.githubusercontent.com", "*.blob.core.windows.net"]
+                  ports: [443]
+      - id: deployment
+        uses: actions/deploy-pages@v4

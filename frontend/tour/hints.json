@@ -1,0 +1,58 @@
+{
+ "hints": [
+  {
+   "lang": "en",
+   "task": "Fingerspelling: spell GEPPETTO",
+   "step": "Letter E",
+   "finger": "little",
+   "error": "too_flat",
+   "score": 80.5,
+   "line": "Curl your pinky finger more."
+  },
+  {
+   "lang": "en",
+   "task": "Fingerspelling: the letters A to M",
+   "step": "The letter K",
+   "finger": "little",
+   "error": "too_curled",
+   "score": 82.1,
+   "line": "Straighten your pinky finger."
+  },
+  {
+   "lang": "en",
+   "task": "Fingerspelling: the letters A to M",
+   "step": "The letter L",
+   "finger": "thumb",
+   "error": "too_closed",
+   "score": 86.7,
+   "line": "Spread your thumb further away from your index finger."
+  },
+  {
+   "lang": "fi",
+   "task": "Fingerspelling: spell GEPPETTO",
+   "step": "Letter T",
+   "finger": "index",
+   "error": "too_spread",
+   "score": 95.3,
+   "line": "Tuo etusormi lähemmäs viereistä sormea."
+  },
+  {
+   "lang": "de",
+   "task": "Fingerspelling: spell GEPPETTO",
+   "step": "Letter E",
+   "finger": "little",
+   "error": "too_curled",
+   "score": 83.9,
+   "line": "Kleiner Finger, strecke ihn etwas mehr aus."
+  },
+  {
+   "lang": "en",
+   "task": "Fingerspelling: spell GEPPETTO",
+   "step": "Letter E",
+   "finger": "little",
+   "error": "too_curled",
+   "score": 84.1,
+   "line": "Straighten your pinky finger."
+  }
+ ]
+}
