@@ -1,0 +1,569 @@
+{
+  "format": "geppetto.lesson-sync/1",
+  "recorder": "arpan",
+  "exported_at": "2026-11-15T00:16:06+00:00",
+  "items": {
+    "take": [
+      "arpan-0bbcca28f9f1",
+      "arpan-11f0f06a17d9",
+      "arpan-1526ba3d6a75",
+      "arpan-26280475dc5e",
+      "arpan-38d8e15a43cf",
+      "arpan-3ef41b853f96",
+      "arpan-698ffa18b8c2",
+      "arpan-95695d4761a4",
+      "arpan-c298f22f6609",
+      "arpan-c4f1e246b68c",
+      "arpan-d34067cfe2a3",
+      "arpan-e6c132f23315",
+      "arpan-fe59d44744a4"
+    ],
+    "calibration": [
+      "arpan-2c9530c89099",
+      "arpan-339ac8aa2560",
+      "arpan-3b5b252f593b",
+      "arpan-43773ddec7e3",
+      "arpan-4820d145ee5d",
+      "arpan-50462cbe80bd",
+      "arpan-62b28705d803",
+      "arpan-c8713cacaff6",
+      "arpan-d773564cc859"
+    ],
+    "glove_calibration": [
+      "arpan-1e251a50a844",
+      "arpan-5611c9c83873",
+      "arpan-59020a2b74b3",
+      "arpan-8f61b4ebab12",
+      "arpan-a211034061af",
+      "arpan-a907152ed526"
+    ],
+    "root_lesson": [
+      "arpan-20261114-1335-glove-slot-checkpoint",
+      "arpan-20261114-1351-held-fist-check",
+      "arpan-fake-demo",
+      "arpan-fake-wave"
+    ]
+  },
+  "files": [
+    {
+      "path": "backend/calibrations/arpan-2c9530c89099.json",
+      "size": 433,
+      "sha256": "f0f4294bb4b0ec594ed48f3b3f3a296c79594ded49930248c114c9d9dfa4f9bd"
+    },
+    {
+      "path": "backend/calibrations/arpan-339ac8aa2560.json",
+      "size": 428,
+      "sha256": "aa33f4f00d7793a4b50713de15486f1961cd1e8995ac1a2621f0063371306e72"
+    },
+    {
+      "path": "backend/calibrations/arpan-3b5b252f593b.json",
+      "size": 428,
+      "sha256": "2e0ff1bf77551b8b3cab2df360a93ca7457d5b0137801e8d81e682a9c92d4c93"
+    },
+    {
+      "path": "backend/calibrations/arpan-43773ddec7e3.json",
+      "size": 431,
+      "sha256": "354becedf4c28fd0cf532b7575cce7e285599dec5e9386aa9e688c2c84aa7b16"
+    },
+    {
+      "path": "backend/calibrations/arpan-4820d145ee5d.json",
+      "size": 430,
+      "sha256": "1b00489933a9ca412a100cf7d2e3770bcaf164f48e59e962b6e35e531dfd6a7b"
+    },
+    {
+      "path": "backend/calibrations/arpan-50462cbe80bd.json",
+      "size": 415,
+      "sha256": "75b6391052cb0faadd87aeb51fdf5f9e5edcb0ca50b31e915dc4bc2574c165f6"
+    },
+    {
+      "path": "backend/calibrations/arpan-62b28705d803.json",
+      "size": 428,
+      "sha256": "586de66cddda5933679e8cf4b9b6f6493244767c7062ead9f4b2a125cf968138"
+    },
+    {
+      "path": "backend/calibrations/arpan-c8713cacaff6.json",
+      "size": 415,
+      "sha256": "bd3c85197bb4de29aa074921ad973588276200a2fbe33cdedcdba28801f21fd6"
+    },
+    {
+      "path": "backend/calibrations/arpan-d773564cc859.json",
+      "size": 429,
+      "sha256": "4cb58c973a0ffb5df94497bcaeeaefb8856b148f38974131beb50dd1eea45f97"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-1e251a50a844.json",
+      "size": 987,
+      "sha256": "cd2135d31aed3122a8d16f0a8dd536484bb3f77292aa424b919d45abeda62809"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-5611c9c83873.json",
+      "size": 925,
+      "sha256": "d1c7e624f0cb0c199fa4e95d00a4cae5babe23e1fc620ec910c639f896132c69"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-59020a2b74b3.json",
+      "size": 864,
+      "sha256": "1513b197dca82f3c825cf7ef9457378f03772c5cffb51b19583c6407ae6dbd5f"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-8f61b4ebab12.json",
+      "size": 826,
+      "sha256": "7d7cb9a3abfbf8c85954fcab1808794c2db5a9869d199d3576902f6fa01f5254"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-a211034061af.json",
+      "size": 867,
+      "sha256": "1bc5f5f75fdcec428d2cc1f5ff42d05d8ff0ce2322a649bc1701505647e0a648"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-a907152ed526.json",
+      "size": 981,
+      "sha256": "4cd0279725701183493baaf063dd79c6deedc89ce2acc52911d3f975f70301cf"
+    },
+    {
+      "path": "backend/recordings/arpan-0bbcca28f9f1.json",
+      "size": 69925,
+      "sha256": "232a96575c186249a4eafa314dd0eb2b6eb807cd92174ac8245fc2dfc5bb83ae"
+    },
+    {
+      "path": "backend/recordings/arpan-11f0f06a17d9.json",
+      "size": 68149,
+      "sha256": "f63f013c104531702ae258cd235ece0ab70c2906655e87c3222372fb6b416dfe"
+    },
+    {
+      "path": "backend/recordings/arpan-1526ba3d6a75.json",
+      "size": 70627,
+      "sha256": "514f9967cd9397138fffcc09669cb9f96df87d71dcd506d43e252063034c251b"
+    },
+    {
+      "path": "backend/recordings/arpan-26280475dc5e.json",
+      "size": 74005,
+      "sha256": "6ac9292d78b000754b9697f11d0b671da6bd9c45f4402a5bad300d2588fe58f6"
+    },
+    {
+      "path": "backend/recordings/arpan-38d8e15a43cf.json",
+      "size": 70905,
+      "sha256": "82dd38591bc00e296ee7bdbfd80e1ebbd1533f3f46722c14b7a77c7cdf839d5a"
+    },
+    {
+      "path": "backend/recordings/arpan-3ef41b853f96.json",
+      "size": 52646,
+      "sha256": "5d80d1a85884cf4f4bcd15b46eaa19bba14c49007be158d0c12dab712da3dca7"
+    },
+    {
+      "path": "backend/recordings/arpan-698ffa18b8c2.json",
+      "size": 70389,
+      "sha256": "62c5fe59befbe8ca163062429b8302abb88befc4f4e1f5b9dc205f8dbe34e5a6"
+    },
+    {
+      "path": "backend/recordings/arpan-95695d4761a4.json",
+      "size": 70673,
+      "sha256": "2b6dc82e4cb01cdfe54bbac22989c38aa56fc66709a09600988eec0b5cab536a"
+    },
+    {
+      "path": "backend/recordings/arpan-c298f22f6609.json",
+      "size": 70637,
+      "sha256": "d1b64f2b576f847fb5b2e0cf10dc0a678c886caeee5c09b09957c50ed8d76ac9"
+    },
+    {
+      "path": "backend/recordings/arpan-c4f1e246b68c.json",
+      "size": 70680,
+      "sha256": "dd0c98691f3b72b36d14366897104915905941f842931276fbe2f257c20ec4fa"
+    },
+    {
+      "path": "backend/recordings/arpan-d34067cfe2a3.json",
+      "size": 37931,
+      "sha256": "2fec17cd0b165f0c695752f2537fbe85d0934da81807f54451d795dbb32905b0"
+    },
+    {
+      "path": "backend/recordings/arpan-e6c132f23315.json",
+      "size": 68282,
+      "sha256": "2cdf528060bffebc9843129fc671543935a353113739db80ada0c58fb6bf011b"
+    },
+    {
+      "path": "backend/recordings/arpan-fe59d44744a4.json",
+      "size": 70556,
+      "sha256": "93972253e1a4cfeb63ad401e26104a9662b80fcb250a07681b4f619ce860a291"
+    },
+    {
+      "path": "core_lessons/manifest.json",
+      "size": 15118,
+      "sha256": "dd9f2176851ab4a866221c524c0e89c56f74755fcb8890904382143f7b352496"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_00.jpg",
+      "size": 9653,
+      "sha256": "1b988f9c7e7436f37c0654c57896c392445a16172ad0b01d6d36b74c2baf821a"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_01.jpg",
+      "size": 9703,
+      "sha256": "39cf7293e8bfb34576c838479a97b04ad2a98462b016fb36be6a6799ce8c51de"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_02.jpg",
+      "size": 9745,
+      "sha256": "4ede6933bfecdeadf23868803165ebc107e44a6899ff67d9398f665ee28ffaa3"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_03.jpg",
+      "size": 9739,
+      "sha256": "81cffd6eae791552f04ef01da79286a6af4b10f3af556fc54b298f1dfcc84bf1"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_04.jpg",
+      "size": 9727,
+      "sha256": "c7c234d15ad7962860604010442ac3470df9a16267bef1b5db3fc7c31f605f6c"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/lesson.json",
+      "size": 17740,
+      "sha256": "9550c880fd71e1e0c0f8e1052fb9827b27e9e86fb05d64fee90a225a76a35d92"
+    },
+    {
+      "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/trace.npz",
+      "size": 59957,
+      "sha256": "5cd54ea7ed8ee35cfd8b1c47c819a24820d6f63992d9582d7a88a831e49c3e2c"
+    },
+    {
+      "path": "core_lessons/takes/arpan-11f0f06a17d9-right/frames/step_00.jpg",
+      "size": 10223,
+      "sha256": "8f31848d059709ab40ef8d5e7500ed3be928be868c8919ed7d789c976c6fecff"
+    },
+    {
+      "path": "core_lessons/takes/arpan-11f0f06a17d9-right/lesson.json",
+      "size": 4069,
+      "sha256": "e7ad70ca2d32cf863abf324f8e4acc1dd8b4ff102ccec2f68268c298ad220861"
+    },
+    {
+      "path": "core_lessons/takes/arpan-11f0f06a17d9-right/trace.npz",
+      "size": 57874,
+      "sha256": "883381a94c5a173880268d227a1e5db63463e06f991a0ed257c14da5d41748df"
+    },
+    {
+      "path": "core_lessons/takes/arpan-1526ba3d6a75-right/frames/step_00.jpg",
+      "size": 9485,
+      "sha256": "81533b9d59861dde0baf2b4f044be3374d5db3f500c3a8c2ee39c739f6ee8d7a"
+    },
+    {
+      "path": "core_lessons/takes/arpan-1526ba3d6a75-right/frames/step_01.jpg",
+      "size": 9689,
+      "sha256": "15661a294178abf0a3419c5f400ab2f0599d195a1f40ee2ba687e981514a8ba0"
+    },
+    {
+      "path": "core_lessons/takes/arpan-1526ba3d6a75-right/lesson.json",
+      "size": 7396,
+      "sha256": "9988f9f747f5623655f51005ffa091d5e2a8408b58ad6010a381f0dab7c2bedc"
+    },
+    {
+      "path": "core_lessons/takes/arpan-1526ba3d6a75-right/trace.npz",
+      "size": 57256,
+      "sha256": "c1a2360c1c7299849cc55ec6968f1e0e49799c9a7e2f4e0822b811c6d0908231"
+    },
+    {
+      "path": "core_lessons/takes/arpan-26280475dc5e-right/frames/step_00.jpg",
+      "size": 9861,
+      "sha256": "91a6c8a3a221dc21f9aee9f1ff5ef7c55de41a937d831ae1e6868892b70de6d6"
+    },
+    {
+      "path": "core_lessons/takes/arpan-26280475dc5e-right/frames/step_01.jpg",
+      "size": 9725,
+      "sha256": "6cbdb42ee1dc20ac2632ec37a6de2edfdbec203a7ddb45bc2c48561cfd782dac"
+    },
+    {
+      "path": "core_lessons/takes/arpan-26280475dc5e-right/frames/step_02.jpg",
+      "size": 9752,
+      "sha256": "eb754eda9a0c4f484e329ac42d29d7a76e4a3a7fb3f80833e1749adf520a426e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-26280475dc5e-right/lesson.json",
+      "size": 10862,
+      "sha256": "f80128b041c6eb714e87ad9a5f4390bd142e19c7547bdfcb5cc19804ccf384aa"
+    },
+    {
+      "path": "core_lessons/takes/arpan-26280475dc5e-right/trace.npz",
+      "size": 65184,
+      "sha256": "ff614a60984cc1227a141a766c17add91cf0813c399999972f0d64aec6ed471e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-38d8e15a43cf-right/frames/step_00.jpg",
+      "size": 11301,
+      "sha256": "15e114d33c3e484ff7c333fb328dbb3c17aa91f909b73db48683c8fbbab467c0"
+    },
+    {
+      "path": "core_lessons/takes/arpan-38d8e15a43cf-right/lesson.json",
+      "size": 4121,
+      "sha256": "a61664eb4bd25e0fbe0d9dddf8520edf2b73c8e4ebf734fd775c13ea1e345202"
+    },
+    {
+      "path": "core_lessons/takes/arpan-38d8e15a43cf-right/trace.npz",
+      "size": 57972,
+      "sha256": "cfefe79dc3d3faccbe1daa56ecb42fe7cad7f6004c7f0c6ce4afdef9f5fe2ad8"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/frames/step_00.jpg",
+      "size": 9578,
+      "sha256": "f66d71648bbaf9dec2c7693b9a23ac5a82a93472c8b48eae1beac0f6707e61d0"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/frames/step_01.jpg",
+      "size": 9667,
+      "sha256": "95ce8def0e914763bcd329ed007697d752083df89b99394c5646d702a0b62d32"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/frames/step_02.jpg",
+      "size": 9690,
+      "sha256": "6922204009f1a2d4edd7af4f3592a6d5e26273427bdfad281d27ca5317a10bbe"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/frames/step_03.jpg",
+      "size": 9676,
+      "sha256": "ba467f344cc3c714e849f1d0c992d9ee93ee4f82be0e3937503bac0baf2c8570"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/frames/step_04.jpg",
+      "size": 9729,
+      "sha256": "bb56eaefa09055e9097a846a8ab0038dfc225bc968b83f0b4927a26dc9fa0481"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/lesson.json",
+      "size": 17735,
+      "sha256": "46069cc659267caadedacb56d33505474a157bc7f823ac49a91bbf8e5916d66f"
+    },
+    {
+      "path": "core_lessons/takes/arpan-3ef41b853f96-right/trace.npz",
+      "size": 45651,
+      "sha256": "5a1fd50374b09fbeed65085b5ff1fc4ff6ea840ffe76906666d820e63d5c39f7"
+    },
+    {
+      "path": "core_lessons/takes/arpan-698ffa18b8c2-right/frames/step_00.jpg",
+      "size": 11461,
+      "sha256": "3cb93f3183d2965c574b41705b8dc8e5bfba4bc2bf5ae16ea3af140e61f36b7a"
+    },
+    {
+      "path": "core_lessons/takes/arpan-698ffa18b8c2-right/lesson.json",
+      "size": 4093,
+      "sha256": "066eb6ea4c0b9aeae4812768797069ca8969ca6d47d7708edf5f6591f3059224"
+    },
+    {
+      "path": "core_lessons/takes/arpan-698ffa18b8c2-right/trace.npz",
+      "size": 62588,
+      "sha256": "29b4c3bee1db3ac6c95da9c90a2ccef0b7e42d0ab93a45fedbd8ad866af8069c"
+    },
+    {
+      "path": "core_lessons/takes/arpan-95695d4761a4-right/frames/step_00.jpg",
+      "size": 10024,
+      "sha256": "d08cf1237fdadcc85cf0dd854836a90adce0eedcff350b745027d54392c55d2e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-95695d4761a4-right/frames/step_01.jpg",
+      "size": 9995,
+      "sha256": "90a976c0f8964b109944e006e70895298f405eabe8ea19ee8fda44631891e393"
+    },
+    {
+      "path": "core_lessons/takes/arpan-95695d4761a4-right/lesson.json",
+      "size": 7408,
+      "sha256": "c6a53e2d4b01e60a7f5a1857040d94590660072b3125bdb7eadf52c762f020d7"
+    },
+    {
+      "path": "core_lessons/takes/arpan-95695d4761a4-right/trace.npz",
+      "size": 61105,
+      "sha256": "f956b1c8a01f1a18007a297bb6644ac627a860f61dc1ea53c90f3b48f5d036a5"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/frames/step_00.jpg",
+      "size": 9623,
+      "sha256": "bca33e5c22769014ae0f8af1845f26c034f9c49de82207795c570971a16ca242"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/frames/step_01.jpg",
+      "size": 9546,
+      "sha256": "825be6793771b0bc3e5ff58a2f2ed9fa170c1a91614d0d20d80cc476cc96870e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/frames/step_02.jpg",
+      "size": 9553,
+      "sha256": "5ccab9995a688ed8330c8f380ee8bea1ac763755745d6c763d294472bdb2e1d2"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/frames/step_03.jpg",
+      "size": 9498,
+      "sha256": "2be42fbd30808e277018fdd51619064f33ca7dfebb5fcd06fc499fa748cd15c3"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/lesson.json",
+      "size": 14255,
+      "sha256": "04cdd8abd0416bf0e2fbbba6a6b72c40ce4093c84e3723dc5f6e8eaefae2544b"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c298f22f6609-right/trace.npz",
+      "size": 58990,
+      "sha256": "00db4ce0e8ced56d5a97bb58de8447434c02b08d54b36c30245c3182d7ff06f7"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c4f1e246b68c-right/frames/step_00.jpg",
+      "size": 9830,
+      "sha256": "48ed29c902d36ff99b0bbae0cd3f9daafb9e6f1e8305a8431693f420a923b42d"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c4f1e246b68c-right/frames/step_01.jpg",
+      "size": 9906,
+      "sha256": "e35eeba8491a5a47498468fa6822175c427e5585da3f37367412f07b24c5200e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c4f1e246b68c-right/lesson.json",
+      "size": 7404,
+      "sha256": "41a30ed5ee2e11a748cb172936dd0fd5e461551c059bf1e7c3efb80519da8c5e"
+    },
+    {
+      "path": "core_lessons/takes/arpan-c4f1e246b68c-right/trace.npz",
+      "size": 59882,
+      "sha256": "eaa523306887fb0c3f3fe0cf45c7009dbbe0cd6bb8a7885567a2caf71d4a6ce2"
+    },
+    {
+      "path": "core_lessons/takes/arpan-d34067cfe2a3-right/frames/step_00.jpg",
+      "size": 11032,
+      "sha256": "2b48b11d59a4a4c512be3ee2f804137646cd63f8dbbfe4a79ec4fe0b52ab996c"
+    },
+    {
+      "path": "core_lessons/takes/arpan-d34067cfe2a3-right/lesson.json",
+      "size": 4111,
+      "sha256": "99df6be127d8dfc0b0e605104c1b0e4ec135fe18a73103ca9517ce227939024c"
+    },
+    {
+      "path": "core_lessons/takes/arpan-d34067cfe2a3-right/trace.npz",
+      "size": 28162,
+      "sha256": "a00244cafc23764d2f44e8d0bebaf2093ef3149b48685e220081e36e2421edc7"
+    },
+    {
+      "path": "core_lessons/takes/arpan-e6c132f23315-right/frames/step_00.jpg",
+      "size": 11226,
+      "sha256": "50a0db5b5c16dced2411bbe3bb530088c50cd1342ae21a4428a1dfedbd2cfade"
+    },
+    {
+      "path": "core_lessons/takes/arpan-e6c132f23315-right/lesson.json",
+      "size": 4114,
+      "sha256": "efcfa3fdec526d9a602d33d7288348f12c5af58fd7479d036904548dc53d29e5"
+    },
+    {
+      "path": "core_lessons/takes/arpan-e6c132f23315-right/trace.npz",
+      "size": 52655,
+      "sha256": "97f0701ef497e68899a17afe1d6bd8ef90f1f64e6a1ccf5c11a89a49295b9ee2"
+    },
+    {
+      "path": "core_lessons/takes/arpan-fe59d44744a4-right/frames/step_00.jpg",
+      "size": 10677,
+      "sha256": "74b78b9c532f1ee534ac378893463f2dce654a54154f7f12092329b7647a08d6"
+    },
+    {
+      "path": "core_lessons/takes/arpan-fe59d44744a4-right/frames/step_01.jpg",
+      "size": 9814,
+      "sha256": "e92d649fd6befff5a95411ebc910193c874129f78b5999be8993e380624df83b"
+    },
+    {
+      "path": "core_lessons/takes/arpan-fe59d44744a4-right/frames/step_02.jpg",
+      "size": 9815,
+      "sha256": "6aeb529b78ab9894bcffb50c9d27cfa553f0b69f179b0269fefefd6672b6afed"
+    },
+    {
+      "path": "core_lessons/takes/arpan-fe59d44744a4-right/lesson.json",
+      "size": 10808,
+      "sha256": "25a104f3b7ef8b811d6cf34f50a167d6661dcac9d951b677a256d2cb007b5e0b"
+    },
+    {
+      "path": "core_lessons/takes/arpan-fe59d44744a4-right/trace.npz",
+      "size": 64011,
+      "sha256": "b6ea3e3731080f1b1d167f6d78e784c8bb2a87132123265e41aa601efdfb115f"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1335-glove-slot-checkpoint/frames/step_00.jpg",
+      "size": 9577,
+      "sha256": "60c35b6e7db69b68bd0e16cf81dc4a4d56292ec2b93c0ee324ce1d5d28d07e39"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1335-glove-slot-checkpoint/frames/step_01.jpg",
+      "size": 9743,
+      "sha256": "89f468f915445bd6c05ecce7372310eef783c4817468a945ff129c4febbece34"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1335-glove-slot-checkpoint/lesson.json",
+      "size": 5881,
+      "sha256": "6f2fc18d65c7d948fd820d2e7e72cc48b9221be04e3046864f85cf4adbe0595a"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1335-glove-slot-checkpoint/trace.npz",
+      "size": 104936,
+      "sha256": "808b83d665c70166f3183401576a941cf0d6ebaadcd704aa3860a941a996e47e"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1351-held-fist-check/frames/step_00.jpg",
+      "size": 9894,
+      "sha256": "a584679d26b2b0dabc0d5cc3026dc09ffe49bed1886fa344fcfc48f11be881cb"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1351-held-fist-check/frames/step_01.jpg",
+      "size": 9949,
+      "sha256": "3e49f9309913a0d79afc6bce82fc72c1d49b2115e4956e9aca5cd84c288e720b"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1351-held-fist-check/frames/step_02.jpg",
+      "size": 9963,
+      "sha256": "5b48e947a0f8a13eef25613fd1d3e3c320bc60258313350b3929d9886abd309d"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1351-held-fist-check/lesson.json",
+      "size": 8634,
+      "sha256": "e402b7b9e37396c5cfb4f4aeac4cadd44d1459cecf361a98ed42afed46c9e4de"
+    },
+    {
+      "path": "root_lessons/arpan-20261114-1351-held-fist-check/trace.npz",
+      "size": 63533,
+      "sha256": "42c6c5ddda328f6a8e54594003a4756136dc9d066a7385663ba92e571ac3208d"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/frames/step_00.jpg",
+      "size": 10770,
+      "sha256": "6a66f90bb3ce859058e8c5c152f7fc7a1ee1c0753205b26a112a996b95c13e27"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/frames/step_01.jpg",
+      "size": 9333,
+      "sha256": "fae7cd179fd326d965d1cb74cab3d3dc4b62ad087a43fcc83518900b9fa676bf"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/frames/step_02.jpg",
+      "size": 9785,
+      "sha256": "8e32b07747571e1df7ad8fcf3b8e6f304e7cea27e101259e2c6c62705b11083b"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/frames/step_03.jpg",
+      "size": 10403,
+      "sha256": "ed7ed6f93c1f4faf04da9b507ff95c09692a4a357906e64f893855365a4b6457"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/lesson.json",
+      "size": 14192,
+      "sha256": "f5fd8a8ca1a062b15e89b10e1c51a4e216f473558331f94f1661d42cd160c8cc"
+    },
+    {
+      "path": "root_lessons/arpan-fake-demo/trace.npz",
+      "size": 271066,
+      "sha256": "c1c4999e2effcc68a05cd2c77c4cf8a7a558a90bab16428fd9bcc3aba1de6362"
+    },
+    {
+      "path": "root_lessons/arpan-fake-wave/frames/step_00.jpg",
+      "size": 10192,
+      "sha256": "67f4026019406c519844a961b8ab876a97cc227e1a5f74de016085b34794c07f"
+    },
+    {
+      "path": "root_lessons/arpan-fake-wave/lesson.json",
+      "size": 3829,
+      "sha256": "1d1b45f92d645f667dd31ee2e29d56c1c19b973fd01a1a64b0c59a134b134568"
+    },
+    {
+      "path": "root_lessons/arpan-fake-wave/trace.npz",
+      "size": 108516,
+      "sha256": "fdc584fed75bc09b9ccc93f36094d007ef57fe66f23977a169e374593b7127d4"
+    }
+  ]
+}
