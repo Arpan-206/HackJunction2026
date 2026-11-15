@@ -131,6 +131,12 @@ The `sbom` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the 
 
 ## Explore mode (the whole app, after the tour)
 
+Three things to know about explore mode:
+
+1. The hands are simulated. No glove data is live.
+2. Any model text is template text. The AI Assistant does not write it.
+3. The lessons use the app's synthetic references, not Szymon's recorded takes.
+
 The last stop offers "Explore the whole app", and the tour footer links to it. It opens `explore.html`: the real Geppetto app, complete, in the browser with no gloves and no backend.
 
 | Part | How |
