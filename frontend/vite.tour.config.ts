@@ -86,6 +86,10 @@ function exploreHonesty(): Plugin {
     { file: 'src/mock/llm.ts', from: "export const MOCK_PROVIDER = 'mock';", to: "export const MOCK_PROVIDER = 'fake (example text)';" },
     { file: 'src/features/shared/providerLabel.ts', from: "gemini: 'Gemini',", to: "gemini: 'a hosted model'," },
     { file: 'src/features/shared/providerLabel.ts', from: "openai: 'Gemma on Verda',", to: "openai: 'a self-hosted model'," },
+    // The glove engine's port: explore mode has no engine (the mock answers /ws/gloves and /ws/robot on the page's own
+    // origin), so the port is removed from the public build; any engine socket would be refused by the network guard.
+    { file: 'src/api/useRobotStream.ts', from: 'export const CORE_PORT = 8765;', to: 'export const CORE_PORT = 0;' },
+    { file: 'src/features/typing/useTypingCore.ts', from: 'const CORE_PORT = 8765;', to: 'const CORE_PORT = 0;' },
   ];
   return {
     name: 'geppetto-explore-honesty',
@@ -111,7 +115,7 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     // The live hand's delay probe can call the core on :8765; the tour has no core, so it gets a stub that does nothing.
-    alias: [{ find: /^.*\/api\/delayProbe$/, replacement: resolve(here, 'src/tour/stubs/delayProbe.ts') }],
+    alias: [{ find: /^(?:.*\/)?delayProbe$/, replacement: resolve(here, 'src/tour/stubs/delayProbe.ts') }],
   },
   define: {
     // Belt and braces: the app's mock and kiosk flags read these; the tour never imports those modules.
