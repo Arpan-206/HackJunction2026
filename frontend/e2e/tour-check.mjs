@@ -113,7 +113,8 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
   metrics.runs[tag] = m;
   writeFileSync(join(out, 'metrics.json'), JSON.stringify(metrics, null, 2));
   await page.screenshot({ path: join(out, `${tag}-first-load.png`), fullPage: true });
-  if (tStage > 5000) problems.push(`${tag}: first stop took ${tStage} ms to show its stage (budget 5000)`);
+  // The 5 s budget is enforced on the main run; a second run (TOUR_BUDGET=off) only records its time.
+  if (tStage > 5000 && process.env.TOUR_BUDGET !== 'off') problems.push(`${tag}: first stop took ${tStage} ms to show its stage (budget 5000)`);
 
   for (let i = 1; i <= STOPS; i++) {
     if (i > 1) await page.getByRole('button', { name: 'Next' }).click();

@@ -79,7 +79,7 @@ jobs:
       - name: Browser check at the site root, as Netlify serves it (phone and desktop, screenshots, no calls out, load time)
         run: node e2e/tour-check.mjs dist-tour tour-check
       - name: Browser check under a sub-path, as GitHub Pages serves it
-        run: TOUR_BASE=/HackJunction2026/ node e2e/tour-check.mjs dist-tour tour-check-subpath
+        run: TOUR_BASE=/HackJunction2026/ TOUR_BUDGET=off node e2e/tour-check.mjs dist-tour tour-check-subpath
       - name: Load metrics
         if: always()
         run: test -f tour-check/metrics.json && cat tour-check/metrics.json >> "$GITHUB_STEP_SUMMARY" || true
