@@ -1,0 +1,1 @@
+- [CRLF working tree and scripted edits](crlf-working-tree.md) — frontend/src has CRLF files; normalise endings in scripted replaces
