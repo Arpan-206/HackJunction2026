@@ -57,9 +57,11 @@ export function canStartGloves(s: GloveRigStatus): boolean {
 
 /**
  * Whether opening the app should show the gloves screen first: always in demo mode (it runs the drift check), and on a
- * real-glove source; never in mock mode or on the simulator, so walks through the app are not interrupted.
+ * real-glove source; never with "No gloves" on, in mock mode or on the simulator, so walks through the app are not
+ * interrupted.
  */
-export function shouldOpenGlovesOnStart(status: GloveRigStatus | null, demo: boolean, mock: boolean): boolean {
+export function shouldOpenGlovesOnStart(status: GloveRigStatus | null, demo: boolean, mock: boolean, noGloves = false): boolean {
+  if (noGloves) return false;
   if (demo) return true;
   if (mock || !status) return false;
   return status.source !== 'simulator';

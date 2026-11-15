@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode, type Ref, type RefObject } from 'react';
 import type { Finger, GloveFrame, HandFrame, MotionSpec, Side } from '../../../api/types';
 import { Hand, HandCanvas, TypingKeyboard, TYPING_HAND_X, TYPING_HAND_Y, useStageColors, type HandHandle } from '../../../three';
+import { BENCH_Y } from '../../../three/typingLayout';
 
 /** What a finger is marked with: the cue to strike next (chalk), right (malachite) or a correction (vermilion). */
 export type FingerMark = 'cue' | 'ok' | 'off';
@@ -35,9 +36,11 @@ interface TypingStageProps {
 }
 
 const SIDES: Side[] = ['left', 'right'];
-export const TYPING_CAMERA: { cameraPosition: [number, number, number]; target: [number, number, number] } = {
+/** The bench stays at the typing layout's own height (BENCH_Y): the hands there hover over it by design (TYPING_HAND_Y). */
+export const TYPING_CAMERA: { cameraPosition: [number, number, number]; target: [number, number, number]; groundY: number } = {
   cameraPosition: [0, 4.6, -0.25],
   target: [0, -0.55, -1.6],
+  groundY: BENCH_Y,
 };
 
 function position(side: Side): [number, number, number] {

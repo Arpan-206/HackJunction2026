@@ -80,22 +80,21 @@ export const CATALOGUE: CatalogueEntry[] = [
     keyPose: { motion: { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5], beat_ms: 620 }, t: 1.55 },
     scene: 'keys',
   },
-  // Finnish fingerspelling on the dashboard (curls are estimates until an expert records them). The pack-aware
-  // fingerspelling drill (ASL alphabet, Finnish slots shown as not recorded yet) lives at /apprentice/fingerspelling and
-  // stays off the dashboard through HIDDEN_SKILLS below, as Szymon's 17:22 narrowing intended. Arpan's rule for
-  // Finnish letters is 'never a placeholder pose': which of the two the demo keeps is a human decision, see STATUS.md.
+  // Fingerspelling on the dashboard: only the "spell a word" course, whose two lessons the expert recorded with the
+  // gloves for the demo (Sat 15 Nov). The Finnish skill and the alphabet courses stay off it (HIDDEN_SKILLS and
+  // HIDDEN_COURSES below), so the demo shows real recordings only.
   {
-    id: 'finnish_fingerspelling',
-    name: 'Finnish fingerspelling',
-    description: 'Spell words letter by letter with the one-handed Finnish manual alphabet, A to Z plus Å, Ä and Ö, with every finger checked.',
+    id: 'fingerspelling',
+    name: 'Fingerspelling',
+    description: 'Spell letters and words with one hand, at an even pace, with every finger checked against the expert.',
     difficulty: 'intermediate',
-    keywords: ['sign', 'sign language', 'finnish', 'suomi', 'viittomakieli', 'letters', 'alphabet', 'deaf', 'spelling', 'words', 'names', 'accessibility'],
+    keywords: ['sign', 'sign language', 'letters', 'alphabet', 'deaf', 'spelling', 'words', 'names', 'accessibility'],
     hands: 'one',
     timeToLearn: 'Two weeks at 10 minutes a day',
     // The letter Y: thumb and little finger out, the clearest shape of the alphabet from any side.
     keyPose: hold(0, 1, 1, 1, 0),
     scene: 'letter',
-    wouldTeach: ['Clear letters first: A, I, L, V and Y', 'Spelling VIILI and LAVA at an even pace', 'The rest of the alphabet, A to Z plus Å, Ä and Ö'],
+    wouldTeach: ['A first letter, held clearly', 'Spelling a whole word at an even pace'],
   },
   {
     id: 'shadow_puppets',
@@ -190,13 +189,15 @@ export function keyPoseTime(spec: MotionSpec | null): number {
  * Merges the catalogue with the lessons from the API, grouping lessons by their skill. Known skills keep catalogue order; a
  * skill id the catalogue lacks becomes a live skill with defaults. Live skills come first, then the workshop.
  */
-/** Skills with seed lessons that stay off the dashboard: the American alphabet drill is reached at /apprentice/fingerspelling (the catalogue shows the Finnish skill). */
-const HIDDEN_SKILLS: ReadonlySet<string> = new Set(['fingerspelling']);
+/** Skills with seed lessons that stay off the dashboard: the Finnish skill, replaced by Fingerspelling for the demo. */
+const HIDDEN_SKILLS: ReadonlySet<string> = new Set(['finnish_fingerspelling']);
+/** Courses that stay off the dashboard: the fingerspelling alphabet courses, whose letters no expert has recorded. */
+const HIDDEN_COURSES: ReadonlySet<string> = new Set(['seed-fingerspelling-a-m', 'seed-fingerspelling-n-z']);
 
 export function buildSkills(lessons: Lesson[], catalogue: CatalogueEntry[] = CATALOGUE): SkillView[] {
   const bySkill = new Map<string, Lesson[]>();
   for (const l of newestPerTitle(lessons)) {
-    if (!l.steps.length || HIDDEN_SKILLS.has(String(l.skill))) continue;
+    if (!l.steps.length || HIDDEN_SKILLS.has(String(l.skill)) || HIDDEN_COURSES.has(l.id)) continue;
     const id = String(l.skill);
     bySkill.set(id, [...(bySkill.get(id) ?? []), l]);
   }
@@ -254,7 +255,7 @@ export function searchText(skill: SkillView): string {
   return fold([skill.name, skill.description, ...skill.keywords, ...lessons].join(' '));
 }
 
-/** True when every word of the query appears somewhere in the skill's text (so "sign lang" finds Finnish fingerspelling). */
+/** True when every word of the query appears somewhere in the skill's text (so "sign lang" finds Fingerspelling). */
 export function matchesQuery(skill: SkillView, query: string): boolean {
   const words = fold(query).split(' ').filter(Boolean);
   if (!words.length) return true;

@@ -10,7 +10,7 @@ import { useRecording } from '../hooks/useRecording';
 import { primarySide, type MoveChoice } from '../lib';
 import { FlowNav } from './FlowNav';
 import { ReplayStage } from './ReplayStage';
-import { fingersSentence, readModel } from './scratchDraft';
+import { fingersSentence, readModel, replayWornHand } from './scratchDraft';
 
 type View = 'strings' | 'ghost';
 
@@ -28,12 +28,13 @@ const REPLAY_POLICY: AttemptPolicy = { attempt: 1, label: 'Replay', blurb: '', s
 
 /**
  * A coach for the training room's guidance views that only plays back: the expert hand is the reference take at the
- * player's clock, the wooden hand is whatever glove is live (the expert's own hand, standing in for the apprentice), and
- * every finger reads as in line. Getters keep it cheap: the 3D views read them each frame, nothing re-renders.
+ * player's clock, the wooden hand is a real glove when one is worn (the expert's own hand, standing in for the apprentice)
+ * and otherwise the same take at the same clock, and every finger reads as in line. Getters keep it cheap: the 3D views
+ * read them each frame, nothing re-renders.
  */
 function useReplayCoach(masterAt: MutableRefObject<() => HandFrame | null>, gloves: GloveStreamHandle, side: Side): Coach {
   return useMemo(() => {
-    const learner = () => gloves.latest.current?.hands.find((h) => h.side === side) ?? null;
+    const learner = () => replayWornHand(gloves.latest.current, side, masterAt.current());
     const live: CoachLive = {
       get learner() {
         return learner();
@@ -149,7 +150,7 @@ export function ReplayScreen({ choice, model, glove, onBack, onNext, onAddAnothe
 
           <aside className="scr-rec__side scr-replay__notes">
             <p className="scr-replay__lead">{VIEWS.find((v) => v.id === view)?.hint}</p>
-            <p>Take {reading.referenceN}, your reference, plays as the expert hand. The wooden hand follows whoever wears the glove, as the apprentice&rsquo;s will.</p>
+            <p>Take {reading.referenceN}, your reference, plays as the expert hand. The wooden hand follows whoever wears a real glove, as the apprentice&rsquo;s will, and plays the same take when none is worn.</p>
             <p className="note">{fingersSentence(model)}</p>
             {loading && <p className="note">Fetching the take...</p>}
             {error && (

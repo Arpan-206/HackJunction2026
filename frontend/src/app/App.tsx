@@ -5,6 +5,7 @@ import { RoleSelect } from './RoleSelect';
 import { lazyPage, whenIdle } from './lazyPage';
 import './pageStyles';
 import { isKiosk, KIOSK_HOME } from '../features/shared/kiosk';
+import { ensureNoGloves } from '../features/shared/noGloves';
 
 // The expert and apprentice pages and the hand lab load on demand, then in the background once the first screen is up.
 const masterPages = () => import('../features/master/pages');
@@ -45,6 +46,8 @@ function MasterRedirect() {
 export function App() {
   // Read once per load. The flag sticks for the tab; only ?kiosk=0 (the operator) turns it off, and a VITE_KIOSK build never.
   const [kiosk] = useState(isKiosk);
+  // "No gloves" survives a backend restart: put the backend back on the simulator once per load.
+  useEffect(ensureNoGloves, []);
   // Fetch the pages while the first screen idles, so following a link never waits for code. The kiosk only shows the demo.
   useEffect(() => (kiosk ? undefined : whenIdle(() => PAGES.forEach((p) => void p.preload().catch(() => undefined)))), [kiosk]);
   if (kiosk) {

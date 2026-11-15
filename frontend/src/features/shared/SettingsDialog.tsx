@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MARGINS } from '../../api/margin';
 import { Button } from '../../components/ui';
 import { useAssistant } from './assistant';
+import { setNoGloves, useNoGloves } from './noGloves';
 import { IconSettings } from './RailIcons';
 import { PROP_NOTE, useShowProps } from './sessionPrefs';
 import { MARGIN_INFO, systemReducesMotion, useDemoMode, useMargin, useReducedMotion, useScoreView, useWearer, WEARER_MAX_CHARS, type ScoreView } from './settings';
@@ -79,6 +80,7 @@ export function SettingsDialog({ onClose, returnFocus }: SettingsDialogProps) {
   const [props, setProps] = useShowProps();
   const [reduce, setReduce] = useReducedMotion();
   const [demo, setDemo] = useDemoMode();
+  const [noGloves] = useNoGloves();
   const [wearer, setWearer] = useWearer();
   const deviceReduces = systemReducesMotion();
 
@@ -167,11 +169,19 @@ export function SettingsDialog({ onClose, returnFocus }: SettingsDialogProps) {
               Gloves
             </h3>
             <Switch
-              on={demo}
-              onChange={setDemo}
-              label="Demo mode"
-              note="Skips the full glove calibration. The app loads the wearer's last calibration and asks them to hold still for 2 seconds; if the gloves have drifted it asks for a recalibration, otherwise it goes straight in."
+              on={noGloves}
+              onChange={(on) => void setNoGloves(on)}
+              label="No gloves"
+              note="For a demo without the gloves: every screen runs on simulated hands and nothing asks for the gloves. Demo mode is paused while it is on. Switch it off when the gloves are here."
             />
+            {!noGloves && (
+              <Switch
+                on={demo}
+                onChange={setDemo}
+                label="Demo mode"
+                note="Skips the full glove calibration. The app loads the wearer's last calibration and asks them to hold still for 2 seconds; if the gloves have drifted it asks for a recalibration, otherwise it goes straight in."
+              />
+            )}
             <div className="settings__row">
               <label className="settings__label" htmlFor={`${titleId}-wearer`}>
                 Who wears the gloves

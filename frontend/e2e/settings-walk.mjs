@@ -114,7 +114,7 @@ try {
   if ((await ai.getAttribute('aria-checked')) !== 'true') fail('AI Assistant should be on by default');
   await ai.click();
   await visible(page.getByText('AI Assistant off'), 'rail says off');
-  await dialog.getByRole('radio', { name: /Relaxed/ }).check();
+  await dialog.getByRole('radio', { name: /Strict/ }).check();
   await dialog.getByRole('switch', { name: 'Reduce motion' }).click();
   if ((await page.evaluate(() => document.documentElement.hasAttribute('data-reduce-motion'))) !== true) fail('reduce motion should mark the root');
   await page.screenshot({ path: `${OUT}settings-02-changed.png` });
@@ -123,18 +123,18 @@ try {
   await page.waitForFunction(() => window.__apprenticeMock === true, null, { timeout: 15000 });
   await visible(page.getByText('AI Assistant off'), 'AI Assistant off after reload');
   const stored = await page.evaluate(() => [localStorage.getItem('apprentice.margin'), localStorage.getItem('apprentice.assistant'), localStorage.getItem('apprentice.reduceMotion')]);
-  if (stored.join() !== 'relaxed,0,1') fail(`settings not persisted: ${stored.join()}`);
+  if (stored.join() !== 'strict,0,1') fail(`settings not persisted: ${stored.join()}`);
 
   step('drafting is gated while the AI Assistant is off');
   await page.goto(`${BASE}/expert/generate?mock=1`);
   await visible(page.getByText('The AI Assistant is off. Turn it on in Settings to draft steps from a sentence.'), 'AI Assistant off note');
 
-  step('the room shows the widened room for error; the score names the margin');
+  step('a non-default margin: the score names it (the default relaxed margin is not named)');
   await playRep(page);
-  await visible(page.getByText(/Judged to within 27 degrees per finger and 375 ms of timing/), 'margin line on the score');
+  await visible(page.getByText(/Judged with a strict margin of error: 11 degrees per finger and 150 ms of timing/), 'margin line on the score');
   await page.waitForTimeout(2500);
   await noOverlap(page, '.ap-scoreview', '.ap-score__detail', 'score view and detail column');
-  await page.screenshot({ path: `${OUT}settings-03-score-3d-relaxed.png` });
+  await page.screenshot({ path: `${OUT}settings-03-score-3d-strict.png` });
 
   step('click the 3D score to flip to the flat chart, and back with the button');
   const scene = page.getByRole('button', { name: /^Score in 3D/ });

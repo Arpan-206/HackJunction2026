@@ -2,6 +2,23 @@
 
 Assumes two laptops are not needed: one laptop runs backend, frontend and Rokoko Studio, and drives the projector. Gloves connect to Studio over our own router (not venue Wi-Fi).
 
+## No gloves
+
+Use this when the gloves are missing, flat, or not worth the risk on the day.
+
+1. Open the landing page `/`.
+2. Press **No gloves** in the footer. It then reads **We have gloves now**, and a line says "Running without gloves: the hands are simulated." (The same switch is in Settings, Gloves section.)
+
+What it does: the backend glove source goes to the simulator, Settings "Demo mode" (the drift check, which needs real gloves) is switched off, and the app never opens the gloves screen first. It is saved in the browser (localStorage `apprentice.noGloves`), so a reload keeps it, and on each page load the app puts the backend back on the simulator if it restarted on another source. No dev panel is needed. In mock mode (`?mock=1`, or the backend is down) the hands are already simulated.
+
+What still works: every screen, with simulated hands. The AI Assistant works if the backend and Verda are up.
+
+What to say: "The hands are simulated here. The gloves feed the same screens." Do not imply the motion is live from a wearer.
+
+Switching back: press **We have gloves now**. The previous glove source and Demo mode come back. Then check `GET http://localhost:8000/api/health` shows the glove source you expect.
+
+Optional, for the glove engine without hardware: `python -m core --fake` (repo root, debug view at `http://localhost:8765/debug`). The app demo does not need it.
+
 ## 1. Hardware checklist
 
 - [ ] Rokoko Smartgloves II, left and right, both charged, each with its own powerbank as backup
@@ -48,7 +65,7 @@ Gemma on Verda (backup coach): set `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPEN
 
 1. Wearer puts gloves on, hubs on the back of the hand, strap snug.
 2. In Studio, do the Studio calibration pose (arms down, hands flat) with both gloves.
-3. In Geppetto: `/master/scratch`, pick the move, press calibrate.
+3. In Geppetto: `/expert`, choose **Start from scratch**, pick the move, press calibrate.
 4. **Flat**: hand flat on the table, fingers together, hold still for the 3 s countdown and capture.
 5. **Fist**: loose fist, hold still for capture.
 6. Check the 3D hand: open the hand and close it; the model must follow without jitter. If a finger lags, recalibrate.
@@ -58,10 +75,10 @@ Note: once the learner has calibrated, scoring normalises each joint by their fl
 
 ## 4. Click path (follow exactly)
 
-1. `/` Role select. Say the hook. Click **Master**.
-2. `/master`: choose **Generate lesson**. Type: "Teach a table tennis forehand grip in three steps". Show validated lesson with guide hands. Save.
+1. `/` Role select. Say the hook. Click **I am an Expert**.
+2. `/expert`: choose **Generate lesson**. Type: "Teach a table tennis forehand grip in three steps". Show validated lesson with guide hands. Save.
 3. Back to `/expert`: **Start from scratch** opens straight on Record for a new skill. Answer the hands question, calibrate from the Gloves control (flat, fist). Record 3 takes. Show the takes model and replay, then name the skill and the move on Publish.
-4. Click role switch, **Apprentice**. Library, then course syllabus (shows video slots).
+4. Click role switch, **I am an Apprentice**. Library, then course syllabus (shows video slots).
 5. Open step 1, training room. Cycle guidance modes: marionette, shadow, ghost, side by side.
 6. Learner attempts the step. Make one deliberate error. Show coaching and the AI hint.
 7. Second attempt: feedback has faded to strings only. Show the score card.
@@ -73,9 +90,9 @@ Cuts, in order, when time is short: piano test, scratch recording (use pre-recor
 
 | Failure | Detect | Do this |
 |---|---|---|
-| One glove drops | 3D hand freezes or jitters | Re-press the hub, check battery. Do not switch hands mid-demo: scoring uses the reference take's hand side, so a left-hand attempt needs a master take for the left hand. Or switch glove source to `simulator` in `?dev=1` and say "demo hand". |
+| One glove drops | 3D hand freezes or jitters | Re-press the hub, check battery. Do not switch hands mid-demo: scoring uses the reference take's hand side, so a left-hand attempt needs a master take for the left hand. Or press **No gloves** on the landing page `/` (or in Settings) and say "demo hand". |
 | Backend silently on simulator | `/api/health` says simulator while gloves are on | Restart backend with `GLOVE_SOURCE=rokoko_udp`, check UDP port 14043 is not busy. |
-| Both gloves drop | No frames in Studio | Dev panel: `GLOVE_SOURCE=simulator`. The simulator drives realistic motion (`set_motion`). Tell the audience honestly it is simulated; show the recorded video next. |
+| Both gloves drop | No frames in Studio | Press **No gloves** on the landing page `/` (no dev panel needed). The simulator drives realistic motion (`set_motion`). Tell the audience honestly it is simulated; show the recorded video next. |
 | Venue Wi-Fi dead | Gemini call times out | The gloves run on our router, so only Gemini is affected. Switch to hotspot, or LLM provider `openai` (Gemma on Verda), or `fake`. |
 | Gemini slow or 429 | Spinner over about 4 s | If over 4 s, switch provider by hand in the dev panel. The backend falls back to fake after 8 s anyway; `provider` in the response says which was used. Open the pre-generated lesson instead. |
 | Gemini and Verda both down | Timeout | Provider `fake`: deterministic template lessons, still valid JSON. Say "offline mode". |

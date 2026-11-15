@@ -35,8 +35,9 @@ describe('assistant switch', () => {
 
   it('is on by default and knows its endpoints', () => {
     expect(isAssistantOn()).toBe(true);
-    expect(ASSISTANT_PATHS).toHaveLength(5);
+    expect(ASSISTANT_PATHS).toHaveLength(6);
     expect(isAssistantPath('/coach/hint')).toBe(true);
+    expect(isAssistantPath('/coach/review')).toBe(true);
     expect(isAssistantPath('/score')).toBe(false);
     expect(isAssistantPath('/lessons')).toBe(false);
   });

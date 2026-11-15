@@ -381,6 +381,33 @@ export interface CoachHintResponse {
   provider: ModelProvider;
 }
 
+/** POST /coach/review: one scored rep to put into plain words. Only `score` is needed, the ScoreResult as it came. */
+export interface CoachReviewRequest {
+  score: ScoreResult;
+  step_id?: string;
+  /** The step's instruction, at most 200 characters. */
+  instruction?: string;
+  move_name?: string;
+  /** The step's per-finger weights; a finger under 0.3 is never mentioned. */
+  weights?: Partial<FingerWeights> | null;
+  /** Which rep this is, from 1. */
+  attempt?: number;
+  /** The previous rep's overall score, so the words can say better, worse or about the same. */
+  previous_overall?: number;
+  /** The previous rep's feedback, so the new one is worded differently. */
+  last_feedback?: string;
+}
+
+/**
+ * At most two short sentences with no number and no measuring word: what went well, then one thing to try. `provider` is
+ * the model that wrote it, or 'algorithmic', 'fake', 'offline' or 'fake (rate limited)' when the backend's own sentence
+ * is shown.
+ */
+export interface CoachReviewResponse {
+  feedback: string;
+  provider: ModelProvider;
+}
+
 export interface CoachPlanRequest {
   lesson_title: string;
   /** At most 20. */

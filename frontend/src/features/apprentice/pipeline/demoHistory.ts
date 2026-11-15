@@ -34,8 +34,8 @@ interface ScriptDay {
 /**
  * The demo learner's week, against the four seed courses (the same ids in the mock and on the backend). Practice on the
  * last three days, today included, makes a 3-day streak; one isolated day five days back shows that a gap breaks it. The
- * reviews are scheduled so nothing is due today. Mastered: Table tennis 2 of 3, Piano 1 of 2, Finnish fingerspelling 3 of 7.
- * Shadow puppets is left untouched on purpose, so it can be demoed live as a brand-new first session.
+ * reviews are scheduled so nothing is due today. Mastered: Table tennis 2 of 3, Piano 1 of 2.
+ * Shadow puppets and Fingerspelling are left untouched on purpose, so they can be demoed live as a brand-new first session.
  */
 const SCRIPT: ScriptDay[] = [
   {
@@ -49,7 +49,6 @@ const SCRIPT: ScriptDay[] = [
     items: [
       { lesson: 'seed-piano', step: 'seed-piano-position', doing: 'review', blind: [88] },
       { lesson: 'seed-table-tennis', step: 'seed-tt-grip', doing: 'master', strings: [70, 79], ghost: [84], blind: [82, 86, 89] },
-      { lesson: 'seed-finnish-fingerspelling', step: 'seed-fs-a', doing: 'master', strings: [73, 85], ghost: [86], blind: [84, 88, 92] },
     ],
   },
   {
@@ -57,8 +56,6 @@ const SCRIPT: ScriptDay[] = [
     hour: 18,
     items: [
       { lesson: 'seed-table-tennis', step: 'seed-tt-grip', doing: 'review', blind: [90] },
-      { lesson: 'seed-finnish-fingerspelling', step: 'seed-fs-a', doing: 'review', blind: [91] },
-      { lesson: 'seed-finnish-fingerspelling', step: 'seed-fs-i', doing: 'master', strings: [69, 80], ghost: [83], blind: [81, 85, 87] },
       { lesson: 'seed-table-tennis', step: 'seed-tt-forehand', doing: 'practise', strings: [58, 66, 72], ghost: [75], blind: [74, 82, 77] },
     ],
   },
@@ -66,9 +63,7 @@ const SCRIPT: ScriptDay[] = [
     daysAgo: 0,
     hour: 9,
     items: [
-      { lesson: 'seed-finnish-fingerspelling', step: 'seed-fs-i', doing: 'review', blind: [89] },
       { lesson: 'seed-table-tennis', step: 'seed-tt-forehand', doing: 'master', ghost: [83], blind: [84, 88, 91] },
-      { lesson: 'seed-finnish-fingerspelling', step: 'seed-fs-l', doing: 'master', strings: [77, 84], blind: [86, 83, 90] },
       { lesson: 'seed-piano', step: 'seed-piano-scale', doing: 'practise', strings: [68, 76, 81], ghost: [79] },
     ],
   },

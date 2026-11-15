@@ -4,6 +4,7 @@ import { useGloveStream, type GloveDeviceStatus, type GloveIssue, type GloveRigS
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { Hand, HandCanvas, type StageProps } from '../../../three';
+import { useNoGloves } from '../noGloves';
 import { useDemoMode } from '../settings';
 import { CalibrationInUse } from './CalibrationInUse';
 import { DemoCheck } from './DemoCheck';
@@ -119,6 +120,7 @@ export default function GlovesScreen() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [demo] = useDemoMode();
+  const [noGloves] = useNoGloves();
   const next = nextPath(params);
   const status = rig.status;
   const { now, rest } = status ? splitIssues(status.issues) : { now: null, rest: [] };
@@ -127,6 +129,23 @@ export default function GlovesScreen() {
   useEffect(() => {
     setTitle(status?.ready ? 'Gloves ready' : 'Gloves');
   }, [status?.ready]);
+
+  // With "No gloves" on, the glove readings would describe the simulator as connected gloves: say what is true instead.
+  if (noGloves) {
+    return (
+      <div className="gl-page">
+        <PageHeader title="Simulated hands" context="No gloves is on, so every screen runs without the gloves." />
+        <p className="gl-line">
+          The hands you see are simulated. Once the gloves are here, press &ldquo;We have gloves now&rdquo; on the Geppetto home page, or switch off No gloves in Settings.
+        </p>
+        <div className="gl-actions">
+          <ButtonLink large to={next}>
+            Continue
+          </ButtonLink>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="gl-page">

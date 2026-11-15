@@ -89,7 +89,7 @@ async function walk({ width, height, suffix, notte }) {
   await see(page.getByText('Put on the gloves and record a new skill. Name it when you are happy with it.'), 'the new scratch door copy');
   await see(page.locator('.shelf .folio'), 'skill cards on the shelf');
   const cards = (await page.locator('.shelf .folio__title').allInnerTexts()).map((t) => t.trim());
-  for (const s of ['Table tennis', 'Piano', 'Finnish fingerspelling', 'Shadow puppets']) if (cards.filter((c) => c.toLowerCase() === s.toLowerCase()).length !== 1) throw new Error(`the shelf should hold one ${s} card, holds ${cards.join(', ')}`);
+  for (const s of ['Table tennis', 'Piano', 'Fingerspelling', 'Shadow puppets']) if (cards.filter((c) => c.toLowerCase() === s.toLowerCase()).length !== 1) throw new Error(`the shelf should hold one ${s} card, holds ${cards.join(', ')}`);
   await settle(7000);
   await shot('01', 'home');
   if (notte) {

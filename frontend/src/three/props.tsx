@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BackSide, BoxGeometry, BufferGeometry, Color, CylinderGeometry, Euler, Group, Mesh, MeshBasicMaterial, MeshToonMaterial, TorusGeometry, Vector3, type Material } from 'three';
 import type { HandHandle } from './Hand';
+import { KEYBED_Y } from './handFloor';
 import { toonGradient } from './materials';
 import { Optional } from './atmosphere';
 import { useStageColors } from './stageContext';
@@ -123,7 +124,7 @@ export function Racket({ rubber = '#7a2a22' }: { rubber?: string }) {
 interface KeyboardProps {
   /** Number of white keys. Default 11. */
   keys?: number;
-  /** Table surface height. Default -0.49. */
+  /** Table surface height. Default KEYBED_Y (the stage bench plus 0.06). */
   y?: number;
   /** When given, the key under the lowest pressing fingertip lights in gold. */
   handRef?: RefObject<HandHandle>;
@@ -134,7 +135,7 @@ interface KeyboardProps {
 const BLACK_AFTER = [0, 1, 3, 4, 5, 7, 8, 10, 11];
 
 /** A paper-piano keyboard laid on the table, with optional fingertip key highlighting. */
-export function Keyboard({ keys = 11, y = -0.49, handRef, activeKey = null }: KeyboardProps) {
+export function Keyboard({ keys = 11, y = KEYBED_Y, handRef, activeKey = null }: KeyboardProps) {
   const stage = useStageColors();
   const w = 0.19;
   const built = useMemo(() => {
