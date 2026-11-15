@@ -309,11 +309,15 @@ nothing: the fix for the three npm packages is on the unmerged branch `craci-fix
 
 Two limits, stated plainly:
 
-- In the first workflow run, the second job got HTTP 403 from the CRACI API with the token from the repository
-  secret. The same token works from a laptop. So for this build the SBOM was fetched on a laptop after the run and
-  added to the site, and the leak check ran again on the final folder. The cause of the 403 is not known yet.
-- The summary in the site says 338 packages and the SBOM file holds 339. The file is the source. The summary is
-  being corrected.
+- In the workflow, the second job got HTTP 403 from the CRACI API with the token from the repository secret. We
+  checked three things. The secret is the right token: its SHA-256 fingerprint and length equal those of the token
+  that works on a laptop. The network policy did not block the call: the job's own network trace shows the connection
+  to `api.craci.com` on port 443 as allowed, with bytes in both directions. The authentication guide names no scope,
+  no address list and no runner limit. So the API itself refused a request that came from inside a CRACI runner,
+  while the same request from a laptop works. This is a question for CRACI. For the published build the SBOM was
+  fetched on a laptop after the run and added to the site, and the leak check ran again on the final folder.
+- The first summary in the site said 338 packages while the SBOM file holds 339. The one left out was the checked-out
+  repository itself. The page now counts every component in the file, and a check compares the page with the file.
 
 ## 11. How tools/agent_bom works
 

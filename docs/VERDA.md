@@ -1,8 +1,56 @@
 # Geppetto on Verda: Gemma 4 turns a glove recording into a lesson
 
-Track submission for the Verda challenge. Written Sat 14 Nov 2026 and kept current by the `verda` lane
-(`verda/`, branch `verda`). Every number below comes from a run of the scripts in that folder. Prices are
-in USD because Verda lists them that way; the account balance is in EUR because Verda bills that way.
+Track submission for the Verda challenge. Written Sat 14 Nov 2026 by the `verda` lane (`verda/`) and finished
+Sun 15 Nov 2026, 04:30 Helsinki. Every number below comes from a run of our own scripts. Prices are in USD
+because Verda lists them that way; the account balance is in EUR because Verda bills that way.
+
+## Final report: everything we did on Verda
+
+Geppetto teaches hand skills. An expert records a skill with Rokoko Smartgloves, and a learner trains against the
+recording. We used Verda for five pieces of work. Each one has its own section below with the full numbers.
+
+| # | Work | What ran on Verda | Main result | GPU hours | USD at list price |
+| --- | --- | --- | --- | --- | --- |
+| 1 | A glove recording becomes a lesson | Gemma 4 31B (bf16) on vLLM, one Serverless Container, 1x H200 | A valid lesson on the first try in 6 of 6 calls; 10 to 19 s for each lesson with pictures | 0.65 | 3.94 |
+| 2 | Our own coach model for the live hints | Teacher Gemma 4 31B wrote 3,231 labels in 35 s; LoRA training of Gemma 4 E2B; tuned serving | The tuned model matches its 31B teacher on our held-out test (89.0% vs 85.7%); untuned 55.5%; answer in 0.108 s | 0.99 | 5.72 |
+| 3 | The same model tuned for feedback after a rep | The same pipeline with the same rules: 3,267 labels in 48 s, 558 training steps in 217 s | Tuned 94.8%, untuned 54.8%, teacher 85.2% on 1,150 held-out examples; 82.6% on the 333 real capture frames | 0.99 (with work 4) | 5.72 (with work 4) |
+| 4 | Load test of the tuned coach | The tuned coach on one H100, 1 to 200 requests in flight | Answers stay at 0.10 to 0.14 s up to 50 requests in flight; one H100 served between about 340 and 1,740 learners across runs | in work 3 | in work 3 |
+| 5 | A robot policy, evaluated at scale | A policy for the simulated Unitree Dex3-1 hand: 39.3 million training rollouts and 1.44 million evaluation rollouts | The policy halves the tracking error of plain replay and recovers from pushes. The GPU did not improve the policy; it made the evaluation 40 times larger | 1.53 | 8.83 |
+| | Total | 8 container starts, all Serverless Containers | | 4.16 | 24.21 |
+
+A rollout is one simulated run of the robot hand from start to end.
+
+What we want a reader to take from this:
+
+1. One recording is enough for a lesson. The large model on Verda turns a glove trace and a few pictures into a
+   lesson that our backend can teach, with output held to a JSON schema.
+2. We trained a small model on Verda that can replace the large one for the fast job. Labels, training, evaluation
+   and serving all ran on Verda in about one GPU hour for each of the two jobs.
+3. We measured how it scales, and we report a range, not the best run.
+4. We used the GPU where it helps and we say where it does not. The robot policy trains in 44 s on a laptop. The
+   GPU's contribution was the size of the evaluation.
+
+Statements we hold to:
+
+- No Gemini model was distilled. No output from Gemini was used as training data. The tuned models learnt only from
+  text written by Gemma 4 31B, which we hosted ourselves on Verda (`docs/COACH_MODEL.md`).
+- Training labels were filtered for correctness with the same check that scores the test. So "matches its teacher"
+  is the claim, and "better than its teacher" is not.
+- Real glove recordings are test data only. No real capture frame is in any training set.
+- On real capture frames the tuned hint model is below its teacher (62.2% against 66.7%). We state this.
+- We trained inside a Serverless Container, because GPU instances would not start on the coupon balance until a
+  payment method was added. This worked, and the section "Which Verda products we used, and why" gives its limits.
+
+State on Sun 15 Nov 2026, 04:30: nothing is deployed, so nothing bills. The balance is 185.05 EUR of 200.00. Verda's
+console shows 14.95 EUR billed, which is less than our list-price estimate of 24.21 USD. We do not know the reason,
+so we give both numbers.
+
+Plan for the demo day: the tuned coach is served from 09:45 and is down by 14:15 (`scripts/coach_up.sh`,
+`scripts/coach_down.sh`; section "Demo day commands"). The large model for lesson writing is tried once; if no GPU
+is free within 10 minutes, lesson writing stays on the fallback.
+
+Where the rest is written: the coach model card is `docs/COACH_MODEL.md`; the robot policy is
+`docs/ROBOT_POLICY.md`; the piano data work that used no Verda GPU is `docs/PRIORS.md`.
 
 ## What runs on Verda
 
@@ -207,6 +255,38 @@ reading of the numbers: `docs/COACH_MODEL.md`, "Second job".
 The training labels were filtered for correctness with the same check that scores the test, so this is not a claim
 that the small model is the better teacher. The adapter is saved; it is not served in the demo.
 
+## A robot policy, evaluated on Verda
+
+The track is robot teleoperation, so we also asked: can a robot hand perform a lesson on its own? The work is
+standalone (`robot_policy/`, `docs/ROBOT_POLICY.md`). The live app does not use it.
+
+The expert's real glove takes are mapped to the 7 joints of the Unitree Dex3-1 hand. 19 takes are the source of
+5,700 generated variations (timing, noise, hand size) for training. 8 real takes are held out. A small network of
+45,703 weights reads the hand's angles and speeds and the next 160 ms of the lesson, 50 times a second.
+
+Tracking error on the 8 held-out takes, in degrees (lower is better), 160,000 rollouts for each system and test:
+
+| Test | Policy | Plain replay | Replay sent 100 ms early |
+| --- | --- | --- | --- |
+| Normal start | 2.13 | 6.12 | 2.44 |
+| Random start pose | 3.73 | 6.88 | 4.02 |
+| Three pushes | 3.78 | 7.25 | 4.60 |
+
+What the GPU added, and what it did not:
+
+| | Laptop CPU | Verda, 1x H100 |
+| --- | --- | --- |
+| Training rollouts | 51,200 | 39,321,600 |
+| Training time | 44 s | 30.5 min |
+| Evaluation rollouts | 36,000 for each policy | 1,440,000 |
+| Evaluation time | 69 s | 4.6 min |
+| Error of the trained policy on the same 36,000 rollouts (three tests) | 2.06, 3.72, 3.73 | 2.12, 3.76, 3.77 |
+
+The GPU did not improve the policy. A network of this size needs no GPU. The GPU's contribution is the evaluation,
+which is 40 times larger and gave the same answer. We did not time 1.44 million rollouts on the laptop, so we make
+no speed claim. Limits: simulation only, no real hand, no contact; the held-out takes are other takes of lesson
+steps that are also in training.
+
 ## Cost so far
 
 | When (Helsinki) | Event | GPU | Hours | USD at list price | Running total USD | Balance (EUR) |
@@ -220,9 +300,14 @@ that the small model is the better teacher. The adapter is saved; it is not serv
 | 14 Nov 20:02 | coach-tune trainer, second start; all torn down | H100 | 0.70 | 4.04 | 9.66 | 196.70 |
 | 15 Nov 00:25 to 00:33 | Rep feedback job: teacher container, 3,620 label calls and the teacher evaluation | H100 | 0.137 | 0.79 | 10.45 | 195.39 |
 | 15 Nov 00:25 to 01:16 | Rep feedback job: trainer container (untuned evaluation, smoke test, training, tuned evaluation), then the hint model served again and the load test | H100 | 0.855 | 4.93 | 15.38 | 189.39 |
+| 15 Nov 00:36 to 01:02 | Robot policy container, first start (a run that we discarded after a data fix) | H100 | 0.44 | 2.54 | 17.92 | 192.52 |
+| 15 Nov 01:02 to 02:08 | Robot policy container, second start: training, the 1.44 million rollout evaluation, the MuJoCo check | H100 | 1.09 | 6.29 | 24.21 | 185.05 |
+| Total | 8 container starts | | 4.16 | 24.21 | 24.21 | 185.05 |
 
 The balance column is what the Verda console showed at that moment. Verda posts charges in 10 minute
-aggregates, so it lags the list-price estimate. The coach-tune containers are deleted. On 15 Nov at 01:20 one container of the robot policy work (`robot-policy`, see `docs/ROBOT_POLICY.md`) still ran; its cost is not in this table.
+aggregates, so it lags the list-price estimate, and the rows of 15 Nov overlap in time, so the column does not fall
+in step with the running total. On 15 Nov at 04:23 the console showed 185.05 EUR and no deployment. Every container
+is deleted. A detached timer on the laptop checks this again at 06:45.
 
 ## Expert-priors lane: no GPU used
 
