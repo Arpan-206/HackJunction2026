@@ -1,0 +1,2091 @@
+{
+  "schema": "geppetto.core-export/1",
+  "updated_at": "2026-11-15T01:09:11.517916+00:00",
+  "format": "geppetto.lesson/1 lesson folders (SPEC.md 'Lesson files')",
+  "read_by": "core.recorder.Lesson.load, weights/check_lessons.py, export/ (geppetto-export --lessons-dir takes or lessons), coach_tune/build_dataset.py once pointed here, verda/gemma_client.py (request context for the model hosted on Verda); all local, nothing uploaded",
+  "angles": "degrees; a real glove part with a calibration (parts[].calibration) is calibrated as the live core does (core/calibration.py), otherwise raw glove flexion",
+  "joints": "core.hand.synth_joints driven by the measured angles (our glove frames carry no joint positions)",
+  "entries": [
+    {
+      "kind": "take",
+      "id": "szymon-94bbf264e87a",
+      "source_file": "recordings/szymon-94bbf264e87a.json",
+      "exported_at": "2026-11-14T23:16:41.931009+00:00",
+      "folders": [
+        "takes/szymon-94bbf264e87a-left",
+        "takes/szymon-94bbf264e87a-right"
+      ],
+      "title": "Expert take 2026-11-14T23:16",
+      "created": "2026-11-14T23:16:38.630946+00:00",
+      "lesson_id": null,
+      "step_id": "free_i8tliqgl:rep1",
+      "hands": "both",
+      "glove_source": "fake",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-94bbf264e87a-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 2.698,
+          "rate_hz": 60.42,
+          "calibration": null
+        },
+        {
+          "folder": "takes/szymon-94bbf264e87a-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 2.698,
+          "rate_hz": 60.42,
+          "calibration": null
+        }
+      ],
+      "fingerprint": "a8142f708ef17c10"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-d0c555996dd0",
+      "source_file": "recordings/szymon-d0c555996dd0.json",
+      "exported_at": "2026-11-14T23:16:48.407866+00:00",
+      "folders": [
+        "takes/szymon-d0c555996dd0-left",
+        "takes/szymon-d0c555996dd0-right"
+      ],
+      "title": "Expert take 2026-11-14T23:16",
+      "created": "2026-11-14T23:16:45.783053+00:00",
+      "lesson_id": null,
+      "step_id": "free_i8tliqgl:rep2",
+      "hands": "both",
+      "glove_source": "fake",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-d0c555996dd0-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 2.043,
+          "rate_hz": 60.19,
+          "calibration": null
+        },
+        {
+          "folder": "takes/szymon-d0c555996dd0-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 2.043,
+          "rate_hz": 60.19,
+          "calibration": null
+        }
+      ],
+      "fingerprint": "9f1ea38e82c7aa25"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-0053cfa41fbc",
+      "source_file": "recordings/szymon-0053cfa41fbc.json",
+      "exported_at": "2026-11-14T23:18:38.170747+00:00",
+      "folders": [
+        "takes/szymon-0053cfa41fbc-left",
+        "takes/szymon-0053cfa41fbc-right"
+      ],
+      "title": "Expert take 2026-11-14T23:18",
+      "created": "2026-11-14T23:18:34.536274+00:00",
+      "lesson_id": null,
+      "step_id": "free_i8tliqgl:rep3",
+      "hands": "both",
+      "glove_source": "fake",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-0053cfa41fbc-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 3.067,
+          "rate_hz": 60.32,
+          "calibration": null
+        },
+        {
+          "folder": "takes/szymon-0053cfa41fbc-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 3.067,
+          "rate_hz": 60.32,
+          "calibration": null
+        }
+      ],
+      "fingerprint": "7efb52f073308e2b"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-64f2c0437179",
+      "source_file": "recordings/szymon-64f2c0437179.json",
+      "exported_at": "2026-11-14T23:22:52.728783+00:00",
+      "folders": [
+        "takes/szymon-64f2c0437179-right"
+      ],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-14T23:22:42.576744+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "fake",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-64f2c0437179-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 9.574,
+          "rate_hz": 60.16,
+          "calibration": null
+        }
+      ],
+      "fingerprint": "57de1461f84e9ec2"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-0f74384620ce",
+      "source_file": "recordings/szymon-0f74384620ce.json",
+      "exported_at": "2026-11-14T23:42:57.123466+00:00",
+      "folders": [
+        "takes/szymon-0f74384620ce-right"
+      ],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-14T23:42:48.978110+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "fake",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-0f74384620ce-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 7.55,
+          "rate_hz": 60.13,
+          "calibration": null
+        }
+      ],
+      "fingerprint": "e6c2e29ef997ce0a"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-edb00738feec",
+      "source_file": "recordings/szymon-edb00738feec.json",
+      "exported_at": "2026-11-15T00:52:27.037063+00:00",
+      "folders": [
+        "takes/szymon-edb00738feec-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 1: Letter A ",
+      "created": "2026-11-15T00:07:25.375757+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-junction",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-edb00738feec-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.735,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "5db9ef578d1e62f3"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-b6c1083312f6",
+      "source_file": "recordings/szymon-b6c1083312f6.json",
+      "exported_at": "2026-11-15T00:52:25.415737+00:00",
+      "folders": [
+        "takes/szymon-b6c1083312f6-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 1: Letter A ",
+      "created": "2026-11-15T00:07:35.802188+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-junction",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-b6c1083312f6-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.469,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "1298193519914e9d"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-dba522c9f8a3",
+      "source_file": "recordings/szymon-dba522c9f8a3.json",
+      "exported_at": "2026-11-15T00:52:26.898997+00:00",
+      "folders": [
+        "takes/szymon-dba522c9f8a3-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 1: Letter A ",
+      "created": "2026-11-15T00:07:45.476310+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-junction",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-dba522c9f8a3-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.438,
+          "rate_hz": 29.97,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "92d6e2b050e9d785"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-78977e77365e",
+      "source_file": "recordings/szymon-78977e77365e.json",
+      "exported_at": "2026-11-15T00:52:23.810968+00:00",
+      "folders": [
+        "takes/szymon-78977e77365e-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 1: Letter A ",
+      "created": "2026-11-15T00:07:54.593737+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-junction",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-78977e77365e-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.734,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "12847add0c877d30"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-2a21347a9ba8",
+      "source_file": "recordings/szymon-2a21347a9ba8.json",
+      "exported_at": "2026-11-15T00:52:22.538916+00:00",
+      "folders": [
+        "takes/szymon-2a21347a9ba8-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 2: Spell junct",
+      "created": "2026-11-15T00:11:08.273578+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-geppetto",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-2a21347a9ba8-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "move",
+            "move",
+            "move",
+            "move",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 13.469,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "c5a34a41d9cd9acd"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-4ca8e37c97eb",
+      "source_file": "recordings/szymon-4ca8e37c97eb.json",
+      "exported_at": "2026-11-15T00:52:23.240908+00:00",
+      "folders": [
+        "takes/szymon-4ca8e37c97eb-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 2: Spell junct",
+      "created": "2026-11-15T00:11:29.300760+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-geppetto",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-4ca8e37c97eb-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "move",
+            "hold",
+            "move",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 10.406,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "b0df54f336c07bb2"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-6e863aef77a2",
+      "source_file": "recordings/szymon-6e863aef77a2.json",
+      "exported_at": "2026-11-15T00:52:23.696946+00:00",
+      "folders": [
+        "takes/szymon-6e863aef77a2-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 2: Spell junct",
+      "created": "2026-11-15T00:11:44.444274+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-geppetto",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-6e863aef77a2-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "move",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 9.406,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "68583c3e15c84763"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-c154d83fb700",
+      "source_file": "recordings/szymon-c154d83fb700.json",
+      "exported_at": "2026-11-15T00:52:25.939191+00:00",
+      "folders": [
+        "takes/szymon-c154d83fb700-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 2: Spell junct",
+      "created": "2026-11-15T00:12:01.390745+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-geppetto",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-c154d83fb700-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "move",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 11.094,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "01ca400c0d715b6b"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-f03dbc46eff5",
+      "source_file": "recordings/szymon-f03dbc46eff5.json",
+      "exported_at": "2026-11-15T00:52:27.106228+00:00",
+      "folders": [
+        "takes/szymon-f03dbc46eff5-right"
+      ],
+      "title": "Fingerspelling: spell a word: Lesson 2: Spell junct",
+      "created": "2026-11-15T00:12:22.254881+00:00",
+      "lesson_id": "seed-fingerspelling-words",
+      "step_id": "seed-fs-word-geppetto",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-f03dbc46eff5-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "move",
+            "hold",
+            "move",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 12.36,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "2efe16aefa603534"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-853270a64f20",
+      "source_file": "recordings/szymon-853270a64f20.json",
+      "exported_at": "2026-11-15T00:52:24.020405+00:00",
+      "folders": [
+        "takes/szymon-853270a64f20-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:20:51.667307+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-853270a64f20-right",
+          "side": "right",
+          "steps": 3,
+          "kinds": [
+            "hold",
+            "move",
+            "move"
+          ],
+          "frames": 3,
+          "duration_s": 7.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "76c2b1aae42dd495"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-8b5847c71fdf",
+      "source_file": "recordings/szymon-8b5847c71fdf.json",
+      "exported_at": "2026-11-15T00:52:24.180795+00:00",
+      "folders": [
+        "takes/szymon-8b5847c71fdf-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:21:03.478718+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-8b5847c71fdf-right",
+          "side": "right",
+          "steps": 3,
+          "kinds": [
+            "hold",
+            "move",
+            "move"
+          ],
+          "frames": 3,
+          "duration_s": 6.672,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "4cc50832cc202108"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-46ee04f5bc0a",
+      "source_file": "recordings/szymon-46ee04f5bc0a.json",
+      "exported_at": "2026-11-15T00:52:23.089526+00:00",
+      "folders": [
+        "takes/szymon-46ee04f5bc0a-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:21:13.959752+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-46ee04f5bc0a-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "move",
+            "move"
+          ],
+          "frames": 5,
+          "duration_s": 6.797,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "a9bb910f1ae9038a"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-35ea4fca137e",
+      "source_file": "recordings/szymon-35ea4fca137e.json",
+      "exported_at": "2026-11-15T00:52:22.999697+00:00",
+      "folders": [
+        "takes/szymon-35ea4fca137e-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:21:24.721499+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-35ea4fca137e-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "move"
+          ],
+          "frames": 4,
+          "duration_s": 6.829,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "f939af8ba06af72d"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-d4ba1ee09d70",
+      "source_file": "recordings/szymon-d4ba1ee09d70.json",
+      "exported_at": "2026-11-15T00:52:26.527453+00:00",
+      "folders": [
+        "takes/szymon-d4ba1ee09d70-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-15T00:35:39.337728+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c412d52d3d77",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-d4ba1ee09d70-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.437,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "55b05bcdba23900d"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-7dfc54e4fc0b",
+      "source_file": "recordings/szymon-7dfc54e4fc0b.json",
+      "exported_at": "2026-11-15T00:52:23.880401+00:00",
+      "folders": [
+        "takes/szymon-7dfc54e4fc0b-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-15T00:35:49.825757+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c412d52d3d77",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-7dfc54e4fc0b-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.437,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "0fe41738e68b76e5"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-8463fc05d240",
+      "source_file": "recordings/szymon-8463fc05d240.json",
+      "exported_at": "2026-11-15T00:52:23.951510+00:00",
+      "folders": [
+        "takes/szymon-8463fc05d240-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 1: The shakehand grip",
+      "created": "2026-11-15T00:36:02.884845+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c412d52d3d77",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-8463fc05d240-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.031,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "21cc72c291b2589b"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-34300ebd954f",
+      "source_file": "recordings/szymon-34300ebd954f.json",
+      "exported_at": "2026-11-15T00:52:22.907337+00:00",
+      "folders": [
+        "takes/szymon-34300ebd954f-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:37:19.680541+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-34300ebd954f-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "move",
+            "hold",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 6.703,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "c2621db131440847"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-014e399298a1",
+      "source_file": "recordings/szymon-014e399298a1.json",
+      "exported_at": "2026-11-15T00:52:21.925362+00:00",
+      "folders": [
+        "takes/szymon-014e399298a1-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:37:30.328689+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-014e399298a1-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "move",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 8.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "213416dce36f19f3"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-ba5c16fc19f6",
+      "source_file": "recordings/szymon-ba5c16fc19f6.json",
+      "exported_at": "2026-11-15T00:52:25.565700+00:00",
+      "folders": [
+        "takes/szymon-ba5c16fc19f6-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:37:42.520402+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-ba5c16fc19f6-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 10.172,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "5b9c20614ba6b129"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-f662ec3ad4b0",
+      "source_file": "recordings/szymon-f662ec3ad4b0.json",
+      "exported_at": "2026-11-15T00:52:27.250014+00:00",
+      "folders": [
+        "takes/szymon-f662ec3ad4b0-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:37:58.831927+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-f662ec3ad4b0-right",
+          "side": "right",
+          "steps": 6,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 6,
+          "duration_s": 10.469,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "45d2c75c9374a70f"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-2feb7ae0ba05",
+      "source_file": "recordings/szymon-2feb7ae0ba05.json",
+      "exported_at": "2026-11-15T00:52:22.689918+00:00",
+      "folders": [
+        "takes/szymon-2feb7ae0ba05-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:40:39.633506+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-2feb7ae0ba05-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 9.922,
+          "rate_hz": 30.03,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "896452514e06f832"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-8f8dcd081055",
+      "source_file": "recordings/szymon-8f8dcd081055.json",
+      "exported_at": "2026-11-15T00:52:24.269615+00:00",
+      "folders": [
+        "takes/szymon-8f8dcd081055-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 2: Forehand swing",
+      "created": "2026-11-15T00:41:01.505601+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "c092900b47e8",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-8f8dcd081055-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 11.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "d44a217b68d2e857"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-fa5fa6665745",
+      "source_file": "recordings/szymon-fa5fa6665745.json",
+      "exported_at": "2026-11-15T00:52:27.382814+00:00",
+      "folders": [
+        "takes/szymon-fa5fa6665745-left",
+        "takes/szymon-fa5fa6665745-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 4: The flapping bird",
+      "created": "2026-11-15T00:45:21.857558+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-bird",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-fa5fa6665745-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 6.968,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-fa5fa6665745-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 6.968,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "52ad4a5c7eb360f8"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-d69602c00512",
+      "source_file": "recordings/szymon-d69602c00512.json",
+      "exported_at": "2026-11-15T00:52:26.695201+00:00",
+      "folders": [
+        "takes/szymon-d69602c00512-left",
+        "takes/szymon-d69602c00512-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 4: The flapping bird",
+      "created": "2026-11-15T00:45:33.154695+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-bird",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-d69602c00512-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.671,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-d69602c00512-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.671,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "900ea927a8858def"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-0183807bbd52",
+      "source_file": "recordings/szymon-0183807bbd52.json",
+      "exported_at": "2026-11-15T00:52:22.064239+00:00",
+      "folders": [
+        "takes/szymon-0183807bbd52-left",
+        "takes/szymon-0183807bbd52-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 4: The flapping bird",
+      "created": "2026-11-15T00:45:48.016694+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-bird",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-0183807bbd52-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.234,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-0183807bbd52-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.234,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "258873790005a818"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-989ed6ba71f9",
+      "source_file": "recordings/szymon-989ed6ba71f9.json",
+      "exported_at": "2026-11-15T00:52:24.545858+00:00",
+      "folders": [
+        "takes/szymon-989ed6ba71f9-left",
+        "takes/szymon-989ed6ba71f9-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 4: The flapping bird",
+      "created": "2026-11-15T00:46:03.189626+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-bird",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-989ed6ba71f9-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.875,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-989ed6ba71f9-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "move"
+          ],
+          "frames": 1,
+          "duration_s": 10.875,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "b14f291278d54286"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-01fa7128f9d7",
+      "source_file": "recordings/szymon-01fa7128f9d7.json",
+      "exported_at": "2026-11-15T00:52:22.284874+00:00",
+      "folders": [
+        "takes/szymon-01fa7128f9d7-left",
+        "takes/szymon-01fa7128f9d7-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 5: The snail",
+      "created": "2026-11-15T00:46:51.418297+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-snail",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-01fa7128f9d7-left",
+          "side": "left",
+          "steps": 2,
+          "kinds": [
+            "hold",
+            "hold"
+          ],
+          "frames": 2,
+          "duration_s": 8.797,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-01fa7128f9d7-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 8.797,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "0c097c23860fadb1"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-abbc0d95aae4",
+      "source_file": "recordings/szymon-abbc0d95aae4.json",
+      "exported_at": "2026-11-15T00:52:25.038599+00:00",
+      "folders": [
+        "takes/szymon-abbc0d95aae4-left",
+        "takes/szymon-abbc0d95aae4-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 5: The snail",
+      "created": "2026-11-15T00:47:04.364077+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-snail",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-abbc0d95aae4-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 8.703,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-abbc0d95aae4-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 8.703,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "665d686330b2ae4e"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-bea9dee6aad3",
+      "source_file": "recordings/szymon-bea9dee6aad3.json",
+      "exported_at": "2026-11-15T00:52:25.699886+00:00",
+      "folders": [
+        "takes/szymon-bea9dee6aad3-left",
+        "takes/szymon-bea9dee6aad3-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 5: The snail",
+      "created": "2026-11-15T00:47:17.572003+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-snail",
+      "hands": "both",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-bea9dee6aad3-left",
+          "side": "left",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 8.562,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f6b9f8e0c3de",
+            "created_at": "2026-11-14T17:46:43.070795+00:00",
+            "range": "measured"
+          }
+        },
+        {
+          "folder": "takes/szymon-bea9dee6aad3-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 8.562,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "8a9d2d730ccb098f"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-9f34d9d8fafe",
+      "source_file": "recordings/szymon-9f34d9d8fafe.json",
+      "exported_at": "2026-11-15T00:52:24.759252+00:00",
+      "folders": [
+        "takes/szymon-9f34d9d8fafe-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 3: The swan",
+      "created": "2026-11-15T00:47:46.429730+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-swan",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-9f34d9d8fafe-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.406,
+          "rate_hz": 29.97,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "d4b946d7a71d157a"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-877473e7c4d9",
+      "source_file": "recordings/szymon-877473e7c4d9.json",
+      "exported_at": "2026-11-15T00:52:24.101427+00:00",
+      "folders": [
+        "takes/szymon-877473e7c4d9-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 3: The swan",
+      "created": "2026-11-15T00:47:55.510022+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-swan",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-877473e7c4d9-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.609,
+          "rate_hz": 29.95,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "0da15617ed5c8aa3"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-c411bc3d3466",
+      "source_file": "recordings/szymon-c411bc3d3466.json",
+      "exported_at": "2026-11-15T00:52:26.077708+00:00",
+      "folders": [
+        "takes/szymon-c411bc3d3466-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 3: The swan",
+      "created": "2026-11-15T00:48:04.679910+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-swan",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-c411bc3d3466-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.031,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "5a4081559f1f9e13"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-6b8b367c4015",
+      "source_file": "recordings/szymon-6b8b367c4015.json",
+      "exported_at": "2026-11-15T00:52:23.615461+00:00",
+      "folders": [
+        "takes/szymon-6b8b367c4015-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:48:37.835367+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-6b8b367c4015-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "hold"
+          ],
+          "frames": 4,
+          "duration_s": 6.063,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "3d26db7f9320917d"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-a03faa350c0e",
+      "source_file": "recordings/szymon-a03faa350c0e.json",
+      "exported_at": "2026-11-15T00:52:24.827415+00:00",
+      "folders": [
+        "takes/szymon-a03faa350c0e-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:48:47.586032+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-a03faa350c0e-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "hold",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 6.734,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "c52c8e26e3ac3dfb"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-5992b3c9201c",
+      "source_file": "recordings/szymon-5992b3c9201c.json",
+      "exported_at": "2026-11-15T00:52:23.514137+00:00",
+      "folders": [
+        "takes/szymon-5992b3c9201c-right"
+      ],
+      "title": "Shadow puppets: five animals by candlelight: Lesson 1: The rabbit",
+      "created": "2026-11-15T00:48:57.872370+00:00",
+      "lesson_id": "seed-shadow-puppets",
+      "step_id": "seed-sp-rabbit",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-5992b3c9201c-right",
+          "side": "right",
+          "steps": 5,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "move",
+            "hold"
+          ],
+          "frames": 5,
+          "duration_s": 7.0,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "6a1589c0a06686f3"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-977906efe597",
+      "source_file": "recordings/szymon-977906efe597.json",
+      "exported_at": "2026-11-15T00:52:24.433248+00:00",
+      "folders": [
+        "takes/szymon-977906efe597-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-15T00:50:03.384902+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "caf5e58369d5",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-977906efe597-right",
+          "side": "right",
+          "steps": 6,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold"
+          ],
+          "frames": 6,
+          "duration_s": 6.859,
+          "rate_hz": 30.03,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "164bb22403480da4"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-af1028500d87",
+      "source_file": "recordings/szymon-af1028500d87.json",
+      "exported_at": "2026-11-15T00:52:25.215371+00:00",
+      "folders": [
+        "takes/szymon-af1028500d87-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-15T00:50:13.859629+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "caf5e58369d5",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-af1028500d87-right",
+          "side": "right",
+          "steps": 8,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "hold",
+            "move",
+            "move"
+          ],
+          "frames": 8,
+          "duration_s": 9.172,
+          "rate_hz": 29.98,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "57d8c062b889af12"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-cfc33b22012e",
+      "source_file": "recordings/szymon-cfc33b22012e.json",
+      "exported_at": "2026-11-15T00:52:26.416200+00:00",
+      "folders": [
+        "takes/szymon-cfc33b22012e-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-15T00:50:26.714873+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "caf5e58369d5",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-cfc33b22012e-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "move"
+          ],
+          "frames": 4,
+          "duration_s": 8.765,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "37cbabb14186264e"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-cefd38f5c4da",
+      "source_file": "recordings/szymon-cefd38f5c4da.json",
+      "exported_at": "2026-11-15T00:52:26.286925+00:00",
+      "folders": [
+        "takes/szymon-cefd38f5c4da-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-15T00:50:38.967820+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "caf5e58369d5",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-cefd38f5c4da-right",
+          "side": "right",
+          "steps": 6,
+          "kinds": [
+            "hold",
+            "hold",
+            "hold",
+            "move",
+            "hold",
+            "move"
+          ],
+          "frames": 6,
+          "duration_s": 8.641,
+          "rate_hz": 29.97,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "b4ea141c9fd9b247"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-a98d510040fe",
+      "source_file": "recordings/szymon-a98d510040fe.json",
+      "exported_at": "2026-11-15T00:52:24.928498+00:00",
+      "folders": [
+        "takes/szymon-a98d510040fe-right"
+      ],
+      "title": "Table Tennis: grip and forehand: Lesson 3: Wrist snap at contact",
+      "created": "2026-11-15T00:50:51.147382+00:00",
+      "lesson_id": "szymon-e77e20844ce0",
+      "step_id": "caf5e58369d5",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-a98d510040fe-right",
+          "side": "right",
+          "steps": 4,
+          "kinds": [
+            "hold",
+            "hold",
+            "move",
+            "move"
+          ],
+          "frames": 4,
+          "duration_s": 8.469,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "f28bbe6d4a343fdc"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-4b2ec9363e7b",
+      "source_file": "recordings/szymon-4b2ec9363e7b.json",
+      "exported_at": "2026-11-15T00:52:23.173904+00:00",
+      "folders": [
+        "takes/szymon-4b2ec9363e7b-right"
+      ],
+      "title": "Piano: first fingering: Lesson 1: Hand position",
+      "created": "2026-11-15T00:51:24.700318+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-position",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-4b2ec9363e7b-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.64,
+          "rate_hz": 29.96,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "ebb5794481a4ebfb"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-b5afa741f126",
+      "source_file": "recordings/szymon-b5afa741f126.json",
+      "exported_at": "2026-11-15T00:52:25.344047+00:00",
+      "folders": [
+        "takes/szymon-b5afa741f126-right"
+      ],
+      "title": "Piano: first fingering: Lesson 1: Hand position",
+      "created": "2026-11-15T00:51:34.407641+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-position",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-b5afa741f126-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 5.859,
+          "rate_hz": 30.04,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "f942a0e88c695ab9"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-e20b944a8690",
+      "source_file": "recordings/szymon-e20b944a8690.json",
+      "exported_at": "2026-11-15T00:52:26.967961+00:00",
+      "folders": [
+        "takes/szymon-e20b944a8690-right"
+      ],
+      "title": "Piano: first fingering: Lesson 1: Hand position",
+      "created": "2026-11-15T00:51:44.329822+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-position",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-e20b944a8690-right",
+          "side": "right",
+          "steps": 1,
+          "kinds": [
+            "hold"
+          ],
+          "frames": 1,
+          "duration_s": 6.063,
+          "rate_hz": 30.02,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "069bf187f3e497fc"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-4986ea2809a7",
+      "source_file": "recordings/szymon-4986ea2809a7.json",
+      "exported_at": "2026-11-15T00:52:41.763955+00:00",
+      "folders": [
+        "takes/szymon-4986ea2809a7-right"
+      ],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-15T00:52:29.511618+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-4986ea2809a7-right",
+          "side": "right",
+          "steps": 6,
+          "kinds": [
+            "move",
+            "move",
+            "hold",
+            "hold",
+            "move",
+            "hold"
+          ],
+          "frames": 6,
+          "duration_s": 11.562,
+          "rate_hz": 30.01,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "178d2c99aadbe91a"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-a4df4ef89dd7",
+      "source_file": "recordings/szymon-a4df4ef89dd7.json",
+      "exported_at": "2026-11-15T00:52:57.635294+00:00",
+      "folders": [
+        "takes/szymon-a4df4ef89dd7-right"
+      ],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-15T00:52:45.089772+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-a4df4ef89dd7-right",
+          "side": "right",
+          "steps": 6,
+          "kinds": [
+            "move",
+            "move",
+            "hold",
+            "move",
+            "move",
+            "hold"
+          ],
+          "frames": 6,
+          "duration_s": 11.766,
+          "rate_hz": 30.0,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "0b8aa70ec84c84f8"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-79da67b23cdb",
+      "source_file": "recordings/szymon-79da67b23cdb.json",
+      "exported_at": "2026-11-15T00:53:15.327215+00:00",
+      "folders": [
+        "takes/szymon-79da67b23cdb-right"
+      ],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-15T00:53:00.602269+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [
+        {
+          "folder": "takes/szymon-79da67b23cdb-right",
+          "side": "right",
+          "steps": 10,
+          "kinds": [
+            "hold",
+            "move",
+            "move",
+            "move",
+            "move",
+            "move",
+            "move",
+            "move",
+            "hold",
+            "hold"
+          ],
+          "frames": 10,
+          "duration_s": 13.938,
+          "rate_hz": 29.99,
+          "calibration": {
+            "wearer": null,
+            "range_calibration_id": "szymon-f4a3ced3f489",
+            "created_at": "2026-11-15T00:52:16.177037+00:00",
+            "range": "measured"
+          }
+        }
+      ],
+      "fingerprint": "ccec074bd307359c"
+    }
+  ]
+}

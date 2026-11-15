@@ -1,0 +1,232 @@
+{
+  "schema": "geppetto.lesson/1",
+  "id": "szymon-4b2ec9363e7b-right",
+  "title": "Piano: first fingering: Lesson 1: Hand position",
+  "task": "general",
+  "task_config": {
+    "geppetto": {
+      "recording_id": "szymon-4b2ec9363e7b",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-position"
+    }
+  },
+  "created": "2026-11-15T00:51:24.700318+00:00",
+  "master": {
+    "name": "Demo expert",
+    "hand": "right"
+  },
+  "source": "glove",
+  "rate_hz": 29.96,
+  "duration_us": 5640000,
+  "steps": [
+    {
+      "index": 0,
+      "name": "Lesson 1: Hand position",
+      "note": "Rest your fingers on five neighbouring keys, curved like you are holding a small ball, wrist level.",
+      "kind": "hold",
+      "t0_us": 0,
+      "t1_us": 5640000,
+      "key_t_us": 5640000,
+      "key_angles": [
+        4.76,
+        4.69,
+        8.04,
+        4.43,
+        3.62,
+        0.0,
+        24.29,
+        22.84,
+        12.4,
+        11.27,
+        10.69,
+        35.6,
+        0.0,
+        0.0,
+        25.11,
+        22.14,
+        11.88,
+        21.21
+      ],
+      "key_joints": [
+        [
+          -0.0086,
+          -0.0,
+          -0.0445
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.018,
+          -0.008,
+          -0.015
+        ],
+        [
+          -0.0503,
+          -0.0172,
+          -0.045
+        ],
+        [
+          -0.0738,
+          -0.0267,
+          -0.0691
+        ],
+        [
+          -0.0912,
+          -0.036,
+          -0.089
+        ],
+        [
+          -0.025,
+          0.0,
+          -0.012
+        ],
+        [
+          -0.0318,
+          -0.0,
+          -0.0766
+        ],
+        [
+          -0.0359,
+          -0.0056,
+          -0.116
+        ],
+        [
+          -0.0385,
+          -0.011,
+          -0.1403
+        ],
+        [
+          -0.0405,
+          -0.0165,
+          -0.1594
+        ],
+        [
+          -0.008,
+          -0.0,
+          -0.012
+        ],
+        [
+          -0.0091,
+          0.0,
+          -0.077
+        ],
+        [
+          -0.0099,
+          -0.0,
+          -0.122
+        ],
+        [
+          -0.0104,
+          -0.0115,
+          -0.1475
+        ],
+        [
+          -0.0106,
+          -0.0262,
+          -0.1611
+        ],
+        [
+          0.01,
+          0.0,
+          -0.012
+        ],
+        [
+          0.0142,
+          -0.0,
+          -0.0719
+        ],
+        [
+          0.0169,
+          -0.0086,
+          -0.1108
+        ],
+        [
+          0.0186,
+          -0.019,
+          -0.1346
+        ],
+        [
+          0.0197,
+          -0.0303,
+          -0.151
+        ],
+        [
+          0.028,
+          0.0,
+          -0.012
+        ],
+        [
+          0.0376,
+          -0.0,
+          -0.0662
+        ],
+        [
+          0.0421,
+          -0.0186,
+          -0.0918
+        ],
+        [
+          0.0449,
+          -0.0303,
+          -0.1078
+        ],
+        [
+          0.0474,
+          -0.0407,
+          -0.1222
+        ]
+      ],
+      "key_wrist_q": [
+        -0.0871,
+        0.1187,
+        -0.1763,
+        0.9733
+      ],
+      "weights": {
+        "thumb": 0.5,
+        "index": 0.5,
+        "middle": 0.5,
+        "ring": 0.5,
+        "little": 0.5
+      },
+      "hold_ms": 500,
+      "frame": "frames/step_00.jpg",
+      "named_by": "manual",
+      "weights_from": {
+        "static": {
+          "thumb": 0.5,
+          "index": 0.5,
+          "middle": 0.5,
+          "ring": 0.5,
+          "little": 0.5
+        },
+        "consistency": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        },
+        "takes": 1,
+        "take_spread_deg": {
+          "thumb": 0.0,
+          "index": 0.0,
+          "middle": 0.0,
+          "ring": 0.0,
+          "little": 0.0
+        },
+        "chart": null,
+        "calibration": {
+          "thumb": 1.0,
+          "index": 1.0,
+          "middle": 1.0,
+          "ring": 1.0,
+          "little": 1.0
+        }
+      }
+    }
+  ]
+}
