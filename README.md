@@ -132,3 +132,11 @@ python -m core --fake --port 8000  # the same, on the port the frontend proxies 
 Read `STATUS.md` (what works, what is untested), `DECISIONS.md` (every
 judgement call) and `RECONCILE.md` (how the two halves fit, and an opinion on
 `SPEC.md` versus `docs/CONTRACT.md`).
+
+## Licence
+
+The code and documents of Geppetto are under the MIT License: see `LICENSE`.
+Some files are not our own work and keep their own licences, for example the
+hand mesh and the Unitree Dex3-1 robot files: see `THIRD_PARTY_NOTICES.md`.
+Rokoko, Unitree and Gemma are names of their owners. Geppetto is not a product
+of those companies.

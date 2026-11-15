@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Export Geppetto lessons and Dex3-1 robot joint targets as LeRobot dataset episodes"
 readme = "README.md"
 authors = [
-    { name = "Arpan Pandey", email = "arpanpandey.aps@gmail.com" }
+    { name = "Arpan Pandey" }
 ]
 requires-python = ">=3.12"
 dependencies = [

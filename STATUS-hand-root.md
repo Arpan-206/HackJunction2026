@@ -63,7 +63,7 @@ Alone on one clip, the tracker takes about 13 to 18 ms a frame (60 fps or more),
 
 "Still jitter" is the median standard deviation of the fused wrist over 1 s windows where the hand moved less than 1 cm per frame. The lidar lane measured 4.6 mm p50 on its own blob finder.
 
-The one-hand clip check: 12 of 12 sampled frames by eye show the right-glove fix on the glove, never on the bare arm (`docs/hand_root/onehand_frames.jpg`). The fuser held 10 times for ambiguity instead of switching.
+The one-hand clip check: 12 of 12 sampled frames by eye show the right-glove fix on the glove, never on the bare arm (the frame sheet is not in the repository: it showed people at the venue). The fuser held 10 times for ambiguity instead of switching.
 
 MediaPipe alone (before the depth-first change) found far less:
 
