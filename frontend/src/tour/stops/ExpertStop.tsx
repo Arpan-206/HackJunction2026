@@ -12,7 +12,7 @@ export default function ExpertStop() {
   return (
     <section className="tour-stop">
       <p className="tour-lead">
-        A member of our team recorded the table tennis shakehand grip as the expert, wearing Rokoko gloves. The chalk hand plays that real take, frame by frame.
+        A member of our team recorded the table tennis wrist snap as the expert, wearing Rokoko gloves. This take is the lesson's expert reference. The chalk hand plays it frame by frame.
       </p>
       <ExpertStage take={take} />
       <p className="tour-small">
@@ -27,7 +27,7 @@ function ExpertStage({ take }: { take: TourTake | null }) {
   const clock = useLoopClock(take?.duration ?? 6);
   return (
     <>
-      <StageFrame text="The expert's chalk hand closes into the shakehand grip around an unseen racket handle.">
+      <StageFrame text="The expert's chalk hand snaps the wrist, as at the end of a forehand.">
         <HandCanvas preset="single" stage={{ decor: false, cameraPosition: SIDE_VIEW }} label="The expert's recorded hand, in chalk">
           {take && <Hand side={take.side} style="chalk" getFrame={() => handAt(take.frames, clock.now(), take.side)} />}
         </HandCanvas>

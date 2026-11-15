@@ -23,7 +23,7 @@ export default function TrainingStop() {
       </p>
       {expert && attempt ? <TrainingStage expert={expert} attempt={attempt} /> : <p className="tour-loading">Loading the two takes...</p>}
       <p className="tour-small">
-        The attempt is another real glove take of the same step. Its corrections and score are replayed through the same scorer and live-correction code the app runs,
+        The attempt is another real glove take of the same step, scored against the expert's own recorded take. Its corrections and score are replayed through the same scorer and live-correction code the app runs,
         so they are what the learner saw from these frames. They are not a log of the session.
       </p>
     </section>
