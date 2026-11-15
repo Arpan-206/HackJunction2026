@@ -8,8 +8,16 @@ the app's modules through it, all with HTTP 200. The two `export/` overrides (fs
 torch version is outside the range that lerobot declares, and it was not proven at run time. They stay on the branch
 `craci-fix`. The rest of this document describes the branch as it was built.
 
+**Update, Sun 15 Nov 2026, 08:00 Helsinki.** The merge is commit `55968e9` on `main` (04:24). It changes
+`frontend/package.json` and `frontend/package-lock.json` only. `main` was then rebuilt on CRACI (lane audit run
+43683032712, job 132717637141, commit `b1f9772`). The API returns 24 vulnerability entries for that build, down from
+45: 0 critical (3 before), 3 high (4 before), 7 medium, 2 low, 12 unknown. The 3 high entries are `torch` 2.7.1 (1)
+and `fsspec` 2025.3.0 (2), the part that did not merge. The suites passed in that build: core 281 passed and 9
+skipped, backend 527 passed and 13 skipped, frontend 658 of 658. The demo laptops were not reinstalled after the
+merge: the Mac still has vite 5.4.21 and vitest 2.1.9 in `node_modules`. See `docs/CRACI.md`, section 8.
+
 This file records the dependency fix for the CRACI findings on `lane main`.
-Do not merge `craci-fix` into main before the demo.
+The branch `craci-fix` itself does not merge into `main`. Only its frontend half merged, as its own commit (see the updates above).
 
 Terms used in this file:
 
