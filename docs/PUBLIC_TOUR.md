@@ -128,6 +128,24 @@ In run 43664418557 the CRACI API answered HTTP 403 Forbidden to the `CRACI_API_T
 
 The `publish` job waits up to 15 minutes for the SBOM: CRACI answers HTTP 409 "the job exists but has not finished" until the job record is final. Without the `CRACI_API_TOKEN` secret the summary says "no API token in this build".
 
+## Explore mode (the whole app, after the tour)
+
+The last stop offers "Explore the whole app", and the tour footer links to it. It opens `explore.html`: the real Geppetto app, complete, in the browser with no gloves and no backend.
+
+| Part | How |
+| --- | --- |
+| Backend | The app's own mock (`src/mock/`, the browser port of the backend) answers every `/api` call and the `/ws/gloves` and `/ws/robot` sockets. |
+| Hands | The "No gloves" mode (simulated hands) is switched on. |
+| Routing | Hash routing (`explore.html#/apprentice`), so a reload never asks the server for a missing page. |
+| Badge | "Demo without gloves: simulated hands. The live version uses Rokoko gloves." It also says that scores come from the in-browser scorer on simulated hands, and that any AI Assistant text is example text. |
+| AI Assistant text | The mock's canned text is labelled as a template in this build (`exploreHonesty` in `vite.tour.config.ts`), so the score card, the plan card, the lesson generator and text-to-motion say the AI Assistant was not used. The developer-only model names become neutral words. |
+| Screens that need hardware | The gloves status, calibration, phone depth and glove compare screens show one plain line saying why, not a broken screen. |
+| No calls out | The same network guard as the tour, installed before the mock. The explore browser check fails on any request off the origin, any console error, any 404, a missing badge, and any text that names Gemini, Gemma or Verda or says text was written by the AI Assistant. |
+| Load | The tour's first load does not change. The app's code and its files (models, textures, stills) load only in explore mode. |
+| Expert takes | The lessons in explore mode use the mock's synthetic references, not Szymon's recorded takes. Wiring his takes into the mock store was not done safely in the time. |
+
+Storage: explore mode writes only to this browser's own storage. localStorage holds the mock store (`apprentice.mock.v1.*`: lessons, recordings and attempts made in the demo, settings of the mock backend), the app's preferences (`apprentice.*`, for example the margin, the score view, the AI Assistant switch and `apprentice.noGloves`) and `apprentice.mock`. sessionStorage holds per-tab flags of the app. Nothing is sent anywhere. Clearing the site's data in the browser removes all of it.
+
 ## Load time
 
 The browser check measures two numbers. "First stop readable" is the stop's text and a poster still of its stage on screen. "3D stage live" is the first frames of the live hand. The 5 s budget is a failing check on the first number. The second number is recorded.
