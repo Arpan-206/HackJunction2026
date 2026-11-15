@@ -1,0 +1,12 @@
+# Shared lessons (backend/scripts/lesson_sync.py, docs/LESSON_SYNC.md).
+# Every file under lessons/shared/ is checked by SHA-256 on import, so Git must never change its bytes.
+# Trace files (.npz) and frame pictures (.jpg) are binary: no line-ending conversion, no text diff.
+lessons/shared/** -text
+lessons/shared/**/*.npz binary
+lessons/shared/**/*.jpg binary
+lessons/shared/**/*.png binary
+lessons/shared/**/*.gz binary
+lessons/shared/**/*.bin binary
+lessons/shared/**/*.rgmp binary
+# JSON stays diffable as text, but with -text Git keeps its LF bytes on Windows too (core.autocrlf=true).
+lessons/shared/**/*.json -text diff
