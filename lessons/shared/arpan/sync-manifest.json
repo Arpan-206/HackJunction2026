@@ -1,7 +1,7 @@
 {
   "format": "geppetto.lesson-sync/1",
   "recorder": "arpan",
-  "exported_at": "2026-11-15T00:16:06+00:00",
+  "exported_at": "2026-11-15T00:26:14+00:00",
   "items": {
     "take": [
       "arpan-0bbcca28f9f1",
@@ -20,22 +20,31 @@
     ],
     "calibration": [
       "arpan-2c9530c89099",
+      "arpan-2f3bb48cf327",
       "arpan-339ac8aa2560",
+      "arpan-35d15708d909",
       "arpan-3b5b252f593b",
       "arpan-43773ddec7e3",
       "arpan-4820d145ee5d",
+      "arpan-4d730ca60457",
       "arpan-50462cbe80bd",
       "arpan-62b28705d803",
+      "arpan-6e652c4c10a3",
+      "arpan-97d676cac9ac",
       "arpan-c8713cacaff6",
-      "arpan-d773564cc859"
+      "arpan-d773564cc859",
+      "arpan-dabc2f724db5"
     ],
     "glove_calibration": [
+      "arpan-021c49a0fc3e",
+      "arpan-04913016a9c0",
       "arpan-1e251a50a844",
       "arpan-5611c9c83873",
       "arpan-59020a2b74b3",
       "arpan-8f61b4ebab12",
       "arpan-a211034061af",
-      "arpan-a907152ed526"
+      "arpan-a907152ed526",
+      "arpan-bb78a2d8bc2d"
     ],
     "root_lesson": [
       "arpan-20261114-1335-glove-slot-checkpoint",
@@ -51,9 +60,19 @@
       "sha256": "f0f4294bb4b0ec594ed48f3b3f3a296c79594ded49930248c114c9d9dfa4f9bd"
     },
     {
+      "path": "backend/calibrations/arpan-2f3bb48cf327.json",
+      "size": 586,
+      "sha256": "02a80a91c2c71986110cdccedc581d267e4990680607d93da759d9547507cc53"
+    },
+    {
       "path": "backend/calibrations/arpan-339ac8aa2560.json",
       "size": 428,
       "sha256": "aa33f4f00d7793a4b50713de15486f1961cd1e8995ac1a2621f0063371306e72"
+    },
+    {
+      "path": "backend/calibrations/arpan-35d15708d909.json",
+      "size": 585,
+      "sha256": "65da068a01bcd02c5fa3f48a90df67a778a9a45549795943d539fb402466a0bc"
     },
     {
       "path": "backend/calibrations/arpan-3b5b252f593b.json",
@@ -71,6 +90,11 @@
       "sha256": "1b00489933a9ca412a100cf7d2e3770bcaf164f48e59e962b6e35e531dfd6a7b"
     },
     {
+      "path": "backend/calibrations/arpan-4d730ca60457.json",
+      "size": 579,
+      "sha256": "5ebb7d87548064ad93a2625dce9bfbffe7e16b71157dfce99179a26a4a5ab5aa"
+    },
+    {
       "path": "backend/calibrations/arpan-50462cbe80bd.json",
       "size": 415,
       "sha256": "75b6391052cb0faadd87aeb51fdf5f9e5edcb0ca50b31e915dc4bc2574c165f6"
@@ -81,6 +105,16 @@
       "sha256": "586de66cddda5933679e8cf4b9b6f6493244767c7062ead9f4b2a125cf968138"
     },
     {
+      "path": "backend/calibrations/arpan-6e652c4c10a3.json",
+      "size": 583,
+      "sha256": "221f4637558ca7c55da9967848c95f21e0489f741127fe0196dfe43eb53b2392"
+    },
+    {
+      "path": "backend/calibrations/arpan-97d676cac9ac.json",
+      "size": 585,
+      "sha256": "5fd2b28eeace8fc6800c0e91f0486321fd88b13eef34e0326d87de78a8e7e0ad"
+    },
+    {
       "path": "backend/calibrations/arpan-c8713cacaff6.json",
       "size": 415,
       "sha256": "bd3c85197bb4de29aa074921ad973588276200a2fbe33cdedcdba28801f21fd6"
@@ -89,6 +123,21 @@
       "path": "backend/calibrations/arpan-d773564cc859.json",
       "size": 429,
       "sha256": "4cb58c973a0ffb5df94497bcaeeaefb8856b148f38974131beb50dd1eea45f97"
+    },
+    {
+      "path": "backend/calibrations/arpan-dabc2f724db5.json",
+      "size": 586,
+      "sha256": "3fa1a236fc0377e6c355866498af5524219e1ac031fae8279c619ad68a34b73a"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-021c49a0fc3e.json",
+      "size": 998,
+      "sha256": "f39d904de8233eb95ab11604991e82fe81232e426fd6740d310c67cc36ef7fe3"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-04913016a9c0.json",
+      "size": 1000,
+      "sha256": "942ede71ea524f1ee4ec09f95c17f6508564c79621739922fd08cd8b4c390441"
     },
     {
       "path": "backend/glove_calibrations/arpan-1e251a50a844.json",
@@ -119,6 +168,11 @@
       "path": "backend/glove_calibrations/arpan-a907152ed526.json",
       "size": 981,
       "sha256": "4cd0279725701183493baaf063dd79c6deedc89ce2acc52911d3f975f70301cf"
+    },
+    {
+      "path": "backend/glove_calibrations/arpan-bb78a2d8bc2d.json",
+      "size": 996,
+      "sha256": "b3f095d288f528eefe4bd771f5c568da3b7704c6aca177117df42c5da93b25e3"
     },
     {
       "path": "backend/recordings/arpan-0bbcca28f9f1.json",
@@ -188,7 +242,7 @@
     {
       "path": "core_lessons/manifest.json",
       "size": 15118,
-      "sha256": "dd9f2176851ab4a866221c524c0e89c56f74755fcb8890904382143f7b352496"
+      "sha256": "443f40154398377714069d1aae23becbd120d5e4bd75321b2dc83f494e6a9ede"
     },
     {
       "path": "core_lessons/takes/arpan-0bbcca28f9f1-right/frames/step_00.jpg",

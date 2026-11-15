@@ -12,7 +12,7 @@ Run each line from the repo root.
 1. Export (on the machine that recorded). On Szymon's machine, use `--recorder szymon`.
 
 ```
-cd backend; uv run python scripts/lesson_sync.py export --recorder arpan --wearers arpan,szymon; cd ..
+cd backend; uv run python scripts/lesson_sync.py export --recorder arpan --wearers arpan,szymon,guest; cd ..
 ```
 
 2. Commit and push.
@@ -152,7 +152,7 @@ It does these steps:
 4. It compares each trace and frame file of the core take folders byte for byte.
 
 Results of the run on Sun 15 Nov, 02:18, with the 13 takes in the main checkout.
-The export used `--recorder arpan --wearers arpan,szymon`.
+The export used `--recorder arpan --wearers arpan,szymon,guest`. The three "Guest" records are team members who wore the gloves under a guest label (Arpan, 15 Nov); nobody outside the team has worn them.
 
 | Check | Result |
 |---|---|

@@ -1,6 +1,6 @@
 {
   "schema": "geppetto.core-export/1",
-  "updated_at": "2026-11-15T00:15:58.883725+00:00",
+  "updated_at": "2026-11-15T00:26:09.256990+00:00",
   "format": "geppetto.lesson/1 lesson folders (SPEC.md 'Lesson files')",
   "read_by": "core.recorder.Lesson.load, weights/check_lessons.py, export/ (geppetto-export --lessons-dir takes or lessons), coach_tune/build_dataset.py once pointed here, verda/gemma_client.py (request context for the model hosted on Verda); all local, nothing uploaded",
   "angles": "degrees; a real glove part with a calibration (parts[].calibration) is calibrated as the live core does (core/calibration.py), otherwise raw glove flexion",
