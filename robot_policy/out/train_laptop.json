@@ -1,0 +1,82 @@
+{
+ "device": "cpu",
+ "gpu": null,
+ "envs": 256,
+ "iters": 200,
+ "horizon_steps": 60,
+ "variations_per_take": 8,
+ "training_takes": [
+  "071446fb50c0-right",
+  "1c9c637b395f-right",
+  "27a9d12701b0-right",
+  "64bd76802c30-right",
+  "72b8ddb468e5-right",
+  "7d0104b3c435-right",
+  "7e43657240ed-right",
+  "8d26a6ad5eb7-right",
+  "b2c97c871e76-right",
+  "b7aeb56b7bf1-right",
+  "c8971b9b3b13-right",
+  "d1c1fa0bd476-right",
+  "d6c5c2dafc88-right",
+  "d8674dceb18a-right",
+  "dc83d48e64a4-right",
+  "dd5bc9de5df0-right",
+  "dec8ea0f50a7-right",
+  "df1dc701e9a8-right",
+  "eb4473af60ae-right"
+ ],
+ "held_out_takes": [
+  "9c90d77fabdb-right",
+  "f09f617ee76d-right",
+  "016a1da374c1-right",
+  "a4de6f1e3ba8-right",
+  "1754a2f74d3d-right",
+  "2da6252cc125-right",
+  "7a4d1c8fb139-right",
+  "88955f73ea1c-right"
+ ],
+ "generated_references": 152,
+ "training_rollouts": 51200,
+ "simulated_hand_seconds": 61440.0,
+ "train_seconds": 43.8,
+ "loss": "huber",
+ "data_seconds": 0.6,
+ "seed": 0,
+ "parameters": 45703,
+ "replay_lead": {
+  "steps": 5,
+  "ms": 100,
+  "rms_deg_by_steps": {
+   "0": 5.46,
+   "1": 4.65,
+   "2": 3.855,
+   "3": 3.127,
+   "4": 2.563,
+   "5": 2.287,
+   "6": 2.386,
+   "7": 2.796,
+   "8": 3.381
+  }
+ },
+ "log": [
+  {
+   "iter": 0,
+   "policy_rms_deg": 8.986,
+   "replay_rms_deg": 8.987,
+   "seconds": 0.4
+  },
+  {
+   "iter": 100,
+   "policy_rms_deg": 7.219,
+   "replay_rms_deg": 9.691,
+   "seconds": 22.2
+  },
+  {
+   "iter": 199,
+   "policy_rms_deg": 6.336,
+   "replay_rms_deg": 8.927,
+   "seconds": 43.8
+  }
+ ]
+}

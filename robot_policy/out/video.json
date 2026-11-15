@@ -1,0 +1,31 @@
+{
+ "take": "9c90d77fabdb-right",
+ "seconds": 13.7,
+ "start": "random pose inside the joint limits",
+ "pushes": [
+  {
+   "at_s": 4.0,
+   "for_s": 0.34,
+   "torque_nm_by_joint": {
+    "right_hand_index_0_joint": 1.3,
+    "right_hand_index_1_joint": 1.2
+   }
+  },
+  {
+   "at_s": 8.5,
+   "for_s": 0.34,
+   "torque_nm_by_joint": {
+    "right_hand_middle_0_joint": -1.3,
+    "right_hand_thumb_1_joint": 1.2,
+    "right_hand_thumb_2_joint": -1.0
+   }
+  }
+ ],
+ "rms_deg": {
+  "policy": 4.83,
+  "replay": 8.07
+ },
+ "file": "out/policy_demo.mp4",
+ "bytes": 1309416,
+ "engine": "MuJoCo 4.0.1"
+}

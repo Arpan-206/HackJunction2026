@@ -1,0 +1,193 @@
+{
+ "engine": "MuJoCo 4.0.1",
+ "rollouts_per_take_per_condition": 200,
+ "total_rollouts": 14400,
+ "seconds": 866.3,
+ "replay_lead_steps": 5,
+ "joint_inertia_kg_m2": [
+  0.00012323533163366857,
+  0.0002958787667226799,
+  0.00011795248922328702,
+  0.00029587876672267994,
+  0.00011795248922328703,
+  0.00029587876672267994,
+  0.00011795248922328703
+ ],
+ "per_rollout_values": "each rollout has its own hand: kp 1.0 to 2.2, kd 0.06 to 0.16 (10 % more per joint), rotor inertia 0.3 to 3 times 1e-4 kg m2, damping 0.002 to 0.03, dry friction 0 to 0.04 N m, command delay 0, 20 or 40 ms; sensor noise 0.3 deg and 0.05 rad/s on what the policy reads",
+ "table": [
+  {
+   "condition": "nominal start",
+   "rollouts_each": 1600,
+   "policy_rms_deg": 2.02,
+   "replay_rms_deg": 6.05,
+   "replay_lead_rms_deg": 2.23,
+   "policy_better_share": 1.0,
+   "policy_better_than_lead_share": 0.7338
+  },
+  {
+   "condition": "random start",
+   "rollouts_each": 1600,
+   "policy_rms_deg": 3.73,
+   "replay_rms_deg": 6.92,
+   "replay_lead_rms_deg": 4.06,
+   "policy_better_share": 1.0,
+   "policy_better_than_lead_share": 0.9006
+  },
+  {
+   "condition": "pushed",
+   "rollouts_each": 1600,
+   "policy_rms_deg": 3.78,
+   "replay_rms_deg": 7.31,
+   "replay_lead_rms_deg": 4.67,
+   "policy_better_share": 1.0,
+   "policy_better_than_lead_share": 0.9669
+  }
+ ],
+ "per_take": [
+  {
+   "take": "9c90d77fabdb-right",
+   "nominal start": {
+    "policy_rms_deg": 2.2,
+    "replay_rms_deg": 6.6,
+    "replay_lead_rms_deg": 2.49
+   },
+   "random start": {
+    "policy_rms_deg": 3.45,
+    "replay_rms_deg": 7.2,
+    "replay_lead_rms_deg": 3.8
+   },
+   "pushed": {
+    "policy_rms_deg": 3.48,
+    "replay_rms_deg": 7.46,
+    "replay_lead_rms_deg": 4.31
+   }
+  },
+  {
+   "take": "f09f617ee76d-right",
+   "nominal start": {
+    "policy_rms_deg": 1.53,
+    "replay_rms_deg": 5.08,
+    "replay_lead_rms_deg": 1.78
+   },
+   "random start": {
+    "policy_rms_deg": 4.53,
+    "replay_rms_deg": 6.79,
+    "replay_lead_rms_deg": 4.85
+   },
+   "pushed": {
+    "policy_rms_deg": 4.16,
+    "replay_rms_deg": 6.94,
+    "replay_lead_rms_deg": 5.07
+   }
+  },
+  {
+   "take": "016a1da374c1-right",
+   "nominal start": {
+    "policy_rms_deg": 2.04,
+    "replay_rms_deg": 6.47,
+    "replay_lead_rms_deg": 2.27
+   },
+   "random start": {
+    "policy_rms_deg": 4.29,
+    "replay_rms_deg": 7.62,
+    "replay_lead_rms_deg": 4.69
+   },
+   "pushed": {
+    "policy_rms_deg": 4.34,
+    "replay_rms_deg": 8.14,
+    "replay_lead_rms_deg": 5.44
+   }
+  },
+  {
+   "take": "a4de6f1e3ba8-right",
+   "nominal start": {
+    "policy_rms_deg": 2.22,
+    "replay_rms_deg": 6.47,
+    "replay_lead_rms_deg": 2.31
+   },
+   "random start": {
+    "policy_rms_deg": 4.65,
+    "replay_rms_deg": 7.73,
+    "replay_lead_rms_deg": 4.88
+   },
+   "pushed": {
+    "policy_rms_deg": 4.45,
+    "replay_rms_deg": 8.14,
+    "replay_lead_rms_deg": 5.44
+   }
+  },
+  {
+   "take": "1754a2f74d3d-right",
+   "nominal start": {
+    "policy_rms_deg": 2.41,
+    "replay_rms_deg": 6.14,
+    "replay_lead_rms_deg": 2.26
+   },
+   "random start": {
+    "policy_rms_deg": 4.62,
+    "replay_rms_deg": 7.43,
+    "replay_lead_rms_deg": 4.83
+   },
+   "pushed": {
+    "policy_rms_deg": 4.58,
+    "replay_rms_deg": 7.92,
+    "replay_lead_rms_deg": 5.49
+   }
+  },
+  {
+   "take": "2da6252cc125-right",
+   "nominal start": {
+    "policy_rms_deg": 1.28,
+    "replay_rms_deg": 4.93,
+    "replay_lead_rms_deg": 1.79
+   },
+   "random start": {
+    "policy_rms_deg": 2.97,
+    "replay_rms_deg": 5.67,
+    "replay_lead_rms_deg": 3.41
+   },
+   "pushed": {
+    "policy_rms_deg": 3.04,
+    "replay_rms_deg": 6.14,
+    "replay_lead_rms_deg": 4.07
+   }
+  },
+  {
+   "take": "7a4d1c8fb139-right",
+   "nominal start": {
+    "policy_rms_deg": 1.46,
+    "replay_rms_deg": 4.8,
+    "replay_lead_rms_deg": 1.69
+   },
+   "random start": {
+    "policy_rms_deg": 3.97,
+    "replay_rms_deg": 6.28,
+    "replay_lead_rms_deg": 4.39
+   },
+   "pushed": {
+    "policy_rms_deg": 4.37,
+    "replay_rms_deg": 7.04,
+    "replay_lead_rms_deg": 5.47
+   }
+  },
+  {
+   "take": "88955f73ea1c-right",
+   "nominal start": {
+    "policy_rms_deg": 2.33,
+    "replay_rms_deg": 6.62,
+    "replay_lead_rms_deg": 2.52
+   },
+   "random start": {
+    "policy_rms_deg": 3.0,
+    "replay_rms_deg": 6.95,
+    "replay_lead_rms_deg": 3.29
+   },
+   "pushed": {
+    "policy_rms_deg": 3.26,
+    "replay_rms_deg": 7.26,
+    "replay_lead_rms_deg": 3.92
+   }
+  }
+ ],
+ "policy_file": "policy.pt"
+}

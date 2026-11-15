@@ -1,0 +1,6 @@
+[project]
+name = "geppetto-robot-policy"
+version = "0.1.0"
+description = "Geppetto: a small policy that performs a lesson on a simulated Dex3-1 hand (standalone, not part of the live app)"
+requires-python = ">=3.12,<3.13"
+dependencies = ["numpy>=2", "torch>=2.4", "mujoco>=3.2", "imageio>=2.34", "imageio-ffmpeg>=0.5", "httpx>=0.27", "python-dotenv>=1.0", "verda"]

@@ -1,0 +1,10 @@
+out/*
+!out/results*.json
+!out/train*.json
+!out/video.json
+!out/policy_demo.mp4
+!out/policy.pt
+!out/policy_laptop.pt
+!out/cost_log.jsonl
+.venv/
+__pycache__/
