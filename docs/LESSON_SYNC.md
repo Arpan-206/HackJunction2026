@@ -5,6 +5,90 @@ The tool is `backend/scripts/lesson_sync.py`.
 It uses only the Python standard library.
 The same commands work on macOS and in Windows PowerShell.
 
+## Session sync: Szymon's lessons to Arpan's Mac
+
+Use these three lines to make Arpan's Mac hold exactly the lessons that Szymon recorded in this session.
+Run each line from the repo root.
+Change the `--since` time to the start of the session.
+
+1. On Szymon's Windows machine (PowerShell), export his lessons:
+
+```
+cd backend; uv run python scripts/lesson_sync.py export --recorder szymon --wearers szymon --only-recorder --since 2026-11-15T00:00+02:00; cd ..
+```
+
+2. On Szymon's machine, commit only `lessons/shared/` and push:
+
+```
+git add lessons/shared; git commit -m "Lessons from szymon"; git push
+```
+
+3. On Arpan's Mac, pull and import with replace:
+
+```
+git pull; cd backend; uv run python scripts/lesson_sync.py import --replace --only szymon; cd ..
+```
+
+Lesson data under `lessons/shared/` can go to main after the code freeze.
+It is data, not code.
+Commit nothing else with it.
+Add `--dry-run` to step 1 or step 3 to see the result without a write.
+
+### The export filter
+
+| Option | Effect |
+|---|---|
+| `--only-recorder` | Exports only lesson records whose expert (`master_name`, first word) is the recorder. Exports only the takes that those lessons use. |
+| `--since DATE` | Exports only lessons (`created_at`) and takes (`started_at`) from this date or date-time. A time without a zone is UTC. |
+
+With either option, `fake-*` lessons (test fixtures) stay out.
+Seeds always stay out.
+The export prints each reason and the count of items it left out.
+
+### What `--replace` does
+
+1. It checks the hash of every bundle file. If one file is bad, it stops.
+2. It stops if the bundles hold no lesson and no take. Thus a bad pull cannot empty a machine.
+3. It stops if the backend data folder has no `lessons/` folder.
+4. It copies the "replace set" to `backend/lesson_backups/<UTC time>/`, and prints the absolute path.
+5. It checks each copy by size and SHA-256, and counts the files. Only then does it remove the originals.
+6. It installs the bundle lessons and takes.
+
+The replace set:
+
+| Folder in `backend/data/` | Removed by replace |
+|---|---|
+| `lessons/*.json`, except `seed-*` | Yes |
+| `recordings/*.json` (takes) | Yes |
+| `core_lessons/` (all files) | Yes. The backend rebuilds this folder from the records. |
+| `calibrations/`, `glove_calibrations/` | No, never |
+| root `lessons/` (the glove engine's folders) | No. Many of them are tracked in Git. |
+
+The backup folder is outside `backend/data/`, so the app does not read it.
+The tool writes a `.gitignore` there, so Git ignores the backups.
+Replace keeps the seven seed lessons.
+The backend installs any missing seeds when it starts, so replace does not remove them.
+
+Replace does not install the bundle calibrations.
+Each person keeps their own calibration, because it belongs to the person who wears the glove.
+Add `--with-calibrations` to install them too.
+An imported take then scores with the local wearer's calibration, or without a calibration.
+Its score can thus differ from the score on the recording machine.
+
+### The summary line
+
+Every import ends with one line, for example:
+
+```
+installed: 3 lessons | recorders: szymon 3 | names: A; B; C | takes: 12 | seeds: 7
+```
+
+Compare this line on the two machines.
+The tool sorts the names and the recorders, so the same data gives the same line.
+"Recorders" counts lessons by the first word of the expert name.
+Seeds have a separate count.
+A dry run prints the line for the data before the run.
+
 ## The three commands
 
 Run each line from the repo root.

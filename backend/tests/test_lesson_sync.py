@@ -200,6 +200,97 @@ def test_include_other_wearers_flag(source: Path, tmp_path: Path) -> None:
     assert not (tmp_path / "s2/ana/backend/glove_calibrations/ana-wc2.json").exists()
 
 
+def _session_source(tmp_path: Path) -> Path:
+    data = tmp_path / "sess"
+    _write(data / "recordings" / "t1.json", {"id": "t1", "lesson_id": "l1", "started_at": "2026-11-15T01:00:00+00:00"})
+    _write(data / "recordings" / "t2.json", {"id": "t2", "lesson_id": "seed-piano", "started_at": "2026-11-15T01:00:00+00:00"})
+    _write(data / "recordings" / "t3.json", {"id": "t3", "lesson_id": "l3", "started_at": "2026-11-13T01:00:00+00:00"})
+    _write(data / "lessons" / "l1.json", {"id": "l1", "title": "Bow", "master_name": "Szymon", "created_at": "2026-11-15T01:05:00+00:00",
+                                          "steps": [{"id": "s", "reference_recording_id": "t1"}]})
+    _write(data / "lessons" / "l2.json", {"id": "l2", "title": "Other", "master_name": "Arpan", "created_at": "2026-11-15T01:05:00+00:00", "steps": []})
+    _write(data / "lessons" / "l3.json", {"id": "l3", "title": "Old", "master_name": "Szymon", "created_at": "2026-11-13T01:05:00+00:00",
+                                          "steps": [{"id": "s", "reference_recording_id": "t3"}]})
+    _write(data / "lessons" / "fake-x.json", {"id": "fake-x", "master_name": "Szymon", "created_at": "2026-11-15T02:00:00+00:00", "steps": []})
+    _write(data / "lessons" / "seed-piano.json", {"id": "seed-piano", "steps": []})
+    return data
+
+
+def test_recorder_and_since_filters(tmp_path: Path) -> None:
+    data = _session_source(tmp_path)
+    session = ls.Session(only_recorder=True, since=ls.parse_since("2026-11-14"))
+    summary = ls.export(data, None, tmp_path / "shared", "szymon", session=session)
+    b = tmp_path / "shared" / "szymon" / "backend"
+    assert sorted(p.name for p in (b / "lessons").iterdir()) == ["szymon-l1.json"]
+    assert sorted(p.name for p in (b / "recordings").iterdir()) == ["szymon-t1.json"]
+    left = summary["left_out"]
+    assert left["expert is not szymon"] == 1 and left["recorded before --since"] == 1
+    assert left["test fixture (fake-*)"] == 1 and left["take not used by a kept lesson"] == 2
+    # since alone keeps every expert's lessons of the session
+    s2 = ls.export(data, None, tmp_path / "s2", "szymon", session=ls.Session(since=ls.parse_since("2026-11-14")))
+    assert s2["items"]["lesson"] == 2
+
+
+def _installed(tmp_path: Path) -> Path:
+    dest = tmp_path / "machine" / "data"
+    _write(dest / "lessons" / "old1.json", {"id": "old1", "title": "Old one", "master_name": "Arpan"})
+    _write(dest / "lessons" / "seed-piano.json", {"id": "seed-piano", "title": "Piano"})
+    _write(dest / "recordings" / "r9.json", {"id": "r9"})
+    _write(dest / "core_lessons" / "takes" / "r9-right" / "lesson.json", {"id": "r9-right"})
+    _write(dest / "calibrations" / "mine.json", {"id": "mine"})
+    _write(dest / "glove_calibrations" / "me.json", {"id": "me", "wearer": "Arpan"})
+    return dest
+
+
+def test_replace_backs_up_then_installs_only_bundle(source: Path, tmp_path: Path) -> None:
+    shared = tmp_path / "shared"
+    _export(source, shared)
+    dest = _installed(tmp_path)
+    before = {p.relative_to(dest).as_posix(): p.read_bytes() for p in dest.rglob("*") if p.is_file()}
+    dry = ls.import_bundles(shared, dest, None, dry_run=True, replace=True)
+    assert "lessons/old1.json" in dry.removed and (dest / "lessons/old1.json").exists()
+    r = ls.import_bundles(shared, dest, None, replace=True)
+    backup = r.backup
+    assert backup is not None and backup.parent.name == "lesson_backups" and dest not in backup.parents
+    for rel in ("lessons/old1.json", "recordings/r9.json", "core_lessons/takes/r9-right/lesson.json"):
+        assert (backup / rel).read_bytes() == before[rel]
+    assert not (backup / "lessons/seed-piano.json").exists()
+    assert sorted(p.name for p in (dest / "lessons").iterdir()) == ["ana-les1.json", "seed-piano.json"]
+    assert sorted(p.name for p in (dest / "recordings").iterdir()) == ["ana-abc123.json"]
+    assert (dest / "core_lessons/takes/ana-abc123-right/trace.npz").is_file()
+    assert not (dest / "core_lessons/takes/r9-right").exists()
+    # calibrations untouched, and the bundle's not installed
+    assert sorted(p.name for p in (dest / "calibrations").iterdir()) == ["mine.json"]
+    assert sorted(p.name for p in (dest / "glove_calibrations").iterdir()) == ["me.json"]
+    assert any("keeps this machine's calibrations" in s for s in r.skipped)
+
+
+def test_replace_refused_on_empty_or_corrupt_bundle(source: Path, tmp_path: Path) -> None:
+    dest = _installed(tmp_path)
+    empty = tmp_path / "empty_src"
+    _write(empty / "calibrations" / "c.json", {"id": "c"})
+    ls.export(empty, None, tmp_path / "e", "ana")
+    with pytest.raises(ls.SyncError, match="no lessons and no takes"):
+        ls.import_bundles(tmp_path / "e", dest, None, replace=True)
+    shared = tmp_path / "shared"
+    _export(source, shared)
+    trace = shared / "ana" / "core_lessons/takes/ana-abc123-right/trace.npz"
+    trace.write_bytes(b"broken")
+    with pytest.raises(ls.SyncError, match="hash check failed"):
+        ls.import_bundles(shared, dest, None, replace=True)
+    with pytest.raises(ls.SyncError, match="no backend data folder"):
+        ls.import_bundles(tmp_path / "e", tmp_path / "nowhere", None, replace=True)
+    assert (dest / "lessons/old1.json").exists() and not (dest.parent / "lesson_backups").exists()
+
+
+def test_summary_line_sorted_and_seeds_apart(tmp_path: Path) -> None:
+    dest = tmp_path / "d"
+    _write(dest / "lessons" / "b.json", {"id": "b", "title": "Bow", "master_name": "Szymon"})
+    _write(dest / "lessons" / "a.json", {"id": "a", "title": "Arch", "master_name": "szymon K"})
+    _write(dest / "lessons" / "seed-x.json", {"id": "seed-x", "title": "Seed"})
+    _write(dest / "recordings" / "t.json", {"id": "t"})
+    assert ls.summary_line(dest) == "installed: 2 lessons | recorders: szymon 2 | names: Arch; Bow | takes: 1 | seeds: 1"
+
+
 def test_recorder_name_sanitised() -> None:
     assert ls.sanitise_recorder("Arpan Pandey!") == "arpanpandey"
     with pytest.raises(ls.SyncError):

@@ -246,7 +246,7 @@ def filter_wearers(
         (kept_cals if row[0] in wanted else dropped_cals).append(row)
     records["glove_calibration"] = kept_wearers
     records["calibration"] = kept_cals
-    plan.left_out = {
+    plan.left_out |= {
         "wearer calibration records of other wearers": len(other_wearers),
         "flat and fist calibrations of other wearers": sum(r[0] in other_ids for r in dropped_cals),
         "flat and fist calibrations with no known wearer and no exported take": sum(
@@ -255,12 +255,92 @@ def filter_wearers(
     }
 
 
+@dataclass
+class Session:
+    """Export filter: only the recorder's own lessons (only_recorder), and nothing older than since (UTC)."""
+
+    only_recorder: bool = False
+    since: _dt.datetime | None = None
+
+
+def parse_since(raw: str) -> _dt.datetime:
+    """A date (2026-11-15) or date-time (2026-11-15T01:30, 2026-11-15 01:30+02:00); no zone means UTC."""
+    try:
+        value = _dt.datetime.fromisoformat(raw.strip())
+    except ValueError as exc:
+        raise SyncError(f"--since {raw!r} is not a date or date-time (for example 2026-11-15T01:30)") from exc
+    return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
+
+
+def _time(value: Any) -> _dt.datetime | None:
+    try:
+        return parse_since(value) if isinstance(value, str) and value else None
+    except SyncError:
+        return None
+
+
+def session_reason(name: Any, created: Any, recorder: str, session: Session, item_id: str = "") -> str | None:
+    """Why a lesson stays out of a session export, or None when it goes in."""
+    if item_id.startswith("fake-") or item_id.startswith(f"{recorder}-fake-"):
+        return "test fixture (fake-*)"
+    if session.only_recorder and wearer_key(name) != recorder:
+        return f"expert is not {recorder}"
+    if session.since is not None:
+        when = _time(created)
+        if when is None or when < session.since:
+            return "recorded before --since"
+    return None
+
+
+def filter_session(
+    records: dict[str, list[tuple[str, Path, Any]]], recorder: str, session: Session, plan: Plan
+) -> None:
+    """Keep the recorder's lessons of this session (master_name, created_at) and the takes they use.
+
+    With --only-recorder a take goes in only when a kept lesson uses it (reference or take_ids, or its lesson_id);
+    takes of seed lessons are practice and stay out. Without it, a take is kept when it passes --since (started_at).
+    """
+    kept, why = [], {}
+    for row in records.get("lesson", []):
+        reason = session_reason(row[2].get("master_name"), row[2].get("created_at"), recorder, session, row[0])
+        if reason:
+            why[reason] = why.get(reason, 0) + 1
+        else:
+            kept.append(row)
+    records["lesson"] = kept
+    lesson_ids = {r[0] for r in kept}
+    used = {
+        i
+        for r in kept
+        for s in r[2].get("steps", [])
+        for i in [s.get("reference_recording_id"), *(s.get("take_ids") or [])]
+        if i
+    }
+    takes = []
+    for row in records.get("take", []):
+        obj = row[2]
+        linked = row[0] in used or obj.get("lesson_id") in lesson_ids
+        if session.only_recorder and not linked:
+            reason = "take not used by a kept lesson"
+        elif session.since is not None and not linked and ((_time(obj.get("started_at")) or session.since) < session.since or not obj.get("started_at")):
+            reason = "take recorded before --since"
+        else:
+            reason = None
+        if reason:
+            why[reason] = why.get(reason, 0) + 1
+        else:
+            takes.append(row)
+    records["take"] = takes
+    plan.left_out.update(why)
+
+
 def build_export(
     data_dir: Path,
     root_lessons: Path | None,
     recorder: str,
     tracked: set[str] | None,
     allowed: set[str] | None = None,
+    session: Session | None = None,
 ) -> Plan:
     """Read the source data and plan the bundle, ids prefixed and references rewritten."""
     plan = Plan()
@@ -288,6 +368,8 @@ def build_export(
                 mapping[f"lessons/{item_id}"] = f"lessons/{new}"
             rows.append((item_id, path, obj))
         records[kind] = rows
+    if session is not None:
+        filter_session(records, recorder, session, plan)
     if allowed is not None:
         filter_wearers(records, data_dir, allowed, plan)
     for kind, rows in records.items():
@@ -329,6 +411,15 @@ def build_export(
                 continue
             if tracked is not None and folder.name in tracked:
                 continue
+            if session is not None:
+                core = read_json(folder / "lesson.json")
+                reason = session_reason(
+                    (core.get("master") or {}).get("name"), core.get("created"), recorder, session, folder.name
+                )
+                if reason:
+                    key = f"root core lesson: {reason}"
+                    plan.left_out[key] = plan.left_out.get(key, 0) + 1
+                    continue
             new = prefixed(folder.name, recorder)
             add_core_folder(plan, folder, f"root_lessons/{new}", {folder.name: new})
             plan.add_item("root_lesson", new)
@@ -354,13 +445,14 @@ def export(
     tracked: set[str] | None = None,
     wearers: set[str] | None = None,
     include_other_wearers: bool = False,
+    session: Session | None = None,
 ) -> dict[str, Any]:
     """Write lessons/shared/<recorder>/ and its manifest; an unchanged export leaves every file as it was.
 
     Calibrations of wearers other than the recorder and `wearers` are left out unless include_other_wearers.
     """
     allowed = None if include_other_wearers else {recorder, *(wearers or set())}
-    plan = build_export(data_dir, root_lessons, recorder, tracked, allowed)
+    plan = build_export(data_dir, root_lessons, recorder, tracked, allowed, session)
     problems = check_paths([f"{recorder}/{p}" for p in plan.paths()])
     if problems:
         raise SyncError("names unsafe on Windows or macOS:\n  " + "\n  ".join(problems))
@@ -421,6 +513,82 @@ class Report:
     added: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     replaced: list[str] = field(default_factory=list)
+    removed: list[str] = field(default_factory=list)
+    backup: Path | None = None
+
+
+BACKUP_DIR = "lesson_backups"
+
+
+def replace_set(data_dir: Path) -> list[Path]:
+    """The installed lessons that --replace removes: lesson records except seeds, every take, and every file of the
+    core lesson folders (core_lessons/, which the backend rebuilds from the records). Calibrations are not in it."""
+    out = [p for p in sorted((data_dir / "lessons").glob("*.json")) if not p.stem.startswith(SEED_PREFIX)]
+    out += sorted((data_dir / "recordings").glob("*.json"))
+    core = data_dir / "core_lessons"
+    if core.is_dir():
+        out += sorted(p for p in core.rglob("*") if p.is_file())
+    return out
+
+
+def backup_and_clear(data_dir: Path, dry_run: bool) -> tuple[set[Path], Path]:
+    """Copy the replace set to <data_dir parent>/lesson_backups/<UTC time>/, verify every copy by size and SHA-256,
+    and only then remove the originals. The backup folder is outside the data folder, so the app never reads it."""
+    files = replace_set(data_dir)
+    stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    root = data_dir.parent / BACKUP_DIR
+    backup = root / stamp
+    if dry_run:
+        return set(files), backup.resolve()
+    if backup.exists():
+        raise SyncError(f"backup folder {backup} exists already; try again in a second")
+    backup.mkdir(parents=True)
+    ignore = root / ".gitignore"
+    if not ignore.exists():
+        ignore.write_text("*\n", encoding="utf-8")  # never committed by accident
+    for src in files:
+        target = backup / src.relative_to(data_dir)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, target)
+    copies = [backup / src.relative_to(data_dir) for src in files]
+    bad = [
+        str(src)
+        for src, dst in zip(files, copies, strict=True)
+        if not dst.is_file() or dst.stat().st_size != src.stat().st_size or sha256(dst) != sha256(src)
+    ]
+    if bad or sum(1 for p in backup.rglob("*") if p.is_file()) != len(files):
+        raise SyncError(f"backup check failed, nothing removed ({backup}):\n  " + "\n  ".join(bad))
+    for src in files:
+        src.unlink()
+    core = data_dir / "core_lessons"
+    if core.is_dir():
+        for d in sorted((p for p in core.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+            if not any(d.iterdir()):
+                d.rmdir()
+    return set(files), backup.resolve()
+
+
+def summary_line(data_dir: Path) -> str:
+    """One stable line to compare two machines: recorded lessons, whose (expert name), titles, takes and seeds."""
+    lessons = []
+    seeds = 0
+    for p in sorted((data_dir / "lessons").glob("*.json")):
+        try:
+            obj = read_json(p)
+        except ValueError:
+            continue
+        if p.stem.startswith(SEED_PREFIX):
+            seeds += 1
+        else:
+            lessons.append(obj)
+    whose: dict[str, int] = {}
+    for obj in lessons:
+        key = wearer_key(obj.get("master_name")) or "unknown"
+        whose[key] = whose.get(key, 0) + 1
+    recorders = ", ".join(f"{k} {v}" for k, v in sorted(whose.items())) or "none"
+    names = "; ".join(sorted(str(o.get("title", "")).strip() for o in lessons)) or "none"
+    takes = len(list((data_dir / "recordings").glob("*.json")))
+    return f"installed: {len(lessons)} lessons | recorders: {recorders} | names: {names} | takes: {takes} | seeds: {seeds}"
 
 
 def verify(bundle: Path) -> dict[str, Any]:
@@ -454,8 +622,14 @@ def import_bundles(
     force: bool = False,
     dry_run: bool = False,
     only: list[str] | None = None,
+    replace: bool = False,
+    with_calibrations: bool = False,
 ) -> Report:
-    """Verify every bundle, then copy its items in; existing ids are skipped unless force."""
+    """Verify every bundle, then copy its items in; existing ids are skipped unless force.
+
+    replace: back up and remove every installed lesson first (backup_and_clear), then install the bundles' lessons.
+    Calibrations are never removed, and the bundles' calibrations are not installed unless with_calibrations.
+    """
     bundles = sorted(p for p in shared.iterdir() if (p / MANIFEST).is_file()) if shared.is_dir() else []
     if only:
         bundles = [b for b in bundles if b.name in only]
@@ -463,6 +637,15 @@ def import_bundles(
         raise SyncError(f"no bundle with {MANIFEST} under {shared}")
     manifests = [(b, verify(b)) for b in bundles]  # every hash checked before anything is written
     report = Report()
+    cleared: set[Path] = set()
+    if replace:
+        if not (data_dir / "lessons").is_dir():
+            raise SyncError(f"--replace refused: no backend data folder with lessons/ at {data_dir}")
+        incoming = sum(len(m["items"].get(k, [])) for _b, m in manifests for k in ("lesson", "take"))
+        if incoming == 0:
+            raise SyncError("--replace refused: the bundle holds no lessons and no takes, so nothing would be installed")
+        cleared, report.backup = backup_and_clear(data_dir, dry_run)
+        report.removed = sorted(p.relative_to(data_dir).as_posix() for p in cleared)
     for bundle, manifest in manifests:
         files = [f["path"] for f in manifest["files"]]
         for kind, folder in BACKEND_KINDS.items():
@@ -470,7 +653,10 @@ def import_bundles(
                 src = bundle / "backend" / folder / f"{item_id}.json"
                 dest = data_dir / folder / f"{item_id}.json"
                 label = f"{kind} {item_id}"
-                if dest.exists():
+                if replace and not with_calibrations and kind in ("calibration", "glove_calibration"):
+                    report.skipped.append(f"{label} (replace keeps this machine's calibrations)")
+                    continue
+                if dest.exists() and dest not in cleared:
                     if dest.read_bytes() == src.read_bytes():
                         report.skipped.append(f"{label} (identical)")
                         continue
@@ -567,6 +753,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub.choices["import"].add_argument("--force", action="store_true", help="replace existing items with the same id")
     sub.choices["import"].add_argument("--only", nargs="*", help="import only these recorders' bundles")
+    sub.choices["import"].add_argument(
+        "--replace",
+        action="store_true",
+        help="back up and remove every installed lesson and take first, then install only the bundles' lessons",
+    )
+    sub.choices["import"].add_argument(
+        "--with-calibrations", action="store_true", help="with --replace: also install the bundles' calibrations"
+    )
+    sub.choices["export"].add_argument(
+        "--only-recorder",
+        action="store_true",
+        help="export only lessons whose expert (master_name) is the recorder, and the takes they use",
+    )
+    sub.choices["export"].add_argument(
+        "--since", default=None, help="export only lessons and takes recorded from this date or date-time (UTC if no zone)"
+    )
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
     data_dir = (args.data_dir or repo / "backend" / "data").resolve()
@@ -577,8 +779,19 @@ def main(argv: list[str] | None = None) -> int:
             recorder = sanitise_recorder(args.recorder) if args.recorder else default_recorder()
             tracked = tracked_root_lessons(repo)
             wearers = {sanitise_recorder(w) for w in args.wearers.split(",") if w.strip()}
+            session = None
+            if args.only_recorder or args.since:
+                session = Session(args.only_recorder, parse_since(args.since) if args.since else None)
             summary = export(
-                data_dir, root_lessons, shared, recorder, args.dry_run, tracked, wearers, args.include_other_wearers
+                data_dir,
+                root_lessons,
+                shared,
+                recorder,
+                args.dry_run,
+                tracked,
+                wearers,
+                args.include_other_wearers,
+                session,
             )
             verb = "would write" if args.dry_run else ("unchanged" if summary.get("unchanged") else "wrote")
             print(f"{verb} {summary['bundle']}: {summary['files']} files, {summary['bytes']} bytes")
@@ -588,18 +801,26 @@ def main(argv: list[str] | None = None) -> int:
                 print("every wearer's calibrations included (--include-other-wearers)")
             else:
                 allowed = ", ".join(sorted({recorder, *wearers}))
-                print(f"left out (only these wearers are exported: {allowed}; --include-other-wearers exports all):")
+                print(f"left out (calibrations: only these wearers are exported: {allowed}; lessons: the session filter):")
                 for why, n in summary["left_out"].items():
                     print(f"  {n} {why}")
         else:
-            report = import_bundles(shared, data_dir, root_lessons, args.force, args.dry_run, args.only)
+            report = import_bundles(
+                shared, data_dir, root_lessons, args.force, args.dry_run, args.only, args.replace, args.with_calibrations
+            )
             head = "dry run, nothing written. " if args.dry_run else ""
             print(f"{head}imported into {data_dir}")
+            if args.replace:
+                verb = "would back up and remove" if args.dry_run else "backed up and removed"
+                print(f"{verb} {len(report.removed)} files; backup folder: {report.backup}")
+                for row in report.removed:
+                    print(f"  removed {row}")
             for name in ("added", "skipped", "replaced"):
                 rows = getattr(report, name)
                 print(f"{name} ({len(rows)}):")
                 for row in rows:
                     print(f"  {row}")
+            print(summary_line(data_dir) + (" (before the dry run)" if args.dry_run else ""))
     except SyncError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
