@@ -63,57 +63,56 @@ const expectVisible = async (locator, what, timeout = 20000) => {
     throw new Error(`Expected to see: ${what}`);
   });
 };
-const stateText = () => page.locator('.rb-state').first().innerText();
-const fidelityOf = async (name) => (await page.locator('.rb-fidelity__row', { hasText: name }).locator('.rb-fidelity__value').first().getAttribute('aria-label')) ?? '';
+const FINGER_NAMES = ['Thumb', 'Index finger', 'Middle finger', 'Ring finger', 'Little finger'];
 
 let exitCode = 0;
 try {
-  step('/robot: the twin, the source switch and the fidelity rows');
+  step('/robot: Copy me, the robot choice, the source switch and the finger sliders');
   // Mock mode is forced so the walk never depends on the Python backend; the robot endpoint is chosen by the store.
   await page.goto(`${BASE}/robot?mock=1`);
   await page.waitForFunction(() => window.__apprenticeMock === true, null, { timeout: 15000 });
   await expectVisible(page.getByRole('heading', { name: 'Robot hand' }), 'Robot hand heading');
-  await expectVisible(page.getByRole('radiogroup', { name: 'Robot source' }), 'source switch');
-  for (const label of ['Expert glove', 'Apprentice glove', 'Lesson', 'Off']) await expectVisible(page.getByRole('radio', { name: label }), `${label} option`);
-  await expectVisible(page.getByRole('list', { name: 'Fidelity per finger' }), 'fidelity list');
-  // The engine (mock or core) must answer with a hello before anything else is judged.
-  await page.waitForFunction(() => !/Looking for|not connected/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
-  console.log(`  state: ${await stateText()}`);
+  await expectVisible(page.getByRole('radiogroup', { name: 'Which robot' }), 'robot choice');
+  for (const label of ['Three fingers', 'Five fingers']) await expectVisible(page.getByRole('radio', { name: label }), `${label} option`);
+  await page.getByRole('radio', { name: 'Three fingers' }).click();
+  // The engine (mock or core) answers with a hello; only then does the source switch appear.
+  // (ROBOT_CORE=1 path: the same checks run against a real core's hello. Unverified here, no core could be run.)
+  const source = page.getByRole('radiogroup', { name: 'Robot source' });
+  await expectVisible(source, 'source switch once the engine answers');
+  for (const label of ['Expert glove', 'Apprentice glove']) await expectVisible(source.getByRole('radio', { name: label }), `${label} option`);
+  const sourceOptions = await source.getByRole('radio').count();
+  if (sourceOptions !== 2) throw new Error(`Copy me should offer only the two gloves, saw ${sourceOptions} source options`);
+  for (const gone of ['Lesson', 'Off']) {
+    if (await source.getByRole('radio', { name: gone, exact: true }).count()) throw new Error(`Copy me should not offer the ${gone} source`);
+  }
 
-  step('switch to the apprentice glove and wait for live joint targets');
-  await page.getByRole('radio', { name: 'Apprentice glove' }).click();
-  await page.waitForFunction(() => /Following the apprentice glove/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
-  console.log(`  state: ${await stateText()}`);
-  await page.locator('.rb-joints summary').click();
-  await expectVisible(page.locator('.rb-joints__table'), 'joint table');
-  const rows = await page.locator('.rb-joints__table tbody tr').count();
-  if (rows !== 7) throw new Error(`expected 7 Dex3-1 joints in the table, saw ${rows}`);
-  const readTargets = () => page.locator('.rb-joints__table tbody td:nth-child(3)').allInnerTexts();
-  const first = await readTargets();
-  await settle(1500);
-  const second = await readTargets();
-  console.log(`  targets: ${first.join(' ')} -> ${second.join(' ')}`);
-  if (first.join() === second.join() && !CORE) console.log('  (targets did not change over 1.5 s; the sample glove may be holding a pose)');
-  const thumb = await fidelityOf('Thumb');
-  const ring = await fidelityOf('Ring');
-  console.log(`  fidelity: ${thumb}; ${ring}`);
-  if (!/100 percent/.test(thumb)) throw new Error(`thumb fidelity should read 100 percent, got "${thumb}"`);
-  if (!/no ring finger/.test(ring)) throw new Error(`ring finger should be marked missing, got "${ring}"`);
+  step('the finger sliders: five labelled ranges, Ring and Little disabled on the three-finger robot');
+  const listen = page.getByRole('group', { name: 'How closely each finger copies you' });
+  await expectVisible(listen, 'finger copy fieldset');
+  for (const name of FINGER_NAMES) await expectVisible(listen.getByRole('slider', { name, exact: true }), `${name} slider`);
+  for (const name of ['Thumb', 'Index finger', 'Middle finger']) {
+    if (await listen.getByRole('slider', { name, exact: true }).isDisabled()) throw new Error(`${name} slider should be enabled on the Dex3-1`);
+  }
+  for (const name of ['Ring finger', 'Little finger']) {
+    if (!(await listen.getByRole('slider', { name, exact: true }).isDisabled())) throw new Error(`${name} slider should be disabled on the three-finger robot`);
+  }
+  const noFinger = await listen.getByText('No finger', { exact: true }).count();
+  if (noFinger !== 2) throw new Error(`expected "No finger" on Ring and Little, saw ${noFinger}`);
+  // Moving a slider changes its readout, and the reset button appears.
+  const thumbSlider = listen.getByRole('slider', { name: 'Thumb', exact: true });
+  await thumbSlider.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expectVisible(page.getByRole('button', { name: 'Copy every finger fully' }), 'reset button after changing a finger');
+  await page.getByRole('button', { name: 'Copy every finger fully' }).click();
+  await expectVisible(listen.getByText('100%', { exact: true }), 'thumb back to 100%');
+
+  step('apprentice glove stays selected and the twin draws');
+  await source.getByRole('radio', { name: 'Apprentice glove' }).click();
+  await expectVisible(source.getByRole('radio', { name: 'Apprentice glove', checked: true }), 'Apprentice glove selected');
   // The skinned hand and the robot's capsules take a moment on the software renderer.
   await settle(2500);
   await shot('01-screen');
 
-  step('lesson source, then off: the state line follows the engine');
-  await page.getByRole('radio', { name: 'Lesson' }).click();
-  await page.waitForFunction(() => /lesson|Lesson/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
-  console.log(`  state: ${await stateText()}`);
-  await page.getByRole('radio', { name: 'Off' }).click();
-  await page.waitForFunction(() => /The robot rests/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
-  console.log(`  state: ${await stateText()}`);
-  await settle(1500);
-  await shot('02-off');
-  await page.getByRole('radio', { name: 'Apprentice glove' }).click();
-  await page.waitForFunction(() => /Following the apprentice glove/.test(document.querySelector('.rb-state')?.textContent ?? ''), null, { timeout: 20000 });
 
   step('training room: the practice stage is the expert and you only; the robot hand is one link away');
   await page.goto(`${BASE}/apprentice/lessons/seed-table-tennis/steps/0?mock=1`);

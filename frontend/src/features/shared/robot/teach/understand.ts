@@ -53,6 +53,9 @@ const OK_WORDS = ['right', 'good', 'correct', 'perfect', 'great', 'fine', 'yes',
 const FORBID = new Set(["don't", 'dont', 'never', 'stop']);
 
 /** Amount for "a little" and for "a lot". */
+/** Ready-made sentences the teach panel offers to tap, so a visitor sees plain words understood without typing. */
+export const EXAMPLE_PHRASES = ['Curl your index more', 'Straighten the little finger a bit', 'Curl the middle and straighten the thumb'] as const;
+
 export const SMALL_AMOUNT = 0.5;
 export const LARGE_AMOUNT = 1.8;
 

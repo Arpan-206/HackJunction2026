@@ -10,7 +10,8 @@ import { LessonStepFields, lessonPickerNote, useLessonStep } from '../LessonStep
 import { LESSON_SPEEDS, type SpeedId } from '../RobotLessonPlayer';
 import type { TwinLesson } from '../RobotTwin';
 import { fingerProfile, MOVING_RANGE_DEG, PASS_SCORE, type Instruction, type SkillAxis } from './robotSkill';
-import { speak, useSpeechInput } from './useSpeechInput';
+import { speak } from './useSpeechInput';
+import { EXAMPLE_PHRASES } from './understand';
 import { useTeachSession, type RoundSummary, type TeachSession } from './useTeachSession';
 
 /** The robot's name in teach mode: Geppetto's wooden boy. */
@@ -21,8 +22,8 @@ const FINGER_LABEL: Record<Finger, string> = { thumb: 'Thumb', index: 'Index', m
 const ACTIONS: { axis: SkillAxis; dir: 1 | -1; label: string }[] = [
   { axis: 'bend', dir: 1, label: 'Curl more' },
   { axis: 'bend', dir: -1, label: 'Straighten' },
-  { axis: 'time', dir: -1, label: 'Earlier' },
-  { axis: 'time', dir: 1, label: 'Later' },
+  { axis: 'time', dir: -1, label: 'Move sooner' },
+  { axis: 'time', dir: 1, label: 'Move later' },
 ];
 
 interface RobotTeachPanelProps {
@@ -33,7 +34,7 @@ interface RobotTeachPanelProps {
 
 /**
  * Teach the robot: the five-finger robot performs a lesson step, sometimes with one planted fault, and the learner
- * judges it and fixes it: by tapping a finger and a change, by voice or typed words, or by showing it with the glove.
+ * judges it and fixes it: by tapping a finger and a change, by typed words, or by showing it with the glove.
  * The robot does what it is told, right or wrong, so its score is the teacher's score (learning by teaching,
  * research/13 and 14).
  */
@@ -51,18 +52,8 @@ export function RobotTeachPanel({ gloves, onChange }: RobotTeachPanelProps) {
   }, [ref.track, onChange]);
 
   if (note) return <p className="note">{note}</p>;
-  const speedLabel = LESSON_SPEEDS.find((s) => s.id === speed)?.label.toLowerCase();
   return (
     <div className="rb-teach">
-      <Disclosure summary={`${lesson?.title ?? 'Lesson'}: ${step?.title ?? ''}, ${speedLabel}`} className="rb-teach__setup">
-        <div className="rb-teach__group">
-          <LessonStepFields choice={choice} />
-          <div className="ap-field">
-            <span className="ap-field__label">Speed</span>
-            <Segmented label="Playback speed" value={speed} options={[...LESSON_SPEEDS]} onChange={setSpeed} />
-          </div>
-        </div>
-      </Disclosure>
       {ref.notice && <p className="note">{ref.notice}</p>}
       {ref.track && step && !ref.loading ? (
         <TeachRun
@@ -78,6 +69,15 @@ export function RobotTeachPanel({ gloves, onChange }: RobotTeachPanelProps) {
       ) : (
         <p className="note">Loading the expert's take...</p>
       )}
+      <Disclosure summary={`Change the lesson (${lesson?.title ?? 'none'})`} className="rb-teach__setup">
+        <div className="rb-teach__group">
+          <LessonStepFields choice={choice} />
+          <div className="ap-field">
+            <span className="ap-field__label">Speed</span>
+            <Segmented label="Playback speed" value={speed} options={[...LESSON_SPEEDS]} onChange={setSpeed} />
+          </div>
+        </div>
+      </Disclosure>
     </div>
   );
 }
@@ -109,7 +109,6 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
   const [gloveOn, setGloveOn] = useState(false);
   const [confirmGiveUp, setConfirmGiveUp] = useState(false);
   const moving = useMemo(() => Object.values(fingerProfile(track.handAt, track.period)).some((p) => p.range >= MOVING_RANGE_DEG), [track]);
-  const voice = useSpeechInput(session.sayText);
 
   // Whether the glove for the step's hand is sending, checked once a second (frames arrive without re-rendering).
   useEffect(() => {
@@ -133,6 +132,10 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
   const tint = session.hintFinger ? { [session.hintFinger]: CODEX_STAGE.vermilion } : undefined;
   const { expertFrame, robotFrame, line, demo, countdown } = session;
   const banner = demo === 'countdown' ? String(countdown) : demo === 'recording' ? 'Recording' : undefined;
+  // The score stays hidden until the teacher has judged by eye: shown at once, it would give away whether anything is
+  // wrong. After a miss or a give-up the robot has fixed itself, so its 100 would not be the teacher's score either.
+  const showScore = session.over ? session.passed : session.heard;
+  const score = showScore ? { value: session.score, passed: session.passed } : null;
   useEffect(() => {
     onChange({
       getFrame: expertFrame,
@@ -144,11 +147,12 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
       speech: line,
       robotLabel: ROBOT_NAME,
       banner,
+      score,
     });
     // The frame functions read the session clock and skill through refs, so a new identity each render changes nothing
     // the stage draws; re-sending on the values below is enough.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onChange, track.side, label, hideExpert, session.hintFinger, line, round, session.score, banner]);
+  }, [onChange, track.side, label, hideExpert, session.hintFinger, line, round, session.score, session.passed, showScore, banner]);
 
   const tell = (axis: SkillAxis, dir: 1 | -1) => {
     if (!finger) return;
@@ -168,22 +172,11 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
   const busy = session.over || demo !== 'idle';
   return (
     <div className="rb-teach__run">
-      {/* The score stays hidden until the teacher has judged by eye: shown at once, it would give away whether anything is wrong. */}
-      <p className="rb-teach__round" aria-live="polite">
+      <p className="rb-teach__round">
         <span>
           Round {round + 1} of {session.rounds}
         </span>
-        {/* After a miss or a give-up the robot has fixed itself, so its 100 would not be the teacher's score. */}
-        {session.over && !session.passed ? (
-          <span className="rb-teach__of">Round over</span>
-        ) : session.over || session.heard ? (
-          <span>
-            {ROBOT_NAME}'s score <strong className={`ap-num ${session.passed ? 'rb-teach__num--ok' : ''}`}>{session.score}</strong>
-            <span className="rb-teach__of"> (passes at {PASS_SCORE})</span>
-          </span>
-        ) : (
-          <span className="rb-teach__of">Judge by eye</span>
-        )}
+        <span className="rb-teach__of">{session.over ? 'Round over' : showScore ? `Passes at ${PASS_SCORE}` : 'Judge by eye'}</span>
       </p>
 
       {session.over ? (
@@ -210,50 +203,48 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
             ) : (
               <p className="note rb-teach__hint">Tap the finger that looks wrong, then what it should do.</p>
             )}
-            <button type="button" className="btn btn--secondary rb-teach__ok" onClick={() => session.looksRight()}>
+            <button type="button" className="btn btn--ghost rb-teach__ok" onClick={() => session.looksRight()}>
               Nothing is wrong
             </button>
           </fieldset>
 
           <div className="rb-teach__group">
-            <span className="rb-teach__legend">Or tell it another way</span>
-            <div className="rb-teach__chips">
-              {voice.supported && (
-                <button type="button" className="btn btn--secondary" aria-pressed={voice.listening} disabled={busy} onClick={voice.listening ? voice.stop : voice.listen}>
-                  {voice.listening ? 'Listening, press to stop' : 'Say it'}
+            <label className="rb-teach__legend" htmlFor="rb-teach-words">
+              Or tell it in words
+            </label>
+            <form className="rb-teach__say" onSubmit={submit}>
+              <input
+                id="rb-teach-words"
+                className="rb-select"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Curl your index a bit more"
+                disabled={busy}
+                autoComplete="off"
+              />
+              <button type="submit" className="btn btn--secondary" disabled={busy || !text.trim()}>
+                Tell
+              </button>
+            </form>
+            <div className="rb-teach__chips" role="group" aria-label="Things to say">
+              {EXAMPLE_PHRASES.map((p) => (
+                <button key={p} type="button" className="btn btn--secondary" disabled={busy} onClick={() => session.sayText(p)}>
+                  {p}
                 </button>
-              )}
+              ))}
+            </div>
+          </div>
+
+          <div className="rb-teach__group">
+            <div className="rb-teach__chips">
               <button type="button" className="btn btn--secondary" disabled={busy || !gloveOn} onClick={session.startDemo}>
                 {demo === 'countdown' ? `Get ready: ${countdown}` : demo === 'recording' ? 'Recording your hand' : 'Show it with your glove'}
               </button>
             </div>
-            <p className="note rb-teach__hint">
-              {voice.supported ? 'Say it: speak a sentence such as "curl your index a bit more". Your browser listens, then the robot acts. ' : ''}
-              {gloveOn
-                ? `Show it: do the step once with the expert (${track.period.toFixed(1)} s); the robot copies most of your hand, mistakes included.`
-                : `Show it: connect a ${track.side} glove first.`}
-            </p>
-            {voice.error && <p className="note">{voice.error}</p>}
-            <Disclosure summary="Type it instead">
-              <form className="rb-teach__say" onSubmit={submit}>
-                <input
-                  className="rb-select"
-                  aria-label="Tell the robot in words"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Curl your index a bit more"
-                  disabled={busy}
-                  autoComplete="off"
-                />
-                <button type="submit" className="btn btn--secondary" disabled={busy || !text.trim()}>
-                  Tell
-                </button>
-              </form>
-            </Disclosure>
+            {!gloveOn && <p className="note rb-teach__hint">{`Connect a ${track.side} glove first.`}</p>}
           </div>
 
-          <div className="rb-teach__group">
-            <span className="rb-teach__legend">Stuck?</span>
+          <Disclosure summary="Stuck?">
             <div className="rb-teach__chips">
               <button type="button" className="btn btn--secondary" onClick={session.hint} disabled={busy || session.hintFinger !== null}>
                 Give me a hint
@@ -273,7 +264,7 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
                 </button>
               )}
             </div>
-          </div>
+          </Disclosure>
         </>
       )}
 
@@ -290,18 +281,6 @@ function TeachRun({ track: given, speed, weights: givenWeights, gloves, label, o
         </div>
       </Disclosure>
 
-      {session.log.length > 0 && (
-        <Disclosure summary={`What you tried (${session.log.length})`}>
-          <ol className="rb-teach__log" aria-label="Teaching log">
-            {[...session.log].reverse().map((e) => (
-              <li key={e.id}>
-                <span className="rb-teach__said">{e.said}</span>
-                <span>{e.reply}</span>
-              </li>
-            ))}
-          </ol>
-        </Disclosure>
-      )}
     </div>
   );
 }

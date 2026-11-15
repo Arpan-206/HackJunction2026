@@ -14,12 +14,14 @@ export interface LessonStepChoice {
   error: boolean;
 }
 
-export function useLessonStep(): LessonStepChoice {
+/** Picks the lesson and step; until the user picks a lesson, the first of `prefer` that exists is shown, else the first lesson. */
+export function useLessonStep(prefer: readonly string[] = []): LessonStepChoice {
   const library = useLessonLibrary();
   const lessons = useMemo(() => (library.data ?? []).filter((l) => l.steps.length > 0), [library.data]);
   const [lessonId, setLessonIdRaw] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
-  const lesson = lessons.find((l) => l.id === lessonId) ?? lessons[0] ?? null;
+  const preferred = prefer.map((id) => lessons.find((l) => l.id === id)).find((l) => l !== undefined);
+  const lesson = lessons.find((l) => l.id === lessonId) ?? preferred ?? lessons[0] ?? null;
   const index = lesson ? Math.min(stepIndex, lesson.steps.length - 1) : 0;
   return {
     lessons,
@@ -44,7 +46,7 @@ export function lessonPickerNote(choice: LessonStepChoice): string | null {
   return 'No lessons yet. Record one in the expert studio and it can be played here.';
 }
 
-/** Lesson and step selects. A step with no recorded take is marked, since the robot then plays its guide motion. */
+/** Lesson and step selects. */
 export function LessonStepFields({ choice, disabled = false }: { choice: LessonStepChoice; disabled?: boolean }) {
   const { lessons, lesson, stepIndex } = choice;
   return (
@@ -65,7 +67,7 @@ export function LessonStepFields({ choice, disabled = false }: { choice: LessonS
           <select className="rb-select" value={stepIndex} disabled={disabled} onChange={(e) => choice.setStepIndex(Number(e.target.value))}>
             {lesson.steps.map((s, i) => (
               <option key={s.id} value={i}>
-                {`${i + 1}. ${s.title}${s.reference_recording_id ? '' : ' (guide motion)'}`}
+                {`${i + 1}. ${s.title}`}
               </option>
             ))}
           </select>

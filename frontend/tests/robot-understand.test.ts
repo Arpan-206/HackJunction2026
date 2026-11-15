@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Finger } from '../src/api/types';
-import { echo, understand } from '../src/features/shared/robot/teach/understand';
+import { echo, EXAMPLE_PHRASES, understand } from '../src/features/shared/robot/teach/understand';
 import type { Instruction } from '../src/features/shared/robot/teach/robotSkill';
 
 const ins = (finger: Finger, axis: 'bend' | 'time', dir: 1 | -1, amount = 1): Instruction => ({ finger, axis, dir, amount });
@@ -110,5 +110,15 @@ describe('echo', () => {
     expect(echo(ins('thumb', 'time', -1))).toBe('Move my thumb earlier.');
     expect(echo(ins('little', 'time', 1, 0.5))).toBe('Move my little finger a little later.');
     expect(echo(ins('thumb', 'time', 1, 1.8))).toBe('Move my thumb a lot later.');
+  });
+});
+
+describe('understand: the example phrases the teach panel offers', () => {
+  it('parses each one into instructions', () => {
+    expect(EXAMPLE_PHRASES.map((p) => one(p))).toEqual([
+      [ins('index', 'bend', 1)],
+      [ins('little', 'bend', -1, 0.5)],
+      [ins('middle', 'bend', 1), ins('thumb', 'bend', -1)],
+    ]);
   });
 });

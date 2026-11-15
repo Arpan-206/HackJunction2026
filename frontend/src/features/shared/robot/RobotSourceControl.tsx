@@ -8,10 +8,12 @@ interface RobotSourceControlProps {
   exclude?: RobotSource[];
   /** When set, the control is greyed out with this line instead of its hint (a browser lesson drives the robot). */
   paused?: string | null;
+  /** Leave out the hint line under the control (the demo screen keeps only what it needs). */
+  quiet?: boolean;
 }
 
 /** Who drives the robot: the expert's glove, the apprentice's glove, the lesson, or nobody. Sends set_robot_source to the engine. */
-export function RobotSourceControl({ robot, exclude = [], paused = null }: RobotSourceControlProps) {
+export function RobotSourceControl({ robot, exclude = [], paused = null, quiet = false }: RobotSourceControlProps) {
   const connected = robot.status === 'open' && robot.hello !== null;
   const value: RobotSource = robot.source ?? 'off';
   const options = SOURCE_OPTIONS.filter((o) => !exclude.includes(o.id));
@@ -23,7 +25,7 @@ export function RobotSourceControl({ robot, exclude = [], paused = null }: Robot
       <div className={active ? '' : 'rb-source--off'} aria-disabled={!active}>
         <Segmented label="Robot source" value={value} options={options} onChange={(id) => void robot.setSource(id).catch(() => undefined)} grid />
       </div>
-      <p className="note ap-field__hint">{paused ?? (connected ? current?.hint : 'Connect the robot engine to choose.')}</p>
+      {!quiet && <p className="note ap-field__hint">{paused ?? (connected ? current?.hint : 'Connect the robot engine to choose.')}</p>}
       {robot.error && (
         <p className="note rb-error" role="alert">
           {robot.error}
