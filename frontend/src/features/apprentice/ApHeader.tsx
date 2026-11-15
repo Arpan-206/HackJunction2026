@@ -20,15 +20,18 @@ interface ApHeaderProps {
   /** A plain line after the title for context (the lesson, the master); never a kicker above it. */
   context?: string;
   back?: { to: string; label: string };
+  /** A control at the end of the line, such as the hand calibration on a task page. */
+  aside?: ReactNode;
 }
 
 /** A compact single-line page header for the stage pages, so the stage keeps most of the viewport. */
-export function ApHeader({ title, context, back }: ApHeaderProps) {
+export function ApHeader({ title, context, back, aside }: ApHeaderProps) {
   return (
     <header className="ap-head">
       <h1>{title}</h1>
       {context && <p className="ap-head__context">{context}</p>}
       {back && <BackLink to={back.to}>{back.label}</BackLink>}
+      {aside}
     </header>
   );
 }

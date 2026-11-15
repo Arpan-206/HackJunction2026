@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/PageHeader';
 import { Button, ButtonLink } from '../../../components/ui';
 import { HandCanvas, Keyboard, PropCue, RecentreHandButton, type HandHandle } from '../../../three';
 import { ApHeader } from '../ApHeader';
+import { CalibrateHands, lessonHands } from '../../shared/CalibrateHands';
 import { KeyPoseStill } from '../course/VideoSlot';
 import { stepSide, useReferenceTrack } from '../hooks/useReferenceTrack';
 import { useLessonById } from '../hooks/useLessonData';
@@ -90,7 +91,7 @@ export function PlayPage() {
   if (lesson.test) return <Navigate replace to={`/apprentice/lessons/${lesson.id}/test`} />;
   return (
     <>
-      <ApHeader title="Play" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} />
+      <ApHeader title="Play" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} aside={<CalibrateHands hands={lessonHands(lesson)} />} />
       {offline && <p className="note ap-banner">Backend offline: playing with the built-in demo lesson. Scores are estimated on this device.</p>}
       {lesson.steps.length ? <PlayRound lesson={lesson} /> : <p className="note ap-state">This course has no moves to play yet.</p>}
     </>

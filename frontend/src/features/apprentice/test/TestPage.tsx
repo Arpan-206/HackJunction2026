@@ -2,6 +2,7 @@ import { useHandPosition } from '../../../three/handPosition';
 import { skillUsesHandPosition } from '../skills/catalogue';
 import { useParams } from 'react-router-dom';
 import { ApHeader } from '../ApHeader';
+import { CalibrateHands, lessonHands } from '../../shared/CalibrateHands';
 import { PageHeader } from '../../../components/PageHeader';
 import { ButtonLink } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
@@ -41,7 +42,7 @@ export function TestPage() {
   }
   return (
     <>
-      <ApHeader title="Test your skills" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} />
+      <ApHeader title="Test your skills" context={lesson.title} back={{ to: `/apprentice/lessons/${lesson.id}`, label: 'Back to syllabus' }} aside={<CalibrateHands hands={lessonHands(lesson)} />} />
       {offline && <p className="note ap-banner">Backend offline: playing with the built-in demo lesson.</p>}
       {lesson.test.kind === 'table_tennis_rally' ? (
         <TableTennisRally spec={lesson.test} lesson={lesson} />

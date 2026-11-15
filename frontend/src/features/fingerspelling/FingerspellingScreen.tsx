@@ -6,6 +6,7 @@ import { Button } from '../../components/ui';
 import { frameAt } from '../../mock/synth';
 import { Hand, HandCanvas, synthFrame, type HandProps } from '../../three';
 import { ApHeader } from '../apprentice/ApHeader';
+import { CalibrateHands } from '../shared/CalibrateHands';
 import { flexionDegrees } from '../apprentice/training/coach/deviation';
 import { Segmented } from '../apprentice/training/Segmented';
 import { skillPath } from '../apprentice/skills/catalogue';
@@ -78,7 +79,7 @@ export default function FingerspellingScreen() {
   const view = packs.find((p) => p.pack.id === packId) ?? packs[0];
   return (
     <div className="fs-page">
-      <ApHeader title="Fingerspelling" context={view ? `${view.pack.name}, letter by letter` : undefined} back={{ to: skillPath('fingerspelling'), label: 'Back to the skill' }} />
+      <ApHeader title="Fingerspelling" context={view ? `${view.pack.name}, letter by letter` : undefined} back={{ to: skillPath('fingerspelling'), label: 'Back to the skill' }} aside={<CalibrateHands hands="right" />} />
       {offline && <p className="note ap-banner">Backend offline: showing the built-in packs.</p>}
       {packs.length > 1 && <Segmented label="Fingerspelling pack" value={view.pack.id} options={packs.map((p) => ({ id: p.pack.id, label: p.pack.name }))} onChange={setPackId} />}
       <Segmented label="Fingerspelling view" value={tab} options={TABS} onChange={setTab} />

@@ -10,8 +10,7 @@ import { ApHeader } from '../ApHeader';
 import { Button, ButtonLink, Countdown, Disclosure } from '../../../components/ui';
 import { useLessonById } from '../hooks/useLessonData';
 import { recordAttempt } from '../hooks/useProgress';
-import { CalibrationPanel } from '../../shared/CalibrationPanel';
-import { useCalibration } from '../../shared/useCalibration';
+import { CalibrateHands, useHandCalibrations } from '../../shared/CalibrateHands';
 import { PropSwitch } from '../../shared/PropSwitch';
 import { shownProp, useShowProps } from '../../shared/sessionPrefs';
 import { MARGIN_INFO, roomFor, useMargin, useReducedMotion } from '../../shared/settings';
@@ -138,8 +137,8 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
   const [pipOn, setPipOn] = useTakeVideoPref();
   // The video beside the expert: the webcam of the reference take, else the step's tutorial video, looped over the take.
   const stageVideo = takeVideo ?? tutorialVideoOf(step);
-  const calibration = useCalibration(side);
-  const calibrated = calibration.latest !== null;
+  const calibrations = useHandCalibrations();
+  const calibrated = calibrations[side].latest !== null;
 
   const [mode, setMode] = useState<PracticeMode>('flow');
   // The clumsy simulation starts on only when this very URL asks for ?dev=1; the remembered dev flag just offers the switch.
@@ -360,21 +359,15 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
   const nextTo = index + 1 < total ? `/apprentice/lessons/${lessonId}/steps/${index + 1}` : `/apprentice/lessons/${lessonId}/${hasTest ? 'test' : 'play'}`;
   const nextLabel = index + 1 < total ? 'Next lesson' : 'Play';
   const busy = phase === 'countdown' || phase === 'running' || phase === 'scoring';
-  const calPanel = (
-    <CalibrationPanel
-      side={side}
-      onSide={() => undefined}
-      cal={calibration}
-      compact
-      hideSide
-      title="Calibrate your glove"
-      missingNote="Not calibrated yet. Scores assume an average hand until you do."
-    />
-  );
 
   return (
     <div className="ap-room">
-      <ApHeader title={step.title} context={lessonTitle} back={{ to: `/apprentice/lessons/${lessonId}`, label: 'Back to syllabus' }} />
+      <ApHeader
+        title={step.title}
+        context={lessonTitle}
+        back={{ to: `/apprentice/lessons/${lessonId}`, label: 'Back to syllabus' }}
+        aside={<CalibrateHands hands={twoHanded ? 'both' : side} cals={calibrations} />}
+      />
       {offline && <p className="note ap-banner">Backend offline: practising with the built-in demo lesson. Scores are estimated on this device.</p>}
       {notice && <p className="note ap-banner">{notice}</p>}
 
@@ -498,11 +491,7 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
           </div>
 
 
-          {/* Calibration is prominent only while the glove has never been calibrated; after that it lives in the settings. */}
-          {!calibration.loading && !calibrated && calPanel}
-
           <Disclosure summary="Room settings" className="ap-settings">
-            {(calibration.loading || calibrated) && calPanel}
             {theatre ? (
               <p className="note ap-field__hint">Shadow puppets are always shown on the wall: the expert's shadow on the left, yours on the right.</p>
             ) : desk ? (

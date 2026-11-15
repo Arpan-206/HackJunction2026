@@ -1,6 +1,6 @@
 import type { Side } from '../../api';
 import { Button, Card, Countdown } from '../../components/ui';
-import type { CalibrationHandle } from './useCalibration';
+import { AIM_HOLD_MS, AIM_LEAD_MS, type CalibrationHandle } from './useCalibration';
 import { CALIBRATION_SECONDS, formatWhen } from '../master/lib';
 
 interface CalibrationPanelProps {
@@ -20,17 +20,22 @@ interface CalibrationPanelProps {
 const PROMPTS = {
   flat: { caption: 'Hold your hand flat and open, palm down, fingers pointing at the screen', capture: 'Keep your hand flat and still, fingers at the screen' },
   fist: { caption: 'Now curl into a loose, relaxed fist', capture: 'Hold the loose fist' },
+  aim: { caption: '', capture: 'Open your hand flat again, fingers pointing at the screen' },
 } as const;
 
+const STEPS = 3;
+
 /**
- * Guided glove calibration: a flat hand, then a loose fist, each with a 3-2-1 countdown and a progress bar
- * while the backend samples the glove. Shows when the glove was last calibrated.
+ * Guided glove calibration: a flat hand, then a loose fist, each with a 3-2-1 countdown and a progress bar while the
+ * backend samples the glove, then the hand flat again while the glove core sets the heading and takes up the new
+ * calibration. Shows when the glove was last calibrated.
  */
 export function CalibrationPanel({ side, onSide, cal, compact, hideSide, missingNote, title = 'Calibrate the glove' }: CalibrationPanelProps) {
   const { phase, latest, loading, error } = cal;
   const running = phase !== 'idle';
-  const which = phase.endsWith('flat') ? 'flat' : 'fist';
-  const step = which === 'flat' ? 1 : 2;
+  const which = phase === 'aim' ? 'aim' : phase.endsWith('flat') ? 'flat' : 'fist';
+  const step = which === 'flat' ? 1 : which === 'fist' ? 2 : 3;
+  const captureMs = which === 'aim' ? AIM_LEAD_MS + AIM_HOLD_MS : CALIBRATION_SECONDS * 1000;
 
   return (
     <Card title={title} className={compact ? 'mst-cal mst-cal--compact' : 'mst-cal mst-cal--secondary'}>
@@ -67,14 +72,16 @@ export function CalibrationPanel({ side, onSide, cal, compact, hideSide, missing
       )}
 
       {(phase === 'countdown-flat' || phase === 'countdown-fist') && (
-        <Countdown key={phase} caption={`Step ${step} of 2: ${PROMPTS[which].caption}`} onDone={cal.countdownDone} />
+        <Countdown key={phase} caption={`Step ${step} of ${STEPS}: ${PROMPTS[which].caption}`} onDone={cal.countdownDone} />
       )}
-      {(phase === 'capture-flat' || phase === 'capture-fist') && (
+      {(phase === 'capture-flat' || phase === 'capture-fist' || phase === 'aim') && (
         <div className="mst-capture" role="status" aria-live="polite">
-          <p className="mst-capture__step">Step {step} of 2</p>
+          <p className="mst-capture__step">
+            Step {step} of {STEPS}
+          </p>
           <p className="mst-capture__text">{PROMPTS[which].capture}</p>
           <div className="mst-progress" role="progressbar" aria-label="Capturing" aria-valuemin={0} aria-valuemax={100}>
-            <div key={phase} className="mst-progress__bar" style={{ animationDuration: `${CALIBRATION_SECONDS}s` }} />
+            <div key={phase} className="mst-progress__bar" style={{ animationDuration: `${captureMs}ms` }} />
           </div>
         </div>
       )}
