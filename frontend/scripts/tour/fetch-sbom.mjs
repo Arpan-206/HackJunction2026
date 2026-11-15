@@ -28,15 +28,15 @@ function* walk(components) {
   }
 }
 
-/** Counts from a CycloneDX document: packages (the checked-out repository itself left out) and vulnerability entries by severity. */
+/**
+ * Counts from a CycloneDX document: every component in the file (nested ones included), as the published file lists
+ * them, and vulnerability entries by severity. The checked-out repository itself is one of the components; it is
+ * counted, so the page shows exactly the number of components in the file.
+ */
 export function summarise(doc) {
   const props = Object.fromEntries(((doc.metadata ?? {}).properties ?? []).map((p) => [p.name, p.value]));
-  const self = `pkg:github/${props['craci:job:repository'] ?? ''}`.toLowerCase();
   let components = 0;
-  for (const c of walk(doc.components)) {
-    if ((c.purl ?? '').toLowerCase().startsWith(self + '@') || (c.purl ?? '').toLowerCase() === self) continue;
-    components++;
-  }
+  for (const c of walk(doc.components)) if (c) components++;
   const hasVulnerabilityData = Array.isArray(doc.vulnerabilities);
   const bySeverity = Object.fromEntries(SEVERITIES.map((s) => [s, 0]));
   for (const v of doc.vulnerabilities ?? []) {

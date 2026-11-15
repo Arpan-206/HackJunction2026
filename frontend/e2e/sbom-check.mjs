@@ -30,7 +30,14 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const problems = [];
 const summary = JSON.parse(readFileSync(join(site, 'sbom-summary.json'), 'utf8'));
 const sbomPath = join(site, 'sbom.cdx.json');
-const truth = existsSync(sbomPath) ? summarise(JSON.parse(readFileSync(sbomPath, 'utf8'))) : null;
+const doc = existsSync(sbomPath) ? JSON.parse(readFileSync(sbomPath, 'utf8')) : null;
+const truth = doc ? summarise(doc) : null;
+// The page's package count must be the number of components in the published file, counted here independently.
+if (doc && truth.components !== (doc.components ?? []).length + (doc.components ?? []).reduce((n, c) => n + countNested(c), 0))
+  problems.push('the summary count differs from the components in sbom.cdx.json');
+function countNested(c) {
+  return (c.components ?? []).reduce((n, k) => n + 1 + countNested(k), 0);
+}
 if (truth && (truth.components !== summary.components || JSON.stringify(truth.vulnerabilities) !== JSON.stringify(summary.vulnerabilities)))
   problems.push('sbom-summary.json does not match sbom.cdx.json');
 
@@ -55,6 +62,8 @@ server.close();
 if (shown.overflow) problems.push('the page overflows sideways at 390 px');
 if (shown.status !== summary.status) problems.push(`status on the page ${shown.status}, in the summary ${summary.status}`);
 if (truth) {
+  const inFile = String((doc.components ?? []).length + (doc.components ?? []).reduce((n, c) => n + countNested(c), 0));
+  if (shown.components !== inFile) problems.push(`packages on the page ${shown.components}, components in the file ${inFile}`);
   if (shown.components !== String(truth.components)) problems.push(`packages on the page ${shown.components}, in the SBOM ${truth.components}`);
   for (const s of SEVERITIES) {
     const want = truth.vulnerabilities ? String(truth.vulnerabilities[s]) : 'No data';

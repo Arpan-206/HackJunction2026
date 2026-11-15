@@ -82,6 +82,15 @@ The recorded hints come from synthetic test attempts. They hold no glove data of
 | The delay probe (it can call the core on :8765) is replaced by a stub | alias in `vite.tour.config.ts` |
 | The browser check fails on any request that leaves the page's origin | `e2e/tour-check.mjs` |
 
+Two third-party URLs are present in library code inside the bundle, and are never requested:
+
+| String in the bundle | From | Why it is never requested |
+| --- | --- | --- |
+| The Draco decoder path on `www.gstatic.com` | drei (`useGLTF` Draco support) | No model in the tour is Draco-compressed: `models/hands/right.glb` has no `KHR_draco_mesh_compression` |
+| The environment preset path on `raw.githack.com` | drei (`Environment` presets) | The tour draws the stage with `decor: false`, so no `Environment` renders; the app's own `Environment` uses a local file, never a preset |
+
+The browser check names both hosts and fails if either is requested.
+
 ## Key-leak check
 
 `frontend/scripts/leak-check.mjs` scans every file in `dist-tour/` after the build. The build fails on any finding.
@@ -113,7 +122,7 @@ The site has a relative base and hash routing (`#/1` to `#/5`), so one build wor
 
 ## What's in this site
 
-Every stop has a link "What's in this site". It opens `sbom.html`, a plain page with no 3D and no tour code. It reads `sbom-summary.json` from the site and shows the commit, the CRACI job link, the number of packages, the vulnerability entries by severity and a link to the CycloneDX file. It says plainly when the SBOM is empty, incomplete or unavailable, and why. It never shows a zero where there is no data. The list is every package the build downloaded, the build and test tools included; it is not the code inside the page.
+Every stop has a link "What's in this site". It opens `sbom.html`, a plain page with no 3D and no tour code. It reads `sbom-summary.json` from the site and shows the commit, the CRACI job link, the number of packages (every component in the SBOM file, the checked-out repository included), the vulnerability entries by severity and a link to the CycloneDX file. It says plainly when the SBOM is empty, incomplete or unavailable, and why. It never shows a zero where there is no data. The list is every package the build downloaded, the build and test tools included; it is not the code inside the page.
 
 In run 43664418557 the CRACI API answered HTTP 403 Forbidden to the `CRACI_API_TOKEN` secret, so that run's site says "unavailable" with that reason. The token in the main checkout's `.env` works, so the secret value needs checking. The zip handed over for that run got its SBOM from a local step after the run, and the key-leak check ran again on the final folder.
 

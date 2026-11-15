@@ -64,6 +64,9 @@ function watch(page, tag) {
   page.on('request', (r) => {
     const u = r.url();
     seen.requests.push(u);
+    // Library code in the bundle names these two hosts (drei's Draco decoder path and environment presets); the tour
+    // must never request them: no Draco model and no Environment preset are used in tour mode.
+    for (const host of ['www.gstatic.com', 'raw.githack.com']) if (u.includes(host)) problems.push(`${tag}: request to ${host}: ${u}`);
     if (!(u.startsWith(origin) || u.startsWith('data:') || u.startsWith('blob:'))) {
       seen.outside.push(u);
       problems.push(`${tag}: request left the origin: ${u}`);

@@ -138,6 +138,14 @@ jobs:
           id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '.jobs[] | select(.name == "build") | .id')
           echo "build job: $id"
           echo "TOUR_SBOM_JOB_ID=$id" >> "$GITHUB_ENV"
+      - name: Fingerprint of the API token (first 8 hex of its SHA-256 and its length; never the value)
+        env:
+          CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
+        run: |
+          if [ -z "$CRACI_API_TOKEN" ]; then echo "token: absent"; else
+            printf '%s' "$CRACI_API_TOKEN" | sha256sum | cut -c1-8 | sed 's/^/token sha256 prefix: /'
+            echo "token length: ${#CRACI_API_TOKEN}"
+          fi
       - name: Fetch the build job's SBOM from CRACI
         env:
           CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
