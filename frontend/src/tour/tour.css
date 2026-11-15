@@ -1,4 +1,10 @@
 /* The public tour (docs/PUBLIC_TOUR.md): one column, readable on a 390 px phone, text never below 16 px. */
+
+/* The app's page paper is a 1 MB photo under an 86% veil; the tour keeps the drawn mottle and skips the photos, for a fast first load on a phone. */
+html[data-theme] {
+  --tex-parchment: none;
+  --tex-plaster: none;
+}
 .tour {
   max-width: 980px;
   margin: 0 auto;

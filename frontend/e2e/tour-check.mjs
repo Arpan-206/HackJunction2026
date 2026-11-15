@@ -99,16 +99,24 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
   const t0 = Date.now();
   await page.goto(home, { waitUntil: 'domcontentloaded' });
   const tDom = Date.now() - t0;
+  await page.locator('.tour-title').waitFor({ timeout: 30000 });
+  const tText = Date.now() - t0;
   await page.locator('.tour-stage canvas, .tour-stage__fallback').first().waitFor({ timeout: 30000 });
   const tStage = Date.now() - t0;
   await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
   const tIdle = Date.now() - t0;
-  m.load = { domContentLoadedMs: tDom, firstStageMs: tStage, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n };
+  const resources = await page.evaluate(() =>
+    performance.getEntriesByType('resource').map((e) => ({ name: e.name.replace(location.origin, ''), start: Math.round(e.startTime), end: Math.round(e.responseEnd), bytes: e.encodedBodySize })),
+  );
+  m.load = { domContentLoadedMs: tDom, firstTextMs: tText, firstStageMs: tStage, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n, resources };
+  metrics.runs[tag] = m;
+  writeFileSync(join(out, 'metrics.json'), JSON.stringify(metrics, null, 2));
+  await page.screenshot({ path: join(out, `${tag}-first-load.png`), fullPage: true });
   if (tStage > 5000) problems.push(`${tag}: first stop took ${tStage} ms to show its stage (budget 5000)`);
 
   for (let i = 1; i <= STOPS; i++) {
     if (i > 1) await page.getByRole('button', { name: 'Next' }).click();
-    await page.waitForFunction((n) => location.hash === `#/${n}`, i);
+    await page.waitForFunction((n) => location.hash === `#/${n}` || (n === 1 && location.hash === ''), i);
     await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(2500);
     const badge = await page.locator('.tour-badge').innerText();
