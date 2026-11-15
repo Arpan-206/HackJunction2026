@@ -2,7 +2,7 @@
 /**
  * Browser check of the built public tour (CRACI only; never on the demo laptop). Usage:
  *   node e2e/tour-check.mjs <dist-tour dir> <output dir>
- * Serves the build under /HackJunction2026/ (as a GitHub Pages project site would), drives it with Playwright's
+ * Serves the build at the root (as Netlify does; TOUR_BASE=/sub/ for a sub-path), drives it with Playwright's
  * chromium at a phone viewport (390 x 844, throttled to a normal connection) and a desktop viewport, takes a screenshot
  * per stop, and fails on any console error, page error, failed request, horizontal overflow, or request that leaves the
  * page's own origin. It also checks a deep link reload, the teach stop's buttons, the clip, and the no-WebGL fallback.
@@ -16,7 +16,8 @@ import { chromium } from 'playwright';
 const dist = resolve(process.argv[2] ?? 'dist-tour');
 const out = resolve(process.argv[3] ?? 'tour-check');
 mkdirSync(out, { recursive: true });
-const BASE = '/HackJunction2026/';
+// Where the site is served: '/' as on Netlify (the default), or a sub-path such as /HackJunction2026/ as on GitHub Pages.
+const BASE = process.env.TOUR_BASE ?? '/';
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.png': 'image/png', '.mp4': 'video/mp4', '.glb': 'model/gltf-binary', '.urdf': 'application/xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.md': 'text/markdown' };
 
 const bytesServed = { n: 0 };

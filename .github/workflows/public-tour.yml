@@ -1,13 +1,19 @@
 name: public-tour
 
 # The public tour (docs/PUBLIC_TOUR.md): build it from the lesson-sync bundle, run the key-leak check and the browser
-# check, upload the site, and deploy it to GitHub Pages once Pages is turned on for this repository. Only the
-# public-tour branch runs this; nothing here touches the live app. No secret is used or needed.
+# check, upload the site, and deploy it. Only the public-tour branch runs this; nothing here touches the live app.
+# The build uses no secret. Deploy: Netlify when the repository secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID exist
+# (otherwise the job skips its steps); GitHub Pages only when started by hand with pages: true.
 
 on:
   push:
     branches: [public-tour]
   workflow_dispatch:
+    inputs:
+      pages:
+        description: Also deploy to GitHub Pages (Pages must be on for the repository)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -70,8 +76,10 @@ jobs:
         run: |
           npm i --no-save playwright@1.65
           npx playwright install --with-deps chromium
-      - name: Browser check (phone and desktop, screenshots, no calls out, load time)
+      - name: Browser check at the site root, as Netlify serves it (phone and desktop, screenshots, no calls out, load time)
         run: node e2e/tour-check.mjs dist-tour tour-check
+      - name: Browser check under a sub-path, as GitHub Pages serves it
+        run: TOUR_BASE=/HackJunction2026/ node e2e/tour-check.mjs dist-tour tour-check-subpath
       - name: Load metrics
         if: always()
         run: test -f tour-check/metrics.json && cat tour-check/metrics.json >> "$GITHUB_STEP_SUMMARY" || true
@@ -81,19 +89,63 @@ jobs:
           name: tour-check
           path: |
             frontend/tour-check
+            frontend/tour-check-subpath
             frontend/tour-size.md
       - uses: actions/upload-artifact@v4
         with:
           name: tour-dist
           path: frontend/dist-tour
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'workflow_dispatch' && inputs.pages
         with:
           path: frontend/dist-tour
 
-  deploy:
+  netlify:
+    # Deploys the checked build (the key-leak and browser checks passed in `build`) to Netlify. It needs the repository
+    # secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID; without them every step after the check skips and the job passes.
     needs: build
-    # Runs only once GitHub Pages is turned on for the repository (Settings, Pages, Source: GitHub Actions).
-    if: github.event.repository.has_pages == true
+    runs-on: craci
+    env:
+      HAS_NETLIFY: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
+    steps:
+      - name: Netlify secrets present?
+        run: |
+          if [ "$HAS_NETLIFY" = "true" ]; then echo "Netlify secrets found: deploying."; else echo "No NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID secrets: skipping the deploy."; fi
+      - uses: cracicorp/setup@v1
+        if: env.HAS_NETLIFY == 'true'
+        with:
+          # npm preset for the CLI; Netlify's API for the upload; GitHub for the build artifact.
+          network: |
+            default: deny
+            connections:
+              - tls:
+                  serverNamePatterns: [api.netlify.com]
+                  ports: [443]
+              - tls:
+                  serverNamePatterns: [api.github.com, "*.actions.githubusercontent.com", "*.githubusercontent.com", "*.blob.core.windows.net"]
+                  ports: [443]
+      - uses: actions/setup-node@v4
+        if: env.HAS_NETLIFY == 'true'
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        if: env.HAS_NETLIFY == 'true'
+        with:
+          name: tour-dist
+          path: dist-tour
+      - name: Deploy the prebuilt site to Netlify (production)
+        if: env.HAS_NETLIFY == 'true'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          npm i --no-save --prefix "$RUNNER_TEMP/netlify" netlify-cli@27.19.0
+          "$RUNNER_TEMP/netlify/node_modules/.bin/netlify" deploy --prod --dir=dist-tour --no-build --message "public-tour ${GITHUB_SHA::7}"
+
+  pages:
+    needs: build
+    # Off by default: only a manual run with pages: true deploys, and Pages must be on (Settings, Pages, Source: GitHub Actions).
+    if: github.event_name == 'workflow_dispatch' && inputs.pages
     runs-on: craci
     permissions:
       pages: write
