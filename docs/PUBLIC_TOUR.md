@@ -32,11 +32,11 @@ The normal app build (`npm run build`) does not change. The tour code is in `fro
 
 | Entry | Stop | Take now | Why this take |
 | --- | --- | --- | --- |
-| `expert` | 1 | `szymon-977906efe597`, table tennis wrist snap (his lesson, step caf5e58369d5) | It is the expert reference of that step. |
-| `reference` | 2, the expert's ghost | `szymon-6b8b367c4015`, shadow puppet rabbit | It is the expert reference of the rabbit step. |
+| `expert` | 1 | `szymon-4ca8e37c97eb`: Szymon spells J U N C T (his "Lesson 2: Spell junct"; the step id `seed-fs-word-geppetto` is misleading, he retitled the step) | The expert reference of that step, 10.4 s, right hand. The clearest take for a Junction audience. The five letters show under the stage as plain text; no per-letter timing is shown, because it is not measured. |
+| `reference` | 2, the expert's ghost | `szymon-6b8b367c4015`, shadow puppet rabbit | The expert reference of the rabbit step. |
 | `attempt` | 2, the learner's attempt | `szymon-5992b3c9201c`, shadow puppet rabbit, another take | Same step. The browser scorer gives it 83 against the reference, so the stop shows real corrections, not a 100. |
-| `robot` | 4, the Dex3-1 follows it | `szymon-4ca8e37c97eb`, fingerspelling GEPPETTO | The expert reference of fingerspelling step 2. Large index, middle and thumb movement: the three fingers the Dex3-1 has. |
-| `teach` | 5, Pinocchio's reference | `szymon-4986ea2809a7`, piano five-finger scale | The expert reference of the scale step. Every finger moves, so a planted fault shows. |
+| `robot` | 4, the Dex3-1 follows it | `szymon-4986ea2809a7`, piano five-finger scale | The expert reference of the scale step. Every finger moves in turn, so the robot's thumb and two fingers move too. |
+| `teach` | 5, Pinocchio's reference | `szymon-977906efe597`, table tennis wrist snap | The expert reference of that step. The fingers hold still, so a planted bend fault is easy to see. |
 
 Which takes are expert references comes from Szymon's own app (his lesson records are not in git). `frontend/tour/takes.json` keeps the step and the reference id of each entry.
 
@@ -65,7 +65,7 @@ The tour bundles takes from the lesson-sync bundle under `lessons/shared/` only:
 | `szymon-977906efe597` | 15 Nov, 00:50 | his table tennis lesson, wrist snap |
 | `szymon-6b8b367c4015` | 15 Nov, 00:48 | `seed-sp-rabbit` |
 | `szymon-5992b3c9201c` | 15 Nov, 00:48 | `seed-sp-rabbit` |
-| `szymon-4ca8e37c97eb` | 15 Nov, 00:11 | `seed-fs-word-geppetto` |
+| `szymon-4ca8e37c97eb` | 15 Nov, 00:11 | "Lesson 2: Spell junct" (`seed-fs-word-geppetto`) |
 | `szymon-4986ea2809a7` | 15 Nov, 00:52 | `seed-piano-scale` |
 
 What a bundled take holds: a title, the hand side, whether a wrist position was recorded, and 30 Hz rows of wrist rotation, wrist position, 15 bends and 5 spreads. Szymon's takes carry no wrist position, so the hand stays where the stage puts it. It holds no id, time stamp, wearer, calibration, lesson id or recorder name. `tests/tour.test.ts` checks this.

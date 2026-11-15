@@ -1,8 +1,8 @@
 {
-  "_comment": "Which take each tour stop plays. recorder: the folder under lessons/shared/; take: the take id inside it (recorder-prefixed, without .json); title: shown on the page; step: the lesson step it belongs to; reference: the expert reference take of that step (Szymon's lesson records are not in git, so it is kept here). Edit and rebuild to switch takes. See docs/PUBLIC_TOUR.md.",
-  "expert": { "recorder": "szymon", "take": "szymon-977906efe597", "title": "Table tennis: the wrist snap", "step": "Table Tennis: grip and forehand, Lesson 3 wrist snap (caf5e58369d5)", "reference": "szymon-977906efe597" },
-  "reference": { "recorder": "szymon", "take": "szymon-6b8b367c4015", "title": "Shadow puppets: the rabbit", "step": "seed-sp-rabbit", "reference": "szymon-6b8b367c4015" },
-  "attempt": { "recorder": "szymon", "take": "szymon-5992b3c9201c", "title": "Shadow puppets: the rabbit, another take", "step": "seed-sp-rabbit", "reference": "szymon-6b8b367c4015" },
-  "robot": { "recorder": "szymon", "take": "szymon-4ca8e37c97eb", "title": "Fingerspelling: the word GEPPETTO", "step": "seed-fs-word-geppetto, step 2", "reference": "szymon-4ca8e37c97eb" },
-  "teach": { "recorder": "szymon", "take": "szymon-4986ea2809a7", "title": "Piano: the five-finger scale", "step": "seed-piano-scale", "reference": "szymon-4986ea2809a7" }
+  "_comment": "Which take each tour stop plays. recorder: the folder under lessons/shared/; take: the take id inside it (recorder-prefixed, without .json); title: shown on the page; step: the lesson step as Szymon titled it; reference: the expert reference take of that step (his lesson records are not in git, so it is kept here). Edit and rebuild to switch takes. See docs/PUBLIC_TOUR.md.",
+  "expert": { "recorder": "szymon", "take": "szymon-4ca8e37c97eb", "title": "Szymon spells J U N C T", "step": "Fingerspelling words, Lesson 2: Spell junct (seed-fs-word-geppetto)", "reference": "szymon-4ca8e37c97eb" },
+  "reference": { "recorder": "szymon", "take": "szymon-6b8b367c4015", "title": "Shadow puppets: the rabbit", "step": "Shadow puppets, the rabbit (seed-sp-rabbit)", "reference": "szymon-6b8b367c4015" },
+  "attempt": { "recorder": "szymon", "take": "szymon-5992b3c9201c", "title": "Shadow puppets: the rabbit, another take", "step": "Shadow puppets, the rabbit (seed-sp-rabbit)", "reference": "szymon-6b8b367c4015" },
+  "robot": { "recorder": "szymon", "take": "szymon-4986ea2809a7", "title": "Piano: the five-finger scale", "step": "Piano, five-finger scale (seed-piano-scale)", "reference": "szymon-4986ea2809a7" },
+  "teach": { "recorder": "szymon", "take": "szymon-977906efe597", "title": "Table tennis: the wrist snap", "step": "Table Tennis: grip and forehand, Lesson 3 wrist snap (caf5e58369d5)", "reference": "szymon-977906efe597" }
 }

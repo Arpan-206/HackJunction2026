@@ -27,7 +27,7 @@ export default function RobotStop() {
   return (
     <section className="tour-stop">
       <p className="tour-lead">
-        Geppetto drives a robot hand from the same recording. The chalk hand plays a real take: the word GEPPETTO in fingerspelling. Strings run from its fingertips to a Unitree
+        Geppetto drives a robot hand from the same recording. The chalk hand plays a real take: the five-finger piano scale, every finger in turn. Strings run from its fingertips to a Unitree
         Dex3-1 robot hand, which follows through the app's own retarget.
       </p>
       {take ? <RobotStage take={take} /> : <p className="tour-loading">Loading the take...</p>}
@@ -70,7 +70,7 @@ function RobotStage({ take }: { take: TourTake }) {
   const clock = useLoopClock(take.duration);
   return (
     <>
-      <StageFrame text="The chalk hand spells a word letter by letter. The Dex3-1 robot hand beside it bends its thumb and two fingers to follow, joined by strings.">
+      <StageFrame text="The chalk hand plays a five-finger scale. The Dex3-1 robot hand beside it bends its thumb and two fingers to follow, joined by strings.">
         <Twin take={take} clock={clock} />
       </StageFrame>
       <div className="tour-controls">
