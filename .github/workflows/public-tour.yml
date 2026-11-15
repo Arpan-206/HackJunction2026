@@ -99,10 +99,49 @@ jobs:
             frontend/tour-check-subpath
             frontend/tour-size.md
 
-  publish:
-    # The build job's SBOM is final only after that job ends, so this job fetches it, adds it to the site, checks the
-    # site again (key leaks, and the "What's in this site" page against the SBOM file), and uploads the final site.
+  sbom:
+    # The ONE step that runs on a GitHub-hosted runner, not on CRACI: fetching the build job's SBOM from the CRACI API.
+    # Why: the CRACI API answered HTTP 403 to the same token when the request came from inside a CRACI runner (the
+    # network policy allowed it; the token fingerprint matched); the same token works from outside. The SBOM of a job is
+    # final only after that job ends, so this job waits for `build`, then polls (up to 15 minutes) and hands the files on.
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: frontend/scripts/tour
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Find the build job of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '.jobs[] | select(.name == "build") | .id')
+          echo "build job: $id"
+          echo "TOUR_SBOM_JOB_ID=$id" >> "$GITHUB_ENV"
+      - name: Fetch the build job's SBOM from the CRACI API
+        env:
+          CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
+          TOUR_SBOM_WAIT_S: "900"
+        run: |
+          mkdir -p sbom-out
+          node scripts/tour/fetch-sbom.mjs sbom-out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tour-sbom
+          path: frontend/sbom-out
+
+  publish:
+    # Assembles the final site on CRACI: the checked build plus the SBOM from the `sbom` job; checks it again (key leaks,
+    # and the "What's in this site" page against the SBOM file), and uploads the final site and its zip.
+    needs: [build, sbom]
     runs-on: craci
     permissions:
       contents: read
@@ -113,14 +152,10 @@ jobs:
     steps:
       - uses: cracicorp/setup@v1
         with:
-          # Presets stay on (npm, ubuntu, github). Extra hosts: the CRACI API for the SBOM, Playwright's browser download,
-          # and GitHub's artifact storage.
+          # Presets stay on (npm, ubuntu, github). Extra hosts: Playwright's browser download and GitHub's artifact storage.
           network: |
             default: deny
             connections:
-              - tls:
-                  serverNamePatterns: [api.craci.com]
-                  ports: [443]
               - tls:
                   serverNamePatterns: [cdn.playwright.dev, playwright.download.prss.microsoft.com, playwright.azureedge.net, "*.azureedge.net"]
                   ports: [443]
@@ -135,26 +170,12 @@ jobs:
         with:
           name: tour-dist
           path: frontend/dist-tour
-      - name: Find the build job of this run
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '.jobs[] | select(.name == "build") | .id')
-          echo "build job: $id"
-          echo "TOUR_SBOM_JOB_ID=$id" >> "$GITHUB_ENV"
-      - name: Fingerprint of the API token (first 8 hex of its SHA-256 and its length; never the value)
-        env:
-          CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
-        run: |
-          if [ -z "$CRACI_API_TOKEN" ]; then echo "token: absent"; else
-            printf '%s' "$CRACI_API_TOKEN" | sha256sum | cut -c1-8 | sed 's/^/token sha256 prefix: /'
-            echo "token length: ${#CRACI_API_TOKEN}"
-          fi
-      - name: Fetch the build job's SBOM from CRACI
-        env:
-          CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
-          TOUR_SBOM_WAIT_S: "900"
-        run: node scripts/tour/fetch-sbom.mjs dist-tour
+      - uses: actions/download-artifact@v4
+        with:
+          name: tour-sbom
+          path: frontend/sbom-out
+      - name: Put the SBOM and its summary into the site
+        run: cp sbom-out/* dist-tour/ && cat dist-tour/sbom-summary.json
       - name: Key-leak check of the final site (the SBOM and its summary included)
         run: node scripts/leak-check.mjs dist-tour
       - name: Install Playwright chromium
