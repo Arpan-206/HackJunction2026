@@ -107,14 +107,33 @@ async function walk(tag, viewport, mobile) {
   await browser.close();
 }
 
+/**
+ * One more try for a walk whose only problems are timeouts. The CRACI runner has no GPU and draws the 3D screens in
+ * software, so a rep or a full-page screenshot is sometimes slower than its limit (runs of 15 Nov, 05:24 and 05:46 UTC:
+ * one timeout each, on a different screen, in the phone walk at twice the pixel density). Any other problem (a request
+ * off the origin, a console error, a 404, forbidden text, no badge) fails at once, and a second timeout fails too.
+ */
+const TIMEOUT = /Timeout \d+ms exceeded/;
+const retried = [];
+async function walkWithRetry(tag, viewport, mobile) {
+  const before = problems.length;
+  await walk(tag, viewport, mobile);
+  const mine = problems.slice(before);
+  if (!mine.length || !mine.every((p) => TIMEOUT.test(p))) return;
+  console.log(`RETRY ${tag}: only timeouts in the first walk (${mine.join(' | ')}), walking once more`);
+  retried.push({ tag, first: mine });
+  problems.length = before;
+  await walk(tag, viewport, mobile);
+}
+
 try {
-  await walk('desktop', { width: 1280, height: 900 }, false);
-  await walk('phone', { width: 390, height: 844 }, true);
+  await walkWithRetry('desktop', { width: 1280, height: 900 }, false);
+  await walkWithRetry('phone', { width: 390, height: 844 }, true);
 } catch (e) {
   problems.push(`check crashed: ${e instanceof Error ? e.stack : String(e)}`);
 }
 server.close();
-writeFileSync(join(out, 'metrics.json'), JSON.stringify({ metrics, problems }, null, 2));
+writeFileSync(join(out, 'metrics.json'), JSON.stringify({ metrics, problems, retried }, null, 2));
 console.log(JSON.stringify(metrics));
 for (const p of problems) console.log(`PROBLEM ${p}`);
 if (problems.length) {

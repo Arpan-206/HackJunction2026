@@ -163,6 +163,8 @@ The last stop offers "Explore the whole app", and the tour footer links to it. I
 
 Storage: explore mode writes only to this browser's own storage. localStorage holds the mock store (`apprentice.mock.v1.*`: lessons, recordings and attempts made in the demo, settings of the mock backend), the app's preferences (`apprentice.*`, for example the margin, the score view, the AI Assistant switch and `apprentice.noGloves`) and `apprentice.mock`. sessionStorage holds per-tab flags of the app. Nothing is sent anywhere. Clearing the site's data in the browser removes all of it.
 
+The explore check walks a screen size once more when its only problems are timeouts. The CRACI runner has no GPU and draws 3D in software. On 15 Nov two builds in a row failed with one timeout each, on different screens of the phone walk (the expert screen at 05:24 UTC, a practice repetition at 05:46 UTC). Any other problem fails at once, and a second timeout fails too. The file `explore-check/metrics.json` lists every retry.
+
 ## Load time
 
 The browser check measures two numbers. "First stop readable" is the stop's text and a poster still of its stage on screen. "3D stage live" is the first frames of the live hand. The 5 s budget is a failing check on the first number. The second number is recorded.
