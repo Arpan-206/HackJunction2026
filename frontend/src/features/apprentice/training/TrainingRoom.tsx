@@ -196,7 +196,7 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
     rate: watching ? watchRate : 1,
     clumsy,
     // the calibration the scorer will apply to this attempt (use_latest_calibration below), so live and final agree
-    calibration: calibration.latest,
+    calibration: calibrations[side].latest,
     alsoRecord: twoHanded ? ['left', 'right'] : undefined,
     onFollowDone: () => finishRef.current(),
     onRecordStart: () => recordStartRef.current(),
