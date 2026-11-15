@@ -38,11 +38,44 @@ function tourFiles(): Plugin {
   };
 }
 
+/**
+ * Preloads for the first stop, written into the page head: its chunks (the 3D stage included) as modulepreload, and the
+ * hand mesh as a fetch preload, so they download while the shell starts instead of one after another.
+ */
+function firstStopPreloads(): Plugin {
+  return {
+    name: 'geppetto-tour-preloads',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        const bundle = ctx.bundle;
+        if (!bundle) return [];
+        const wanted = ['src/tour/stops/ExpertStop.tsx', 'src/tour/stops/ExpertStage3D.tsx', 'tour/data/expert.json'];
+        const files = new Set<string>();
+        const add = (name: string) => {
+          const c = bundle[name];
+          if (!c || c.type !== 'chunk' || files.has(name)) return;
+          files.add(name);
+          c.imports.forEach(add);
+        };
+        for (const [name, c] of Object.entries(bundle)) {
+          if (c.type === 'chunk' && c.facadeModuleId && wanted.some((w) => c.facadeModuleId!.replace(/\\/g, '/').endsWith(w))) add(name);
+        }
+        const tags = [...files].map((f) => ({ tag: 'link', attrs: { rel: 'modulepreload', crossorigin: true, href: `./${f}` }, injectTo: 'head' as const }));
+        tags.push({ tag: 'link', attrs: { rel: 'preload', as: 'fetch', crossorigin: true, href: './models/hands/right.glb' } as never, injectTo: 'head' });
+        tags.push({ tag: 'link', attrs: { rel: 'preload', as: 'image', href: './posters/expert.jpg' } as never, injectTo: 'head' });
+        return tags;
+      },
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
   envPrefix: 'GEPPETTO_TOUR_NO_ENV_',
   publicDir: resolve(here, 'tour/public'),
-  plugins: [react(), tourFiles()],
+  plugins: [react(), tourFiles(), firstStopPreloads()],
   resolve: {
     preserveSymlinks: true,
     // The live hand's delay probe can call the core on :8765; the tour has no core, so it gets a stub that does nothing.

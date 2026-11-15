@@ -115,6 +115,14 @@ html[data-theme] {
   background: var(--stage-bg);
   overflow: hidden;
 }
+.tour-stage__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
 .tour-stage .rb-twin {
   min-height: 0;
 }

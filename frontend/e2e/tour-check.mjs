@@ -112,21 +112,33 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
   const tDom = Date.now() - t0;
   await page.locator('.tour-title').waitFor({ timeout: 30000 });
   const tText = Date.now() - t0;
-  await page.locator('.tour-stage canvas, .tour-stage__fallback').first().waitFor({ timeout: 30000 });
-  const tStage = Date.now() - t0;
+  // "First stop readable": the stop's own text and the stage's poster (or the no-WebGL still) are on screen.
+  await page.locator('.tour-lead').first().waitFor({ timeout: 30000 });
+  await page.waitForFunction(
+    () => {
+      const img = document.querySelector('.tour-stage__poster, .tour-stage__fallback img');
+      return !!(img && img.complete && img.naturalWidth > 0) || !!document.querySelector('.tour-stage canvas') || !!document.querySelector('.tour-stage__fallback');
+    },
+    null,
+    { timeout: 30000 },
+  );
+  const tReadable = Date.now() - t0;
+  // "3D stage live": the hand has drawn its first frames (FirstFrame stamps data-stage-live, ms since navigation start).
+  const live = await page.waitForFunction(() => document.body.dataset.stageLive, null, { timeout: 60000 }).then((h) => h.jsonValue()).catch(() => null);
+  const tLive = live ? Number(live) : null;
   await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
   const tIdle = Date.now() - t0;
   const resources = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((e) => ({ name: e.name.replace(location.origin, ''), start: Math.round(e.startTime), end: Math.round(e.responseEnd), bytes: e.encodedBodySize })),
   );
   const longTasks = await page.evaluate(() => window.__long);
-  m.load = { domContentLoadedMs: tDom, firstTextMs: tText, firstStageMs: tStage, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n, longTasks, resources };
+  m.load = { domContentLoadedMs: tDom, firstTextMs: tText, firstStopReadableMs: tReadable, stageLiveMs: tLive, networkIdleMs: tIdle, bytesFirstLoad: bytesServed.n, longTasks, resources };
   metrics.runs[tag] = m;
   writeFileSync(join(out, 'metrics.json'), JSON.stringify(metrics, null, 2));
   await page.screenshot({ path: join(out, `${tag}-first-load.png`), fullPage: true });
-  // The 5 s budget is enforced on the main run; a second run (TOUR_BUDGET=off) only records its time.
-  // Over budget is reported as a warning with the timings, not a failure: CRACI's emulated phone is not a real phone.
-  if (tStage > 5000 && process.env.TOUR_BUDGET !== 'off') warnings.push(`${tag}: first stop took ${tStage} ms to show its stage (budget 5000)`);
+  // The budget holds on what a visitor first sees: the stop readable within 5 s. The live 3D time is recorded.
+  if (tReadable > 5000 && process.env.TOUR_BUDGET !== 'off') problems.push(`${tag}: first stop readable after ${tReadable} ms (budget 5000)`);
+  if (tLive === null) problems.push(`${tag}: the 3D stage never drew a frame`);
 
   for (let i = 1; i <= STOPS; i++) {
     if (i > 1) await page.getByRole('button', { name: 'Next' }).click();
@@ -138,6 +150,8 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
     if (!(await page.locator('.tour-live').isVisible())) problems.push(`${tag}: stop ${i} has no live note`);
     if ((await page.getByRole('link', { name: "What's in this site" }).count()) !== 1) problems.push(`${tag}: stop ${i} has no "What's in this site" link`);
     await overflow(page, tag, i);
+    // The stage alone, as a poster still for this stop.
+    if (await page.locator('.tour-stage').count()) await page.locator('.tour-stage').first().screenshot({ path: join(out, `poster-${tag}-stop${i}.png`) });
     const shot = join(out, `${tag}-stop${i}.png`);
     await page.screenshot({ path: shot, fullPage: true });
     m.stops.push({ stop: i, screenshot: shot });
