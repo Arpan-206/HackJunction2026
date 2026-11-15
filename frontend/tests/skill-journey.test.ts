@@ -18,14 +18,16 @@ const step = (id: string) => ({ id, title: id, instruction: '', move_id: id, han
 const course = (id: string, steps: string[], test = false): Lesson =>
   ({ id, title: id, skill: 'table_tennis', summary: '', master_name: 'Demo master', source: 'seed', created_at: '2026-11-13T00:00:00Z', steps: steps.map(step), ...(test ? { test: { kind: 'table_tennis_rally', opponent: 'bot', rounds: 3 } } : {}) }) as unknown as Lesson;
 
-const rep = (step_id: string, stage: LoggedAttempt['stage'], v: number, minutesAgo: number): LoggedAttempt => ({ step_id, stage, kind: 'practice', score: syntheticScore(v), at: new Date(Date.now() - minutesAgo * 60000).toISOString() });
+/** A fixed mid-afternoon, so attempts a few hours old stay on the same day however late the suite runs. */
+const NOW = new Date(2026, 10, 14, 15, 0).getTime();
+const rep = (step_id: string, stage: LoggedAttempt['stage'], v: number, minutesAgo: number): LoggedAttempt => ({ step_id, stage, kind: 'practice', score: syntheticScore(v), at: new Date(NOW - minutesAgo * 60000).toISOString() });
 
 describe('the skill page timeline', () => {
   const courses = [course('c1', ['grip', 'swing', 'snap'], true), course('c2', ['serve'])];
   const attempts = {
     c1: [rep('grip', 'ghost', 85, 300), rep('grip', 'ghost', 88, 299), rep('grip', 'ghost', 90, 298), rep('grip', 'blind', 86, 290), rep('grip', 'blind', 90, 289), rep('grip', 'blind', 93, 288), rep('swing', 'ghost', 61, 200), rep('swing', 'ghost', 72, 199)],
   };
-  const today = new Date().toISOString().slice(0, 10);
+  const today = '2026-11-14';
   const progress = skillProgress(courses, attempts, today);
   const path = skillJourney({ courses, progress, attempts, tests: { c1: [{ passed: false, overall: 64.4, at: '2026-11-14T10:00:00Z' }] }, seen: (id) => new Set(id === 'c1' ? ['snap'] : []), played: () => null });
 

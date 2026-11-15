@@ -32,6 +32,16 @@ Geppetto was written by a fleet of AI agents, each on its own branch and each fr
 
 The lane audit is one workflow on the `craci` branch. It checks out every lane branch at its tip and runs the same installs as CI. Each job is named `lane <branch>`. So we audit 28 branches without pushing anything to them.
 
+## The public tour shows its own SBOM
+
+We also publish a public tour of Geppetto, built on CRACI. After the build job ends, a second job gets that job's
+SBOM from the CRACI API and puts it into the site. A link on every stop, "What's in this site", opens a plain page with
+the commit, the CRACI job link, the number of packages, the known vulnerabilities by severity and the CycloneDX file.
+The build we published has 339 packages and 133 vulnerability entries, 5 critical and 43 high. Almost all of the high
+entries are in `xvfb`, the display tool that the browser check needs on a runner with no screen. The rest are the test
+tools already found on `main`. None is inside the page that a visitor loads, and the page says so. If the SBOM is
+empty, incomplete or not available, the page says that too. Details: `docs/CRACI.md`, section 10.
+
 ## Findings
 
 | # | Finding | Source |

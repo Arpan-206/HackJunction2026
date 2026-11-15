@@ -102,7 +102,7 @@ export function newDraft(hands: Hands = 'right', forSkill: DraftSkill | null = n
   };
 }
 
-const WIRE_SKILLS: Skill[] = ['table_tennis', 'piano', 'finnish_fingerspelling', 'shadow_puppets', 'general'];
+const WIRE_SKILLS: Skill[] = ['table_tennis', 'piano', 'fingerspelling', 'shadow_puppets', 'general'];
 
 /**
  * The skill a draft should record for, from the address an expert skill page links to: `?skill=table_tennis` adds a
@@ -359,4 +359,15 @@ export function scratchLesson(d: Pick<ScratchDraft, 'skill' | 'skillLocked' | 's
     steps,
     test: null,
   };
+}
+
+/**
+ * The hand the wooden hand shows on the Replay screen. A real glove being worn (anything but the simulator or a replayed
+ * stream) is followed live, as the apprentice's will be. Otherwise the live stream is a free-running stand-in with no
+ * relation to the take, so the wooden hand takes the take's own frame at the player's clock and the two hands stay
+ * frame for frame together.
+ */
+export function replayWornHand<T>(live: { source: string; hands: (T & { side: string })[] } | null, side: string, played: T | null): T | null {
+  if (live && live.source !== 'simulator' && live.source !== 'replay') return live.hands.find((h) => h.side === side) ?? played;
+  return played;
 }

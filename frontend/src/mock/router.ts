@@ -34,6 +34,7 @@ import { deleteMedia, getMedia, putMedia } from './media';
 import { FINGERS } from '../api/types';
 import { isAssistantOn, isAssistantPath } from '../features/shared/assistant';
 import { handFrame, synthesise } from './synth';
+import { buildReview } from './review';
 import * as persist from './persist';
 
 /**
@@ -519,6 +520,16 @@ route('POST', '/coach/hint', (req) => {
   const chosen = margin(b.margin);
   const perFinger = fingerThresholds({ angle_deg: tol, timing_ms: DEFAULT_TOLERANCE.timing_ms, finger_angle_deg: fingerDegrees(b.finger_tolerance_deg, 'finger_tolerance_deg') }, chosen);
   return ok({ hint: buildHint(deviations, Number(b.timing_ms ?? 0), thresholds(chosen, tol), perFinger), provider: 'algorithmic' });
+});
+route('POST', '/coach/review', async (req) => {
+  const b = body(req);
+  const s = b.score;
+  if (!isObj(s) || !isObj(s.per_finger) || typeof s.overall !== 'number' || typeof s.timing !== 'number') invalid('score must be a ScoreResult');
+  const score = s as unknown as Parameters<typeof buildReview>[0]['score'];
+  const weights = isObj(b.weights) ? (b.weights as Parameters<typeof buildReview>[0]['weights']) : null;
+  await sleep(300);
+  // The backend's own sentence, as it answers when no model does: the mock has no language model to reword it.
+  return ok({ feedback: buildReview({ score: { ...score, hint: String(score.hint ?? '') }, weights }), provider: 'algorithmic' });
 });
 route('POST', '/coach/plan', async (req) => {
   const b = body(req);

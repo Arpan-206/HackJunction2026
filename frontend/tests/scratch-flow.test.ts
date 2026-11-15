@@ -17,6 +17,7 @@ import {
   newMove,
   reachableScreen,
   readModel,
+  replayWornHand,
   saveDraft,
   SCREENS,
   scratchLesson,
@@ -327,5 +328,22 @@ describe('the expert stage camera', () => {
     }
     expect(namedView('above', EXPERT_STAGE_CAMERA.record).elevationDeg).toBe(89);
     expect(namedView('side', EXPERT_STAGE_CAMERA.record).azimuthDeg).toBe(-90);
+  });
+});
+
+describe('replayWornHand', () => {
+  const hand = (side: 'left' | 'right', tag: number) => ({ side, tag });
+  const played = hand('right', 1);
+  it('follows a real glove being worn', () => {
+    const live = { source: 'rokoko_udp', hands: [hand('left', 2), hand('right', 3)] };
+    expect(replayWornHand(live, 'right', played)).toEqual(hand('right', 3));
+  });
+  it('takes the take at the player clock when the stream is the simulator, a replay or absent', () => {
+    expect(replayWornHand({ source: 'simulator', hands: [hand('right', 9)] }, 'right', played)).toBe(played);
+    expect(replayWornHand({ source: 'replay', hands: [hand('right', 9)] }, 'right', played)).toBe(played);
+    expect(replayWornHand(null, 'right', played)).toBe(played);
+  });
+  it('falls back to the take when a real glove lacks that side', () => {
+    expect(replayWornHand({ source: 'external', hands: [hand('left', 2)] }, 'right', played)).toBe(played);
   });
 });

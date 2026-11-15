@@ -89,7 +89,9 @@ try {
   await page.goto(`${BASE}/apprentice`);
   await page.getByRole('link', { name: /Fingerspelling/ }).click();
   await expectVisible(page.getByRole('link', { name: /Start lesson 1|Continue lesson/ }), 'fingerspelling primary action');
-  await expectVisible(page.getByRole('link', { name: 'Spell a word' }), 'drill link');
+  await expectVisible(page.getByText('Lesson 1: Spell JUNCTION'), 'first word lesson');
+  await expectVisible(page.getByText('Lesson 2: Spell GEPPETTO'), 'second word lesson');
+  if (await page.getByRole('link', { name: 'Spell a word' }).count()) throw new Error('the drill link should be gone from the skill page');
   await settle(2000);
   await shot('02-fingerspelling-skill');
 
@@ -126,12 +128,12 @@ try {
   await settle(1500);
   await shot('05-chart');
 
-  step('fingerspelling packs: the skill page lists the ASL alphabet and the empty Finnish pack');
+  step('fingerspelling packs: the skill page no longer lists the alphabet packs, the drill page still holds them');
   await page.goto(`${BASE}/apprentice/skills/fingerspelling`);
-  await expectVisible(page.getByRole('link', { name: 'ASL fingerspelling alphabet' }), 'ASL pack on the skill page');
-  await expectVisible(page.getByText('26 of 26 letters recorded'), 'ASL count');
-  await expectVisible(page.getByRole('link', { name: 'Finnish fingerspelling (sormiaakkoset)' }), 'Finnish pack on the skill page');
-  await expectVisible(page.getByText('Not recorded yet: S, U, O, M, I, Ä, Ö'), 'Finnish letters not recorded yet');
+  await expectVisible(page.getByText('Lesson 2: Spell GEPPETTO'), 'word lesson on the skill page');
+  for (const gone of ['ASL fingerspelling alphabet', 'Finnish fingerspelling (sormiaakkoset)']) {
+    if (await page.getByRole('link', { name: gone }).count()) throw new Error(`${gone} should not be linked from the skill page`);
+  }
 
   step('fingerspelling packs: the Finnish drill flags every letter and scores nothing');
   await page.goto(`${BASE}/apprentice/fingerspelling`);

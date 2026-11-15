@@ -61,8 +61,10 @@ describe('demo history, relative to today', () => {
       const mastered = Object.fromEntries(buildSkills(SEED_LESSONS).map((s) => [s.id, skillProgress(s.courses, h.attempts, today)]));
       expect([mastered.table_tennis.mastered, mastered.table_tennis.total]).toEqual([2, 3]);
       expect([mastered.piano.mastered, mastered.piano.total]).toEqual([1, 2]);
-      expect([mastered.finnish_fingerspelling.mastered, mastered.finnish_fingerspelling.total]).toEqual([3, 7]);
-      // Shadow puppets is left untouched for a live first session.
+      // Fingerspelling and shadow puppets are left untouched for a live first session.
+      expect(mastered.fingerspelling).toMatchObject({ mastered: 0, total: 2, started: false });
+      expect(h.attempts['seed-fingerspelling-words'] ?? []).toHaveLength(0);
+      expect(Object.keys(h.attempts).some((id) => id.includes('finnish'))).toBe(false);
       expect(mastered.shadow_puppets).toMatchObject({ mastered: 0, total: 5, started: false });
       expect(h.attempts['seed-shadow-puppets'] ?? []).toHaveLength(0);
       expect(h.tests['seed-shadow-puppets'] ?? []).toHaveLength(0);
@@ -70,31 +72,30 @@ describe('demo history, relative to today', () => {
     });
   }
 
-  it('describes Thursday: three lessons, two mastered, time and best score', () => {
+  it('describes Thursday: two lessons, one mastered, time and best score', () => {
     const h = buildDemoHistory(SEED_LESSONS, SATURDAY);
     const d = dayDetail('2026-11-12', SEED_LESSONS, h.attempts, h.tests, skillName);
     expect(d.lessons.map((l) => `${l.skill}: ${l.lesson}`)).toEqual([
       'Piano: Hand position',
       'Table tennis: The shakehand grip',
-      'Finnish fingerspelling: Letter A',
     ]);
-    expect(d.lessons.filter((l) => l.mastered)).toHaveLength(2);
+    expect(d.lessons.filter((l) => l.mastered)).toHaveLength(1);
     expect(d.lessons[0].review).toBe(true);
-    expect(d.best).toBe(92);
+    expect(d.best).toBe(89);
     expect(d.minutes).toBeGreaterThan(10);
-    expect(dayButtonLabel(d.day, d.lessons.length, false)).toBe('Thursday 12 November, practised 3 lessons');
+    expect(dayButtonLabel(d.day, d.lessons.length, false)).toBe('Thursday 12 November, practised 2 lessons');
     const rest = dayDetail('2026-11-11', SEED_LESSONS, h.attempts, h.tests, skillName);
     expect(rest.lessons).toHaveLength(0);
     expect(rest.best).toBeNull();
     expect(dayButtonLabel(rest.day, 0, false)).toBe('Wednesday 11 November, no practice');
   });
 
-  it("keeps today's account full without shadow puppets", () => {
+  it("keeps today's account full without shadow puppets or fingerspelling", () => {
     const h = buildDemoHistory(SEED_LESSONS, SATURDAY);
     const d = dayDetail('2026-11-14', SEED_LESSONS, h.attempts, h.tests, skillName);
-    expect(d.lessons.length).toBe(4);
-    expect(d.lessons.some((l) => l.skill === 'Shadow puppets')).toBe(false);
-    expect(d.lessons.filter((l) => l.mastered)).toHaveLength(2);
+    expect(d.lessons.length).toBe(2);
+    expect(d.lessons.some((l) => l.skill === 'Shadow puppets' || l.skill === 'Fingerspelling')).toBe(false);
+    expect(d.lessons.filter((l) => l.mastered)).toHaveLength(1);
   });
 
   it('skips lessons the library no longer has', () => {
@@ -147,7 +148,7 @@ describe('seed only when there is no real practice', () => {
 
     it('seeds an empty log once a day, and the resets work', () => {
       expect(seedDemoHistoryIfEmpty(SEED_LESSONS, SATURDAY)).toBe(true);
-      expect(Object.keys(readLog().attempts).sort()).toEqual(['seed-finnish-fingerspelling', 'seed-piano', 'seed-table-tennis']);
+      expect(Object.keys(readLog().attempts).sort()).toEqual(['seed-piano', 'seed-table-tennis']);
       expect(seedDemoHistoryIfEmpty(SEED_LESSONS, SATURDAY)).toBe(false);
       expect(seedDemoHistoryIfEmpty(SEED_LESSONS, MONDAY)).toBe(true);
       clearPracticeHistory();

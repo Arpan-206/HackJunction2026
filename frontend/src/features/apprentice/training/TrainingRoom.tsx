@@ -2,7 +2,9 @@ import { useHandPosition } from '../../../three/handPosition';
 import { skillUsesHandPosition } from '../skills/catalogue';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, tutorialVideoOf, useGloveStream, type Lesson, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
+import { api, tutorialVideoOf, useGloveStream, type Lesson, type ModelProvider, type ScoreRequest, type ScoreResult, type Side, type Step } from '../../../api';
+import { buildReview } from '../../../mock/review';
+import { isAssistantOn } from '../../shared/assistant';
 import { PageHeader } from '../../../components/PageHeader';
 import { ApHeader } from '../ApHeader';
 import { Button, ButtonLink, Countdown, Disclosure } from '../../../components/ui';
@@ -194,6 +196,8 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
     mode: watching ? 'flow' : mode,
     rate: watching ? watchRate : 1,
     clumsy,
+    // the calibration the scorer will apply to this attempt (use_latest_calibration below), so live and final agree
+    calibration: calibration.latest,
     alsoRecord: twoHanded ? ['left', 'right'] : undefined,
     onFollowDone: () => finishRef.current(),
     onRecordStart: () => recordStartRef.current(),
@@ -214,6 +218,40 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
     const id = window.setTimeout(() => setWatchRate(1), Math.min(24, (2 * period) / 0.5) * 1000);
     return () => window.clearTimeout(id);
   }, [watching, track, period]);
+
+  // The rep in plain words: the device's own sentence at once, then the AI Assistant's (POST /coach/review) when it
+  // answers. A late answer for an older rep is dropped. With the AI Assistant off, the device's sentence stays.
+  const [feedback, setFeedback] = useState<{ text: string; provider: ModelProvider | null } | null>(null);
+  const reviewSeq = useRef(0);
+  const lastReview = useRef<{ overall: number; feedback: string } | null>(null);
+  const askReview = useCallback(
+    async (score: ScoreResult) => {
+      const seq = ++reviewSeq.current;
+      const weights = step.weights ?? null;
+      const local = buildReview({ score, weights });
+      setFeedback({ text: local, provider: null });
+      const prev = lastReview.current;
+      lastReview.current = { overall: score.overall, feedback: local };
+      if (!isAssistantOn()) return;
+      try {
+        const res = await api.coachReview({
+          score,
+          step_id: step.id,
+          instruction: step.instruction.slice(0, 200),
+          ...(weights ? { weights } : {}),
+          // finish() runs before the pipeline counts this rep
+          attempt: pipe.reps + 1,
+          ...(prev ? { previous_overall: prev.overall, last_feedback: prev.feedback } : {}),
+        });
+        if (seq !== reviewSeq.current) return;
+        setFeedback({ text: res.feedback, provider: res.provider });
+        lastReview.current = { overall: score.overall, feedback: res.feedback };
+      } catch {
+        /* the device's sentence stays */
+      }
+    },
+    [step.id, step.instruction, step.weights, pipe.reps],
+  );
 
   const finish = useCallback(async () => {
     if (endTimer.current !== null) window.clearTimeout(endTimer.current);
@@ -263,7 +301,8 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
     if (outcome.event === 'mastered') void planRequest.current();
     setResult({ score, source, outcome });
     setPhase('result');
-  }, [coach, config, lessonId, step, calibrated, pipe, mode, track, twoHanded, margin]);
+    void askReview(score);
+  }, [coach, config, lessonId, step, calibrated, pipe, mode, track, twoHanded, margin, askReview]);
   finishRef.current = () => {
     if (phase === 'running') void finish();
   };
@@ -350,6 +389,7 @@ function Room({ ask, lesson, lessonId, lessonTitle, step, index, total, hasTest,
             side={side}
             tolerance={step.tolerance}
             light={config.light}
+            feedback={feedback}
             attempt={pipe.reps}
             lines={{ rep: repLine(result.score), stage: pipe.lines.stage, set: pipe.lines.set }}
             clean={result.outcome.clean}

@@ -18,7 +18,7 @@ type Slot = { side: 'left' | 'right'; top: string };
  * The hand lies thumb side to the camera with its fingers towards the left gutter (mirrored for a left hand), so every
  * finger shows in profile instead of curling away under the back of the hand.
  */
-const HAND_AT: [number, number, number] = [1.0, 0, -0.3];
+const HAND_AT: [number, number, number] = [1.3, 0, -1.2];
 const HAND_TURN = Math.PI * 0.68;
 
 /**

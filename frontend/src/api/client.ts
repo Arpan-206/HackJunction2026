@@ -11,6 +11,8 @@ import type {
   WearerCalibration,
   CoachHintRequest,
   CoachHintResponse,
+  CoachReviewRequest,
+  CoachReviewResponse,
   CoachPlanRequest,
   CoachPlanResponse,
   GenerateFromVideoOptions,
@@ -228,6 +230,8 @@ export const api = {
   coachPlan: (req: CoachPlanRequest) => request<CoachPlanResponse>('POST', '/coach/plan', req),
   motionFromText: (req: MotionFromTextRequest) => request<MotionFromTextResponse>('POST', '/motion/from_text', req),
   coachHint: (req: CoachHintRequest) => request<CoachHintResponse>('POST', '/coach/hint', req),
+  /** Feedback for one scored rep in plain words (AI Assistant; the backend falls back to its own sentence). */
+  coachReview: (req: CoachReviewRequest) => request<CoachReviewResponse>('POST', '/coach/review', req),
 
   gloveStatus: (signal?: AbortSignal) => request<GloveRigStatus>('GET', '/gloves/status', undefined, signal),
   gloveDriver: (req: DriverActionRequest) => request<GloveRigStatus>('POST', '/gloves/driver', req),

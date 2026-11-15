@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type MutableRefObject } from 'react';
-import { FINGERS, type Finger, type GloveFrame, type HandFrame, type Side } from '../../../../api/types';
+import { FINGERS, type Calibration, type Finger, type GloveFrame, type HandFrame, type Side } from '../../../../api/types';
 import type { GloveStreamHandle } from '../../../../api';
 import { alignedDeviation, meanLagMs } from './alignment';
 import { ClumsySim } from './clumsy';
@@ -19,6 +19,7 @@ import {
 } from './deviation';
 import { findCheckpoints, startFollow, stepFollow, skipCheckpoint, FOLLOW_HOLD_S, type FollowState } from './follow';
 import { FrameWatch, lockedToGlove } from './frameClock';
+import { calibratedWeights, liveCalibration } from './liveCalibration';
 import type { ReferenceTrack } from './reference';
 import { algorithmicTip } from './tips';
 
@@ -91,6 +92,12 @@ export interface UseCoachOptions {
   /** Dev aid: perturb live frames before comparison. */
   clumsy: boolean;
   /**
+   * The learner's calibration for `side` when the scorer will apply it to this attempt (`use_latest_calibration`). The
+   * live comparison then reads the same calibrated angles as the final score (coach/liveCalibration.ts). Null or absent:
+   * raw angles, as the scorer does without a calibration.
+   */
+  calibration?: Calibration | null;
+  /**
    * Other hands to keep in the recorded attempt frames, unperturbed, so a two-handed step can score both hands. The coach
    * itself still compares only `side`.
    */
@@ -142,6 +149,10 @@ export function useCoach(opts: UseCoachOptions): Coach {
   const optsRef = useRef(opts);
   optsRef.current = opts;
   live.current.light = opts.config.light ?? [];
+  // built once per calibration, read every tick
+  const calib = useMemo(() => liveCalibration(opts.calibration), [opts.calibration]);
+  const calRef = useRef(calib);
+  calRef.current = calib;
 
   const sim = useRef(new ClumsySim());
   const avg = useRef(new MovingAverage(6));
@@ -224,9 +235,11 @@ export function useCoach(opts: UseCoachOptions): Coach {
       L.master = trk.handAt(refTime);
 
       if (learner && trk) {
-        const smooth = avg.current.push(flexionDegrees(learner));
+        // with a calibration, both sides are read as the scorer reads them: the learner calibrated, the same joints on each
+        const cal = calRef.current;
+        const smooth = avg.current.push(cal ? cal.learner(learner) : flexionDegrees(learner));
         const window = o.mode === 'flow' ? o.config.timingMs / 1000 : 0;
-        const aligned = alignedDeviation(smooth, (t) => trk.flexionAt(t), refTime, window);
+        const aligned = alignedDeviation(smooth, cal ? (t) => cal.reference(trk.handAt(t)) : (t) => trk.flexionAt(t), refTime, window);
         if (aligned) {
           const dev = zeroValues();
           const ten = zeroValues();
@@ -278,7 +291,7 @@ export function useCoach(opts: UseCoachOptions): Coach {
           deviation: L.deviation,
           status: L.status,
           match: matchMeter(L.deviation, o.config.fingerToleranceDeg, o.config.light),
-          score: liveScore(L.deviation, o.config.fingerToleranceDeg, o.config.weights),
+          score: liveScore(L.deviation, o.config.fingerToleranceDeg, calibratedWeights(o.config.weights, calRef.current)),
           tip: r.tip,
           lagMs: r.lagMs,
           hasLearner: L.hasLearner,

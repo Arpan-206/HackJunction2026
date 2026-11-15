@@ -98,6 +98,8 @@ function useAspect(ref: RefObject<HTMLElement | null>): number {
   return aspect;
 }
 
+/** The bench under the twin stays where LIFT was tuned for it (the stage's default bench is lower now, see three/handFloor.ts). */
+const TWIN_GROUND_Y = -0.55;
 /**
  * Geppetto and Pinocchio: the human hand on the left, the Dex3-1 twin on the right, a string from each human fingertip
  * to the robot's. The fingers the robot lacks (ring and little) hang their strings loose and show as chalk ghosts.
@@ -130,7 +132,7 @@ function DexTwin({ robot, human: given, className, label }: RobotTwinProps) {
       <HandCanvas
         preset="pair"
         label={label ?? 'The robot hand beside the human hand that drives it, strings between their fingertips'}
-        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'orbit' }}
+        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'orbit', groundY: TWIN_GROUND_Y }}
       >
         {showHuman && human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} centred={false} />}
         <RobotHand ref={robotRef} side={side} live={robot.latest} position={[showHuman ? ROBOT_X : 0, LIFT, 0]} rotation={robotRoll(side)} />
@@ -166,7 +168,7 @@ function HumanoidTwin({ robot, lesson, human: given, className, label }: Omit<Ro
       <HandCanvas
         preset="pair"
         label={label ?? 'The five-finger robot hand beside the human hand that drives it, strings between their fingertips'}
-        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'orbit' }}
+        stage={{ cameraPosition: camera, target: TARGET, circleCenter: [0, -0.5], controls: 'orbit', groundY: TWIN_GROUND_Y }}
       >
         {human && <Hand ref={humanRef} side={human.side} style={human.style} live={human.live} getFrame={human.getFrame} position={[HUMAN_X, LIFT, 0]} centred={false} />}
         <Hand

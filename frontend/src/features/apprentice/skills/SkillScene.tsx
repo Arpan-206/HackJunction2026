@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { MeshBasicMaterial, TorusGeometry, type Mesh } from 'three';
 import type { HandFrame, Side } from '../../../api';
-import { Hand, HandCanvas, KeysSketch, RacketSketch, useStageColors, type HandHandle, type HandStyle, type StillStage } from '../../../three';
+import { HAND_FLOOR_Y, Hand, HandCanvas, KeysSketch, RacketSketch, useStageColors, type HandHandle, type HandStyle, type StillStage } from '../../../three';
 import type { SkillScene } from './catalogue';
 
 /**
@@ -41,7 +41,7 @@ const VIEWS: Record<SkillScene, SceneView> = {
   // The grip from the thumb side and a little above: the handle in the palm, the thumb on the blade, the blade out past the
   // fingers. Framed for the whole forehand stroke of the hover preview, not just the held grip.
   racket: { aim: [-0.65, -0.85, -1.09], distance: 6.8, groundY: -1.3, circle: 'under-aim', radius: 1.7, azimuth: (-72 * Math.PI) / 180, elevation: (30 * Math.PI) / 180 },
-  keys: { aim: [-0.115, -0.26, -1.06], distance: 3.9, groundY: -0.6, circle: 'under-aim', radius: 1.3 },
+  keys: { aim: [-0.115, -0.26, -1.06], distance: 3.9, groundY: HAND_FLOOR_Y, circle: 'under-aim', radius: 1.3 },
   // The raised hand seen almost level from behind, far enough back that a raised finger never looms or leaves the frame.
   letter: { aim: [0, 0.38, -0.3], distance: 5.6, groundY: -0.62, circle: [0, -0.35], radius: 1.1, handRotation: [1.25, 0, 0], handPosition: [0, -0.35, 0.2], elevation: (30 * Math.PI) / 180 },
 };

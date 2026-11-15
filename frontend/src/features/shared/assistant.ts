@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * The AI Assistant switch: one flag for every language-model feature (drafting steps from words or a video, describing a
- * movement in words, the practice plan, written coaching hints). On by default and kept in localStorage. The API client
+ * movement in words, the practice plan, written coaching hints, the feedback after a rep). On by default and kept in localStorage. The API client
  * checks it too (see ASSISTANT_PATHS), so no assistant request can leave the app while it is off, in mock mode as well.
  * The algorithmic scorer is not the AI Assistant and works either way.
  */
@@ -10,7 +10,7 @@ import { useSyncExternalStore } from 'react';
 const KEY = 'apprentice.assistant';
 
 /** API paths (under /api) that call the AI Assistant. */
-export const ASSISTANT_PATHS = ['/lessons/generate', '/lessons/generate_from_video', '/coach/hint', '/coach/plan', '/motion/from_text'] as const;
+export const ASSISTANT_PATHS = ['/lessons/generate', '/lessons/generate_from_video', '/coach/hint', '/coach/review', '/coach/plan', '/motion/from_text'] as const;
 
 /** Whether a request path (without query string) goes to the AI Assistant. */
 export function isAssistantPath(path: string): boolean {

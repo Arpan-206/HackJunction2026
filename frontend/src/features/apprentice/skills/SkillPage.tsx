@@ -6,7 +6,6 @@ import { HANDS_LABEL, type SkillView } from './catalogue';
 import { DifficultyLine } from './SkillParts';
 import { SkillShowcase, WorkshopShowcase } from './SkillShowcase';
 import { SkillTrail } from './SkillTrail';
-import { FingerspellingPacks } from '../../fingerspelling/PackList';
 import { useSkills } from './useSkills';
 import './skills.css';
 
@@ -66,17 +65,6 @@ export function SkillPage() {
         <div className="sk-page__info">
           <p className="sk-page__lede">{skill.description}</p>
           {skill.live && skill.courses.length > 0 && <SkillTrail skill={skill} progress={progress} />}
-          {skill.live && skill.id === 'fingerspelling' && (
-            <div className="sk-page__extra">
-              <ButtonLink to="/apprentice/fingerspelling" variant="secondary">
-                Spell a word
-              </ButtonLink>
-              <ButtonLink to="/apprentice/fingerspelling?tab=chart" variant="secondary">
-                Open the letter chart
-              </ButtonLink>
-            </div>
-          )}
-          {skill.live && skill.id === 'fingerspelling' && <FingerspellingPacks />}
           <Facts skill={skill} />
           {!skill.live && (
             <>
