@@ -23,7 +23,9 @@ from pathlib import Path
 
 import httpx
 
-os.environ.pop("COACH_TUNE_TASK", None)  # the load test is always the hint job, the one served in the demo
+os.environ.pop(
+    "COACH_TUNE_TASK", None
+)  # the load test is always the hint job, the one served in the demo
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import oai
 import prompt
@@ -45,9 +47,17 @@ async def level(model: str, rows: list[dict], n: int, seconds: float) -> dict:
     stop = time.perf_counter() + seconds
     rng = random.Random(n)
     limits = httpx.Limits(max_connections=n, max_keepalive_connections=n)
-    async with httpx.AsyncClient(timeout=120, headers=oai.headers(), limits=limits) as client:
+    async with httpx.AsyncClient(
+        timeout=120, headers=oai.headers(), limits=limits
+    ) as client:
         # open the connections first, so the TLS handshakes are not counted
-        await asyncio.gather(*(oai.complete(client, model, prompt.messages(rng.choice(rows)), 0.0) for _ in range(n)), return_exceptions=True)
+        await asyncio.gather(
+            *(
+                oai.complete(client, model, prompt.messages(rng.choice(rows)), 0.0)
+                for _ in range(n)
+            ),
+            return_exceptions=True,
+        )
 
         async def worker() -> None:
             nonlocal errors
@@ -84,7 +94,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=30.0)
     ap.add_argument("--levels", default="1,10,50,200")
-    ap.add_argument("--usd-per-hour", type=float, default=5.77, help="list price of the GPU serving the model (H100)")
+    ap.add_argument(
+        "--usd-per-hour",
+        type=float,
+        default=5.77,
+        help="list price of the GPU serving the model (H100)",
+    )
     ap.add_argument("--gpu", default="1x H100 80 GB")
     a = ap.parse_args()
     rows = [json.loads(x) for x in TEST.read_text().splitlines() if x.strip()]
@@ -92,17 +107,32 @@ def main() -> int:
     results = []
     for n in [int(x) for x in a.levels.split(",")]:
         r = asyncio.run(level(model, rows, n, a.seconds))
-        r["usd_per_learner_hour_at_app_rate"] = round(a.usd_per_hour / r["learners_at_app_rate"], 5) if r["learners_at_app_rate"] else None
+        r["usd_per_learner_hour_at_app_rate"] = (
+            round(a.usd_per_hour / r["learners_at_app_rate"], 5)
+            if r["learners_at_app_rate"]
+            else None
+        )
         results.append(r)
         print(json.dumps(r), flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    out = {"model": model, "gpu": a.gpu, "usd_per_hour": a.usd_per_hour, "hint_gap_s": HINT_GAP_S, "host": oai.where(),
-           "when": time.strftime("%Y-%m-%d %H:%M"), "levels": results}
+    out = {
+        "model": model,
+        "gpu": a.gpu,
+        "usd_per_hour": a.usd_per_hour,
+        "hint_gap_s": HINT_GAP_S,
+        "host": oai.where(),
+        "when": time.strftime("%Y-%m-%d %H:%M"),
+        "levels": results,
+    }
     (OUT / "result.json").write_text(json.dumps(out, indent=2) + "\n")
-    print("\n| Simultaneous learners | Hints per second | Latency p50 s | Latency p95 s | Errors | Learners at one hint per 5 s | USD per learner-hour |")
+    print(
+        "\n| Simultaneous learners | Hints per second | Latency p50 s | Latency p95 s | Errors | Learners at one hint per 5 s | USD per learner-hour |"
+    )
     print("| --- | --- | --- | --- | --- | --- | --- |")
     for r in results:
-        print(f"| {r['simultaneous']} | {r['hints_per_s']} | {r['latency_p50_s']} | {r['latency_p95_s']} | {r['errors']} | {r['learners_at_app_rate']} | {r['usd_per_learner_hour_at_app_rate']} |")
+        print(
+            f"| {r['simultaneous']} | {r['hints_per_s']} | {r['latency_p50_s']} | {r['latency_p95_s']} | {r['errors']} | {r['learners_at_app_rate']} | {r['usd_per_learner_hour_at_app_rate']} |"
+        )
     return 0
 
 

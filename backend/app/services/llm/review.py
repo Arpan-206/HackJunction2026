@@ -142,13 +142,18 @@ def build_prompt(request: CoachReviewRequest, fallback: CoachReviewDraft) -> str
     for finger in c.FINGERS:
         if finger not in skip:
             lines.append(f"{_FINGER_WORDS[finger]}: {_level(scores[finger])}")
-    lines.append(f"Timing: {'on the beat' if s.timing >= c.REVIEW_GOOD_FROM else 'off the beat'}")
+    lines.append(
+        f"Timing: {'on the beat' if s.timing >= c.REVIEW_GOOD_FROM else 'off the beat'}"
+    )
     if skip:
         lines.append("Ignore: " + ", ".join(_FINGER_WORDS[f] for f in skip))
     weak = weakest(request)
     if weak is not None:
         way = _direction(request, weak)
-        note = {"curl": "too straight, it should curl more", "relax": "curled too much, it should relax"}.get(way or "", "least like the guide")
+        note = {
+            "curl": "too straight, it should curl more",
+            "relax": "curled too much, it should relax",
+        }.get(way or "", "least like the guide")
         lines.append(f"Scorer's note: the {_FINGER_WORDS[weak]} was {note}.")
     else:
         lines.append("Scorer's note: no finger needs fixing.")
@@ -156,7 +161,13 @@ def build_prompt(request: CoachReviewRequest, fallback: CoachReviewDraft) -> str
         delta = s.overall - request.previous_overall
         lines.append(
             "Compared with the last repetition: "
-            + ("better" if delta >= c.REVIEW_CHANGE_POINTS else "worse" if delta <= -c.REVIEW_CHANGE_POINTS else "about the same")
+            + (
+                "better"
+                if delta >= c.REVIEW_CHANGE_POINTS
+                else "worse"
+                if delta <= -c.REVIEW_CHANGE_POINTS
+                else "about the same"
+            )
         )
     if request.last_feedback:
         lines.append(f"Previous feedback: {request.last_feedback}")
@@ -168,10 +179,17 @@ def build_prompt(request: CoachReviewRequest, fallback: CoachReviewDraft) -> str
 def acceptable(text: str, request: CoachReviewRequest) -> bool:
     """A model answer is shown only if it is short, has no number or measuring word, and names no ignored finger."""
     t = text.strip()
-    if not t or len(t.split()) > c.REVIEW_MAX_WORDS + c.REVIEW_WORD_SLACK or _JARGON.search(t):
+    if (
+        not t
+        or len(t.split()) > c.REVIEW_MAX_WORDS + c.REVIEW_WORD_SLACK
+        or _JARGON.search(t)
+    ):
         return False
     low = t.lower()
-    if any(_FINGER_WORDS[f] in low or (f == "little" and "pinky" in low) for f in ignored(request)):
+    if any(
+        _FINGER_WORDS[f] in low or (f == "little" and "pinky" in low)
+        for f in ignored(request)
+    ):
         return False
     return low != (request.last_feedback or "").strip().lower()
 
@@ -205,18 +223,29 @@ class ReviewService:
             model=self._llm.hint_model,
         )
         try:
-            draft = CoachReviewDraft.model_validate_json(await client.generate_json(llm_request))
+            draft = CoachReviewDraft.model_validate_json(
+                await client.generate_json(llm_request)
+            )
         except LLMOfflineError as exc:
             log.info("Review offline (%s); using the algorithmic feedback", exc)
             return CoachReviewResponse(feedback=fallback.feedback, provider=OFFLINE)
         except RateLimitedError as exc:
-            log.info("Review LLM rate limited (%s); using the algorithmic feedback", exc)
-            return CoachReviewResponse(feedback=fallback.feedback, provider=c.PROVIDER_RATE_LIMITED)
+            log.info(
+                "Review LLM rate limited (%s); using the algorithmic feedback", exc
+            )
+            return CoachReviewResponse(
+                feedback=fallback.feedback, provider=c.PROVIDER_RATE_LIMITED
+            )
         except (ValidationError, ValueError) as exc:
-            log.warning("Review LLM gave an invalid answer (%s); using the algorithmic feedback", exc)
+            log.warning(
+                "Review LLM gave an invalid answer (%s); using the algorithmic feedback",
+                exc,
+            )
             return CoachReviewResponse(feedback=fallback.feedback, provider=ALGORITHMIC)
         except Exception as exc:
-            log.warning("Review LLM unavailable (%s); using the algorithmic feedback", exc)
+            log.warning(
+                "Review LLM unavailable (%s); using the algorithmic feedback", exc
+            )
             return CoachReviewResponse(feedback=fallback.feedback, provider=ALGORITHMIC)
         if not acceptable(draft.feedback, request):
             log.warning("Review LLM answer rejected: %s", draft.feedback)

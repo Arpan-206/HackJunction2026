@@ -159,7 +159,9 @@ class CoachReviewRequest(BaseModel):
     )
     attempt: int = Field(default=1, ge=1, le=c.HINT_MAX_ATTEMPT)
     previous_overall: float | None = Field(default=None, ge=0, le=100)
-    last_feedback: str | None = Field(default=None, max_length=2 * c.HINT_TEXT_MAX_CHARS)
+    last_feedback: str | None = Field(
+        default=None, max_length=2 * c.HINT_TEXT_MAX_CHARS
+    )
 
 
 class CoachReviewDraft(BaseModel):

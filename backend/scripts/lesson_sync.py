@@ -221,13 +221,18 @@ def take_calibration_ids(data_dir: Path) -> set[str]:
         for entry in read_json(path).get("entries", []):
             for part in entry.get("parts") or []:
                 cal = (part or {}).get("calibration") or {}
-                if entry.get("kind") == "take" and isinstance(cal.get("range_calibration_id"), str):
+                if entry.get("kind") == "take" and isinstance(
+                    cal.get("range_calibration_id"), str
+                ):
                     out.add(cal["range_calibration_id"])
     return out
 
 
 def filter_wearers(
-    records: dict[str, list[tuple[str, Path, Any]]], data_dir: Path, allowed: set[str], plan: Plan
+    records: dict[str, list[tuple[str, Path, Any]]],
+    data_dir: Path,
+    allowed: set[str],
+    plan: Plan,
 ) -> None:
     """Keep only the allowed wearers' calibrations (the privacy rule, docs/LESSON_SYNC.md).
 
@@ -237,10 +242,22 @@ def filter_wearers(
     """
     kept_wearers, other_wearers = [], []
     for row in records.get("glove_calibration", []):
-        (kept_wearers if wearer_key(row[2].get("wearer")) in allowed else other_wearers).append(row)
-    wanted = {i for r in kept_wearers for i in (r[2].get("range_calibration_ids") or {}).values()}
+        (
+            kept_wearers
+            if wearer_key(row[2].get("wearer")) in allowed
+            else other_wearers
+        ).append(row)
+    wanted = {
+        i
+        for r in kept_wearers
+        for i in (r[2].get("range_calibration_ids") or {}).values()
+    }
     wanted |= take_calibration_ids(data_dir)
-    other_ids = {i for r in other_wearers for i in (r[2].get("range_calibration_ids") or {}).values()}
+    other_ids = {
+        i
+        for r in other_wearers
+        for i in (r[2].get("range_calibration_ids") or {}).values()
+    }
     kept_cals, dropped_cals = [], []
     for row in records.get("calibration", []):
         (kept_cals if row[0] in wanted else dropped_cals).append(row)
@@ -248,7 +265,9 @@ def filter_wearers(
     records["calibration"] = kept_cals
     plan.left_out |= {
         "wearer calibration records of other wearers": len(other_wearers),
-        "flat and fist calibrations of other wearers": sum(r[0] in other_ids for r in dropped_cals),
+        "flat and fist calibrations of other wearers": sum(
+            r[0] in other_ids for r in dropped_cals
+        ),
         "flat and fist calibrations with no known wearer and no exported take": sum(
             r[0] not in other_ids for r in dropped_cals
         ),
@@ -268,7 +287,9 @@ def parse_since(raw: str) -> _dt.datetime:
     try:
         value = _dt.datetime.fromisoformat(raw.strip())
     except ValueError as exc:
-        raise SyncError(f"--since {raw!r} is not a date or date-time (for example 2026-11-15T01:30)") from exc
+        raise SyncError(
+            f"--since {raw!r} is not a date or date-time (for example 2026-11-15T01:30)"
+        ) from exc
     return value if value.tzinfo else value.replace(tzinfo=_dt.UTC)
 
 
@@ -279,7 +300,9 @@ def _time(value: Any) -> _dt.datetime | None:
         return None
 
 
-def session_reason(name: Any, created: Any, recorder: str, session: Session, item_id: str = "") -> str | None:
+def session_reason(
+    name: Any, created: Any, recorder: str, session: Session, item_id: str = ""
+) -> str | None:
     """Why a lesson stays out of a session export, or None when it goes in."""
     if item_id.startswith("fake-") or item_id.startswith(f"{recorder}-fake-"):
         return "test fixture (fake-*)"
@@ -293,7 +316,10 @@ def session_reason(name: Any, created: Any, recorder: str, session: Session, ite
 
 
 def filter_session(
-    records: dict[str, list[tuple[str, Path, Any]]], recorder: str, session: Session, plan: Plan
+    records: dict[str, list[tuple[str, Path, Any]]],
+    recorder: str,
+    session: Session,
+    plan: Plan,
 ) -> None:
     """Keep the recorder's lessons of this session (master_name, created_at) and the takes they use.
 
@@ -302,7 +328,13 @@ def filter_session(
     """
     kept, why = [], {}
     for row in records.get("lesson", []):
-        reason = session_reason(row[2].get("master_name"), row[2].get("created_at"), recorder, session, row[0])
+        reason = session_reason(
+            row[2].get("master_name"),
+            row[2].get("created_at"),
+            recorder,
+            session,
+            row[0],
+        )
         if reason:
             why[reason] = why.get(reason, 0) + 1
         else:
@@ -322,7 +354,14 @@ def filter_session(
         linked = row[0] in used or obj.get("lesson_id") in lesson_ids
         if session.only_recorder and not linked:
             reason = "take not used by a kept lesson"
-        elif session.since is not None and not linked and ((_time(obj.get("started_at")) or session.since) < session.since or not obj.get("started_at")):
+        elif (
+            session.since is not None
+            and not linked
+            and (
+                (_time(obj.get("started_at")) or session.since) < session.since
+                or not obj.get("started_at")
+            )
+        ):
             reason = "take recorded before --since"
         else:
             reason = None
@@ -357,7 +396,9 @@ def build_export(
                 raise SyncError(f"{path}: unsafe id {item_id!r}")
             new = prefixed(item_id, recorder)
             if not SAFE_ID.match(new):
-                raise SyncError(f"{path}: prefixed id {new!r} is longer than 64 characters")
+                raise SyncError(
+                    f"{path}: prefixed id {new!r} is longer than 64 characters"
+                )
             mapping[item_id] = new
             mapping[f"{folder}/{item_id}.json"] = f"{folder}/{new}.json"
             if kind == "take":
@@ -376,7 +417,9 @@ def build_export(
         folder = BACKEND_KINDS[kind]
         for item_id, _path, obj in rows:
             new = mapping[item_id]
-            plan.data[f"backend/{folder}/{new}.json"] = dump_compact(rewrite(obj, mapping))
+            plan.data[f"backend/{folder}/{new}.json"] = dump_compact(
+                rewrite(obj, mapping)
+            )
             plan.add_item(kind, new)
 
     # core lesson folders made by services/core_export.py, with their manifest entries
@@ -398,11 +441,17 @@ def build_export(
             if allowed is not None:
                 for part in entry.get("parts") or []:
                     cal = (part or {}).get("calibration")
-                    if isinstance(cal, dict) and cal.get("wearer") and wearer_key(cal["wearer"]) not in allowed:
+                    if (
+                        isinstance(cal, dict)
+                        and cal.get("wearer")
+                        and wearer_key(cal["wearer"]) not in allowed
+                    ):
                         cal["wearer"] = None  # never carry another wearer's name
             kept_entries.append(rewrite(entry, mapping))
         header = {k: v for k, v in manifest.items() if k != "entries"}
-        plan.data["core_lessons/manifest.json"] = dump_pretty({**header, "entries": kept_entries})
+        plan.data["core_lessons/manifest.json"] = dump_pretty(
+            {**header, "entries": kept_entries}
+        )
 
     # root lessons/ folders of the core that Git does not track (the glove slot recordings)
     if root_lessons is not None and root_lessons.is_dir():
@@ -414,7 +463,11 @@ def build_export(
             if session is not None:
                 core = read_json(folder / "lesson.json")
                 reason = session_reason(
-                    (core.get("master") or {}).get("name"), core.get("created"), recorder, session, folder.name
+                    (core.get("master") or {}).get("name"),
+                    core.get("created"),
+                    recorder,
+                    session,
+                    folder.name,
                 )
                 if reason:
                     key = f"root core lesson: {reason}"
@@ -426,12 +479,16 @@ def build_export(
     return plan
 
 
-def add_core_folder(plan: Plan, src: Path, dest_rel: str, mapping: dict[str, str]) -> None:
+def add_core_folder(
+    plan: Plan, src: Path, dest_rel: str, mapping: dict[str, str]
+) -> None:
     """Copy a core lesson folder: lesson.json rewritten (its id and references), every other file byte for byte."""
     for path in sorted(p for p in src.rglob("*") if p.is_file()):
         rel = path.relative_to(src).as_posix()
         if rel == "lesson.json":
-            plan.data[f"{dest_rel}/lesson.json"] = dump_pretty(rewrite(read_json(path), mapping))
+            plan.data[f"{dest_rel}/lesson.json"] = dump_pretty(
+                rewrite(read_json(path), mapping)
+            )
         else:
             plan.copies[f"{dest_rel}/{rel}"] = path
 
@@ -460,10 +517,18 @@ def export(
     for rel in plan.paths():
         if rel in plan.data:
             blob = plan.data[rel]
-            files.append({"path": rel, "size": len(blob), "sha256": hashlib.sha256(blob).hexdigest()})
+            files.append(
+                {
+                    "path": rel,
+                    "size": len(blob),
+                    "sha256": hashlib.sha256(blob).hexdigest(),
+                }
+            )
         else:
             src = plan.copies[rel]
-            files.append({"path": rel, "size": src.stat().st_size, "sha256": sha256(src)})
+            files.append(
+                {"path": rel, "size": src.stat().st_size, "sha256": sha256(src)}
+            )
     bundle = out_root / recorder
     old_manifest = bundle / MANIFEST
     counts = {k: len(v) for k, v in sorted(plan.items.items())}
@@ -523,7 +588,11 @@ BACKUP_DIR = "lesson_backups"
 def replace_set(data_dir: Path) -> list[Path]:
     """The installed lessons that --replace removes: lesson records except seeds, every take, and every file of the
     core lesson folders (core_lessons/, which the backend rebuilds from the records). Calibrations are not in it."""
-    out = [p for p in sorted((data_dir / "lessons").glob("*.json")) if not p.stem.startswith(SEED_PREFIX)]
+    out = [
+        p
+        for p in sorted((data_dir / "lessons").glob("*.json"))
+        if not p.stem.startswith(SEED_PREFIX)
+    ]
     out += sorted((data_dir / "recordings").glob("*.json"))
     core = data_dir / "core_lessons"
     if core.is_dir():
@@ -554,15 +623,23 @@ def backup_and_clear(data_dir: Path, dry_run: bool) -> tuple[set[Path], Path]:
     bad = [
         str(src)
         for src, dst in zip(files, copies, strict=True)
-        if not dst.is_file() or dst.stat().st_size != src.stat().st_size or sha256(dst) != sha256(src)
+        if not dst.is_file()
+        or dst.stat().st_size != src.stat().st_size
+        or sha256(dst) != sha256(src)
     ]
     if bad or sum(1 for p in backup.rglob("*") if p.is_file()) != len(files):
-        raise SyncError(f"backup check failed, nothing removed ({backup}):\n  " + "\n  ".join(bad))
+        raise SyncError(
+            f"backup check failed, nothing removed ({backup}):\n  " + "\n  ".join(bad)
+        )
     for src in files:
         src.unlink()
     core = data_dir / "core_lessons"
     if core.is_dir():
-        for d in sorted((p for p in core.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
+        for d in sorted(
+            (p for p in core.rglob("*") if p.is_dir()),
+            key=lambda p: len(p.parts),
+            reverse=True,
+        ):
             if not any(d.iterdir()):
                 d.rmdir()
     return set(files), backup.resolve()
@@ -586,7 +663,9 @@ def summary_line(data_dir: Path) -> str:
         key = wearer_key(obj.get("master_name")) or "unknown"
         whose[key] = whose.get(key, 0) + 1
     recorders = ", ".join(f"{k} {v}" for k, v in sorted(whose.items())) or "none"
-    names = "; ".join(sorted(str(o.get("title", "")).strip() for o in lessons)) or "none"
+    names = (
+        "; ".join(sorted(str(o.get("title", "")).strip() for o in lessons)) or "none"
+    )
     takes = len(list((data_dir / "recordings").glob("*.json")))
     return f"installed: {len(lessons)} lessons | recorders: {recorders} | names: {names} | takes: {takes} | seeds: {seeds}"
 
@@ -598,20 +677,30 @@ def verify(bundle: Path) -> dict[str, Any]:
         raise SyncError(f"{bundle}: no {MANIFEST}")
     manifest = read_json(path)
     if manifest.get("format") != FORMAT:
-        raise SyncError(f"{path}: format {manifest.get('format')!r}, expected {FORMAT!r}")
+        raise SyncError(
+            f"{path}: format {manifest.get('format')!r}, expected {FORMAT!r}"
+        )
     bad = []
     for item in manifest.get("files", []):
         rel = item["path"]
-        if check_name(rel.split("/")[0]) or ".." in rel.split("/") or rel.startswith("/"):
+        if (
+            check_name(rel.split("/")[0])
+            or ".." in rel.split("/")
+            or rel.startswith("/")
+        ):
             bad.append(f"{rel}: unsafe path")
             continue
         target = bundle.joinpath(*rel.split("/"))
         if not target.is_file():
             bad.append(f"{rel}: missing")
         elif target.stat().st_size != item["size"] or sha256(target) != item["sha256"]:
-            bad.append(f"{rel}: size or SHA-256 differs from the manifest (corrupted, or changed by line-ending conversion)")
+            bad.append(
+                f"{rel}: size or SHA-256 differs from the manifest (corrupted, or changed by line-ending conversion)"
+            )
     if bad:
-        raise SyncError(f"{bundle}: hash check failed, nothing imported:\n  " + "\n  ".join(bad))
+        raise SyncError(
+            f"{bundle}: hash check failed, nothing imported:\n  " + "\n  ".join(bad)
+        )
     return manifest
 
 
@@ -630,20 +719,34 @@ def import_bundles(
     replace: back up and remove every installed lesson first (backup_and_clear), then install the bundles' lessons.
     Calibrations are never removed, and the bundles' calibrations are not installed unless with_calibrations.
     """
-    bundles = sorted(p for p in shared.iterdir() if (p / MANIFEST).is_file()) if shared.is_dir() else []
+    bundles = (
+        sorted(p for p in shared.iterdir() if (p / MANIFEST).is_file())
+        if shared.is_dir()
+        else []
+    )
     if only:
         bundles = [b for b in bundles if b.name in only]
     if not bundles:
         raise SyncError(f"no bundle with {MANIFEST} under {shared}")
-    manifests = [(b, verify(b)) for b in bundles]  # every hash checked before anything is written
+    manifests = [
+        (b, verify(b)) for b in bundles
+    ]  # every hash checked before anything is written
     report = Report()
     cleared: set[Path] = set()
     if replace:
         if not (data_dir / "lessons").is_dir():
-            raise SyncError(f"--replace refused: no backend data folder with lessons/ at {data_dir}")
-        incoming = sum(len(m["items"].get(k, [])) for _b, m in manifests for k in ("lesson", "take"))
+            raise SyncError(
+                f"--replace refused: no backend data folder with lessons/ at {data_dir}"
+            )
+        incoming = sum(
+            len(m["items"].get(k, []))
+            for _b, m in manifests
+            for k in ("lesson", "take")
+        )
         if incoming == 0:
-            raise SyncError("--replace refused: the bundle holds no lessons and no takes, so nothing would be installed")
+            raise SyncError(
+                "--replace refused: the bundle holds no lessons and no takes, so nothing would be installed"
+            )
         cleared, report.backup = backup_and_clear(data_dir, dry_run)
         report.removed = sorted(p.relative_to(data_dir).as_posix() for p in cleared)
     for bundle, manifest in manifests:
@@ -653,15 +756,23 @@ def import_bundles(
                 src = bundle / "backend" / folder / f"{item_id}.json"
                 dest = data_dir / folder / f"{item_id}.json"
                 label = f"{kind} {item_id}"
-                if replace and not with_calibrations and kind in ("calibration", "glove_calibration"):
-                    report.skipped.append(f"{label} (replace keeps this machine's calibrations)")
+                if (
+                    replace
+                    and not with_calibrations
+                    and kind in ("calibration", "glove_calibration")
+                ):
+                    report.skipped.append(
+                        f"{label} (replace keeps this machine's calibrations)"
+                    )
                     continue
                 if dest.exists() and dest not in cleared:
                     if dest.read_bytes() == src.read_bytes():
                         report.skipped.append(f"{label} (identical)")
                         continue
                     if not force:
-                        report.skipped.append(f"{label} (exists and differs; --force replaces it)")
+                        report.skipped.append(
+                            f"{label} (exists and differs; --force replaces it)"
+                        )
                         continue
                     report.replaced.append(label)
                 else:
@@ -699,13 +810,24 @@ def copy_tree(bundle: Path, files: list[str], prefix: str, dest: Path) -> None:
             shutil.copyfile(bundle.joinpath(*rel.split("/")), target)
 
 
-def copy_core_folders(bundle: Path, data_dir: Path, files: list[str], item_id: str, kind: str) -> None:
+def copy_core_folders(
+    bundle: Path, data_dir: Path, files: list[str], item_id: str, kind: str
+) -> None:
     """Copy the core lesson folders of one take (takes/<id>-<side>) or lesson (lessons/<id>)."""
-    names = [f"takes/{item_id}-{s}" for s in SIDES] if kind == "take" else [f"lessons/{item_id}"]
+    names = (
+        [f"takes/{item_id}-{s}" for s in SIDES]
+        if kind == "take"
+        else [f"lessons/{item_id}"]
+    )
     for name in names:
         prefix = f"core_lessons/{name}"
         if any(rel.startswith(prefix + "/") for rel in files):
-            copy_tree(bundle, files, prefix, data_dir / "core_lessons" / Path(*name.split("/")))
+            copy_tree(
+                bundle,
+                files,
+                prefix,
+                data_dir / "core_lessons" / Path(*name.split("/")),
+            )
 
 
 def merge_core_manifest(bundle: Path, data_dir: Path, manifest: dict[str, Any]) -> None:
@@ -715,11 +837,18 @@ def merge_core_manifest(bundle: Path, data_dir: Path, manifest: dict[str, Any]) 
         return
     incoming = read_json(src)
     dest = data_dir / "core_lessons" / "manifest.json"
-    current = read_json(dest) if dest.is_file() else {k: v for k, v in incoming.items() if k != "entries"}
+    current = (
+        read_json(dest)
+        if dest.is_file()
+        else {k: v for k, v in incoming.items() if k != "entries"}
+    )
     entries = {(e.get("kind"), e.get("id")): e for e in current.get("entries", [])}
     for entry in incoming.get("entries", []):
         key = (entry.get("kind"), entry.get("id"))
-        folders_ok = all((data_dir / "core_lessons" / Path(*f.split("/"))).is_dir() for f in entry.get("folders", []))
+        folders_ok = all(
+            (data_dir / "core_lessons" / Path(*f.split("/"))).is_dir()
+            for f in entry.get("folders", [])
+        )
         if key not in entries and folders_ok:
             entries[key] = entry
     current["entries"] = list(entries.values())
@@ -734,12 +863,38 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     for name in ("export", "import"):
         p = sub.add_parser(name)
-        p.add_argument("--repo", type=Path, default=REPO_ROOT, help="repo holding lessons/shared (default: this one)")
-        p.add_argument("--data-dir", type=Path, default=None, help="backend data dir (default: <repo>/backend/data)")
-        p.add_argument("--root-lessons", type=Path, default=None, help="core lessons dir (default: <repo>/lessons)")
-        p.add_argument("--shared", type=Path, default=None, help="bundle folder (default: <repo>/lessons/shared)")
-        p.add_argument("--dry-run", action="store_true", help="show what would happen, write nothing")
-    sub.choices["export"].add_argument("--recorder", default=None, help="name prefixed to every id (default: OS user)")
+        p.add_argument(
+            "--repo",
+            type=Path,
+            default=REPO_ROOT,
+            help="repo holding lessons/shared (default: this one)",
+        )
+        p.add_argument(
+            "--data-dir",
+            type=Path,
+            default=None,
+            help="backend data dir (default: <repo>/backend/data)",
+        )
+        p.add_argument(
+            "--root-lessons",
+            type=Path,
+            default=None,
+            help="core lessons dir (default: <repo>/lessons)",
+        )
+        p.add_argument(
+            "--shared",
+            type=Path,
+            default=None,
+            help="bundle folder (default: <repo>/lessons/shared)",
+        )
+        p.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="show what would happen, write nothing",
+        )
+    sub.choices["export"].add_argument(
+        "--recorder", default=None, help="name prefixed to every id (default: OS user)"
+    )
     sub.choices["export"].add_argument(
         "--wearers",
         default="",
@@ -751,15 +906,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="export every wearer's calibrations and names (off by default: the repo may be public)",
     )
-    sub.choices["import"].add_argument("--force", action="store_true", help="replace existing items with the same id")
-    sub.choices["import"].add_argument("--only", nargs="*", help="import only these recorders' bundles")
+    sub.choices["import"].add_argument(
+        "--force", action="store_true", help="replace existing items with the same id"
+    )
+    sub.choices["import"].add_argument(
+        "--only", nargs="*", help="import only these recorders' bundles"
+    )
     sub.choices["import"].add_argument(
         "--replace",
         action="store_true",
         help="back up and remove every installed lesson and take first, then install only the bundles' lessons",
     )
     sub.choices["import"].add_argument(
-        "--with-calibrations", action="store_true", help="with --replace: also install the bundles' calibrations"
+        "--with-calibrations",
+        action="store_true",
+        help="with --replace: also install the bundles' calibrations",
     )
     sub.choices["export"].add_argument(
         "--only-recorder",
@@ -767,7 +928,9 @@ def main(argv: list[str] | None = None) -> int:
         help="export only lessons whose expert (master_name) is the recorder, and the takes they use",
     )
     sub.choices["export"].add_argument(
-        "--since", default=None, help="export only lessons and takes recorded from this date or date-time (UTC if no zone)"
+        "--since",
+        default=None,
+        help="export only lessons and takes recorded from this date or date-time (UTC if no zone)",
     )
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
@@ -776,12 +939,20 @@ def main(argv: list[str] | None = None) -> int:
     shared = (args.shared or repo / "lessons" / "shared").resolve()
     try:
         if args.cmd == "export":
-            recorder = sanitise_recorder(args.recorder) if args.recorder else default_recorder()
+            recorder = (
+                sanitise_recorder(args.recorder)
+                if args.recorder
+                else default_recorder()
+            )
             tracked = tracked_root_lessons(repo)
-            wearers = {sanitise_recorder(w) for w in args.wearers.split(",") if w.strip()}
+            wearers = {
+                sanitise_recorder(w) for w in args.wearers.split(",") if w.strip()
+            }
             session = None
             if args.only_recorder or args.since:
-                session = Session(args.only_recorder, parse_since(args.since) if args.since else None)
+                session = Session(
+                    args.only_recorder, parse_since(args.since) if args.since else None
+                )
             summary = export(
                 data_dir,
                 root_lessons,
@@ -793,26 +964,47 @@ def main(argv: list[str] | None = None) -> int:
                 args.include_other_wearers,
                 session,
             )
-            verb = "would write" if args.dry_run else ("unchanged" if summary.get("unchanged") else "wrote")
-            print(f"{verb} {summary['bundle']}: {summary['files']} files, {summary['bytes']} bytes")
+            verb = (
+                "would write"
+                if args.dry_run
+                else ("unchanged" if summary.get("unchanged") else "wrote")
+            )
+            print(
+                f"{verb} {summary['bundle']}: {summary['files']} files, {summary['bytes']} bytes"
+            )
             for kind, n in summary["items"].items():
                 print(f"  {kind}: {n}")
             if args.include_other_wearers:
                 print("every wearer's calibrations included (--include-other-wearers)")
             else:
                 allowed = ", ".join(sorted({recorder, *wearers}))
-                print(f"left out (calibrations: only these wearers are exported: {allowed}; lessons: the session filter):")
+                print(
+                    f"left out (calibrations: only these wearers are exported: {allowed}; lessons: the session filter):"
+                )
                 for why, n in summary["left_out"].items():
                     print(f"  {n} {why}")
         else:
             report = import_bundles(
-                shared, data_dir, root_lessons, args.force, args.dry_run, args.only, args.replace, args.with_calibrations
+                shared,
+                data_dir,
+                root_lessons,
+                args.force,
+                args.dry_run,
+                args.only,
+                args.replace,
+                args.with_calibrations,
             )
             head = "dry run, nothing written. " if args.dry_run else ""
             print(f"{head}imported into {data_dir}")
             if args.replace:
-                verb = "would back up and remove" if args.dry_run else "backed up and removed"
-                print(f"{verb} {len(report.removed)} files; backup folder: {report.backup}")
+                verb = (
+                    "would back up and remove"
+                    if args.dry_run
+                    else "backed up and removed"
+                )
+                print(
+                    f"{verb} {len(report.removed)} files; backup folder: {report.backup}"
+                )
                 for row in report.removed:
                     print(f"  removed {row}")
             for name in ("added", "skipped", "replaced"):
@@ -820,7 +1012,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{name} ({len(rows)}):")
                 for row in rows:
                     print(f"  {row}")
-            print(summary_line(data_dir) + (" (before the dry run)" if args.dry_run else ""))
+            print(
+                summary_line(data_dir)
+                + (" (before the dry run)" if args.dry_run else "")
+            )
     except SyncError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

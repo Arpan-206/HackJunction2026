@@ -30,14 +30,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import lesson_sync  # noqa: E402
-from app.schemas.lesson import Lesson  # noqa: E402
-from app.schemas.records import Calibration, Recording, ScoreRequest  # noqa: E402
-from app.services.calibration import CalibrationService  # noqa: E402
-from app.services.recorder import Recorder  # noqa: E402
-from app.services.scoring import ScoringService  # noqa: E402
-from app.services.storage.json_store import JsonStore  # noqa: E402
-from app.services.storage.seed import load_seed_lessons  # noqa: E402
+import lesson_sync
+from app.schemas.records import Calibration, Recording, ScoreRequest
+from app.services.calibration import CalibrationService
+from app.services.recorder import Recorder
+from app.services.scoring import ScoringService
+from app.services.storage.json_store import JsonStore
+from app.services.storage.seed import load_seed_lessons
 
 TOL = 0.01
 FINGERS = ("thumb", "index", "middle", "ring", "little")
@@ -72,7 +71,12 @@ def take_calibrations(data_dir: Path) -> dict[str, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source-data", type=Path, required=True, help="the original backend data dir (read only)")
+    ap.add_argument(
+        "--source-data",
+        type=Path,
+        required=True,
+        help="the original backend data dir (read only)",
+    )
     ap.add_argument("--recorder", default="arpan")
     ap.add_argument("--repo", type=Path, default=lesson_sync.REPO_ROOT)
     args = ap.parse_args()
@@ -81,19 +85,36 @@ def main() -> int:
     work = Path(tempfile.mkdtemp(prefix="lesson-sync-proof-"))
     clone = work / "clone"
     subprocess.run(
-        ["git", "clone", "-q", "--config", "core.autocrlf=true", str(args.repo), str(clone)], check=True
+        [
+            "git",
+            "clone",
+            "-q",
+            "--config",
+            "core.autocrlf=true",
+            str(args.repo),
+            str(clone),
+        ],
+        check=True,
     )
     # 1. autocrlf: every file must still match the manifest
     bundle = clone / "lessons" / "shared" / rec
     manifest = lesson_sync.verify(bundle)
     crlf_json = sum(
-        1 for f in manifest["files"] if f["path"].endswith(".json") and b"\r\n" in (bundle / f["path"]).read_bytes()
+        1
+        for f in manifest["files"]
+        if f["path"].endswith(".json") and b"\r\n" in (bundle / f["path"]).read_bytes()
     )
-    print(f"autocrlf clone: {len(manifest['files'])} files verified by SHA-256, {crlf_json} JSON files with CRLF")
+    print(
+        f"autocrlf clone: {len(manifest['files'])} files verified by SHA-256, {crlf_json} JSON files with CRLF"
+    )
     # 2. import into an empty data dir
     data = clone / "backend" / "data-proof"
-    report = lesson_sync.import_bundles(clone / "lessons" / "shared", data, work / "root_lessons", only=[rec])
-    print(f"import: added {len(report.added)}, skipped {len(report.skipped)}, replaced {len(report.replaced)}")
+    report = lesson_sync.import_bundles(
+        clone / "lessons" / "shared", data, work / "root_lessons", only=[rec]
+    )
+    print(
+        f"import: added {len(report.added)}, skipped {len(report.skipped)}, replaced {len(report.replaced)}"
+    )
     # 3. scores
     seeds = {lesson.id: lesson for lesson in load_seed_lessons()}
     original, imported = scorer(src), scorer(data)
@@ -110,7 +131,11 @@ def main() -> int:
         step = next((s for s in seeds[lesson_id].steps if s.id == step_id), None)
         if step is None:
             continue
-        common = {"tolerance": step.tolerance, "weights": step.weights, "margin": "standard"}
+        common = {
+            "tolerance": step.tolerance,
+            "weights": step.weights,
+            "margin": "standard",
+        }
         cases = []
         ref = ids[0]
         for att in ids[1:]:
@@ -118,6 +143,7 @@ def main() -> int:
         if step.motion is not None:
             cases += [("motion", None, att) for att in ids]
         for kind, ref_id, att in cases:
+
             def req(m: dict[str, str]) -> ScoreRequest:
                 body = dict(common, attempt_recording_id=m.get(att, att))
                 if kind == "take":
@@ -131,16 +157,44 @@ def main() -> int:
                 return ScoreRequest(**body)
 
             ident: dict[str, str] = {}
-            pref = {k: lesson_sync.prefixed(k, rec) for k in [att, ref_id or "", cals.get(att, ""), cals.get(ref_id or "", "")] if k}
-            a, b = numbers(original.score(req(ident))), numbers(imported.score(req(pref)))
+            pref = {
+                k: lesson_sync.prefixed(k, rec)
+                for k in [
+                    att,
+                    ref_id or "",
+                    cals.get(att, ""),
+                    cals.get(ref_id or "", ""),
+                ]
+                if k
+            }
+            a, b = (
+                numbers(original.score(req(ident))),
+                numbers(imported.score(req(pref))),
+            )
             diff = max(abs(a[k] - b[k]) for k in a)
             worst = max(worst, diff)
-            rows.append((lesson_id, step_id, kind, ref_id or "motion", att, a["overall"], b["overall"], diff,
-                         "weights" if step.weights else "-", "yes" if att in cals else "no"))
-    print("| lesson | step | reference | attempt take | original | imported | max diff (all fingers) | weights | calibrated |")
+            rows.append(
+                (
+                    lesson_id,
+                    step_id,
+                    kind,
+                    ref_id or "motion",
+                    att,
+                    a["overall"],
+                    b["overall"],
+                    diff,
+                    "weights" if step.weights else "-",
+                    "yes" if att in cals else "no",
+                )
+            )
+    print(
+        "| lesson | step | reference | attempt take | original | imported | max diff (all fingers) | weights | calibrated |"
+    )
     print("|---|---|---|---|---|---|---|---|---|")
     for r in rows:
-        print(f"| {r[0]} | {r[1]} | {r[3]} | {r[4]} | {r[5]:.4f} | {r[6]:.4f} | {r[7]:.6f} | {r[8]} | {r[9]} |")
+        print(
+            f"| {r[0]} | {r[1]} | {r[3]} | {r[4]} | {r[5]:.4f} | {r[6]:.4f} | {r[7]:.6f} | {r[8]} | {r[9]} |"
+        )
     print(f"cases {len(rows)}, worst difference {worst:.6f} (limit {TOL})")
     # 4. core lesson folders byte for byte (trace.npz, frames)
     same = differ = 0
@@ -148,10 +202,22 @@ def main() -> int:
         if not p.is_file() or p.name == "lesson.json":
             continue
         rel = p.relative_to(src / "core_lessons" / "takes")
-        new = data / "core_lessons" / "takes" / lesson_sync.prefixed(rel.parts[0], rec) / Path(*rel.parts[1:])
-        ok = new.is_file() and hashlib.sha256(new.read_bytes()).digest() == hashlib.sha256(p.read_bytes()).digest()
+        new = (
+            data
+            / "core_lessons"
+            / "takes"
+            / lesson_sync.prefixed(rel.parts[0], rec)
+            / Path(*rel.parts[1:])
+        )
+        ok = (
+            new.is_file()
+            and hashlib.sha256(new.read_bytes()).digest()
+            == hashlib.sha256(p.read_bytes()).digest()
+        )
         same, differ = same + ok, differ + (not ok)
-    print(f"core take folder files (traces, frames) byte-identical: {same}, different or missing: {differ}")
+    print(
+        f"core take folder files (traces, frames) byte-identical: {same}, different or missing: {differ}"
+    )
     print(f"work folder: {work}")
     return 0 if worst <= TOL and differ == 0 and rows else 1
 

@@ -188,7 +188,9 @@ class FakeLLM:
                 CoachHintRequest.model_validate_json(request.user_text)
             ).model_dump_json()
         if request.task == "review":
-            from app.services.llm.review import build_review  # local: review imports the chain
+            from app.services.llm.review import (
+                build_review,  # local: review imports the chain
+            )
 
             return build_review(
                 CoachReviewRequest.model_validate_json(request.user_text)

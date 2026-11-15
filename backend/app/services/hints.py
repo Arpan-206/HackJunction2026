@@ -88,7 +88,9 @@ def build_hint(
     )
     if finger is not None:
         deviation = deviations_deg[finger]
-        name = "thumb" if finger == "thumb" else f"{finger} finger"  # never "thumb finger"
+        name = (
+            "thumb" if finger == "thumb" else f"{finger} finger"
+        )  # never "thumb finger"
         if deviation > 0:
             return f"Relax your {name}, it is curled about {abs(deviation):.0f} degrees (in total) too much."
         return f"Curl your {name} more, it is about {abs(deviation):.0f} degrees (in total) too straight."

@@ -22,7 +22,9 @@ async def coach_hint(body: CoachHintRequest, coach: CoachDep) -> CoachHintRespon
 
 
 @router.post("/coach/review", response_model=CoachReviewResponse)
-async def coach_review(body: CoachReviewRequest, review: ReviewDep) -> CoachReviewResponse:
+async def coach_review(
+    body: CoachReviewRequest, review: ReviewDep
+) -> CoachReviewResponse:
     """Return feedback for one scored rep in plain words."""
     return await review.review(body)
 

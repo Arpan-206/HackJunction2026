@@ -49,7 +49,9 @@ REVIEW_SYSTEM = (
 )
 MAX_TOKENS = 96 if TASK == "review" else 48
 # Each job keeps its own labels, training files, evaluation and adapter; the dataset is shared.
-OUT_ROOT = Path(__file__).resolve().parent / "out" / ("review" if TASK == "review" else "")
+OUT_ROOT = (
+    Path(__file__).resolve().parent / "out" / ("review" if TASK == "review" else "")
+)
 JARGON_RE = re.compile(
     r"\b(score[ds]?|points?|percent|tolerance|punkt\w*|prozent|toleranz|piste\w*|prosent\w*|toleranss\w*)\b|%",
     re.IGNORECASE,

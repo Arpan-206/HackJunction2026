@@ -46,7 +46,11 @@ async def run(system: str, latency_n: int, concurrency: int) -> dict:
 
     async def one(client, ex):
         line, dt = await oai.complete(
-            client, model, prompt.messages(ex), temperature=0.0, max_tokens=prompt.MAX_TOKENS
+            client,
+            model,
+            prompt.messages(ex),
+            temperature=0.0,
+            max_tokens=prompt.MAX_TOKENS,
         )
         return {
             "id": ex["id"],
@@ -61,9 +65,17 @@ async def run(system: str, latency_n: int, concurrency: int) -> dict:
     lat = []
     sample = random.Random(1).sample(rows, min(latency_n, len(rows)))
     async with httpx.AsyncClient(timeout=60, headers=oai.headers()) as client:
-        await oai.complete(client, model, prompt.messages(sample[0]), 0.0, prompt.MAX_TOKENS)  # warm
+        await oai.complete(
+            client, model, prompt.messages(sample[0]), 0.0, prompt.MAX_TOKENS
+        )  # warm
         for ex in sample:
-            lat.append((await oai.complete(client, model, prompt.messages(ex), 0.0, prompt.MAX_TOKENS))[1])
+            lat.append(
+                (
+                    await oai.complete(
+                        client, model, prompt.messages(ex), 0.0, prompt.MAX_TOKENS
+                    )
+                )[1]
+            )
     summary = {
         "system": system,
         "model": model,

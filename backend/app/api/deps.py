@@ -16,8 +16,8 @@ from app.services.llm.coach import CoachService
 from app.services.llm.lesson_generator import LessonGenerator
 from app.services.llm.motion_text import MotionTextService
 from app.services.llm.plan import PlanService
-from app.services.llm.review import ReviewService
 from app.services.llm.registry import LLMState
+from app.services.llm.review import ReviewService
 from app.services.media import MediaService
 from app.services.moves import MoveCatalog
 from app.services.recorder import Recorder

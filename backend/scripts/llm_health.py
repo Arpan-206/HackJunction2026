@@ -271,7 +271,9 @@ async def main(only: list[str]) -> int:
         "openai": lambda: check_openai(settings, env, secrets),
     }
     rows = list(await asyncio.gather(*(jobs[name]() for name in only)))
-    if LLMState(settings).tuned_on():  # the tuned coach heads the hint chain, so it gets its own row
+    if LLMState(
+        settings
+    ).tuned_on():  # the tuned coach heads the hint chain, so it gets its own row
         rows.append(await check_tuned(settings, secrets))
     print(
         f"LLM_PROVIDER={settings.llm_provider}  LLM_FALLBACK={settings.llm_fallback}  LLM_ROUTES={settings.llm_routes or '-'}"
