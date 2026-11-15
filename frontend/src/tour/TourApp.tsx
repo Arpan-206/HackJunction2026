@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from 'react';
+import { loadTake } from './data';
 
 interface StopDef {
   title: string;
@@ -37,6 +38,13 @@ export const STOPS: StopDef[] = [
 ];
 
 const PAGES = STOPS.map((s) => lazy(s.load));
+
+// The first stop's code and take start loading with the shell, in parallel, instead of one after the other.
+if (typeof window !== 'undefined') {
+  const first = stopFromHash(window.location.hash);
+  void STOPS[first].load();
+  if (first === 0) void loadTake('expert');
+}
 
 /** The stop index (0 to 4) from the address hash: #/1 to #/5. Anything else is the first stop. */
 export function stopFromHash(hash: string): number {
@@ -123,6 +131,9 @@ export function TourApp() {
           <h3>What you would see live</h3>
           <p>{def.live}</p>
         </aside>
+        <p className="tour-site">
+          <a href="./sbom.html">What's in this site</a>
+        </p>
       </main>
 
       <footer className="tour-nav">

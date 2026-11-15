@@ -303,6 +303,13 @@ html[data-theme] {
   margin-bottom: 0.3rem;
 }
 
+.tour-site a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 1rem;
+}
+
 .tour-nav {
   position: sticky;
   bottom: 0;

@@ -1,0 +1,77 @@
+/* The "What's in this site" page: plain, readable on a phone, text at least 16 px, the tour's colours. */
+:root {
+  color-scheme: light;
+  --bg: #eadbbd;
+  --surface: #f5ecd9;
+  --text: #2a1b0f;
+  --line: #cdb68d;
+  --rule: #6b4a2b;
+  --link: #26357f;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 18px/1.5 Georgia, 'Times New Roman', serif;
+}
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+h1 {
+  font-size: 1.8rem;
+  margin: 0.5rem 0 1rem;
+}
+h2 {
+  font-size: 1.3rem;
+  margin: 1.5rem 0 0.5rem;
+}
+a {
+  color: var(--link);
+  min-height: 44px;
+  display: inline-block;
+  padding: 0.5rem 0;
+}
+.state {
+  border-left: 3px solid var(--rule);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+}
+dt {
+  font-weight: 700;
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.full {
+  font-size: 16px;
+  font-family: ui-monospace, Menlo, monospace;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+caption {
+  text-align: left;
+  font-style: italic;
+  padding-bottom: 0.3rem;
+}
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+td {
+  font-variant-numeric: tabular-nums;
+}

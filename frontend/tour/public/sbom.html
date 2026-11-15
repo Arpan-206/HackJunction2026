@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+    <title>What's in this site: Geppetto tour</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./sbom.css" />
+    <script src="./sbom.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <p><a href="./">Back to the tour</a></p>
+      <h1>What's in this site</h1>
+      <p>
+        This list is every package the build downloaded, the build tools and test tools included. CRACI recorded it while the build ran. It is not the list of code inside the page.
+      </p>
+      <p id="state" class="state">Loading the record of this build...</p>
+      <dl>
+        <dt>Commit</dt>
+        <dd id="commit">-</dd>
+        <dt>CRACI build job</dt>
+        <dd id="job">-</dd>
+        <dt>Packages</dt>
+        <dd id="components">-</dd>
+        <dt>Recorded</dt>
+        <dd id="fetched">-</dd>
+      </dl>
+      <h2>Known vulnerabilities by severity</h2>
+      <table>
+        <caption id="vuln-caption">Vulnerability entries in the SBOM</caption>
+        <thead>
+          <tr><th scope="col">Severity</th><th scope="col">Entries</th></tr>
+        </thead>
+        <tbody id="vulns">
+          <tr><th scope="row">critical</th><td data-severity="critical">-</td></tr>
+          <tr><th scope="row">high</th><td data-severity="high">-</td></tr>
+          <tr><th scope="row">medium</th><td data-severity="medium">-</td></tr>
+          <tr><th scope="row">low</th><td data-severity="low">-</td></tr>
+          <tr><th scope="row">unknown</th><td data-severity="unknown">-</td></tr>
+        </tbody>
+      </table>
+      <h2>Download</h2>
+      <p id="download">-</p>
+    </main>
+  </body>
+</html>

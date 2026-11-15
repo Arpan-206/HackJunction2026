@@ -124,6 +124,7 @@ async function run(tag, viewport, { throttle = false, mobile = false } = {}) {
     const badge = await page.locator('.tour-badge').innerText();
     if (!badge.includes('Recorded session, the live version uses Rokoko gloves')) problems.push(`${tag}: stop ${i} has no badge`);
     if (!(await page.locator('.tour-live').isVisible())) problems.push(`${tag}: stop ${i} has no live note`);
+    if ((await page.getByRole('link', { name: "What's in this site" }).count()) !== 1) problems.push(`${tag}: stop ${i} has no "What's in this site" link`);
     await overflow(page, tag, i);
     const shot = join(out, `${tag}-stop${i}.png`);
     await page.screenshot({ path: shot, fullPage: true });

@@ -58,6 +58,8 @@ jobs:
         run: npm run build
       - name: Tour build (no env values reach it)
         run: npx vite build --config vite.tour.config.ts
+      - name: Placeholder SBOM summary (the publish job replaces it with the real one)
+        run: node scripts/tour/fetch-sbom.mjs dist-tour --placeholder
       - name: Key-leak check
         run: node scripts/leak-check.mjs dist-tour
       - name: Size report
@@ -72,6 +74,10 @@ jobs:
             echo "Total raw: $(find dist-tour -type f -exec cat {} + | wc -c) bytes"
             echo "Total gzip (per file): $(find dist-tour -type f -exec sh -c 'gzip -9 -c "$1" | wc -c' _ {} \; | paste -sd+ | bc) bytes"
           } | tee tour-size.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tour-dist
+          path: frontend/dist-tour
       - name: Install Playwright chromium
         run: |
           npm i --no-save playwright@1.65
@@ -80,9 +86,6 @@ jobs:
         run: node e2e/tour-check.mjs dist-tour tour-check
       - name: Browser check under a sub-path, as GitHub Pages serves it
         run: TOUR_BASE=/HackJunction2026/ TOUR_BUDGET=off node e2e/tour-check.mjs dist-tour tour-check-subpath
-      - name: Load metrics
-        if: always()
-        run: test -f tour-check/metrics.json && cat tour-check/metrics.json >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -91,19 +94,89 @@ jobs:
             frontend/tour-check
             frontend/tour-check-subpath
             frontend/tour-size.md
-      - uses: actions/upload-artifact@v4
+
+  publish:
+    # The build job's SBOM is final only after that job ends, so this job fetches it, adds it to the site, checks the
+    # site again (key leaks, and the "What's in this site" page against the SBOM file), and uploads the final site.
+    needs: build
+    runs-on: craci
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: cracicorp/setup@v1
+        with:
+          # Presets stay on (npm, ubuntu, github). Extra hosts: the CRACI API for the SBOM, Playwright's browser download,
+          # and GitHub's artifact storage.
+          network: |
+            default: deny
+            connections:
+              - tls:
+                  serverNamePatterns: [api.craci.com]
+                  ports: [443]
+              - tls:
+                  serverNamePatterns: [cdn.playwright.dev, playwright.download.prss.microsoft.com, playwright.azureedge.net, "*.azureedge.net"]
+                  ports: [443]
+              - tls:
+                  serverNamePatterns: [api.github.com, "*.actions.githubusercontent.com", "*.githubusercontent.com", "*.blob.core.windows.net"]
+                  ports: [443]
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
         with:
           name: tour-dist
           path: frontend/dist-tour
+      - name: Find the build job of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --jq '.jobs[] | select(.name == "build") | .id')
+          echo "build job: $id"
+          echo "TOUR_SBOM_JOB_ID=$id" >> "$GITHUB_ENV"
+      - name: Fetch the build job's SBOM from CRACI
+        env:
+          CRACI_API_TOKEN: ${{ secrets.CRACI_API_TOKEN }}
+          TOUR_SBOM_WAIT_S: "900"
+        run: node scripts/tour/fetch-sbom.mjs dist-tour
+      - name: Key-leak check of the final site (the SBOM and its summary included)
+        run: node scripts/leak-check.mjs dist-tour
+      - name: Install Playwright chromium
+        run: |
+          npm i --no-save playwright@1.65
+          npx playwright install --with-deps chromium
+      - name: Check the "What's in this site" page against the SBOM file
+        run: node e2e/sbom-check.mjs dist-tour sbom-check
+      - name: Zip the site (index.html at the top)
+        run: |
+          cd dist-tour && zip -qr ../geppetto-tour.zip . && cd .. && ls -l geppetto-tour.zip
+          cat dist-tour/sbom-summary.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tour-site
+          path: frontend/dist-tour
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geppetto-tour-zip
+          path: frontend/geppetto-tour.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sbom-check
+          path: frontend/sbom-check
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'workflow_dispatch' && inputs.pages
         with:
           path: frontend/dist-tour
 
   netlify:
-    # Deploys the checked build (the key-leak and browser checks passed in `build`) to Netlify. It needs the repository
-    # secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID; without them every step after the check skips and the job passes.
-    needs: build
+    # Deploys the final, checked site to Netlify. It needs the repository secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID;
+    # without them every step after the first skips and the job passes.
+    needs: publish
     runs-on: craci
     env:
       HAS_NETLIFY: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
@@ -114,7 +187,7 @@ jobs:
       - uses: cracicorp/setup@v1
         if: env.HAS_NETLIFY == 'true'
         with:
-          # npm preset for the CLI; Netlify's API for the upload; GitHub for the build artifact.
+          # npm preset for the CLI; Netlify's API for the upload; GitHub for the site artifact.
           network: |
             default: deny
             connections:
@@ -131,7 +204,7 @@ jobs:
       - uses: actions/download-artifact@v4
         if: env.HAS_NETLIFY == 'true'
         with:
-          name: tour-dist
+          name: tour-site
           path: dist-tour
       - name: Deploy the prebuilt site to Netlify (production)
         if: env.HAS_NETLIFY == 'true'
@@ -143,7 +216,7 @@ jobs:
           "$RUNNER_TEMP/netlify/node_modules/.bin/netlify" deploy --prod --dir=dist-tour --no-build --message "public-tour ${GITHUB_SHA::7}"
 
   pages:
-    needs: build
+    needs: publish
     # Off by default: only a manual run with pages: true deploys, and Pages must be on (Settings, Pages, Source: GitHub Actions).
     if: github.event_name == 'workflow_dispatch' && inputs.pages
     runs-on: craci
