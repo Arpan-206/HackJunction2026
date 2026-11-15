@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import type { Finger, HandFrame, ScoreResult, Side, Tolerance } from '../../../api/types';
+import type { Finger, HandFrame, ModelProvider, ScoreResult, Side, Tolerance } from '../../../api/types';
 import { Button } from '../../../components/ui';
-import { marginSentence } from '../../shared/settings';
+import { isOfflineProvider } from '../../shared/providerLabel';
+import { LEARNER_DEFAULT_MARGIN, marginSentence } from '../../shared/settings';
 import { FINGER_LABEL } from './coach/tips';
 import { isMastery, MASTERY, OK_FROM, weakestFinger } from './score/scoreRules';
 import { ScoreView } from './score/ScoreView';
@@ -36,6 +37,16 @@ interface ScoreCardProps {
   light?: readonly Finger[];
   /** The step's own tolerance, so the margin line can say what the margin allowed. */
   tolerance?: Tolerance;
+  /**
+   * The rep in plain words (POST /coach/review): shown as the main sentence. `provider` null means the sentence was built
+   * on this device and the AI Assistant's version may still arrive.
+   */
+  feedback?: { text: string; provider: ModelProvider | null } | null;
+}
+
+/** Whether a language model wrote the feedback (not the backend's own sentence, a template or the offline note). */
+export function writtenByModel(provider: ModelProvider | null | undefined): boolean {
+  return !!provider && provider !== 'algorithmic' && provider !== 'algorithm' && provider !== 'mock' && !isOfflineProvider(provider);
 }
 
 const NAMED_FINGER = /\b(thumb|(?:index|middle|ring|little) finger)\b/gi;
@@ -52,7 +63,7 @@ function consistentHint(hint: string, weakest: Finger): string | null {
  * (Settings, or click to flip), a large Cinzel numeral (gold only at mastery), the margin of error it was judged with, and
  * one line about the weakest finger, all derived from the displayed scores.
  */
-export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer, pose, side = 'right', tolerance, light = [] }: ScoreCardProps) {
+export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLabel, onNext, planTo, lines, clean, combo, retryLabel, restartLabel, footer, pose, side = 'right', tolerance, light = [], feedback }: ScoreCardProps) {
   const overall = Math.round(result.overall);
   const mastery = isMastery(result);
   const margin = result.margin ?? 'standard';
@@ -66,7 +77,10 @@ export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLab
   const summary = allGood
     ? `Every finger held the shape.${timingWeak ? ` Timing was the weak point at ${Math.round(result.timing)}.` : ''}`
     : `${FINGER_LABEL[weakest]} was weakest at ${weakScore}.`;
-  const verdict = result.within_tolerance ? 'Within the tolerance.' : allGood && timingWeak ? 'Timing was outside the tolerance.' : 'Outside the tolerance.';
+  const verdict = result.within_tolerance ? 'A clean rep.' : 'Close. Not clean yet.';
+  // The margin is named only when the learner chose one other than the one they start on (Settings).
+  const showMargin = margin !== LEARNER_DEFAULT_MARGIN || goldKept;
+  const main = feedback?.text ?? lines?.rep ?? `${summary} ${hint ?? ''}`;
   return (
     <section className="ap-score" aria-label={`Score for attempt ${attempt}`}>
       <ScoreView result={result} weakest={weakest} allGood={allGood} mastery={mastery} pose={pose} side={side} attempt={attempt} />
@@ -84,24 +98,32 @@ export function ScoreCard({ result, attempt, source, onRetry, onRestart, nextLab
             </p>
           </div>
         </div>
-        <p className="ap-score__margin">
-          {marginSentence(margin, tolerance)}
-          {goldKept && ' Gold is kept for a tighter margin.'}
+        {showMargin && (
+          <p className="ap-score__margin">
+            {marginSentence(margin, tolerance)}
+            {goldKept && ' Gold is kept for a tighter margin.'}
+          </p>
+        )}
+        <p className="ap-score__hint" aria-live="polite">
+          {main}
         </p>
-        <p className="ap-score__hint">{lines?.rep ?? `${summary} ${hint ?? ''}`}</p>
+        {writtenByModel(feedback?.provider) && <p className="ap-score__by">Written by the AI Assistant.</p>}
         {clean !== undefined && combo && (
           <p className={`ap-score__combo ${clean ? 'ap-score__combo--clean' : ''}`}>
-            {clean ? `Clean rep. ${combo.count} in a row${combo.count > 0 && combo.count < combo.need ? `, ${combo.need - combo.count} more to move on.` : '.'}` : 'Not clean this time. The count starts again.'}
+            {clean ? `${combo.count} in a row${combo.count > 0 && combo.count < combo.need ? `, ${combo.need - combo.count} more to move on.` : '.'}` : 'The count starts again.'}
           </p>
         )}
         {lines?.stage && <p className="ap-score__stage">{lines.stage}</p>}
         {lines?.set && <p className="ap-score__set">{lines.set}</p>}
         {(result.warnings?.length ?? 0) > 0 && (
-          <ul className="ap-score__warnings" aria-label="Notes about this score">
-            {result.warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
+          <details className="ap-score__tech">
+            <summary>Technical notes</summary>
+            <ul className="ap-score__warnings" aria-label="Notes about this score">
+              {result.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </details>
         )}
         {planTo && attempt >= 3 && (
           <p className="ap-score__plan">
