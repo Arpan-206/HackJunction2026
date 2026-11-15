@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useGloveStream } from '../../../api';
+import { noGlovesPref } from '../noGloves';
 import { demoModePref } from '../settings';
 import { gloveLine, shouldOpenGlovesOnStart } from './logic';
 import { useGloveRig } from './useGloveRig';
@@ -26,7 +27,7 @@ function markChecked(): void {
 
 /**
  * The rail's glove line: one short state with a dot, as a link to the gloves screen. On the first screen of a session it
- * also decides whether to open the gloves screen first (real gloves, or demo mode); mock mode and the simulator never do.
+ * also decides whether to open the gloves screen first (real gloves, or demo mode); "No gloves", mock mode and the simulator never do.
  */
 export function GloveStatusLine({ mock }: { mock: boolean }) {
   const { status: stream } = useGloveStream(true);
@@ -42,7 +43,7 @@ export function GloveStatusLine({ mock }: { mock: boolean }) {
     decided.current = true;
     markChecked();
     if (location.pathname.startsWith('/gloves')) return;
-    if (shouldOpenGlovesOnStart(rig.status, demoModePref.get(), mock)) navigate(`/gloves?next=${encodeURIComponent(location.pathname + location.search)}`);
+    if (shouldOpenGlovesOnStart(rig.status, demoModePref.get(), mock, noGlovesPref.get())) navigate(`/gloves?next=${encodeURIComponent(location.pathname + location.search)}`);
   }, [rig.status, rig.error, mock, navigate, location]);
 
   return (

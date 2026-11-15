@@ -1,4 +1,4 @@
-import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Vector3, type Group, type Mesh } from 'three';
 import { Link } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { HandCanvas, Hand, synthFrame, type HandHandle, type StageProps } from '
 import { useStageColors } from '../three/stageContext';
 import type { MotionSpec } from '../api';
 import { ThemeSwitch } from '../components/ThemeSelect';
+import { setNoGloves, useNoGloves } from '../features/shared/noGloves';
 
 /** One clip for both cards. */
 export const CARD_MOTION: MotionSpec = { preset: 'finger_sequence', sequence: [1, 2, 3, 4, 5, 4, 3, 2], beat_ms: 700 };
@@ -138,6 +139,32 @@ function Arrow() {
   );
 }
 
+/**
+ * The landing page's gloves switch, for a demo where the gloves are not to hand. "No gloves" turns on simulated hands
+ * everywhere (features/shared/noGloves.ts); then it reads "We have gloves now" and switches back.
+ */
+function NoGlovesSwitch() {
+  const [noGloves] = useNoGloves();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const press = async () => {
+    setBusy(true);
+    const ok = await setNoGloves(!noGloves);
+    setFailed(!ok);
+    setBusy(false);
+  };
+  return (
+    <div className="roles__gloves">
+      <button type="button" className="btn btn--secondary" onClick={() => void press()} disabled={busy} aria-busy={busy}>
+        {noGloves ? 'We have gloves now' : 'No gloves'}
+      </button>
+      <span role="status" className="roles__gloves-note">
+        {failed ? 'The backend did not switch to simulated hands. Check that it is running.' : noGloves ? 'Running without gloves: the hands are simulated.' : ''}
+      </span>
+    </div>
+  );
+}
+
 /** First screen: choose Expert or Apprentice, each with a live 3D hand. */
 export function RoleSelect() {
   const apprenticeHand = useRef<HandHandle>(null);
@@ -203,6 +230,7 @@ export function RoleSelect() {
 
       <footer className="roles__foot">
         <span>Junction 2026 &middot; Rokoko Smartgloves</span>
+        <NoGlovesSwitch />
         <ThemeSwitch />
       </footer>
     </div>
