@@ -102,7 +102,7 @@ export function newDraft(hands: Hands = 'right', forSkill: DraftSkill | null = n
   };
 }
 
-const WIRE_SKILLS: Skill[] = ['table_tennis', 'piano', 'finnish_fingerspelling', 'shadow_puppets', 'general'];
+const WIRE_SKILLS: Skill[] = ['table_tennis', 'piano', 'fingerspelling', 'shadow_puppets', 'general'];
 
 /**
  * The skill a draft should record for, from the address an expert skill page links to: `?skill=table_tennis` adds a

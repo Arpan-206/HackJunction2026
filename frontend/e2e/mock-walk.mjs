@@ -136,7 +136,8 @@ try {
   await expectVisible(page.getByRole('link', { name: /Table tennis/ }), 'table tennis skill card');
   await expectVisible(page.getByRole('link', { name: /Shadow puppets/ }), 'shadow puppets skill card');
   await expectVisible(page.getByRole('link', { name: /Piano/ }), 'piano skill card');
-  await expectVisible(page.getByRole('link', { name: /Finnish fingerspelling/ }), 'Finnish fingerspelling skill card');
+  await expectVisible(page.getByRole('link', { name: /Fingerspelling/ }), 'Fingerspelling skill card');
+  if (await page.getByRole('link', { name: /Finnish/ }).count()) throw new Error('the Finnish fingerspelling card should be gone from the dashboard');
   for (const gone of [/Surgical/, /Crochet/, /Touch typing/, /Boxing/, /Guitar/, /Rock paper/]) {
     if (await page.getByRole('link', { name: gone }).count()) throw new Error(`a retired skill is still on the dashboard: ${gone}`);
   }
@@ -155,11 +156,12 @@ try {
   }
   await page.getByRole('searchbox').fill('');
 
-  step('apprentice: Finnish fingerspelling starts at its first letter');
-  await page.getByRole('link', { name: /Finnish fingerspelling/ }).first().click();
+  step('apprentice: Fingerspelling shows only the spell a word course');
+  await page.getByRole('link', { name: /Fingerspelling/ }).first().click();
   await expectVisible(page.getByRole('link', { name: /Start lesson 1|Continue lesson/ }), 'fingerspelling primary action');
-  await expectVisible(page.getByText('Lesson 1: Letter A'), 'first letter lesson');
-  await expectVisible(page.getByText('Lesson 6: Spell VIILI'), 'first word lesson');
+  await expectVisible(page.getByText('Lesson 1: Spell JUNCTION'), 'first word lesson');
+  await expectVisible(page.getByText('Lesson 2: Spell GEPPETTO'), 'second word lesson');
+  if (await page.getByText(/Lesson \d+: Letter A/).count()) throw new Error('the alphabet courses should be hidden from the skill page');
 
   step('apprentice: skill page, then the course page and a training attempt with its score card');
   await page.goto(`${BASE}/apprentice`);
