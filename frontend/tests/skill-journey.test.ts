@@ -1,10 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { Lesson } from '../src/api/types';
 import type { LoggedAttempt } from '../src/features/shared/practiceLog';
 import { skillProgress } from '../src/features/apprentice/skills/catalogue';
 import { expertName, partStates, partsDone, partTo, skillJourney } from '../src/features/apprentice/skills/journeyMap';
 import { syntheticScore } from '../src/features/apprentice/pipeline/progress';
 import { askedStage, initialState, openAt } from '../src/features/apprentice/pipeline/stages';
+
+// The clock is pinned to midday UTC. The attempts below reach five hours back, so a run between 00:00 and 05:00 UTC
+// put them on the day before "today", and the mastered lesson was no longer done (CI on main failed at 00:16 UTC).
+vi.useFakeTimers({ now: new Date('2026-11-14T12:00:00Z'), toFake: ['Date'] });
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const tol = { angle_deg: 18, timing_ms: 250 };
 const step = (id: string) => ({ id, title: id, instruction: '', move_id: id, hands: 'right' as const, prop: 'none' as const, motion: null, reference_recording_id: null, repetitions: 3, tolerance: tol, video_url: null });
