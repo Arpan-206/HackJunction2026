@@ -193,6 +193,21 @@ async def check_openai(
     return await _ask(row, OpenAICompatLLM(base, key, model), secrets)
 
 
+async def check_tuned(settings: Settings, secrets: list[str]) -> Row:
+    """The tuned coach's vLLM server (COACH_MODEL=tuned, TUNED_BASE_URL). Read-only: nothing is deployed."""
+    row = Row("tuned", settings.tuned_model)
+    base = settings.tuned_base_url.strip().rstrip("/")
+    key = settings.tuned_api_key
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+    status = await _probe(base + "/v1/models", headers)
+    if status is None or status >= 400:
+        row.reachable = "no" if status is None else f"no (HTTP {status})"
+        row.words = f"unreachable at {base}"
+        return row
+    row.reachable = "yes"
+    return await _ask(row, OpenAICompatLLM(base, key, settings.tuned_model), secrets)
+
+
 def role_table(state: LLMState, rows: list[Row]) -> list[tuple[str, str, str]]:
     """For each role: its chain after the fallback rules, and who would answer now."""
     healthy = {r.provider for r in rows if r.answered == "yes"} | {"fake"}
@@ -256,6 +271,8 @@ async def main(only: list[str]) -> int:
         "openai": lambda: check_openai(settings, env, secrets),
     }
     rows = list(await asyncio.gather(*(jobs[name]() for name in only)))
+    if LLMState(settings).tuned_on():  # the tuned coach heads the hint chain, so it gets its own row
+        rows.append(await check_tuned(settings, secrets))
     print(
         f"LLM_PROVIDER={settings.llm_provider}  LLM_FALLBACK={settings.llm_fallback}  LLM_ROUTES={settings.llm_routes or '-'}"
     )
