@@ -10,7 +10,7 @@ import { useLoopClock } from '../clock';
 import type { TourTake } from '../data';
 import { momentAt, replayCoach } from '../replayCoach';
 import { StageFrame } from '../StageFrame';
-import { PlayButton, useTake } from './shared';
+import { PlayButton, SIDE_VIEW, useTake } from './shared';
 
 export default function TrainingStop() {
   const expert = useTake('expert');
@@ -43,7 +43,7 @@ function TrainingStage({ expert, attempt }: { expert: TourTake; attempt: TourTak
   return (
     <>
       <StageFrame text="The learner's wooden hand closes into the grip beside the faint ghost of the expert's hand. Fingers that stray turn vermilion.">
-        <HandCanvas preset="single" stage={{ decor: false }} label="The learner's recorded attempt in wood, with the expert's ghost hand">
+        <HandCanvas preset="single" stage={{ decor: false, cameraPosition: SIDE_VIEW }} label="The learner's recorded attempt in wood, with the expert's ghost hand">
           <Hand side={expert.side} style="ghost" getFrame={() => handAt(expert.frames, clock.now(), expert.side)} />
           <Hand side={attempt.side} style="wood" fingerTint={tint} getFrame={() => handAt(attempt.frames, clock.now(), attempt.side)} />
         </HandCanvas>
@@ -66,7 +66,7 @@ function TrainingStage({ expert, attempt }: { expert: TourTake; attempt: TourTak
             return (
               <li key={f} className={off ? 'is-off' : 'is-ok'}>
                 <span>{FINGER_LABEL[f]}</span>
-                <span>{off ? `${d > 0 ? 'curled' : 'open'} ${Math.abs(d)} degrees past the expert` : 'in line'}</span>
+                <span>{off ? `${Math.abs(d)} degrees too ${d > 0 ? 'curled' : 'open'}` : 'in line'}</span>
               </li>
             );
           })}

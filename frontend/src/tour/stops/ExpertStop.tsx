@@ -5,7 +5,7 @@ import { handAt } from '../../features/shared/playback';
 import { useLoopClock } from '../clock';
 import type { TourTake } from '../data';
 import { StageFrame } from '../StageFrame';
-import { PlayButton, useTake } from './shared';
+import { PlayButton, SIDE_VIEW, useTake } from './shared';
 
 export default function ExpertStop() {
   const take = useTake('expert');
@@ -27,7 +27,7 @@ function ExpertStage({ take }: { take: TourTake }) {
   return (
     <>
       <StageFrame text="The expert's chalk hand closes into the shakehand grip around an unseen racket handle.">
-        <HandCanvas preset="single" stage={{ decor: false }} label="The expert's recorded hand, in chalk">
+        <HandCanvas preset="single" stage={{ decor: false, cameraPosition: SIDE_VIEW }} label="The expert's recorded hand, in chalk">
           <Hand side={take.side} style="chalk" getFrame={() => handAt(take.frames, clock.now(), take.side)} />
         </HandCanvas>
       </StageFrame>

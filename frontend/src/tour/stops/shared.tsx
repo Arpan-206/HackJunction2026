@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import type { LoopClock } from '../clock';
 import { loadTake, type TakeName, type TourTake } from '../data';
 
+/**
+ * A lower, more frontal camera than the app's default top-down one, so a grip's curled fingers show under the palm on a
+ * small screen.
+ */
+export const SIDE_VIEW: [number, number, number] = [1.5, 1.15, 3.7];
+
 /** A bundled take, null until its chunk has loaded. */
 export function useTake(name: TakeName): TourTake | null {
   const [take, setTake] = useState<TourTake | null>(null);

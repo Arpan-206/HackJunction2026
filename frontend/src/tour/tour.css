@@ -109,7 +109,7 @@ html[data-theme] {
 .tour-stage {
   position: relative;
   width: 100%;
-  height: clamp(280px, 52vh, 560px);
+  height: clamp(260px, min(56vh, 72vw), 600px);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-m);
   background: var(--stage-bg);
@@ -182,10 +182,9 @@ html[data-theme] {
   gap: 0.25rem;
 }
 .tour-fingers li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.75rem;
   border-bottom: 1px dotted var(--line);
   padding: 0.15rem 0;
 }
