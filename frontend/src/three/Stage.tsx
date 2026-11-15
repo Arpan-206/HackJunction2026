@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Group } from 'three';
 import { useTheme } from '../theme';
 import { BackdropProps, WorkshopLight, type StageQuality } from './atmosphere';
+import { HAND_FLOOR_Y } from './handFloor';
 import { Sketchbook, type SheetRect } from './sketchbook';
 import { StageAnchorContext, StageColorsContext, useStageColors } from './stageContext';
 import { ResetViewButton, StageOrbit, StageOrbitContext, type OrbitLink, type ResetCorner } from './StageOrbit';
@@ -24,11 +25,11 @@ const z = (k: number): [number, number, number] => [1.9 * k, 2.7 * k, 2.4 * k];
 
 /** Camera and stage layout per scene type, tuned for one or two hands at about 3 m on a projector. */
 export const PRESETS: Record<CameraPreset, PresetDef> = {
-  single: { groundY: -0.55, position: z(1.0), target: [0, -0.12, -0.62], circle: 1.55, circleCenter: [0, -0.5], shadow: [2.4, 2.6], centreHands: true },
-  pair: { groundY: -0.55, position: z(1.7), target: [0, -0.12, -0.62], circle: 2.6, circleCenter: [0, -0.5], shadow: [5, 2.6], centreHands: true },
+  single: { groundY: HAND_FLOOR_Y, position: z(1.0), target: [0, -0.12, -0.62], circle: 1.55, circleCenter: [0, -0.5], shadow: [2.4, 2.6], centreHands: true },
+  pair: { groundY: HAND_FLOOR_Y, position: z(1.7), target: [0, -0.12, -0.62], circle: 2.6, circleCenter: [0, -0.5], shadow: [5, 2.6], centreHands: true },
   racket: { groundY: -0.95, position: z(1.35), target: [-0.35, -0.12, -0.62], circle: 1.9, circleCenter: [-0.3, -0.5], shadow: [3.4, 2.8], centreHands: false },
-  keyboard: { groundY: -0.55, position: z(1.4), target: [0, -0.12, -1.25], circle: 2.1, circleCenter: [0, -1.2], shadow: [3, 3], centreHands: false },
-  closeup: { groundY: -0.55, position: z(0.85), target: [0, -0.1, -0.6], circle: 1.2, circleCenter: [0, -0.5], shadow: [1.8, 2], centreHands: true },
+  keyboard: { groundY: HAND_FLOOR_Y, position: z(1.4), target: [0, -0.12, -1.25], circle: 2.1, circleCenter: [0, -1.2], shadow: [3, 3], centreHands: false },
+  closeup: { groundY: HAND_FLOOR_Y, position: z(0.85), target: [0, -0.1, -0.6], circle: 1.2, circleCenter: [0, -0.5], shadow: [1.8, 2], centreHands: true },
 };
 
 /**
@@ -47,7 +48,7 @@ export const pairPosition = (side: 'left' | 'right'): [number, number, number] =
 export const PAIR_STAGE: StageProps = { cameraPosition: z(2.0), circleRadius: 2.9, shadowSize: [6.2, 2.8] };
 
 export interface StageProps {
-  /** Height of the paper; the grid, circle and hatched shadow sit here. Default -0.55. */
+  /** Height of the paper; the grid, circle and hatched shadow sit here. Default HAND_FLOOR_Y (see handFloor.ts). */
   groundY?: number;
   showGrid?: boolean;
   showCircle?: boolean;
@@ -86,7 +87,7 @@ export interface StageProps {
  * circle in ink, the hands' shadows hatched in iron-gall ink, lights and the orbit (StageOrbit).
  */
 export function Stage({
-  groundY = -0.55,
+  groundY = HAND_FLOOR_Y,
   showGrid = true,
   showCircle = true,
   showShadow = true,

@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, CatmullRomCurve3, Group, Mesh, MeshBasicMaterial, PlaneGeometry, TorusGeometry, TubeGeometry, Vector3 } from 'three';
 import { FINGERS, type Prop } from '../api/types';
 import type { HandHandle } from './Hand';
+import { KEYBED_Y } from './handFloor';
 import { useStageColors } from './stageContext';
 import { RACKET_GRIP } from './props';
 
@@ -69,7 +70,7 @@ export function RacketSketch({ weight = 1 }: { weight?: number }) {
 interface KeysSketchProps {
   /** Number of white keys. Default 11. */
   keys?: number;
-  /** Bench height. Default -0.49. */
+  /** Bench height. Default KEYBED_Y (the stage bench plus 0.06). */
   y?: number;
   /** When given, the key under the lowest pressing fingertip is filled in chalk. */
   handRef?: RefObject<HandHandle>;
@@ -81,7 +82,7 @@ const KEY_D = 1.15;
 const BLACK_AFTER = [0, 1, 3, 4, 5, 7, 8, 10, 11];
 
 /** The keyboard drawn in chalk on the bench where <Keyboard /> would lie; a pressed key fills in. */
-export function KeysSketch({ keys = 11, y = -0.49, handRef }: KeysSketchProps) {
+export function KeysSketch({ keys = 11, y = KEYBED_Y, handRef }: KeysSketchProps) {
   const mat = useChalk(0.6);
   const fillMat = useChalk(0.22);
   const built = useMemo(() => {
