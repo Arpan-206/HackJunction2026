@@ -1,7 +1,7 @@
 {
   "format": "geppetto.lesson-sync/1",
   "recorder": "szymon",
-  "exported_at": "2026-11-15T01:09:19+00:00",
+  "exported_at": "2026-11-15T01:58:09+00:00",
   "items": {
     "take": [
       "szymon-0053cfa41fbc",
@@ -9,6 +9,7 @@
       "szymon-0183807bbd52",
       "szymon-01fa7128f9d7",
       "szymon-0f74384620ce",
+      "szymon-1ee83a609f65",
       "szymon-2a21347a9ba8",
       "szymon-2feb7ae0ba05",
       "szymon-34300ebd954f",
@@ -53,6 +54,7 @@
       "szymon-e20b944a8690",
       "szymon-edb00738feec",
       "szymon-f03dbc46eff5",
+      "szymon-f10e6c89ddc2",
       "szymon-f662ec3ad4b0",
       "szymon-fa5fa6665745"
     ],
@@ -96,6 +98,11 @@
       "path": "backend/recordings/szymon-0f74384620ce.json",
       "size": 158421,
       "sha256": "2120e67add542bbbee490371bcf38414b16156ff3de9529a99c72a41b45717e8"
+    },
+    {
+      "path": "backend/recordings/szymon-1ee83a609f65.json",
+      "size": 29713,
+      "sha256": "bcd1fb2c0b6749b13b0b522ed4105403a075367d94446e57b8fcc990310c3e90"
     },
     {
       "path": "backend/recordings/szymon-2a21347a9ba8.json",
@@ -318,6 +325,11 @@
       "sha256": "4bf6534f9b2fc9710041568c4be538e78d5101fdf6b901b0c6f834e6f31a8f58"
     },
     {
+      "path": "backend/recordings/szymon-f10e6c89ddc2.json",
+      "size": 28582,
+      "sha256": "b243b7136a1a43d4e2bfdc0156a6a186430688953edbaca592dd5dbb90b4f765"
+    },
+    {
       "path": "backend/recordings/szymon-f662ec3ad4b0.json",
       "size": 116270,
       "sha256": "bd285080327a0c46a9cc69d79b1cd5c8d1adc486fd3390aa1a0a5db45c63731d"
@@ -329,8 +341,8 @@
     },
     {
       "path": "core_lessons/manifest.json",
-      "size": 61766,
-      "sha256": "6ae284a10c14d38027ef0322c0c5f31465c0412f7ec867d510271280c037798a"
+      "size": 62932,
+      "sha256": "7004a6c36147ecf3a37a85bbcfd7d052c2d62f350c9a9ace6a700d3716b6e4fe"
     },
     {
       "path": "core_lessons/takes/szymon-0053cfa41fbc-left/frames/step_00.jpg",

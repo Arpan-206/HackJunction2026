@@ -149,7 +149,7 @@
     flex-direction: row;
     justify-content: space-around;
   }
-  /* Tiles grow from their word, never shrink below it. Six tiles (with Robot, Typing and Settings) fit 390px only with
+  /* Tiles grow from their word, never shrink below it. Five tiles (with Robot and Settings) fit 390px only with
      slim padding, so the page never scrolls sideways. */
   .rail {
     padding-inline: 0.25rem;

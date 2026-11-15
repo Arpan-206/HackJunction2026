@@ -1,6 +1,6 @@
 {
   "schema": "geppetto.core-export/1",
-  "updated_at": "2026-11-15T01:09:11.517916+00:00",
+  "updated_at": "2026-11-15T01:57:54.288297+00:00",
   "format": "geppetto.lesson/1 lesson folders (SPEC.md 'Lesson files')",
   "read_by": "core.recorder.Lesson.load, weights/check_lessons.py, export/ (geppetto-export --lessons-dir takes or lessons), coach_tune/build_dataset.py once pointed here, verda/gemma_client.py (request context for the model hosted on Verda); all local, nothing uploaded",
   "angles": "degrees; a real glove part with a calibration (parts[].calibration) is calibrated as the live core does (core/calibration.py), otherwise raw glove flexion",
@@ -2086,6 +2086,40 @@
         }
       ],
       "fingerprint": "ccec074bd307359c"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-1ee83a609f65",
+      "source_file": "recordings/szymon-1ee83a609f65.json",
+      "exported_at": "2026-11-15T01:28:24.841459+00:00",
+      "folders": [],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-15T01:27:59.052807+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [],
+      "reason": "the take has no hand frames",
+      "fingerprint": "1251525d2803d608"
+    },
+    {
+      "kind": "take",
+      "id": "szymon-f10e6c89ddc2",
+      "source_file": "recordings/szymon-f10e6c89ddc2.json",
+      "exported_at": "2026-11-15T01:30:19.366791+00:00",
+      "folders": [],
+      "title": "Piano: first fingering: Lesson 2: Five-finger scale",
+      "created": "2026-11-15T01:29:53.507383+00:00",
+      "lesson_id": "seed-piano",
+      "step_id": "seed-piano-scale",
+      "hands": "right",
+      "glove_source": "glove",
+      "video": null,
+      "parts": [],
+      "reason": "the take has no hand frames",
+      "fingerprint": "91e19531f2ef965d"
     }
   ]
 }
