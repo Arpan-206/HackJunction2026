@@ -15,15 +15,17 @@ import { fileURLToPath } from 'node:url';
 
 const FINGERS = ['thumb', 'index', 'middle', 'ring', 'little'];
 const FPS = 30;
-const NAMES = ['expert', 'attempt', 'rabbit', 'letter'];
+const NAMES = ['expert', 'reference', 'attempt', 'robot', 'teach'];
 
 const r = (v, d) => {
   const k = 10 ** d;
   return Math.round(v * k) / k;
 };
 
+/** The take's hand: the right hand when the frame has one (two-handed takes), else the only hand. */
 function handOf(frame) {
-  return frame.hands && frame.hands.length ? frame.hands[0] : null;
+  const hands = frame.hands ?? [];
+  return hands.find((h) => h.side === 'right') ?? hands[0] ?? null;
 }
 
 function packHand(h) {
@@ -64,7 +66,9 @@ export function packTake(raw, title) {
   const first = raw.frames.find((f) => handOf(f));
   if (!first) throw new Error('the take has no hand frames');
   const { duration, frames } = resample(raw.frames);
-  return { title, side: handOf(first).side, fps: FPS, duration, frames };
+  // Gloves alone record no wrist position (null); the 3D hand must then stay where the stage puts it.
+  const hasPos = raw.frames.some((f) => handOf(f)?.wrist_pos);
+  return { title, side: handOf(first).side, fps: FPS, duration, hasPos, frames };
 }
 
 function main() {

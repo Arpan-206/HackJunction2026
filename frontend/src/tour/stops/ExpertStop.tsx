@@ -16,7 +16,7 @@ export default function ExpertStop() {
       </p>
       <ExpertStage take={take} />
       <p className="tour-small">
-        Recorded on 14 November 2026. Shown at 30 frames a second: the wrist turn and three bends in each finger. Drag the stage to turn it.
+        Recorded on 15 November 2026. Shown at 30 frames a second: the wrist turn and three bends in each finger. Drag the stage to turn it.
       </p>
     </section>
   );

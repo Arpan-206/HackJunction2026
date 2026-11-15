@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { unpackTake, type PackedTake } from '../src/tour/data';
 import { allowedUrl, underBase } from '../src/tour/netGuard';
 import { momentAt, replayCoach } from '../src/tour/replayCoach';
-import expert from '../tour/data/expert.json';
+import expert from '../tour/data/reference.json';
 import attempt from '../tour/data/attempt.json';
 import takes from '../tour/takes.json';
 
@@ -29,13 +29,13 @@ describe('tour network guard', () => {
 
 describe('tour data', () => {
   it('names each stop take in one config file', () => {
-    for (const name of ['expert', 'attempt', 'rabbit', 'letter'] as const) {
+    for (const name of ['expert', 'reference', 'attempt', 'robot', 'teach'] as const) {
       expect(takes[name].recorder).toMatch(/^[a-z0-9_-]+$/);
       expect(takes[name].take.startsWith(`${takes[name].recorder}-`)).toBe(true);
     }
   });
   it('bundles only frames: no ids, times or wearer names', () => {
-    expect(Object.keys(expert).sort()).toEqual(['duration', 'fps', 'frames', 'side', 'title']);
+    expect(Object.keys(expert).sort()).toEqual(['duration', 'fps', 'frames', 'hasPos', 'side', 'title']);
     expect(JSON.stringify(expert)).not.toMatch(/arpan|szymon|guest|wearer|calibration|started_at/i);
   });
 });

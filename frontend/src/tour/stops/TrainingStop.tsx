@@ -13,17 +13,17 @@ import { StageFrame } from '../StageFrame';
 import { PlayButton, SIDE_VIEW, useTake } from './shared';
 
 export default function TrainingStop() {
-  const expert = useTake('expert');
+  const expert = useTake('reference');
   const attempt = useTake('attempt');
   return (
     <section className="tour-stop">
       <p className="tour-lead">
-        The learner's wooden hand plays a recorded attempt at the same grip. The faint ghost is the expert's take, to follow. A finger that strays past its band turns
+        The step is the shadow puppet rabbit: two fingers rise as ears and wiggle. The learner's wooden hand plays a recorded attempt; the faint ghost is the expert's take, to follow. A finger that strays past its band turns
         vermilion, and the correction names it.
       </p>
       {expert && attempt ? <TrainingStage expert={expert} attempt={attempt} /> : <p className="tour-loading">Loading the two takes...</p>}
       <p className="tour-small">
-        The attempt is a second real glove take of the same step. Its corrections and score are replayed through the same scorer and live-correction code the app runs,
+        The attempt is another real glove take of the same step. Its corrections and score are replayed through the same scorer and live-correction code the app runs,
         so they are what the learner saw from these frames. They are not a log of the session.
       </p>
     </section>
@@ -42,7 +42,7 @@ function TrainingStage({ expert, attempt }: { expert: TourTake; attempt: TourTak
   const final = Math.round(replay.result.overall);
   return (
     <>
-      <StageFrame text="The learner's wooden hand closes into the grip beside the faint ghost of the expert's hand. Fingers that stray turn vermilion.">
+      <StageFrame text="The learner's wooden hand makes the rabbit's ears beside the faint ghost of the expert's hand. Fingers that stray turn vermilion.">
         <HandCanvas preset="single" stage={{ decor: false, cameraPosition: SIDE_VIEW }} label="The learner's recorded attempt in wood, with the expert's ghost hand">
           <Hand side={expert.side} style="ghost" getFrame={() => handAt(expert.frames, clock.now(), expert.side)} />
           <Hand side={attempt.side} style="wood" fingerTint={tint} getFrame={() => handAt(attempt.frames, clock.now(), attempt.side)} />

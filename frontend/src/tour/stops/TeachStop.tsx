@@ -19,13 +19,13 @@ const ACTIONS: { axis: SkillAxis; dir: 1 | -1; label: string }[] = [
 ];
 
 export default function TeachStop() {
-  const take = useTake('letter');
+  const take = useTake('teach');
   const track = useMemo(() => (take ? trackFromFrames(take.frames, take.side) : null), [take]);
   const [attempt, setAttempt] = useState(0);
   return (
     <section className="tour-stop">
       <p className="tour-lead">
-        Now you teach. {ROBOT_NAME}, a five-finger robot hand, performs the Finnish letter A from an expert's take, sometimes with one finger wrong. Judge it by eye, then
+        Now you teach. {ROBOT_NAME}, a five-finger robot hand, performs the shadow puppet rabbit from an expert's take, sometimes with one finger wrong. Judge it by eye, then
         tap the finger and the fix, or type it in words.
       </p>
       {take && track ? <TeachRun key={attempt} take={take} track={track} onRestart={() => setAttempt((a) => a + 1)} /> : <p className="tour-loading">Loading the take...</p>}
@@ -60,7 +60,7 @@ function TeachRun({ take, track, onRestart }: { take: TourTake; track: Reference
 
   return (
     <>
-      <StageFrame text={`The expert's chalk hand makes the letter A beside ${ROBOT_NAME}, a steel robot hand that copies it.`}>
+      <StageFrame text={`The expert's chalk hand makes the rabbit beside ${ROBOT_NAME}, a steel robot hand that copies it.`}>
         <HandCanvas preset="pair" stage={{ decor: false }} label={`The expert's hand beside ${ROBOT_NAME}, the robot hand you teach`}>
           <Hand side={take.side} style="chalk" getFrame={session.expertFrame} position={[-1.3, 0.15, 0]} />
           <Hand side={take.side} style="robot" getFrame={session.robotFrame} fingerTint={tint} smoothing={0.09} position={[1.3, 0.15, 0]} />

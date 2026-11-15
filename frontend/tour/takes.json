@@ -1,7 +1,8 @@
 {
-  "_comment": "Which take each tour stop plays. recorder: the folder under lessons/shared/; take: the take id inside it (recorder-prefixed, without .json). Switch to Szymon's takes by editing this file and rebuilding. See docs/PUBLIC_TOUR.md.",
-  "expert": { "recorder": "arpan", "take": "arpan-38d8e15a43cf", "title": "Table tennis: the shakehand grip" },
-  "attempt": { "recorder": "arpan", "take": "arpan-c298f22f6609", "title": "Table tennis: the shakehand grip, a second take" },
-  "rabbit": { "recorder": "arpan", "take": "arpan-698ffa18b8c2", "title": "Shadow puppets: the rabbit" },
-  "letter": { "recorder": "arpan", "take": "arpan-11f0f06a17d9", "title": "Finnish fingerspelling: the letter A" }
+  "_comment": "Which take each tour stop plays. recorder: the folder under lessons/shared/; take: the take id inside it (recorder-prefixed, without .json); title: shown on the page. Edit and rebuild to switch takes. See docs/PUBLIC_TOUR.md.",
+  "expert": { "recorder": "szymon", "take": "szymon-8f8dcd081055", "title": "Table tennis: the shakehand grip" },
+  "reference": { "recorder": "szymon", "take": "szymon-a03faa350c0e", "title": "Shadow puppets: the rabbit" },
+  "attempt": { "recorder": "szymon", "take": "szymon-6b8b367c4015", "title": "Shadow puppets: the rabbit, another take" },
+  "robot": { "recorder": "szymon", "take": "szymon-4ca8e37c97eb", "title": "Fingerspelling: the word GEPPETTO" },
+  "teach": { "recorder": "szymon", "take": "szymon-5992b3c9201c", "title": "Shadow puppets: the rabbit" }
 }
